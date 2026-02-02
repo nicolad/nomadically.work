@@ -3,6 +3,8 @@
  * Runs daily at midnight UTC
  */
 
+import { createClient } from "@libsql/client";
+
 interface Env {
   BRAVE_API_KEY: string;
   TURSO_DB_URL: string;
@@ -41,10 +43,10 @@ type JobSource = {
 };
 
 const DISCOVERY_QUERIES = [
-  { kind: "greenhouse", q: 'site:boards.greenhouse.io "Apply for this job"' },
-  { kind: "lever", q: 'site:jobs.lever.co "Apply for this job"' },
-  { kind: "ashby", q: 'site:jobs.ashbyhq.com "Apply"' },
-  { kind: "workable", q: "site:apply.workable.com" },
+  { kind: "greenhouse", q: "site:boards.greenhouse.io remote" },
+  { kind: "lever", q: "site:jobs.lever.co remote" },
+  { kind: "ashby", q: "site:jobs.ashbyhq.com remote" },
+  { kind: "workable", q: "site:apply.workable.com remote" },
 ] as const;
 
 async function braveSearch(
@@ -266,29 +268,44 @@ export default {
 
     try {
       const result = await discoverJobSources(env, {
-        freshness: "pw",
-        maxOffsets: 2,
+        freshness: "pm", // past month for better results
+        maxOffsets: 1, // 2 pages per query type
       });
 
       console.log(`✅ Discovered ${result.stats.sourcesExtracted} sources`);
       console.log(`Stats: ${JSON.stringify(result.stats)}`);
 
-      // TODO: Save discovered sources to D1 database
-      // Example:
-      // for (const source of result.sources) {
-      //   await env.DB.prepare(
-      //     `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
-      //      VALUES (?, ?, ?, ?)`
-      //   ).bind(
-      //     source.kind,
-      //     source.company_key,
-      //     source.canonical_url,
-      //     new Date(source.first_seen_at).toISOString()
-      //   ).run();
-      // }
+      // Save discovered sources to Turso database
+      if (result.sources.length > 0) {
+        console.log("💾 Saving sources to Turso...");
+        const turso = createClient({
+          url: env.TURSO_DB_URL,
+          authToken: env.TURSO_DB_AUTH_TOKEN,
+        });
+
+        let savedCount = 0;
+        for (const source of result.sources) {
+          try {
+            await turso.execute({
+              sql: `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+                    VALUES (?, ?, ?, ?)`,
+              args: [
+                source.kind,
+                source.company_key,
+                source.canonical_url || "",
+                new Date(source.first_seen_at).toISOString(),
+              ],
+            });
+            savedCount++;
+          } catch (err) {
+            console.error(`Failed to save ${source.kind}/${source.company_key}:`, err);
+          }
+        }
+        console.log(`✅ Saved ${savedCount}/${result.sources.length} sources to Turso`);
+      }
 
       // Trigger scoring after job insertion
-      if (result.stats.sourcesExtracted > 0) {
+      if (result.stats.sourcesExtracted > 0 && env.APP_URL) {
         console.log("🎯 Triggering job scoring...");
         ctx.waitUntil(
           fetch(`${env.APP_URL}/api/jobs/score`, {

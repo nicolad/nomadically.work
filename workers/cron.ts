@@ -43,10 +43,56 @@ type JobSource = {
 };
 
 const DISCOVERY_QUERIES = [
-  { kind: "greenhouse", q: "site:boards.greenhouse.io remote" },
-  { kind: "lever", q: "site:jobs.lever.co remote" },
-  { kind: "ashby", q: "site:jobs.ashbyhq.com remote" },
-  { kind: "workable", q: "site:apply.workable.com remote" },
+  {
+    kind: "greenhouse",
+    q: [
+      "site:boards.greenhouse.io",
+      '("remote" OR "fully remote" OR "100% remote" OR "work from home")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
+  {
+    kind: "greenhouse",
+    q: [
+      "site:job-boards.greenhouse.io",
+      '("remote" OR "fully remote" OR "100% remote" OR "work from home")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
+  {
+    kind: "lever",
+    q: [
+      "site:jobs.lever.co",
+      '("remote" OR "fully remote" OR "100% remote")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
+  {
+    kind: "ashby",
+    q: [
+      "site:jobs.ashbyhq.com",
+      '("remote" OR "fully remote" OR "100% remote")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
+  {
+    kind: "workable",
+    q: [
+      "(site:apply.workable.com OR site:workable.com)",
+      '("remote" OR "fully remote" OR "100% remote")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
 ] as const;
 
 async function braveSearch(
@@ -94,55 +140,92 @@ async function braveSearch(
   return { results, more };
 }
 
+function looksLikeEuFullyRemote(r: BraveWebResult): boolean {
+  const blob = [r.title, r.description, ...(r.extra_snippets ?? [])]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const hasRemote =
+    /\bremote\b/.test(blob) ||
+    /work from home/.test(blob) ||
+    /\bwfh\b/.test(blob);
+
+  const hasEuScope =
+    /\beurope\b/.test(blob) ||
+    /\beu\b/.test(blob) ||
+    /\bemea\b/.test(blob) ||
+    /\bcet\b/.test(blob) ||
+    /gmt\+1|gmt\+2/.test(blob) ||
+    /european union/.test(blob);
+
+  const rejects =
+    /\bhybrid\b/.test(blob) ||
+    /\bonsite\b/.test(blob) ||
+    /\bon-site\b/.test(blob) ||
+    /\bin[- ]office\b/.test(blob);
+
+  const usOnly =
+    /remote\s*(?:-|\(|,)?\s*(?:us|usa|united states)\b/.test(blob) ||
+    /\b(us only|usa only|united states only)\b/.test(blob);
+
+  return hasRemote && hasEuScope && !rejects && !usOnly;
+}
+
 function extractJobSource(url: string): JobSource | null {
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname.toLowerCase();
     const path = parsed.pathname;
 
-    if (hostname === "boards.greenhouse.io") {
-      const match = path.match(/^\/([^\/]+)\//);
-      if (match) {
+    const firstSeg = (p: string) => p.match(/^\/([^\/]+)(?:\/|$)/)?.[1];
+
+    if (
+      hostname === "boards.greenhouse.io" ||
+      hostname === "job-boards.greenhouse.io"
+    ) {
+      const company = firstSeg(path);
+      if (company) {
         return {
           kind: "greenhouse",
-          company_key: match[1],
-          canonical_url: `https://boards-api.greenhouse.io/v1/boards/${match[1]}/jobs`,
+          company_key: company,
+          canonical_url: `https://boards-api.greenhouse.io/v1/boards/${company}/jobs`,
           first_seen_at: Date.now(),
         };
       }
     }
 
     if (hostname === "jobs.lever.co") {
-      const match = path.match(/^\/([^\/]+)\//);
-      if (match) {
+      const company = firstSeg(path);
+      if (company) {
         return {
           kind: "lever",
-          company_key: match[1],
-          canonical_url: `https://api.lever.co/v0/postings/${match[1]}`,
+          company_key: company,
+          canonical_url: `https://api.lever.co/v0/postings/${company}`,
           first_seen_at: Date.now(),
         };
       }
     }
 
     if (hostname === "jobs.ashbyhq.com") {
-      const match = path.match(/^\/([^\/]+)\//);
-      if (match) {
+      const company = firstSeg(path);
+      if (company) {
         return {
           kind: "ashby",
-          company_key: match[1],
-          canonical_url: `https://api.ashbyhq.com/posting-api/job-board/${match[1]}`,
+          company_key: company,
+          canonical_url: `https://api.ashbyhq.com/posting-api/job-board/${company}`,
           first_seen_at: Date.now(),
         };
       }
     }
 
     if (hostname === "apply.workable.com") {
-      const match = path.match(/^\/([^\/]+)\//);
-      if (match) {
+      const company = firstSeg(path);
+      if (company) {
         return {
           kind: "workable",
-          company_key: match[1],
-          canonical_url: `https://apply.workable.com/api/v3/accounts/${match[1]}/jobs`,
+          company_key: company,
+          canonical_url: `https://apply.workable.com/api/v3/accounts/${company}/jobs`,
           first_seen_at: Date.now(),
         };
       }
@@ -156,7 +239,12 @@ function extractJobSource(url: string): JobSource | null {
 
 async function discoverJobSources(
   env: Env,
-  options: { freshness?: string; maxOffsets?: number } = {},
+  options: {
+    freshness?: string;
+    maxPages?: number;
+    perPage?: number;
+    onlyEuFullyRemote?: boolean;
+  } = {},
 ): Promise<{
   success: boolean;
   message: string;
@@ -165,35 +253,44 @@ async function discoverJobSources(
     resultsFound: number;
     sourcesExtracted: number;
     errors: string[];
+    filteredOut: number;
   };
   sources: JobSource[];
 }> {
-  const { freshness = "pw", maxOffsets = 2 } = options;
+  const {
+    freshness = "pw",
+    maxPages = 3,
+    perPage = 20,
+    onlyEuFullyRemote = true,
+  } = options;
 
   console.log(
-    `🔍 Discovering jobs via Brave Search (freshness: ${freshness})...`,
+    `🔍 Discovering jobs via Brave Search (freshness: ${freshness}, pages: ${maxPages}, perPage: ${perPage})...`,
   );
 
-  const discoveredSources: JobSource[] = [];
+  const discovered = new Map<string, JobSource>();
   const stats = {
     queriesRun: 0,
     resultsFound: 0,
     sourcesExtracted: 0,
     errors: [] as string[],
+    filteredOut: 0,
   };
 
   for (const discoveryQuery of DISCOVERY_QUERIES) {
-    for (let offset = 0; offset <= maxOffsets; offset++) {
+    for (let page = 0; page < maxPages; page++) {
       try {
         // Rate limit: 1 req/sec for free tier
         if (stats.queriesRun > 0) {
           await new Promise((resolve) => setTimeout(resolve, 1100));
         }
 
+        const offset = page * Math.min(20, perPage);
+
         const result = await braveSearch(env.BRAVE_API_KEY, {
           q: discoveryQuery.q,
           freshness,
-          count: 20,
+          count: Math.min(20, perPage),
           offset,
           extra_snippets: true,
         });
@@ -202,47 +299,56 @@ async function discoverJobSources(
         stats.resultsFound += result.results.length;
 
         console.log(
-          `  ${discoveryQuery.kind} offset=${offset}: ${result.results.length} results`,
+          `  ${discoveryQuery.kind} page=${page} offset=${offset}: ${result.results.length} results`,
         );
+
+        let addedThisPage = 0;
 
         for (const item of result.results) {
           if (!item.url) continue;
 
-          const source = extractJobSource(item.url);
-          if (source) {
-            const isDuplicate = discoveredSources.some(
-              (s) =>
-                s.kind === source.kind && s.company_key === source.company_key,
-            );
+          if (onlyEuFullyRemote && !looksLikeEuFullyRemote(item)) {
+            stats.filteredOut++;
+            continue;
+          }
 
-            if (!isDuplicate) {
-              discoveredSources.push(source);
-              stats.sourcesExtracted++;
-              console.log(`    ✓ Found ${source.kind}: ${source.company_key}`);
-            }
+          const source = extractJobSource(item.url);
+          if (!source) continue;
+
+          const key = `${source.kind}:${source.company_key}`;
+          if (!discovered.has(key)) {
+            discovered.set(key, source);
+            stats.sourcesExtracted++;
+            addedThisPage++;
+            console.log(`    ✓ Found ${source.kind}: ${source.company_key}`);
           }
         }
 
+        // Early stop: if Brave says no more, or we're no longer finding new sources
         if (!result.more) break;
+        if (page >= 1 && addedThisPage === 0) break;
+        if (result.results.length < Math.min(20, perPage)) break;
       } catch (error: any) {
         stats.errors.push(
-          `${discoveryQuery.kind} offset ${offset}: ${error.message}`,
+          `${discoveryQuery.kind} page ${page}: ${error?.message ?? String(error)}`,
         );
-        console.error(`❌ Error: ${error.message}`);
+        console.error(`❌ Error: ${error?.message ?? String(error)}`);
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
     }
   }
 
+  const sources = [...discovered.values()];
+
   console.log(
-    `✅ Brave discovery complete: ${stats.sourcesExtracted} sources found`,
+    `✅ Brave discovery complete: ${stats.sourcesExtracted} sources found (filtered out: ${stats.filteredOut})`,
   );
 
   return {
     success: true,
-    message: `Found ${stats.sourcesExtracted} job sources from ${stats.queriesRun} queries`,
+    message: `Found ${stats.sourcesExtracted} job sources from ${stats.queriesRun} queries (filtered out: ${stats.filteredOut})`,
     stats,
-    sources: discoveredSources,
+    sources,
   };
 }
 
@@ -269,7 +375,9 @@ export default {
     try {
       const result = await discoverJobSources(env, {
         freshness: "pm", // past month for better results
-        maxOffsets: 1, // 2 pages per query type
+        maxPages: 3, // 3 pages per query type
+        perPage: 20, // Brave max
+        onlyEuFullyRemote: true, // Filter for EU + fully remote jobs
       });
 
       console.log(`✅ Discovered ${result.stats.sourcesExtracted} sources`);

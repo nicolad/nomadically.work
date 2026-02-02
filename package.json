@@ -12,7 +12,8 @@
     "test:eval:watch": "vitest src/lib/evals",
     "mastra:init": "pnpm dlx mastra init",
     "mastra:dev": "pnpm dlx mastra dev",
-    "braintrust:eval": "npx braintrust eval src/lib/evals"
+    "braintrust:eval": "npx braintrust eval src/lib/evals",
+    "cron:trigger": "tsx scripts/trigger-cron.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "latest",
@@ -52,6 +53,7 @@
     "@types/react-dom": "^19.1.9",
     "eslint": "^9.37.0",
     "eslint-config-next": "16.1.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",
     "wrangler": "^4.61.1"

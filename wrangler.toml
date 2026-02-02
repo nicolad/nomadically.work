@@ -14,3 +14,11 @@ APP_URL = "https://nomadically.work"
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # - TURSO_DB_AUTH_TOKEN
 # - BRAVE_API_KEY
+
+# Observability - Enable logging
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

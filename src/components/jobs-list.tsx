@@ -58,7 +58,9 @@ export function JobsList() {
             </div>
 
             <div className="text-gray-600 mb-2">
-              {job.company && <span className="font-medium">{job.company}</span>}
+              {job.company && (
+                <span className="font-medium">{job.company}</span>
+              )}
               {job.location && <span className="ml-2">• {job.location}</span>}
               {job.salary && <span className="ml-2">• {job.salary}</span>}
             </div>

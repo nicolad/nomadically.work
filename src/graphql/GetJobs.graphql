@@ -1,5 +1,10 @@
 query GetJobs($sourceType: String, $status: String, $limit: Int, $offset: Int) {
-  jobs(sourceType: $sourceType, status: $status, limit: $limit, offset: $offset) {
+  jobs(
+    sourceType: $sourceType
+    status: $status
+    limit: $limit
+    offset: $offset
+  ) {
     id
     title
     company

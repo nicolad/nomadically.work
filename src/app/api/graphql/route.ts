@@ -13,7 +13,7 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
       // You can add authentication here if needed
       return { userId: null, userEmail: null };
     },
-  }
+  },
 );
 
 export async function GET(request: NextRequest) {

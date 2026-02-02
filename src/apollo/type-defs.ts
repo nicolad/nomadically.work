@@ -31,12 +31,7 @@ export const typeDefs = gql`
   }
 
   type Query {
-    jobs(
-      sourceType: String
-      status: String
-      limit: Int
-      offset: Int
-    ): [Job!]!
+    jobs(sourceType: String, status: String, limit: Int, offset: Int): [Job!]!
     job(id: String!): Job
   }
 `;

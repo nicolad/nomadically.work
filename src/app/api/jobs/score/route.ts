@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const d1Client = getD1Client();
-    
+
     // Get unscored jobs
     const jobs = await d1Client.getJobsFiltered({
       status: "active",

@@ -1,0 +1,19 @@
+name = "nomadically-work-insert-jobs"
+main = "workers/insert-jobs.ts"
+compatibility_date = "2026-02-01"
+
+# Environment variables
+[vars]
+TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
+
+# Secrets (set via: npx wrangler secret put SECRET_NAME --name nomadically-work-insert-jobs)
+# - TURSO_DB_AUTH_TOKEN (required)
+# - API_SECRET (optional, for authentication)
+
+# Observability - Enable logging
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

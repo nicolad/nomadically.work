@@ -1,10 +1,10 @@
 import { deepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
 
-export const birdAgent = new Agent({
-  id: "bird-agent",
-  name: "Bird Agent",
+export const jobClassifierAgent = new Agent({
+  id: "job-classifier-agent",
+  name: "Job Classifier Agent",
   instructions:
-    "You can view an image and figure out if it is a bird or not. You can also figure out the species of the bird and where the picture was taken.",
+    "You are an expert at classifying job postings. You can analyze job titles, locations, and descriptions to determine if they are remote EU jobs, UK remote jobs, or other types of positions. You understand geographical nuances like EMEA vs EU, timezone requirements, and work authorization implications.",
   model: deepseek("deepseek-chat"),
 });

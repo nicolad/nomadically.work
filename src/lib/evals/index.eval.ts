@@ -1,46 +1,48 @@
 import { Eval } from "braintrust";
-import { IMAGES } from "./data";
-import { BirdResponse, promptClaude } from "../mastra/actions";
+import { remoteEUTestCases } from "./remote-eu-test-data";
+import { classifyJob } from "../mastra/actions";
+import { scoreRemoteEUClassification } from "./scorers/remote-eu-scorer";
+import type { RemoteEUClassification } from "./scorers/remote-eu-scorer";
 
-const containsScorer = ({
+const jobClassificationScorer = ({
   output,
   expected,
 }: {
-  output: BirdResponse;
-  expected: Omit<BirdResponse, "location">;
+  output: RemoteEUClassification;
+  expected: RemoteEUClassification;
 }) => {
-  const birdDataCorrect = output?.bird === expected?.bird;
-
-  const speciesDataCorrect = output?.species
-    ?.toLocaleLowerCase()
-    ?.includes(expected?.species?.toLocaleLowerCase());
+  const isCorrect = output?.isRemoteEU === expected?.isRemoteEU;
+  const confidenceMatch = output?.confidence === expected?.confidence;
 
   return {
-    name: "containsScorer",
-    score: birdDataCorrect && speciesDataCorrect ? 1 : 0,
+    name: "jobClassificationScorer",
+    score: isCorrect ? (confidenceMatch ? 1 : 0.5) : 0,
   };
 };
 
-Eval("Is a bird", {
+Eval("Remote EU Job Classification", {
   data: () => {
-    return [
-      {
-        input: IMAGES.isBird.image,
-        expected: IMAGES.isBird,
-      },
-      {
-        input: IMAGES.notBird.image,
-        expected: IMAGES.notBird,
-      },
-    ];
+    return remoteEUTestCases.slice(0, 5).map((testCase) => ({
+      input: testCase.jobPosting,
+      expected: testCase.expectedClassification,
+    }));
   },
   task: async (input) => {
-    const claudeResponse = await promptClaude({ imageUrl: input });
-    if (!claudeResponse.ok) {
-      return { bird: false, location: "", species: "" };
+    const result = await classifyJob({
+      title: input.title,
+      location: input.location,
+      description: input.description,
+    });
+
+    if (!result.ok || !result.data) {
+      return {
+        isRemoteEU: false,
+        confidence: "low" as const,
+        reason: "Classification failed",
+      };
     }
 
-    return claudeResponse.data;
+    return result.data;
   },
-  scores: [containsScorer],
+  scores: [jobClassificationScorer],
 });

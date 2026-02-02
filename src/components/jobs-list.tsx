@@ -77,7 +77,7 @@ export function JobsList() {
   );
 
   return (
-    <Container size="4" p="8">
+    <Container size="4" px="8">
       <Flex justify="between" align="center" mb="6">
         <Heading size="8">Remote Jobs</Heading>
         <Text size="2" color="gray">

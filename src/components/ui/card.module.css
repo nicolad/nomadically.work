@@ -1,0 +1,38 @@
+.card {
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border, 240 3.7% 15.9%));
+  background-color: hsl(var(--card, 222.2 84% 4.9%));
+  color: hsl(var(--card-foreground, 210 40% 98%));
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.cardDescription {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
+}
+
+.cardContent {
+  padding: 1.5rem;
+  padding-top: 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  padding-top: 0;
+}

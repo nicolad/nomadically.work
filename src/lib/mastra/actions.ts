@@ -1,53 +1,52 @@
 "use server";
 
 import { mastra } from "@/mastra";
-import { getRandomImage, Image, ImageResponse } from "./system-tools";
 import { z } from "zod";
+import type { RemoteEUClassification } from "@/lib/evals/scorers/remote-eu-scorer";
 
-export type ImageQuery = "wildlife" | "feathers" | "flying" | "birds";
-
-export type BirdResponse = {
-  bird: boolean;
-  species: string;
+export type JobClassificationInput = {
+  title: string;
   location: string;
+  description: string;
 };
 
-export const getImage = async ({
-  query,
-}: {
-  query: ImageQuery;
-}): Promise<ImageResponse<Image, string>> => {
-  console.log("get image ============", "got here");
+export type JobClassificationResponse = RemoteEUClassification;
 
-  const response = await getRandomImage({
-    query,
-  });
-
-  return response;
-};
-
-export const promptClaude = async ({
-  imageUrl,
-}: {
-  imageUrl: string;
-}): Promise<ImageResponse<BirdResponse, string>> => {
+export const classifyJob = async ({
+  title,
+  location,
+  description,
+}: JobClassificationInput): Promise<{
+  ok: boolean;
+  data?: JobClassificationResponse;
+  error?: string;
+}> => {
   try {
-    const birdAgent = mastra.getAgent("birdAgent");
+    const jobClassifierAgent = mastra.getAgent("jobClassifierAgent");
 
-    console.log("calling bird checker agent");
+    console.log("Calling job classifier agent");
 
-    const response = await birdAgent.generate(
+    const response = await jobClassifierAgent.generate(
       [
         {
           role: "user",
           content: [
             {
-              type: "image",
-              image: imageUrl,
-            },
-            {
               type: "text",
-              text: "view this image and let me know if it's a bird or not, and the scientific name of the bird without any explanation. Also summarize the location for this picture in one or two short sentences understandable by a high school student",
+              text: `Analyze this job posting and determine if it is a Remote EU position.
+
+Title: ${title}
+Location: ${location}
+Description: ${description}
+
+Consider:
+- EMEA includes non-EU countries (UK post-Brexit, Switzerland, Middle East)
+- CET timezone is not exclusive to EU
+- UK is not part of EU since Brexit
+- EU work authorization suggests EU remote
+- Must be fully remote, not hybrid or onsite
+
+Provide your classification with confidence level and reasoning.`,
             },
           ],
         },
@@ -55,9 +54,9 @@ export const promptClaude = async ({
       {
         structuredOutput: {
           schema: z.object({
-            bird: z.boolean(),
-            species: z.string(),
-            location: z.string(),
+            isRemoteEU: z.boolean(),
+            confidence: z.enum(["high", "medium", "low"]),
+            reason: z.string(),
           }),
         },
       },
@@ -65,11 +64,14 @@ export const promptClaude = async ({
 
     const { object } = response || {};
 
-    console.log("prompt claude response====", JSON.stringify(object, null, 2));
+    console.log(
+      "Job classification response:",
+      JSON.stringify(object, null, 2),
+    );
 
-    return { ok: true, data: object as BirdResponse };
+    return { ok: true, data: object as JobClassificationResponse };
   } catch (err) {
-    console.error("Error prompting claude:", err);
-    return { ok: false, error: "Could not fetch image metadata" };
+    console.error("Error classifying job:", err);
+    return { ok: false, error: "Could not classify job" };
   }
 };

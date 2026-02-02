@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
+import styles from "./layout.module.css";
 import { Theme } from "@radix-ui/themes";
 import { Toaster } from "@/components/ui/sonner";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
+import Image from "next/image";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -18,8 +19,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Bird Checker",
-  description: "Bird checker with Mastra",
+  title: "Nomadically.Work",
+  description: "Nomadically - Remote jobs",
 };
 
 export default function RootLayout({
@@ -28,13 +29,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistSans.className} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" style={{ fontFamily: 'var(--font-geist-sans)' }}>
+      <body>
         <Theme appearance="dark">
           <Toaster />
-          <NuqsAdapter>{children}</NuqsAdapter>
+          <header className={styles.header}>
+            <div className={styles.logoContainer}>
+              <Image 
+                src="/logo.svg" 
+                alt="Nomadically Logo" 
+                width={240} 
+                height={56}
+                priority
+                className={styles.logo}
+              />
+            </div>
+          </header>
+          {children}
         </Theme>
       </body>
     </html>

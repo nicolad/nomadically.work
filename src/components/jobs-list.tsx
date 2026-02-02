@@ -38,7 +38,7 @@ export function JobsList() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Jobs from Cloudflare D1</h1>
+        <h1 className="text-3xl font-bold">Remote Jobs</h1>
         <div className="text-sm text-gray-500">{jobs.length} jobs found</div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { ApolloProvider, useApollo } from "@/apollo/client";
-import { JobsList } from "@/app/components/jobs-list";
+import { JobsList } from "./jobs-list";
 
 export function JobsProvider() {
   const apolloClient = useApollo(null);

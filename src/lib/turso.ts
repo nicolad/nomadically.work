@@ -10,16 +10,14 @@ let tursoClient: Client | null = null;
 export function getTursoClient(): Client {
   if (tursoClient) return tursoClient;
 
-  const url = process.env.LIBSQL_DB_URL?.trim();
+  const url = process.env.TURSO_DB_URL?.trim();
   if (!url) {
-    throw new Error("LIBSQL_DB_URL is not defined. Set it in .env.local");
+    throw new Error("TURSO_DB_URL is not defined. Set it in .env.local");
   }
 
-  const authToken = process.env.LIBSQL_DB_AUTH_TOKEN?.trim();
+  const authToken = process.env.TURSO_DB_AUTH_TOKEN?.trim();
   if (!authToken) {
-    throw new Error(
-      "LIBSQL_DB_AUTH_TOKEN is not defined. Set it in .env.local",
-    );
+    throw new Error("TURSO_DB_AUTH_TOKEN is not defined. Set it in .env.local");
   }
 
   tursoClient = createClient({ url, authToken });

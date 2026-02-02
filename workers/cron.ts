@@ -5,10 +5,8 @@
 
 interface Env {
   BRAVE_API_KEY: string;
-  CLOUDFLARE_ACCOUNT_ID: string;
-  CLOUDFLARE_D1_DATABASE_ID: string;
-  CLOUDFLARE_API_TOKEN: string;
-  DB: D1Database;
+  TURSO_DB_URL: string;
+  TURSO_DB_AUTH_TOKEN: string;
 }
 
 type BraveWebResult = {

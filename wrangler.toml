@@ -8,8 +8,8 @@ crons = ["0 0 * * *"]
 
 # Environment variables
 [vars]
-LIBSQL_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
+TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
-# - LIBSQL_DB_AUTH_TOKEN
+# - TURSO_DB_AUTH_TOKEN
 # - BRAVE_API_KEY

@@ -43,7 +43,7 @@ export const resolvers = {
     ) {
       try {
         const client = getTursoClient();
-        
+
         let sql = "SELECT * FROM jobs";
         const params: any[] = [];
         const conditions: string[] = [];

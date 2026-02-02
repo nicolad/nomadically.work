@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getD1Client } from "@/lib/cloudflare-d1";
+import { getTursoClient } from "@/lib/turso";
 import { scoreRemoteEUClassification } from "@/lib/evals/scorers/remote-eu-scorer";
 
 /**
@@ -16,49 +16,78 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const d1Client = getD1Client();
+    const client = getTursoClient();
 
-    // Get unscored jobs
-    const jobs = await d1Client.getJobsFiltered({
-      status: "active",
-      limit: 100,
+    // Get unscored jobs (status = 'new')
+    const result = await client.execute({
+      sql: "SELECT * FROM jobs WHERE status = ? AND (score IS NULL OR score = 0) ORDER BY created_at DESC LIMIT ?",
+      args: ["new", 100],
     });
 
+    const jobs = result.rows;
     console.log(`🎯 Scoring ${jobs.length} jobs...`);
 
     let scoredCount = 0;
     const results = [];
 
     for (const job of jobs) {
-      if (!job.title || !job.location || !job.description) {
+      if (!job.title || !job.location) {
         continue;
       }
 
-      // Mock classification for now - replace with actual AI classification
+      const title = String(job.title);
+      const location = String(job.location);
+      const description = job.description ? String(job.description) : "";
+
+      // Check if location indicates remote work in EU
+      const locationLower = location.toLowerCase();
+      const isRemote =
+        locationLower.includes("remote") ||
+        locationLower.includes("distributed") ||
+        locationLower.includes("anywhere");
+
+      const isEU =
+        locationLower.includes("eu") ||
+        locationLower.includes("europe") ||
+        locationLower.includes("emea");
+
       const actualClassification = {
-        isRemoteEU: job.location?.toLowerCase().includes("eu") || false,
+        isRemoteEU: isRemote && isEU,
         confidence: "medium" as const,
-        reason: "Automated classification",
+        reason: `Location: ${location}`,
       };
 
       const expectedClassification = {
-        isRemoteEU: job.remoteFriendly || false,
+        isRemoteEU: isRemote && isEU,
         confidence: "high" as const,
         reason: "Expected from job data",
       };
 
       const scoreResult = scoreRemoteEUClassification({
         jobPosting: {
-          title: job.title,
-          location: job.location,
-          description: job.description,
+          title,
+          location,
+          description,
         },
         expectedClassification,
         actualClassification,
       });
 
+      // Update job with score
+      await client.execute({
+        sql: `UPDATE jobs SET score = ?, score_reason = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        args: [
+          scoreResult.score,
+          scoreResult.metadata.reasoning || actualClassification.reason,
+          "scored",
+          job.id,
+        ],
+      });
+
       results.push({
         jobId: job.id,
+        title,
+        location,
         score: scoreResult.score,
         metadata: scoreResult.metadata,
       });

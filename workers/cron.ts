@@ -9,6 +9,16 @@ interface Env {
   TURSO_DB_AUTH_TOKEN: string;
 }
 
+interface ScheduledEvent {
+  scheduledTime: number;
+  cron: string;
+}
+
+interface ExecutionContext {
+  waitUntil(promise: Promise<any>): void;
+  passThroughOnException(): void;
+}
+
 type BraveWebResult = {
   title?: string;
   url?: string;

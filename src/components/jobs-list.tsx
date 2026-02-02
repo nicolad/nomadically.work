@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useGetJobsQuery } from "@/__generated__/hooks";
 import {
   Box,
@@ -10,12 +11,46 @@ import {
   Card,
   Badge,
   Button,
+  Tabs,
 } from "@radix-ui/themes";
 
+type JobStatus = "eu-remote" | "non-eu-remote" | "eu-onsite" | "non-eu" | "all";
+
+const getStatusBadgeColor = (status: string) => {
+  switch (status) {
+    case "eu-remote":
+      return "green";
+    case "non-eu-remote":
+      return "orange";
+    case "eu-onsite":
+      return "blue";
+    case "non-eu":
+      return "gray";
+    default:
+      return "gray";
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case "eu-remote":
+      return "EU Remote";
+    case "non-eu-remote":
+      return "Non-EU Remote";
+    case "eu-onsite":
+      return "EU On-site";
+    case "non-eu":
+      return "Non-EU";
+    default:
+      return status;
+  }
+};
+
 export function JobsList() {
+  const [statusFilter, setStatusFilter] = useState<JobStatus>("eu-remote");
+  
   const { loading, error, data, refetch } = useGetJobsQuery({
     variables: {
-      limit: 50,
       offset: 0,
     },
     pollInterval: 60000, // Refresh every minute

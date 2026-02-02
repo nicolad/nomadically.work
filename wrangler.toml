@@ -9,6 +9,7 @@ crons = ["0 0 * * *"]
 # Environment variables
 [vars]
 TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
+APP_URL = "https://nomadically.work"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # - TURSO_DB_AUTH_TOKEN

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getD1Client } from "@/lib/cloudflare-d1";
+import { getTursoClient } from "@/lib/turso";
 
 export async function GET(
   request: NextRequest,
@@ -7,8 +7,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const d1Client = getD1Client();
-    const job = await d1Client.getJobById(id);
+    const client = getTursoClient();
+    const result = await client.execute({
+      sql: "SELECT * FROM jobs WHERE id = ?",
+      args: [id],
+    });
+
+    const job = result.rows?.[0];
 
     if (!job) {
       return NextResponse.json(

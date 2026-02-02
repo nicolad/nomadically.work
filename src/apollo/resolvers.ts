@@ -1,4 +1,4 @@
-import { getD1Client } from "@/lib/cloudflare-d1";
+import { getTursoClient } from "@/lib/turso";
 import type { GraphQLContext } from "./context";
 
 export const resolvers = {
@@ -42,13 +42,35 @@ export const resolvers = {
       _context: GraphQLContext,
     ) {
       try {
-        const d1Client = getD1Client();
-        const jobs = await d1Client.getJobsFiltered({
-          limit: args.limit,
-          offset: args.offset,
-          status: args.status,
-        });
-        return jobs;
+        const client = getTursoClient();
+        
+        let sql = "SELECT * FROM jobs";
+        const params: any[] = [];
+        const conditions: string[] = [];
+
+        if (args.status) {
+          conditions.push("status = ?");
+          params.push(args.status);
+        }
+
+        if (conditions.length > 0) {
+          sql += " WHERE " + conditions.join(" AND ");
+        }
+
+        sql += " ORDER BY created_at DESC";
+
+        if (args.limit) {
+          sql += " LIMIT ?";
+          params.push(args.limit);
+        }
+
+        if (args.offset) {
+          sql += " OFFSET ?";
+          params.push(args.offset);
+        }
+
+        const result = await client.execute({ sql, args: params });
+        return result.rows || [];
       } catch (error) {
         console.error("Error fetching jobs:", error);
         return [];
@@ -56,9 +78,12 @@ export const resolvers = {
     },
     async job(_parent: any, args: { id: string }, _context: GraphQLContext) {
       try {
-        const d1Client = getD1Client();
-        const job = await d1Client.getJobById(args.id);
-        return job;
+        const client = getTursoClient();
+        const result = await client.execute({
+          sql: "SELECT * FROM jobs WHERE id = ?",
+          args: [args.id],
+        });
+        return result.rows?.[0] || null;
       } catch (error) {
         console.error("Error fetching job:", error);
         return null;

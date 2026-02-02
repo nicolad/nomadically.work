@@ -298,10 +298,15 @@ export default {
             });
             savedCount++;
           } catch (err) {
-            console.error(`Failed to save ${source.kind}/${source.company_key}:`, err);
+            console.error(
+              `Failed to save ${source.kind}/${source.company_key}:`,
+              err,
+            );
           }
         }
-        console.log(`✅ Saved ${savedCount}/${result.sources.length} sources to Turso`);
+        console.log(
+          `✅ Saved ${savedCount}/${result.sources.length} sources to Turso`,
+        );
       }
 
       // Trigger scoring after job insertion

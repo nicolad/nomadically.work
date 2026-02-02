@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getD1Client } from "@/lib/cloudflare-d1";
+import { getTursoClient } from "@/lib/turso";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,18 +8,35 @@ export async function GET(request: NextRequest) {
     const offset = searchParams.get("offset");
     const status = searchParams.get("status");
 
-    const d1Client = getD1Client();
+    const client = getTursoClient();
 
-    let jobs;
-    if (limit || offset || status) {
-      jobs = await d1Client.getJobsFiltered({
-        limit: limit ? parseInt(limit) : undefined,
-        offset: offset ? parseInt(offset) : undefined,
-        status: status || undefined,
-      });
-    } else {
-      jobs = await d1Client.getJobs();
+    let sql = "SELECT * FROM jobs";
+    const params: any[] = [];
+    const conditions: string[] = [];
+
+    if (status) {
+      conditions.push("status = ?");
+      params.push(status);
     }
+
+    if (conditions.length > 0) {
+      sql += " WHERE " + conditions.join(" AND ");
+    }
+
+    sql += " ORDER BY created_at DESC";
+
+    if (limit) {
+      sql += " LIMIT ?";
+      params.push(parseInt(limit));
+    }
+
+    if (offset) {
+      sql += " OFFSET ?";
+      params.push(parseInt(offset));
+    }
+
+    const result = await client.execute({ sql, args: params });
+    const jobs = result.rows || [];
 
     return NextResponse.json({
       success: true,

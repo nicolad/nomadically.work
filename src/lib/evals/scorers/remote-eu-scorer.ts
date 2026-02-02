@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/**
+ * Remote EU Classification Scorer
+ * Scores job classification accuracy for Remote EU jobs
+ * Called automatically after cron inserts new jobs via /api/jobs/score endpoint
+ */
+
 const remoteEUClassificationSchema = z.object({
   isRemoteEU: z.boolean(),
   confidence: z.enum(["high", "medium", "low"]),

@@ -7,6 +7,8 @@ interface Env {
   BRAVE_API_KEY: string;
   TURSO_DB_URL: string;
   TURSO_DB_AUTH_TOKEN: string;
+  APP_URL: string;
+  CRON_SECRET?: string;
 }
 
 interface ScheduledEvent {
@@ -272,6 +274,29 @@ export default {
       //     new Date(source.first_seen_at).toISOString()
       //   ).run();
       // }
+
+      // Trigger scoring after job insertion
+      if (result.stats.sourcesExtracted > 0) {
+        console.log("🎯 Triggering job scoring...");
+        ctx.waitUntil(
+          fetch(`${env.APP_URL}/api/jobs/score`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${env.CRON_SECRET || ""}`,
+            },
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              console.log(
+                `✅ Scoring triggered: ${data.scoredCount || 0} jobs scored`,
+              );
+            })
+            .catch((err) => {
+              console.error("⚠️ Failed to trigger scoring:", err);
+            }),
+        );
+      }
 
       console.log("✅ Cron job completed successfully");
     } catch (error) {

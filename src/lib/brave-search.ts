@@ -2,6 +2,8 @@
  * Brave Search API integration for discovering ATS job sources
  */
 
+import _ from "lodash";
+
 type BraveWebResult = {
   title?: string;
   url?: string;
@@ -87,37 +89,45 @@ export const DISCOVERY_QUERIES = [
  * using only Brave result text (fast, no extra HTTP).
  */
 export function looksLikeEuFullyRemote(r: BraveWebResult): boolean {
-  const blob = [r.title, r.description, ...(r.extra_snippets ?? [])]
-    .filter(Boolean)
+  const blob = _.chain([r.title, r.description, ...(r.extra_snippets ?? [])])
+    .compact()
     .join(" ")
-    .toLowerCase();
+    .toLower()
+    .value();
 
   // Must indicate remote (or very similar)
-  const hasRemote =
-    /\bremote\b/.test(blob) ||
-    /work from home/.test(blob) ||
-    /\bwfh\b/.test(blob);
+  const hasRemote = _.some(
+    [/\bremote\b/, /work from home/, /\bwfh\b/],
+    (pattern: RegExp) => pattern.test(blob),
+  );
 
   // Must indicate EU-ish scope
-  const hasEuScope =
-    /\beurope\b/.test(blob) ||
-    /\beu\b/.test(blob) ||
-    /\bemea\b/.test(blob) ||
-    /\bcet\b/.test(blob) ||
-    /gmt\+1|gmt\+2/.test(blob) ||
-    /european union/.test(blob);
+  const hasEuScope = _.some(
+    [
+      /\beurope\b/,
+      /\beu\b/,
+      /\bemea\b/,
+      /\bcet\b/,
+      /gmt\+1|gmt\+2/,
+      /european union/,
+    ],
+    (pattern: RegExp) => pattern.test(blob),
+  );
 
   // Reject common non-fully-remote indicators
-  const rejects =
-    /\bhybrid\b/.test(blob) ||
-    /\bonsite\b/.test(blob) ||
-    /\bon-site\b/.test(blob) ||
-    /\bin[- ]office\b/.test(blob);
+  const rejects = _.some(
+    [/\bhybrid\b/, /\bonsite\b/, /\bon-site\b/, /\bin[- ]office\b/],
+    (pattern: RegExp) => pattern.test(blob),
+  );
 
   // Optional: reject obvious "remote US only" phrases
-  const usOnly =
-    /remote\s*(?:-|\(|,)?\s*(?:us|usa|united states)\b/.test(blob) ||
-    /\b(us only|usa only|united states only)\b/.test(blob);
+  const usOnly = _.some(
+    [
+      /remote\s*(?:-|\(|,)?\s*(?:us|usa|united states)\b/,
+      /\b(us only|usa only|united states only)\b/,
+    ],
+    (pattern: RegExp) => pattern.test(blob),
+  );
 
   return hasRemote && hasEuScope && !rejects && !usOnly;
 }
@@ -146,20 +156,28 @@ export async function braveSearch(
 }> {
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", params.q);
-  if (params.freshness) url.searchParams.set("freshness", params.freshness);
-  if (params.country) url.searchParams.set("country", params.country);
-  if (params.search_lang)
-    url.searchParams.set("search_lang", params.search_lang);
-  if (params.ui_lang) url.searchParams.set("ui_lang", params.ui_lang);
-  if (params.count != null)
-    url.searchParams.set("count", String(Math.min(20, params.count)));
-  if (params.offset != null)
-    url.searchParams.set("offset", String(params.offset));
-  if (params.safesearch) url.searchParams.set("safesearch", params.safesearch);
-  if (params.extra_snippets) url.searchParams.set("extra_snippets", "true");
+
+  const paramMappings: Record<string, string | undefined> = {
+    freshness: params.freshness,
+    country: params.country,
+    search_lang: params.search_lang,
+    ui_lang: params.ui_lang,
+    count: !_.isNil(params.count)
+      ? String(_.min([20, params.count]))
+      : undefined,
+    offset: !_.isNil(params.offset) ? String(params.offset) : undefined,
+    safesearch: params.safesearch,
+    extra_snippets: params.extra_snippets ? "true" : undefined,
+  };
+
+  _.forEach(paramMappings, (value: string | undefined, key: string) => {
+    if (!_.isNil(value)) {
+      url.searchParams.set(key, value);
+    }
+  });
 
   const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), params.timeoutMs ?? 8000);
+  const t = setTimeout(() => ac.abort(), _.get(params, "timeoutMs", 8000));
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -172,11 +190,14 @@ export async function braveSearch(
     signal: ac.signal,
   }).finally(() => clearTimeout(t));
 
-  const rate = {
-    "x-ratelimit-limit": res.headers.get("X-RateLimit-Limit") ?? "",
-    "x-ratelimit-remaining": res.headers.get("X-RateLimit-Remaining") ?? "",
-    "x-ratelimit-reset": res.headers.get("X-RateLimit-Reset") ?? "",
-  };
+  const rate = _.mapValues(
+    {
+      "x-ratelimit-limit": "X-RateLimit-Limit",
+      "x-ratelimit-remaining": "X-RateLimit-Remaining",
+      "x-ratelimit-reset": "X-RateLimit-Reset",
+    },
+    (headerName: string) => res.headers.get(headerName) ?? "",
+  );
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -187,17 +208,17 @@ export async function braveSearch(
   const data = (await res.json()) as BraveResponse;
 
   // Debug: Log response structure
-  if (!data.web?.results || data.web.results.length === 0) {
+  const results = _.get(data, "web.results", []) as BraveWebResult[];
+  if (_.isEmpty(results)) {
     console.log(`   ⚠️  Query returned 0 results. Response:`, {
-      hasWeb: !!data.web,
-      resultsCount: data.web?.results?.length ?? 0,
-      moreAvailable: data.query?.more_results_available,
-      query: params.q.substring(0, 50),
+      hasWeb: !_.isNil(data.web),
+      resultsCount: _.size(results),
+      moreAvailable: _.get(data, "query.more_results_available"),
+      query: _.truncate(params.q, { length: 50 }),
     });
   }
 
-  const results = data.web?.results ?? [];
-  const more = Boolean(data.query?.more_results_available);
+  const more = _.get(data, "query.more_results_available", false) as boolean;
 
   return { results, more, rate };
 }
@@ -210,62 +231,48 @@ export async function braveSearch(
 export function extractJobSource(url: string): JobSource | null {
   try {
     const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase();
+    const hostname = _.toLower(parsed.hostname);
     const path = parsed.pathname;
 
     // helper: capture first segment with or without trailing slash
-    const firstSeg = (p: string) => p.match(/^\/([^\/]+)(?:\/|$)/)?.[1];
+    const firstSeg = (p: string) =>
+      _.get(p.match(/^\/([^\/]+)(?:\/|$)/), "[1]");
 
-    // Greenhouse (boards.greenhouse.io or job-boards.greenhouse.io)
-    if (
-      hostname === "boards.greenhouse.io" ||
-      hostname === "job-boards.greenhouse.io"
-    ) {
+    const atsConfigs = {
+      greenhouse: {
+        hosts: ["boards.greenhouse.io", "job-boards.greenhouse.io"],
+        apiTemplate: (company: string) =>
+          `https://boards-api.greenhouse.io/v1/boards/${company}/jobs`,
+      },
+      lever: {
+        hosts: ["jobs.lever.co"],
+        apiTemplate: (company: string) =>
+          `https://api.lever.co/v0/postings/${company}`,
+      },
+      ashby: {
+        hosts: ["jobs.ashbyhq.com"],
+        apiTemplate: (company: string) =>
+          `https://api.ashbyhq.com/posting-api/job-board/${company}`,
+      },
+      workable: {
+        hosts: ["apply.workable.com"],
+        apiTemplate: (company: string) =>
+          `https://apply.workable.com/api/v3/accounts/${company}/jobs`,
+      },
+    };
+
+    const matchedEntry = _.find(_.entries(atsConfigs), ([, config]) =>
+      _.includes(config.hosts, hostname),
+    );
+
+    if (matchedEntry) {
+      const [kind, config] = matchedEntry;
       const company = firstSeg(path);
       if (company) {
         return {
-          kind: "greenhouse",
+          kind: kind as JobSource["kind"],
           company_key: company,
-          canonical_url: `https://boards-api.greenhouse.io/v1/boards/${company}/jobs`,
-          first_seen_at: Date.now(),
-        };
-      }
-    }
-
-    // Lever
-    if (hostname === "jobs.lever.co") {
-      const company = firstSeg(path);
-      if (company) {
-        return {
-          kind: "lever",
-          company_key: company,
-          canonical_url: `https://api.lever.co/v0/postings/${company}`,
-          first_seen_at: Date.now(),
-        };
-      }
-    }
-
-    // Ashby
-    if (hostname === "jobs.ashbyhq.com") {
-      const company = firstSeg(path);
-      if (company) {
-        return {
-          kind: "ashby",
-          company_key: company,
-          canonical_url: `https://api.ashbyhq.com/posting-api/job-board/${company}`,
-          first_seen_at: Date.now(),
-        };
-      }
-    }
-
-    // Workable (apply.workable.com)
-    if (hostname === "apply.workable.com") {
-      const company = firstSeg(path);
-      if (company) {
-        return {
-          kind: "workable",
-          company_key: company,
-          canonical_url: `https://apply.workable.com/api/v3/accounts/${company}/jobs`,
+          canonical_url: config.apiTemplate(company),
           first_seen_at: Date.now(),
         };
       }
@@ -305,12 +312,14 @@ export async function discoverJobSources(
   };
   sources: JobSource[];
 }> {
-  const {
-    freshness,
-    maxPages = 3,
-    perPage = 20,
-    onlyEuFullyRemote = true,
-  } = options;
+  const { freshness, maxPages, perPage, onlyEuFullyRemote } = _.defaults(
+    options,
+    {
+      maxPages: 3,
+      perPage: 20,
+      onlyEuFullyRemote: true,
+    },
+  );
 
   console.log(
     `🔍 Discovering jobs via Brave Search (freshness: ${freshness || "all"}, pages: ${maxPages}, perPage: ${perPage})...`,
@@ -333,35 +342,35 @@ export async function discoverJobSources(
           await new Promise((resolve) => setTimeout(resolve, 1100));
         }
 
-        const offset = page * Math.min(20, perPage); // ✅ correct meaning of offset
+        const offset = page * _.min([20, perPage])!; // ✅ correct meaning of offset
 
         const result = await braveSearch(apiKey, {
           q: discoveryQuery.q,
           freshness,
-          count: Math.min(20, perPage),
+          count: _.min([20, perPage]),
           offset,
           extra_snippets: true,
         });
 
         stats.queriesRun++;
-        stats.resultsFound += result.results.length;
+        stats.resultsFound += _.size(result.results);
 
         console.log(
-          `  ${discoveryQuery.kind} page=${page} offset=${offset}: ${result.results.length} results`,
+          `  ${discoveryQuery.kind} page=${page} offset=${offset}: ${_.size(result.results)} results`,
         );
 
         let addedThisPage = 0;
 
-        for (const item of result.results) {
-          if (!item.url) continue;
+        _.forEach(result.results, (item: BraveWebResult) => {
+          if (!item.url) return;
 
           if (onlyEuFullyRemote && !looksLikeEuFullyRemote(item)) {
             stats.filteredOut++;
-            continue;
+            return;
           }
 
           const source = extractJobSource(item.url);
-          if (!source) continue;
+          if (!source) return;
 
           const key = `${source.kind}:${source.company_key}`;
           if (!discovered.has(key)) {
@@ -370,23 +379,23 @@ export async function discoverJobSources(
             addedThisPage++;
             console.log(`    ✓ Found ${source.kind}: ${source.company_key}`);
           }
-        }
+        });
 
         // Early stop: if Brave says no more, or we're no longer finding new sources
         if (!result.more) break;
         if (page >= 1 && addedThisPage === 0) break;
-        if (result.results.length < Math.min(20, perPage)) break;
-      } catch (error: any) {
+        if (_.size(result.results) < _.min([20, perPage])!) break;
+      } catch (error: unknown) {
         stats.errors.push(
-          `${discoveryQuery.kind} page ${page}: ${error?.message ?? String(error)}`,
+          `${discoveryQuery.kind} page ${page}: ${_.get(error, "message", String(error))}`,
         );
-        console.error(`❌ Error: ${error?.message ?? String(error)}`);
+        console.error(`❌ Error: ${_.get(error, "message", String(error))}`);
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
     }
   }
 
-  const sources = [...discovered.values()];
+  const sources = Array.from(discovered.values());
 
   console.log(
     `✅ Brave discovery complete: ${stats.sourcesExtracted} sources found (filtered out: ${stats.filteredOut})`,

@@ -8,11 +8,5 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/discover-jobs",
-      "schedule": "0 0 * * *"
-    }
-  ]
+  }
 }

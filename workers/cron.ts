@@ -1,0 +1,274 @@
+/**
+ * Cloudflare Workers Cron for Job Discovery
+ * Runs daily at midnight UTC
+ */
+
+interface Env {
+  BRAVE_API_KEY: string;
+  CLOUDFLARE_ACCOUNT_ID: string;
+  CLOUDFLARE_D1_DATABASE_ID: string;
+  CLOUDFLARE_API_TOKEN: string;
+  DB: D1Database;
+}
+
+type BraveWebResult = {
+  title?: string;
+  url?: string;
+  description?: string;
+  extra_snippets?: string[];
+};
+
+type BraveResponse = {
+  query?: { more_results_available?: boolean };
+  web?: { results?: BraveWebResult[] };
+};
+
+type JobSource = {
+  kind: "greenhouse" | "lever" | "ashby" | "workable" | "unknown";
+  company_key: string;
+  canonical_url?: string;
+  first_seen_at: number;
+};
+
+const DISCOVERY_QUERIES = [
+  { kind: "greenhouse", q: 'site:boards.greenhouse.io "Apply for this job"' },
+  { kind: "lever", q: 'site:jobs.lever.co "Apply for this job"' },
+  { kind: "ashby", q: 'site:jobs.ashbyhq.com "Apply"' },
+  { kind: "workable", q: "site:apply.workable.com" },
+] as const;
+
+async function braveSearch(
+  apiKey: string,
+  params: {
+    q: string;
+    freshness?: string;
+    count?: number;
+    offset?: number;
+    extra_snippets?: boolean;
+  },
+): Promise<{
+  results: BraveWebResult[];
+  more: boolean;
+}> {
+  const url = new URL("https://api.search.brave.com/res/v1/web/search");
+  url.searchParams.set("q", params.q);
+  if (params.freshness) url.searchParams.set("freshness", params.freshness);
+  if (params.count != null)
+    url.searchParams.set("count", String(Math.min(20, params.count)));
+  if (params.offset != null)
+    url.searchParams.set("offset", String(params.offset));
+  if (params.extra_snippets) url.searchParams.set("extra_snippets", "true");
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "Accept-Encoding": "gzip",
+      "X-Subscription-Token": apiKey,
+      "Cache-Control": "no-cache",
+    },
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`❌ Brave API ${res.status} ${res.statusText}: ${errorText}`);
+    throw new Error(`Brave API ${res.status}: ${errorText}`);
+  }
+
+  const data = (await res.json()) as BraveResponse;
+  const results = data.web?.results ?? [];
+  const more = Boolean(data.query?.more_results_available);
+
+  return { results, more };
+}
+
+function extractJobSource(url: string): JobSource | null {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    const path = parsed.pathname;
+
+    if (hostname === "boards.greenhouse.io") {
+      const match = path.match(/^\/([^\/]+)\//);
+      if (match) {
+        return {
+          kind: "greenhouse",
+          company_key: match[1],
+          canonical_url: `https://boards-api.greenhouse.io/v1/boards/${match[1]}/jobs`,
+          first_seen_at: Date.now(),
+        };
+      }
+    }
+
+    if (hostname === "jobs.lever.co") {
+      const match = path.match(/^\/([^\/]+)\//);
+      if (match) {
+        return {
+          kind: "lever",
+          company_key: match[1],
+          canonical_url: `https://api.lever.co/v0/postings/${match[1]}`,
+          first_seen_at: Date.now(),
+        };
+      }
+    }
+
+    if (hostname === "jobs.ashbyhq.com") {
+      const match = path.match(/^\/([^\/]+)\//);
+      if (match) {
+        return {
+          kind: "ashby",
+          company_key: match[1],
+          canonical_url: `https://api.ashbyhq.com/posting-api/job-board/${match[1]}`,
+          first_seen_at: Date.now(),
+        };
+      }
+    }
+
+    if (hostname === "apply.workable.com") {
+      const match = path.match(/^\/([^\/]+)\//);
+      if (match) {
+        return {
+          kind: "workable",
+          company_key: match[1],
+          canonical_url: `https://apply.workable.com/api/v3/accounts/${match[1]}/jobs`,
+          first_seen_at: Date.now(),
+        };
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function discoverJobSources(
+  env: Env,
+  options: { freshness?: string; maxOffsets?: number } = {},
+): Promise<{
+  success: boolean;
+  message: string;
+  stats: {
+    queriesRun: number;
+    resultsFound: number;
+    sourcesExtracted: number;
+    errors: string[];
+  };
+  sources: JobSource[];
+}> {
+  const { freshness = "pw", maxOffsets = 2 } = options;
+
+  console.log(
+    `🔍 Discovering jobs via Brave Search (freshness: ${freshness})...`,
+  );
+
+  const discoveredSources: JobSource[] = [];
+  const stats = {
+    queriesRun: 0,
+    resultsFound: 0,
+    sourcesExtracted: 0,
+    errors: [] as string[],
+  };
+
+  for (const discoveryQuery of DISCOVERY_QUERIES) {
+    for (let offset = 0; offset <= maxOffsets; offset++) {
+      try {
+        // Rate limit: 1 req/sec for free tier
+        if (stats.queriesRun > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1100));
+        }
+
+        const result = await braveSearch(env.BRAVE_API_KEY, {
+          q: discoveryQuery.q,
+          freshness,
+          count: 20,
+          offset,
+          extra_snippets: true,
+        });
+
+        stats.queriesRun++;
+        stats.resultsFound += result.results.length;
+
+        console.log(
+          `  ${discoveryQuery.kind} offset=${offset}: ${result.results.length} results`,
+        );
+
+        for (const item of result.results) {
+          if (!item.url) continue;
+
+          const source = extractJobSource(item.url);
+          if (source) {
+            const isDuplicate = discoveredSources.some(
+              (s) =>
+                s.kind === source.kind && s.company_key === source.company_key,
+            );
+
+            if (!isDuplicate) {
+              discoveredSources.push(source);
+              stats.sourcesExtracted++;
+              console.log(`    ✓ Found ${source.kind}: ${source.company_key}`);
+            }
+          }
+        }
+
+        if (!result.more) break;
+      } catch (error: any) {
+        stats.errors.push(
+          `${discoveryQuery.kind} offset ${offset}: ${error.message}`,
+        );
+        console.error(`❌ Error: ${error.message}`);
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      }
+    }
+  }
+
+  console.log(
+    `✅ Brave discovery complete: ${stats.sourcesExtracted} sources found`,
+  );
+
+  return {
+    success: true,
+    message: `Found ${stats.sourcesExtracted} job sources from ${stats.queriesRun} queries`,
+    stats,
+    sources: discoveredSources,
+  };
+}
+
+export default {
+  async scheduled(
+    event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    console.log("🔄 Cloudflare Cron: Starting job discovery...");
+
+    try {
+      const result = await discoverJobSources(env, {
+        freshness: "pw",
+        maxOffsets: 2,
+      });
+
+      console.log(`✅ Discovered ${result.stats.sourcesExtracted} sources`);
+      console.log(`Stats: ${JSON.stringify(result.stats)}`);
+
+      // TODO: Save discovered sources to D1 database
+      // Example:
+      // for (const source of result.sources) {
+      //   await env.DB.prepare(
+      //     `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+      //      VALUES (?, ?, ?, ?)`
+      //   ).bind(
+      //     source.kind,
+      //     source.company_key,
+      //     source.canonical_url,
+      //     new Date(source.first_seen_at).toISOString()
+      //   ).run();
+      // }
+
+      console.log("✅ Cron job completed successfully");
+    } catch (error) {
+      console.error("❌ Cron job failed:", error);
+      throw error;
+    }
+  },
+};

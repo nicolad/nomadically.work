@@ -32,7 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistSans.className} ${geistMono.variable} antialiased`}
       >
-        <Theme>
+        <Theme appearance="dark">
           <Toaster />
           <NuqsAdapter>{children}</NuqsAdapter>
         </Theme>

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { BirdChecker } from "./components/bird-checker";
+import { JobsProvider } from "@/components/jobs-provider";
 
 const Page = () => {
   return (
@@ -9,7 +9,7 @@ const Page = () => {
         <div className="z-30 w-full gradient absolute h-full blur-[100px] saturate-[150%] top-[80px] opacity-[0.15]"></div>
       </div>
       <div className="relative z-50">
-        <BirdChecker />
+        <JobsProvider />
       </div>
     </Suspense>
   );

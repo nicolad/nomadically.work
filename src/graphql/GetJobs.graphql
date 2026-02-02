@@ -1,0 +1,28 @@
+query GetJobs($sourceType: String, $status: String, $limit: Int, $offset: Int) {
+  jobs(sourceType: $sourceType, status: $status, limit: $limit, offset: $offset) {
+    id
+    title
+    company
+    location
+    salary
+    description
+    url
+    publishedDate
+    sourceType
+    sourceCategory
+    sourceDetail
+    guid
+    keywords
+    employmentType
+    experienceLevel
+    techStack
+    status
+    applied
+    appliedAt
+    isDeveloperRole
+    developerConfidence
+    remoteFriendly
+    createdAt
+    updatedAt
+  }
+}

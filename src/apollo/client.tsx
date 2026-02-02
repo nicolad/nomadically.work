@@ -1,8 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { ApolloClient, InMemoryCache, HttpLink } from "@apollo/client";
+import {
+  ApolloClient,
+  InMemoryCache,
+  HttpLink,
+  ApolloProvider,
+} from "@apollo/client";
 import merge from "deepmerge";
+
+// Re-export ApolloProvider for convenience
+export { ApolloProvider };
 
 let apolloClient: ApolloClient<any> | undefined;
 

@@ -1,0 +1,28 @@
+query GetJob($id: String!) {
+  job(id: $id) {
+    id
+    title
+    company
+    location
+    salary
+    description
+    url
+    publishedDate
+    sourceType
+    sourceCategory
+    sourceDetail
+    guid
+    keywords
+    employmentType
+    experienceLevel
+    techStack
+    status
+    applied
+    appliedAt
+    isDeveloperRole
+    developerConfidence
+    remoteFriendly
+    createdAt
+    updatedAt
+  }
+}

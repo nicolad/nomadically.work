@@ -1,6 +1,16 @@
 "use client";
 
 import { useGetJobsQuery } from "@/__generated__/hooks";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Flex,
+  Card,
+  Badge,
+  Button,
+} from "@radix-ui/themes";
 
 export function JobsList() {
   const { loading, error, data, refetch } = useGetJobsQuery({
@@ -13,121 +23,121 @@ export function JobsList() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
-        <div className="text-gray-500">Loading jobs...</div>
-      </div>
+      <Container size="4" p="8">
+        <Text color="gray">Loading jobs...</Text>
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
-        <div className="text-red-500">Error loading jobs: {error.message}</div>
-        <button
-          onClick={() => refetch()}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
+      <Container size="4" p="8">
+        <Text color="red">Error loading jobs: {error.message}</Text>
+        <Button onClick={() => refetch()} mt="4">
           Retry
-        </button>
-      </div>
+        </Button>
+      </Container>
     );
   }
 
   const jobs = data?.jobs || [];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Remote Jobs</h1>
-        <div className="text-sm text-gray-500">{jobs.length} jobs found</div>
-      </div>
+    <Container size="4" p="8">
+      <Flex justify="between" align="center" mb="6">
+        <Heading size="8">Remote Jobs</Heading>
+        <Text size="2" color="gray">
+          {jobs.length} jobs found
+        </Text>
+      </Flex>
 
-      <div className="grid gap-4">
+      <Flex direction="column" gap="4">
         {jobs.map((job) => (
-          <div
-            key={job.id}
-            className="border rounded-lg p-6 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <h2 className="text-xl font-semibold">{job.title}</h2>
-              {job.status && (
-                <span className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                  {job.status}
-                </span>
-              )}
-            </div>
+          <Card key={job.id} size="3">
+            <Flex justify="between" align="start" mb="2">
+              <Heading size="5">{job.title}</Heading>
+              {job.status && <Badge color="blue">{job.status}</Badge>}
+            </Flex>
 
-            <div className="text-gray-600 mb-2">
-              {job.company && (
-                <span className="font-medium">{job.company}</span>
-              )}
-              {job.location && <span className="ml-2">• {job.location}</span>}
-              {job.salary && <span className="ml-2">• {job.salary}</span>}
-            </div>
+            <Flex gap="2" mb="2" wrap="wrap">
+              {job.company && <Text weight="medium">{job.company}</Text>}
+              {job.location && <Text color="gray">• {job.location}</Text>}
+              {job.salary && <Text color="gray">• {job.salary}</Text>}
+            </Flex>
 
             {job.employmentType && (
-              <div className="text-sm text-gray-500 mb-2">
+              <Text size="2" color="gray" mb="2">
                 {job.employmentType}
                 {job.experienceLevel && ` • ${job.experienceLevel}`}
                 {job.remoteFriendly && ` • Remote Friendly`}
-              </div>
+              </Text>
             )}
 
             {job.techStack && job.techStack.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
+              <Flex gap="2" wrap="wrap" mb="3">
                 {job.techStack.map((tech, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
-                  >
+                  <Badge key={idx} variant="soft" color="gray">
                     {tech}
-                  </span>
+                  </Badge>
                 ))}
-              </div>
+              </Flex>
             )}
 
             {job.description && (
-              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+              <Text
+                size="2"
+                color="gray"
+                mb="3"
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
                 {job.description}
-              </p>
+              </Text>
             )}
 
-            <div className="flex justify-between items-center mt-4">
-              <div className="text-xs text-gray-400">
+            <Flex justify="between" align="center" mt="4">
+              <Text size="1" color="gray">
                 {job.sourceType && <span>Source: {job.sourceType}</span>}
                 {job.publishedDate && (
-                  <span className="ml-3">
+                  <span style={{ marginLeft: "12px" }}>
                     Posted: {new Date(job.publishedDate).toLocaleDateString()}
                   </span>
                 )}
-              </div>
+              </Text>
 
               {job.url && (
-                <a
-                  href={job.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                >
-                  View Job
-                </a>
+                <Button asChild size="2">
+                  <a href={job.url} target="_blank" rel="noopener noreferrer">
+                    View Job
+                  </a>
+                </Button>
               )}
-            </div>
+            </Flex>
 
             {job.applied && job.appliedAt && (
-              <div className="mt-3 pt-3 border-t text-sm text-green-600">
-                ✓ Applied on {new Date(job.appliedAt).toLocaleDateString()}
-              </div>
+              <Box
+                mt="3"
+                pt="3"
+                style={{ borderTop: "1px solid var(--gray-6)" }}
+              >
+                <Text size="2" color="green">
+                  ✓ Applied on {new Date(job.appliedAt).toLocaleDateString()}
+                </Text>
+              </Box>
             )}
-          </div>
+          </Card>
         ))}
 
         {jobs.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            No jobs found in the database.
-          </div>
+          <Box py="9" style={{ textAlign: "center" }}>
+            <Text color="gray">No jobs found in the database.</Text>
+          </Box>
         )}
-      </div>
-    </div>
+      </Flex>
+    </Container>
   );
 }

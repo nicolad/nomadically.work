@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "@radix-ui/themes/styles.css";
 import "./globals.css";
+import { Theme } from "@radix-ui/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -30,8 +32,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistSans.className} ${geistMono.variable} antialiased`}
       >
-        <Toaster />
-        <NuqsAdapter>{children}</NuqsAdapter>
+        <Theme>
+          <Toaster />
+          <NuqsAdapter>{children}</NuqsAdapter>
+        </Theme>
       </body>
     </html>
   );

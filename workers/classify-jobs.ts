@@ -3,7 +3,6 @@
  * Runs periodically to classify unclassified jobs
  *
  * Uses DeepSeek API (BETA) for classification.
- * No lodash (Cloudflare-friendly).
  */
 
 import { drizzle } from "drizzle-orm/libsql";
@@ -70,11 +69,11 @@ interface ExecutionContext {
 }
 
 interface Job {
-  id: string;
+  id: number;
   title: string;
-  location: string;
-  description: string;
-  status: string;
+  location: string | null;
+  description: string | null;
+  status: string | null;
 }
 
 interface ClassificationResult {

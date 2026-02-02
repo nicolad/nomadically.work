@@ -3,7 +3,7 @@
  * Accepts POST requests with job data and inserts them into the database
  */
 
-import { createClient } from "@libsql/client";
+import { createClient, type Client } from "@libsql/client";
 
 interface Env {
   TURSO_DB_URL: string;
@@ -61,11 +61,29 @@ function validateJob(job: JobInput): { valid: boolean; errors: string[] } {
 }
 
 async function insertJob(
-  turso: ReturnType<typeof createClient>,
+  turso: Client,
   job: JobInput,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const now = new Date().toISOString();
+
+    const args: (string | number | null)[] = [
+      job.externalId!,
+      job.sourceId || null,
+      job.sourceKind!,
+      job.companyKey!,
+      job.title!,
+      job.location || null,
+      job.url!,
+      job.description || null,
+      job.postedAt || now,
+      job.score || null,
+      job.scoreReason || null,
+      job.status || "new",
+      now, // created_at
+      now, // updated_at
+      now, // updated_at for UPDATE clause
+    ];
 
     const result = await turso.execute({
       sql: `INSERT INTO jobs (
@@ -95,23 +113,7 @@ async function insertJob(
         score_reason = excluded.score_reason,
         status = excluded.status,
         updated_at = ?`,
-      args: [
-        job.externalId,
-        job.sourceId || null,
-        job.sourceKind,
-        job.companyKey,
-        job.title,
-        job.location || null,
-        job.url,
-        job.description || null,
-        job.postedAt || now,
-        job.score || null,
-        job.scoreReason || null,
-        job.status || "new",
-        now, // created_at
-        now, // updated_at
-        now, // updated_at for UPDATE clause
-      ],
+      args,
     });
 
     return {

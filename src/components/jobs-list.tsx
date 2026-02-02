@@ -133,27 +133,16 @@ export function JobsList() {
             </Flex>
 
             <Flex gap="2" mb="2" wrap="wrap">
-              {job.company && <Text weight="medium">{job.company}</Text>}
+              {job.company_key && (
+                <Text weight="medium">{job.company_key}</Text>
+              )}
               {job.location && <Text color="gray">• {job.location}</Text>}
-              {job.salary && <Text color="gray">• {job.salary}</Text>}
             </Flex>
 
-            {job.employmentType && (
+            {job.source_kind && (
               <Text size="2" color="gray" mb="2">
-                {job.employmentType}
-                {job.experienceLevel && ` • ${job.experienceLevel}`}
-                {job.remoteFriendly && ` • Remote Friendly`}
+                {job.source_kind}
               </Text>
-            )}
-
-            {job.techStack && job.techStack.length > 0 && (
-              <Flex gap="2" wrap="wrap" mb="3">
-                {job.techStack.map((tech, idx) => (
-                  <Badge key={idx} variant="soft" color="gray">
-                    {tech}
-                  </Badge>
-                ))}
-              </Flex>
             )}
 
             {job.description && (
@@ -174,10 +163,10 @@ export function JobsList() {
 
             <Flex justify="between" align="center" mt="4">
               <Text size="1" color="gray">
-                {job.sourceType && <span>Source: {job.sourceType}</span>}
-                {job.publishedDate && (
+                {job.source_kind && <span>Source: {job.source_kind}</span>}
+                {job.posted_at && (
                   <span style={{ marginLeft: "12px" }}>
-                    Posted: {new Date(job.publishedDate).toLocaleDateString()}
+                    Posted: {new Date(job.posted_at).toLocaleDateString()}
                   </span>
                 )}
               </Text>
@@ -190,18 +179,6 @@ export function JobsList() {
                 </Button>
               )}
             </Flex>
-
-            {job.applied && job.appliedAt && (
-              <Box
-                mt="3"
-                pt="3"
-                style={{ borderTop: "1px solid var(--gray-6)" }}
-              >
-                <Text size="2" color="green">
-                  ✓ Applied on {new Date(job.appliedAt).toLocaleDateString()}
-                </Text>
-              </Box>
-            )}
           </Card>
         ))}
       </Flex>

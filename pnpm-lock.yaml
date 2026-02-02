@@ -105,6 +105,9 @@ importers:
       '@graphql-codegen/typescript-react-apollo':
         specifier: ^4.4.0
         version: 4.4.0(graphql@16.12.0)
+      '@next/swc-darwin-arm64':
+        specifier: 15.5.7
+        version: 15.5.7
       '@types/lodash':
         specifier: ^4.17.23
         version: 4.17.23
@@ -8626,8 +8629,7 @@ snapshots:
     dependencies:
       fast-glob: 3.3.1
 
-  '@next/swc-darwin-arm64@15.5.7':
-    optional: true
+  '@next/swc-darwin-arm64@15.5.7': {}
 
   '@next/swc-darwin-x64@15.5.7':
     optional: true

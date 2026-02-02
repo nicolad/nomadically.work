@@ -53,11 +53,13 @@ export const promptClaude = async ({
         },
       ],
       {
-        output: z.object({
-          bird: z.boolean(),
-          species: z.string(),
-          location: z.string(),
-        }),
+        structuredOutput: {
+          schema: z.object({
+            bird: z.boolean(),
+            species: z.string(),
+            location: z.string(),
+          }),
+        },
       },
     );
 

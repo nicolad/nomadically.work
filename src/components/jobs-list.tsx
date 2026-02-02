@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useGetJobsQuery } from "@/__generated__/hooks";
+import type { GetJobsQuery } from "@/__generated__/graphql";
 import {
   Box,
   Container,
@@ -14,41 +15,36 @@ import {
   Tabs,
 } from "@radix-ui/themes";
 
+type Job = GetJobsQuery["jobs"][number];
+type BadgeColor = "green" | "orange" | "blue" | "gray";
+
 type JobStatus = "eu-remote" | "non-eu-remote" | "eu-onsite" | "non-eu" | "all";
 
-const getStatusBadgeColor = (status: string) => {
+const getStatusBadgeColor = (status: Job["status"]): BadgeColor => {
   switch (status) {
     case "eu-remote":
       return "green";
-    case "non-eu-remote":
-      return "orange";
-    case "eu-onsite":
+    case "uk-remote":
       return "blue";
-    case "non-eu":
-      return "gray";
     default:
       return "gray";
   }
 };
 
-const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: Job["status"]): string => {
   switch (status) {
     case "eu-remote":
       return "EU Remote";
-    case "non-eu-remote":
-      return "Non-EU Remote";
-    case "eu-onsite":
-      return "EU On-site";
-    case "non-eu":
-      return "Non-EU";
+    case "uk-remote":
+      return "UK Remote";
     default:
-      return status;
+      return status ?? "Unknown";
   }
 };
 
 export function JobsList() {
   const [statusFilter, setStatusFilter] = useState<JobStatus>("eu-remote");
-  
+
   const { loading, error, data, refetch } = useGetJobsQuery({
     variables: {
       offset: 0,
@@ -76,22 +72,41 @@ export function JobsList() {
   }
 
   const jobs = data?.jobs || [];
+  const filteredJobs = jobs.filter(
+    (job) => statusFilter === "all" || job.status === statusFilter,
+  );
 
   return (
     <Container size="4" p="8">
       <Flex justify="between" align="center" mb="6">
         <Heading size="8">Remote Jobs</Heading>
         <Text size="2" color="gray">
-          {jobs.length} jobs found
+          {filteredJobs.length} of {jobs.length} jobs
         </Text>
       </Flex>
 
+      <Tabs.Root
+        value={statusFilter}
+        onValueChange={(value) => setStatusFilter(value as JobStatus)}
+        mb="6"
+      >
+        <Tabs.List>
+          <Tabs.Trigger value="eu-remote">EU Remote</Tabs.Trigger>
+          <Tabs.Trigger value="uk-remote">UK Remote</Tabs.Trigger>
+          <Tabs.Trigger value="all">All Jobs</Tabs.Trigger>
+        </Tabs.List>
+      </Tabs.Root>
+
       <Flex direction="column" gap="4">
-        {jobs.map((job) => (
+        {filteredJobs.map((job) => (
           <Card key={job.id} size="3">
             <Flex justify="between" align="start" mb="2">
               <Heading size="5">{job.title}</Heading>
-              {job.status && <Badge color="blue">{job.status}</Badge>}
+              {job.status && (
+                <Badge color={getStatusBadgeColor(job.status)}>
+                  {getStatusLabel(job.status)}
+                </Badge>
+              )}
             </Flex>
 
             <Flex gap="2" mb="2" wrap="wrap">
@@ -167,9 +182,15 @@ export function JobsList() {
           </Card>
         ))}
 
-        {jobs.length === 0 && (
+        {filteredJobs.length === 0 && (
           <Box py="9" style={{ textAlign: "center" }}>
-            <Text color="gray">No jobs found in the database.</Text>
+            <Text color="gray">
+              No jobs found{" "}
+              {statusFilter !== "all"
+                ? `with status "${getStatusLabel(statusFilter)}"`
+                : "in the database"}
+              .
+            </Text>
           </Box>
         )}
       </Flex>

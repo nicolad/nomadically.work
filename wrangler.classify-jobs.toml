@@ -1,0 +1,25 @@
+name = "nomadically-work-classify-jobs"
+main = "workers/classify-jobs.ts"
+compatibility_date = "2024-01-01"
+
+# Cron trigger - runs every 6 hours
+[triggers]
+crons = ["0 */6 * * *"]
+
+# Environment variables
+[vars]
+TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
+
+# Secrets (set via wrangler secret put)
+# - TURSO_DB_AUTH_TOKEN  
+# - DEEPSEEK_API_KEY (or OPENAI_API_KEY as fallback)
+# - CRON_SECRET (optional)
+
+# Observability - Enable logging
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+head_sampling_rate = 1.0

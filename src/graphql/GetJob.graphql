@@ -1,28 +1,19 @@
 query GetJob($id: String!) {
   job(id: $id) {
     id
+    external_id
+    source_id
+    source_kind
+    company_key
     title
-    company
     location
-    salary
-    description
     url
-    publishedDate
-    sourceType
-    sourceCategory
-    sourceDetail
-    guid
-    keywords
-    employmentType
-    experienceLevel
-    techStack
+    description
+    posted_at
+    score
+    score_reason
     status
-    applied
-    appliedAt
-    isDeveloperRole
-    developerConfidence
-    remoteFriendly
-    createdAt
-    updatedAt
+    created_at
+    updated_at
   }
 }

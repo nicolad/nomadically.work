@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useGetJobsQuery } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
 import {
@@ -13,6 +14,7 @@ import {
   Badge,
   Button,
   Tabs,
+  TextField,
 } from "@radix-ui/themes";
 
 type Job = GetJobsQuery["jobs"][number];
@@ -43,10 +45,37 @@ const getStatusLabel = (status: Job["status"]): string => {
 };
 
 export function JobsList() {
-  const [statusFilter, setStatusFilter] = useState<JobStatus>("eu-remote");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    searchParams.get("q") || "",
+  );
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Update URL when debounced search changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (debouncedSearch) {
+      params.set("q", debouncedSearch);
+    } else {
+      params.delete("q");
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : "/";
+    router.replace(newUrl, { scroll: false });
+  }, [debouncedSearch, router, searchParams]);
 
   const { loading, error, data, refetch } = useGetJobsQuery({
     variables: {
+      search: debouncedSearch || undefined,
       offset: 0,
     },
     pollInterval: 60000, // Refresh every minute
@@ -72,33 +101,27 @@ export function JobsList() {
   }
 
   const jobs = data?.jobs || [];
-  const filteredJobs = jobs.filter(
-    (job) => statusFilter === "all" || job.status === statusFilter,
-  );
 
   return (
     <Container size="4" px="8">
       <Flex justify="between" align="center" mb="6">
         <Heading size="8">Remote Jobs</Heading>
         <Text size="2" color="gray">
-          {filteredJobs.length} of {jobs.length} jobs
+          {jobs.length} of {jobs.length} jobs
         </Text>
       </Flex>
 
-      <Tabs.Root
-        value={statusFilter}
-        onValueChange={(value) => setStatusFilter(value as JobStatus)}
-        mb="6"
-      >
-        <Tabs.List>
-          <Tabs.Trigger value="eu-remote">EU Remote</Tabs.Trigger>
-          <Tabs.Trigger value="uk-remote">UK Remote</Tabs.Trigger>
-          <Tabs.Trigger value="all">All Jobs</Tabs.Trigger>
-        </Tabs.List>
-      </Tabs.Root>
+      <Box mb="4">
+        <TextField.Root
+          placeholder="Search jobs by title, company, or location..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          size="3"
+        />
+      </Box>
 
       <Flex direction="column" gap="4">
-        {filteredJobs.map((job) => (
+        {jobs.map((job) => (
           <Card key={job.id} size="3">
             <Flex justify="between" align="start" mb="2">
               <Heading size="5">{job.title}</Heading>
@@ -181,18 +204,6 @@ export function JobsList() {
             )}
           </Card>
         ))}
-
-        {filteredJobs.length === 0 && (
-          <Box py="9" style={{ textAlign: "center" }}>
-            <Text color="gray">
-              No jobs found{" "}
-              {statusFilter !== "all"
-                ? `with status "${getStatusLabel(statusFilter)}"`
-                : "in the database"}
-              .
-            </Text>
-          </Box>
-        )}
       </Flex>
     </Container>
   );

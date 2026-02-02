@@ -12,27 +12,18 @@ interface Env {
 }
 
 interface JobInput {
+  externalId?: string; // Maps to external_id
+  sourceId?: number; // Maps to source_id
+  sourceKind?: string; // Maps to source_kind (e.g., 'rss', 'api', 'scrape')
+  companyKey?: string; // Maps to company_key (normalized company identifier)
   title?: string;
-  company?: string;
   location?: string;
-  salary?: string;
-  description?: string;
   url?: string;
-  publishedDate?: string;
-  sourceType?: string;
-  sourceCategory?: string;
-  sourceDetail?: string;
-  guid?: string;
-  keywords?: string[];
-  employmentType?: string;
-  experienceLevel?: string;
-  techStack?: string[];
-  status?: string;
-  applied?: boolean;
-  appliedAt?: string;
-  isDeveloperRole?: boolean;
-  developerConfidence?: string;
-  remoteFriendly?: boolean;
+  description?: string;
+  postedAt?: string; // Maps to posted_at
+  score?: number;
+  scoreReason?: string; // Maps to score_reason
+  status?: string; // Default: 'new'
 }
 
 interface InsertJobsRequest {
@@ -42,17 +33,25 @@ interface InsertJobsRequest {
 function validateJob(job: JobInput): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // Add basic validation rules
+  // Required fields based on schema
   if (!job.title?.trim()) {
     errors.push("title is required");
   }
 
-  if (!job.company?.trim()) {
-    errors.push("company is required");
+  if (!job.companyKey?.trim()) {
+    errors.push("companyKey is required");
   }
 
   if (!job.url?.trim()) {
     errors.push("url is required");
+  }
+
+  if (!job.externalId?.trim()) {
+    errors.push("externalId is required");
+  }
+
+  if (!job.sourceKind?.trim()) {
+    errors.push("sourceKind is required");
   }
 
   return {
@@ -67,93 +66,57 @@ async function insertJob(
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const now = new Date().toISOString();
-    const guid = job.guid || `${job.company}_${job.title}_${Date.now()}`;
-
-    // Convert arrays to JSON strings for storage
-    const keywords = job.keywords ? JSON.stringify(job.keywords) : null;
-    const techStack = job.techStack ? JSON.stringify(job.techStack) : null;
 
     const result = await turso.execute({
       sql: `INSERT INTO jobs (
-        id,
+        external_id,
+        source_id,
+        source_kind,
+        company_key,
         title,
-        company,
         location,
-        salary,
-        description,
         url,
-        publishedDate,
-        sourceType,
-        sourceCategory,
-        sourceDetail,
-        guid,
-        keywords,
-        employmentType,
-        experienceLevel,
-        techStack,
+        description,
+        posted_at,
+        score,
+        score_reason,
         status,
-        applied,
-        appliedAt,
-        isDeveloperRole,
-        developerConfidence,
-        remoteFriendly,
-        createdAt,
-        updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(guid) DO UPDATE SET
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source_kind, company_key, external_id) DO UPDATE SET
+        source_id = excluded.source_id,
         title = excluded.title,
-        company = excluded.company,
         location = excluded.location,
-        salary = excluded.salary,
-        description = excluded.description,
         url = excluded.url,
-        publishedDate = excluded.publishedDate,
-        sourceType = excluded.sourceType,
-        sourceCategory = excluded.sourceCategory,
-        sourceDetail = excluded.sourceDetail,
-        keywords = excluded.keywords,
-        employmentType = excluded.employmentType,
-        experienceLevel = excluded.experienceLevel,
-        techStack = excluded.techStack,
+        description = excluded.description,
+        posted_at = excluded.posted_at,
+        score = excluded.score,
+        score_reason = excluded.score_reason,
         status = excluded.status,
-        applied = excluded.applied,
-        appliedAt = excluded.appliedAt,
-        isDeveloperRole = excluded.isDeveloperRole,
-        developerConfidence = excluded.developerConfidence,
-        remoteFriendly = excluded.remoteFriendly,
-        updatedAt = ?`,
+        updated_at = ?`,
       args: [
-        guid, // id (using guid as id)
-        job.title || null,
-        job.company || null,
+        job.externalId,
+        job.sourceId || null,
+        job.sourceKind,
+        job.companyKey,
+        job.title,
         job.location || null,
-        job.salary || null,
+        job.url,
         job.description || null,
-        job.url || null,
-        job.publishedDate || null,
-        job.sourceType || null,
-        job.sourceCategory || null,
-        job.sourceDetail || null,
-        guid,
-        keywords,
-        job.employmentType || null,
-        job.experienceLevel || null,
-        techStack,
+        job.postedAt || now,
+        job.score || null,
+        job.scoreReason || null,
         job.status || "new",
-        job.applied ? 1 : 0,
-        job.appliedAt || null,
-        job.isDeveloperRole ? 1 : 0,
-        job.developerConfidence || null,
-        job.remoteFriendly ? 1 : 0,
-        now, // createdAt
-        now, // updatedAt
-        now, // updatedAt for UPDATE clause
+        now, // created_at
+        now, // updated_at
+        now, // updated_at for UPDATE clause
       ],
     });
 
     return {
       success: true,
-      id: guid,
+      id: result.lastInsertRowid?.toString() || job.externalId,
     };
   } catch (error) {
     console.error("Failed to insert job:", error);

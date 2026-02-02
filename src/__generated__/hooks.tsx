@@ -20,30 +20,21 @@ export type Scalars = {
 
 export type Job = {
   __typename?: 'Job';
-  applied?: Maybe<Scalars['Boolean']['output']>;
-  appliedAt?: Maybe<Scalars['String']['output']>;
-  company?: Maybe<Scalars['String']['output']>;
-  createdAt?: Maybe<Scalars['String']['output']>;
+  company_key: Scalars['String']['output'];
+  created_at: Scalars['String']['output'];
   description?: Maybe<Scalars['String']['output']>;
-  developerConfidence?: Maybe<Scalars['String']['output']>;
-  employmentType?: Maybe<Scalars['String']['output']>;
-  experienceLevel?: Maybe<Scalars['String']['output']>;
-  guid?: Maybe<Scalars['String']['output']>;
-  id: Scalars['String']['output'];
-  isDeveloperRole?: Maybe<Scalars['Boolean']['output']>;
-  keywords?: Maybe<Array<Scalars['String']['output']>>;
+  external_id: Scalars['String']['output'];
+  id: Scalars['Int']['output'];
   location?: Maybe<Scalars['String']['output']>;
-  publishedDate?: Maybe<Scalars['String']['output']>;
-  remoteFriendly?: Maybe<Scalars['Boolean']['output']>;
-  salary?: Maybe<Scalars['String']['output']>;
-  sourceCategory?: Maybe<Scalars['String']['output']>;
-  sourceDetail?: Maybe<Scalars['String']['output']>;
-  sourceType?: Maybe<Scalars['String']['output']>;
+  posted_at: Scalars['String']['output'];
+  score?: Maybe<Scalars['Float']['output']>;
+  score_reason?: Maybe<Scalars['String']['output']>;
+  source_id?: Maybe<Scalars['String']['output']>;
+  source_kind: Scalars['String']['output'];
   status?: Maybe<Scalars['String']['output']>;
-  techStack?: Maybe<Array<Scalars['String']['output']>>;
-  title?: Maybe<Scalars['String']['output']>;
-  updatedAt?: Maybe<Scalars['String']['output']>;
-  url?: Maybe<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  updated_at: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export type Query = {
@@ -61,6 +52,7 @@ export type QueryJobArgs = {
 export type QueryJobsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
 };
@@ -70,46 +62,38 @@ export type GetJobQueryVariables = Exact<{
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: string, title?: string | null, company?: string | null, location?: string | null, salary?: string | null, description?: string | null, url?: string | null, publishedDate?: string | null, sourceType?: string | null, sourceCategory?: string | null, sourceDetail?: string | null, guid?: string | null, keywords?: Array<string> | null, employmentType?: string | null, experienceLevel?: string | null, techStack?: Array<string> | null, status?: string | null, applied?: boolean | null, appliedAt?: string | null, isDeveloperRole?: boolean | null, developerConfidence?: string | null, remoteFriendly?: boolean | null, createdAt?: string | null, updatedAt?: string | null } | null };
+export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string } | null };
 
 export type GetJobsQueryVariables = Exact<{
   sourceType?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: Array<{ __typename?: 'Job', id: string, title?: string | null, company?: string | null, location?: string | null, salary?: string | null, description?: string | null, url?: string | null, publishedDate?: string | null, sourceType?: string | null, sourceCategory?: string | null, sourceDetail?: string | null, guid?: string | null, keywords?: Array<string> | null, employmentType?: string | null, experienceLevel?: string | null, techStack?: Array<string> | null, status?: string | null, applied?: boolean | null, appliedAt?: string | null, isDeveloperRole?: boolean | null, developerConfidence?: string | null, remoteFriendly?: boolean | null, createdAt?: string | null, updatedAt?: string | null }> };
+export type GetJobsQuery = { __typename?: 'Query', jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string }> };
 
 
 export const GetJobDocument = gql`
     query GetJob($id: String!) {
   job(id: $id) {
     id
+    external_id
+    source_id
+    source_kind
+    company_key
     title
-    company
     location
-    salary
-    description
     url
-    publishedDate
-    sourceType
-    sourceCategory
-    sourceDetail
-    guid
-    keywords
-    employmentType
-    experienceLevel
-    techStack
+    description
+    posted_at
+    score
+    score_reason
     status
-    applied
-    appliedAt
-    isDeveloperRole
-    developerConfidence
-    remoteFriendly
-    createdAt
-    updatedAt
+    created_at
+    updated_at
   }
 }
     `;
@@ -150,32 +134,29 @@ export type GetJobLazyQueryHookResult = ReturnType<typeof useGetJobLazyQuery>;
 export type GetJobSuspenseQueryHookResult = ReturnType<typeof useGetJobSuspenseQuery>;
 export type GetJobQueryResult = Apollo.QueryResult<GetJobQuery, GetJobQueryVariables>;
 export const GetJobsDocument = gql`
-    query GetJobs($sourceType: String, $status: String, $limit: Int, $offset: Int) {
-  jobs(sourceType: $sourceType, status: $status, limit: $limit, offset: $offset) {
+    query GetJobs($sourceType: String, $status: String, $search: String, $limit: Int, $offset: Int) {
+  jobs(
+    sourceType: $sourceType
+    status: $status
+    search: $search
+    limit: $limit
+    offset: $offset
+  ) {
     id
+    external_id
+    source_id
+    source_kind
+    company_key
     title
-    company
     location
-    salary
-    description
     url
-    publishedDate
-    sourceType
-    sourceCategory
-    sourceDetail
-    guid
-    keywords
-    employmentType
-    experienceLevel
-    techStack
+    description
+    posted_at
+    score
+    score_reason
     status
-    applied
-    appliedAt
-    isDeveloperRole
-    developerConfidence
-    remoteFriendly
-    createdAt
-    updatedAt
+    created_at
+    updated_at
   }
 }
     `;
@@ -194,6 +175,7 @@ export const GetJobsDocument = gql`
  *   variables: {
  *      sourceType: // value for 'sourceType'
  *      status: // value for 'status'
+ *      search: // value for 'search'
  *      limit: // value for 'limit'
  *      offset: // value for 'offset'
  *   },

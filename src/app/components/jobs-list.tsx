@@ -1,11 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { useGetJobsQuery } from "@/__generated__/hooks";
-import { Card, Flex, Text, Badge, Box, Heading } from "@radix-ui/themes";
+import {
+  Card,
+  Flex,
+  Text,
+  Badge,
+  Box,
+  Heading,
+  TextField,
+} from "@radix-ui/themes";
+import Link from "next/link";
 
 export function JobsList() {
+  const [searchTerm, setSearchTerm] = useState("");
   const { loading, error, data } = useGetJobsQuery({
     variables: {
+      search: searchTerm || undefined,
       limit: 50,
       offset: 0,
     },
@@ -29,7 +41,7 @@ export function JobsList() {
 
   const jobs = data?.jobs || [];
 
-  if (jobs.length === 0) {
+  if (jobs.length === 0 && !loading) {
     return (
       <Flex justify="center" align="center" style={{ minHeight: "200px" }}>
         <Text>No jobs found</Text>
@@ -42,46 +54,79 @@ export function JobsList() {
       <Heading size="6" mb="4">
         Jobs ({jobs.length})
       </Heading>
-      <Flex direction="column" gap="3">
-        {jobs.map((job) => (
-          <Card key={job.id}>
-            <Flex direction="column" gap="2">
-              <Flex justify="between" align="center">
-                <Heading size="4">{job.title || "Untitled"}</Heading>
-                {job.status && (
-                  <Badge color={job.status === "active" ? "green" : "gray"}>
-                    {job.status}
-                  </Badge>
-                )}
-              </Flex>
 
-              {job.company && (
-                <Text weight="medium" size="3">
-                  {job.company}
-                </Text>
-              )}
+      <Box mb="4">
+        <TextField.Root
+          placeholder="Search jobs by title, company, or location..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          size="3"
+        />
+      </Box>
 
-              {job.location && (
-                <Text size="2" color="gray">
-                  📍 {job.location}
-                </Text>
-              )}
+      {jobs.length === 0 ? (
+        <Flex justify="center" align="center" style={{ minHeight: "200px" }}>
+          <Text>No jobs match your search</Text>
+        </Flex>
+      ) : (
+        <Flex direction="column" gap="3">
+          {jobs.map((job) => (
+            <Link
+              key={job.id}
+              href={`/jobs/${job.id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <Card
+                style={{ cursor: "pointer", transition: "box-shadow 0.2s" }}
+                className="hover:shadow-lg"
+              >
+                <Flex direction="column" gap="2">
+                  <Flex justify="between" align="center">
+                    <Heading size="4">{job.title || "Untitled"}</Heading>
+                    {job.status && (
+                      <Badge
+                        color={
+                          job.status === "eu-remote"
+                            ? "green"
+                            : job.status === "non-eu"
+                              ? "red"
+                              : "gray"
+                        }
+                      >
+                        {job.status}
+                      </Badge>
+                    )}
+                  </Flex>
 
-              {job.salary && (
-                <Text size="2" color="green">
-                  💰 {job.salary}
-                </Text>
-              )}
+                  {job.company_key && (
+                    <Text weight="medium" size="3">
+                      {job.company_key}
+                    </Text>
+                  )}
 
-              {job.createdAt && (
-                <Text size="1" color="gray">
-                  Posted: {new Date(job.createdAt).toLocaleDateString()}
-                </Text>
-              )}
-            </Flex>
-          </Card>
-        ))}
-      </Flex>
+                  {job.location && (
+                    <Text size="2" color="gray">
+                      📍 {job.location}
+                    </Text>
+                  )}
+
+                  {job.score && (
+                    <Text size="2" color="green">
+                      🎯 Score: {(job.score * 100).toFixed(0)}%
+                    </Text>
+                  )}
+
+                  {job.created_at && (
+                    <Text size="1" color="gray">
+                      Posted: {new Date(job.created_at).toLocaleDateString()}
+                    </Text>
+                  )}
+                </Flex>
+              </Card>
+            </Link>
+          ))}
+        </Flex>
+      )}
     </Box>
   );
 }

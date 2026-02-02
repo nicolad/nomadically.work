@@ -1,4 +1,6 @@
-import { getTursoClient } from "@/lib/turso";
+import { db } from "@/db";
+import { jobs } from "@/db/schema";
+import { eq, and, or, like, desc } from "drizzle-orm";
 import type { GraphQLContext } from "./context";
 
 export const resolvers = {
@@ -36,41 +38,51 @@ export const resolvers = {
       args: {
         sourceType?: string;
         status?: string;
+        search?: string;
         limit?: number;
         offset?: number;
       },
       _context: GraphQLContext,
     ) {
       try {
-        const client = getTursoClient();
-
-        let sql = "SELECT * FROM jobs";
-        const params: any[] = [];
-        const conditions: string[] = [];
+        const conditions = [];
 
         if (args.status) {
-          conditions.push("status = ?");
-          params.push(args.status);
+          conditions.push(eq(jobs.status, args.status));
         }
+
+        if (args.search) {
+          const searchPattern = `%${args.search}%`;
+          conditions.push(
+            or(
+              like(jobs.title, searchPattern),
+              like(jobs.company_key, searchPattern),
+              like(jobs.location, searchPattern),
+            )!,
+          );
+        }
+
+        let query = db.select().from(jobs);
 
         if (conditions.length > 0) {
-          sql += " WHERE " + conditions.join(" AND ");
+          query = query.where(and(...conditions)!) as any;
         }
 
-        sql += " ORDER BY created_at DESC";
+        query = query.orderBy(
+          desc(jobs.posted_at),
+          desc(jobs.created_at),
+        ) as any;
 
         if (args.limit) {
-          sql += " LIMIT ?";
-          params.push(args.limit);
+          query = query.limit(args.limit) as any;
         }
 
         if (args.offset) {
-          sql += " OFFSET ?";
-          params.push(args.offset);
+          query = query.offset(args.offset) as any;
         }
 
-        const result = await client.execute({ sql, args: params });
-        return result.rows || [];
+        const result = await query;
+        return result || [];
       } catch (error) {
         console.error("Error fetching jobs:", error);
         return [];
@@ -78,12 +90,12 @@ export const resolvers = {
     },
     async job(_parent: any, args: { id: string }, _context: GraphQLContext) {
       try {
-        const client = getTursoClient();
-        const result = await client.execute({
-          sql: "SELECT * FROM jobs WHERE id = ?",
-          args: [args.id],
-        });
-        return result.rows?.[0] || null;
+        const result = await db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.id, parseInt(args.id)))
+          .limit(1);
+        return result?.[0] || null;
       } catch (error) {
         console.error("Error fetching job:", error);
         return null;

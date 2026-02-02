@@ -17,7 +17,7 @@ type BraveResponse = {
 };
 
 export type JobSource = {
-  kind: "greenhouse" | "lever" | "ashby" | "workable" | "unknown";
+  kind: "greenhouse" | "lever" | "ashby" | "workable" | "onhires" | "unknown";
   company_key: string;
   canonical_url?: string;
   first_seen_at: number;
@@ -76,6 +76,16 @@ export const DISCOVERY_QUERIES = [
     q: [
       // Workable has both apply.workable.com and <company>.workable.com in the wild.
       "(site:apply.workable.com OR site:workable.com)",
+      '("remote" OR "fully remote" OR "100% remote")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
+  {
+    kind: "onhires",
+    q: [
+      "site:onhires.com",
       '("remote" OR "fully remote" OR "100% remote")',
       '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
       "-hybrid -onsite -on-site -office -in-office",
@@ -258,6 +268,10 @@ export function extractJobSource(url: string): JobSource | null {
         hosts: ["apply.workable.com"],
         apiTemplate: (company: string) =>
           `https://apply.workable.com/api/v3/accounts/${company}/jobs`,
+      },
+      onhires: {
+        hosts: ["onhires.com"],
+        apiTemplate: (company: string) => `https://onhires.com/${company}/jobs`,
       },
     };
 

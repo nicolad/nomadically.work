@@ -13,7 +13,10 @@
     "mastra:init": "pnpm dlx mastra init",
     "mastra:dev": "pnpm dlx mastra dev",
     "braintrust:eval": "npx braintrust eval src/lib/evals",
-    "cron:trigger": "tsx scripts/trigger-cron.ts"
+    "cron:trigger": "tsx scripts/trigger-cron.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "latest",
@@ -30,6 +33,8 @@
     "braintrust": "^0.0.168",
     "clsx": "^2.1.1",
     "deepmerge": "^4.3.1",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
     "graphql": "^16.12.0",
     "graphql-ws": "^6.0.7",
     "lodash": "^4.17.23",
@@ -52,6 +57,7 @@
     "@types/node": "22.19.7",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "drizzle-kit": "^0.31.8",
     "eslint": "^9.37.0",
     "eslint-config-next": "16.1.1",
     "tsx": "^4.21.0",

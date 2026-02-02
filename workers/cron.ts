@@ -36,7 +36,7 @@ type BraveResponse = {
 };
 
 type JobSource = {
-  kind: "greenhouse" | "lever" | "ashby" | "workable" | "unknown";
+  kind: "greenhouse" | "lever" | "ashby" | "workable" | "onhires" | "unknown";
   company_key: string;
   canonical_url?: string;
   first_seen_at: number;
@@ -87,6 +87,16 @@ const DISCOVERY_QUERIES = [
     kind: "workable",
     q: [
       "(site:apply.workable.com OR site:workable.com)",
+      '("remote" OR "fully remote" OR "100% remote")',
+      '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
+      "-hybrid -onsite -on-site -office -in-office",
+      '-"United States" -"U.S." -Canada -India -Australia',
+    ].join(" "),
+  },
+  {
+    kind: "onhires",
+    q: [
+      "site:onhires.com",
       '("remote" OR "fully remote" OR "100% remote")',
       '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
       "-hybrid -onsite -on-site -office -in-office",
@@ -226,6 +236,18 @@ function extractJobSource(url: string): JobSource | null {
           kind: "workable",
           company_key: company,
           canonical_url: `https://apply.workable.com/api/v3/accounts/${company}/jobs`,
+          first_seen_at: Date.now(),
+        };
+      }
+    }
+
+    if (hostname === "onhires.com") {
+      const company = firstSeg(path);
+      if (company) {
+        return {
+          kind: "onhires",
+          company_key: company,
+          canonical_url: `https://onhires.com/${company}/jobs`,
           first_seen_at: Date.now(),
         };
       }

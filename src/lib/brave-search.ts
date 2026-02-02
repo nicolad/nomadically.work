@@ -25,9 +25,9 @@ export type JobSource = {
  * Discovery queries for finding ATS job pages
  */
 export const DISCOVERY_QUERIES = [
-  { kind: "greenhouse", q: 'site:boards.greenhouse.io "Apply for this job"' },
-  { kind: "lever", q: 'site:jobs.lever.co "Apply for this job"' },
-  { kind: "ashby", q: 'site:jobs.ashbyhq.com "Apply"' },
+  { kind: "greenhouse", q: 'site:boards.greenhouse.io "remote"' },
+  { kind: "lever", q: 'site:jobs.lever.co "remote"' },
+  { kind: "ashby", q: 'site:jobs.ashbyhq.com "remote"' },
   { kind: "workable", q: "site:apply.workable.com" },
 ] as const;
 

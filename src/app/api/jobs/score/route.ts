@@ -51,6 +51,11 @@ export async function POST(request: NextRequest) {
         locationLower.includes("europe") ||
         locationLower.includes("emea");
 
+      const isUK =
+        locationLower.includes("uk") ||
+        locationLower.includes("united kingdom") ||
+        locationLower.includes("britain");
+
       const actualClassification = {
         isRemoteEU: isRemote && isEU,
         confidence: "medium" as const,
@@ -73,27 +78,20 @@ export async function POST(request: NextRequest) {
         actualClassification,
       });
 
-      // Determine status based on EU and remote flags
+      // Determine status based on EU, UK and remote flags
       let status: string;
       if (isRemote && isEU) {
-        status = "eu-remote"; // Remote EU job - perfect match
-      } else if (isRemote) {
-        status = "non-eu-remote"; // Remote but not EU
-      } else if (isEU) {
-        status = "eu-onsite"; // EU but not remote
+        status = "eu-remote"; // Remote EU job
+      } else if (isRemote && isUK) {
+        status = "uk-remote"; // Remote UK job
       } else {
-        status = "non-eu"; // Neither EU nor remote
+        status = "other"; // Other jobs
       }
 
       // Update job with score and status
       await client.execute({
         sql: `UPDATE jobs SET score = ?, score_reason = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        args: [
-          scoreResult.score,
-          scoreResult.metadata.reasoning || actualClassification.reason,
-          status,
-          job.id,
-        ],
+        args: [scoreResult.score, actualClassification.reason, status, job.id],
       });
 
       results.push({

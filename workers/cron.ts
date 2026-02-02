@@ -245,6 +245,18 @@ async function discoverJobSources(
 }
 
 export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Manual trigger endpoint for testing
+    return new Response(
+      JSON.stringify({
+        message:
+          "This is a scheduled worker. Use wrangler to trigger the cron.",
+        hint: "npx wrangler deploy && npx wrangler tail",
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  },
+
   async scheduled(
     event: ScheduledEvent,
     env: Env,

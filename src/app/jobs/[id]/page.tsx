@@ -20,11 +20,46 @@ import { useParams, useSearchParams } from "next/navigation";
 import { classifyJob } from "@/lib/mastra/actions";
 import type { JobClassificationResponse } from "@/lib/mastra/actions";
 
+interface AshbySecondaryLocation {
+  location: string;
+  address?: {
+    addressLocality?: string;
+    addressRegion?: string;
+    addressCountry?: string;
+  };
+}
+
+interface AshbyCompensationComponent {
+  id: string;
+  summary: string;
+  compensationType: string;
+  interval: string;
+  currencyCode: string | null;
+  minValue: number | null;
+  maxValue: number | null;
+}
+
+interface AshbyCompensationTier {
+  id: string;
+  tierSummary: string;
+  title: string;
+  additionalInformation: string | null;
+  components: AshbyCompensationComponent[];
+}
+
+interface AshbyCompensation {
+  compensationTierSummary: string;
+  scrapeableCompensationSalarySummary: string;
+  compensationTiers: AshbyCompensationTier[];
+  summaryComponents: AshbyCompensationComponent[];
+}
+
 interface AshbyJobPosting {
   id: string;
   title: string;
   location: string;
   locationName?: string;
+  secondaryLocations?: AshbySecondaryLocation[];
   department?: string;
   team?: string;
   isRemote?: boolean;
@@ -32,9 +67,17 @@ interface AshbyJobPosting {
   descriptionPlain?: string;
   publishedAt?: string;
   employmentType?: string;
+  address?: {
+    postalAddress?: {
+      addressLocality?: string;
+      addressRegion?: string;
+      addressCountry?: string;
+    };
+  };
   jobUrl?: string;
   applyUrl?: string;
   isListed?: boolean;
+  compensation?: AshbyCompensation;
 }
 
 function JobPageContent() {
@@ -64,7 +107,7 @@ function JobPageContent() {
         setAshbyLoading(true);
         try {
           const response = await fetch(
-            `https://api.ashbyhq.com/posting-api/job-board/${company}?includeCompensation=false`,
+            `https://api.ashbyhq.com/posting-api/job-board/${company}?includeCompensation=true`,
             {
               method: "GET",
               headers: {
@@ -94,6 +137,7 @@ function JobPageContent() {
                     title: jobPosting.title,
                     location: jobPosting.location,
                     locationName: jobPosting.location,
+                    secondaryLocations: jobPosting.secondaryLocations,
                     department: jobPosting.department,
                     team: jobPosting.team,
                     isRemote: jobPosting.isRemote,
@@ -101,8 +145,11 @@ function JobPageContent() {
                     descriptionPlain: jobPosting.descriptionPlain,
                     publishedAt: jobPosting.publishedAt,
                     employmentType: jobPosting.employmentType,
+                    address: jobPosting.address,
                     jobUrl: jobPosting.jobUrl,
                     applyUrl: jobPosting.applyUrl,
+                    isListed: jobPosting.isListed,
+                    compensation: jobPosting.compensation,
                     company,
                   }),
                 });
@@ -188,9 +235,7 @@ function JobPageContent() {
           {job.title}
         </Heading>
         <Flex gap="4" mb="4">
-          {job.company_key && (
-            <Text weight="medium">{job.company_key}</Text>
-          )}
+          {job.company_key && <Text weight="medium">{job.company_key}</Text>}
           {job.location && <Text color="gray">📍 {job.location}</Text>}
         </Flex>
         <Flex gap="2" wrap="wrap">
@@ -215,11 +260,14 @@ function JobPageContent() {
       </Box>
 
       {/* 2-Column Layout */}
-      <Box style={{ 
-        display: "grid", 
-        gridTemplateColumns: "2fr 1fr", 
-        gap: "24px"
-      }} className="job-detail-grid">
+      <Box
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr",
+          gap: "24px",
+        }}
+        className="job-detail-grid"
+      >
         {/* Left Column - Main Job Info */}
         <Box style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {ashbyLoading && (
@@ -227,7 +275,7 @@ function JobPageContent() {
               Loading Ashby data...
             </Text>
           )}
-          
+
           {/* Ashby Job Data */}
           {ashbyData && (
             <Card>
@@ -235,43 +283,138 @@ function JobPageContent() {
                 <Heading size="5" mb="2">
                   Job Details
                 </Heading>
-                
-                <Flex direction="column" gap="2">
+
+                <Box
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px 24px",
+                  }}
+                >
                   {ashbyData.department && (
                     <Text size="2">
-                      <Text weight="bold" as="span">Department:</Text> {ashbyData.department}
+                      <Text weight="bold" as="span">
+                        Department:
+                      </Text>{" "}
+                      {ashbyData.department}
                     </Text>
                   )}
-                  
+
                   {ashbyData.team && (
                     <Text size="2">
-                      <Text weight="bold" as="span">Team:</Text> {ashbyData.team}
+                      <Text weight="bold" as="span">
+                        Team:
+                      </Text>{" "}
+                      {ashbyData.team}
                     </Text>
                   )}
-                  
+
                   {ashbyData.employmentType && (
                     <Text size="2">
-                      <Text weight="bold" as="span">Employment Type:</Text> {ashbyData.employmentType}
+                      <Text weight="bold" as="span">
+                        Employment Type:
+                      </Text>{" "}
+                      {ashbyData.employmentType}
                     </Text>
                   )}
-                  
+
                   {ashbyData.isRemote !== undefined && (
                     <Text size="2">
-                      <Text weight="bold" as="span">Remote:</Text> {ashbyData.isRemote ? "Yes ✅" : "No"}
+                      <Text weight="bold" as="span">
+                        Remote:
+                      </Text>{" "}
+                      {ashbyData.isRemote ? "Yes ✅" : "No"}
                     </Text>
                   )}
-                  
+
                   {ashbyData.publishedAt && (
                     <Text size="2">
-                      <Text weight="bold" as="span">Published:</Text>{" "}
+                      <Text weight="bold" as="span">
+                        Published:
+                      </Text>{" "}
                       {new Date(ashbyData.publishedAt).toLocaleDateString()}
                     </Text>
                   )}
-                </Flex>
+
+                  {ashbyData.isListed !== undefined && (
+                    <Text size="2">
+                      <Text weight="bold" as="span">
+                        Listed:
+                      </Text>{" "}
+                      {ashbyData.isListed ? "Yes" : "No (Direct link only)"}
+                    </Text>
+                  )}
+                </Box>
+
+                {/* Secondary Locations */}
+                {ashbyData.secondaryLocations &&
+                  ashbyData.secondaryLocations.length > 0 && (
+                    <Box mt="2">
+                      <Text weight="bold" size="3" mb="2">
+                        Additional Locations
+                      </Text>
+                      <Flex direction="column" gap="1">
+                        {ashbyData.secondaryLocations.map((loc, idx) => (
+                          <Text size="2" key={idx}>
+                            📍 {loc.location}
+                            {loc.address && (
+                              <Text color="gray" as="span">
+                                {" "}
+                                ({loc.address.addressLocality}
+                                {loc.address.addressRegion &&
+                                  `, ${loc.address.addressRegion}`}
+                                {loc.address.addressCountry &&
+                                  `, ${loc.address.addressCountry}`}
+                                )
+                              </Text>
+                            )}
+                          </Text>
+                        ))}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Compensation */}
+                {ashbyData.compensation && (
+                  <Box
+                    mt="3"
+                    p="3"
+                    style={{
+                      backgroundColor: "var(--accent-3)",
+                      borderRadius: "var(--radius-3)",
+                      border: "1px solid var(--accent-6)",
+                    }}
+                  >
+                    <Heading size="4" mb="2">
+                      💰 Compensation
+                    </Heading>
+                    <Text size="2" weight="bold" mb="2">
+                      {ashbyData.compensation.compensationTierSummary}
+                    </Text>
+                    {ashbyData.compensation.compensationTiers.map(
+                      (tier, idx) => (
+                        <Box key={tier.id} mt="2">
+                          <Text size="2" weight="medium">
+                            {tier.title}
+                          </Text>
+                          <Flex direction="column" gap="1" mt="1">
+                            {tier.components.map((comp) => (
+                              <Text size="1" color="gray" key={comp.id}>
+                                • {comp.summary}
+                              </Text>
+                            ))}
+                          </Flex>
+                        </Box>
+                      ),
+                    )}
+                  </Box>
+                )}
 
                 {ashbyData.descriptionPlain && (
                   <Box mt="3">
-                    <Text weight="bold" size="3" mb="2">Description</Text>
+                    <Text weight="bold" size="3" mb="2">
+                      Description
+                    </Text>
                     <Text
                       size="2"
                       style={{
@@ -288,14 +431,22 @@ function JobPageContent() {
                   <Flex gap="2" mt="3">
                     {ashbyData.jobUrl && (
                       <Button asChild size="2" variant="outline">
-                        <a href={ashbyData.jobUrl} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={ashbyData.jobUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           View Job →
                         </a>
                       </Button>
                     )}
                     {ashbyData.applyUrl && (
                       <Button asChild size="2">
-                        <a href={ashbyData.applyUrl} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={ashbyData.applyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           Apply Now →
                         </a>
                       </Button>
@@ -305,7 +456,7 @@ function JobPageContent() {
               </Flex>
             </Card>
           )}
-          
+
           {/* Fallback to DB description if no Ashby data */}
           {!ashbyData && job.description && (
             <Card>
@@ -385,7 +536,9 @@ function JobPageContent() {
               <Heading size="5" mb="2">
                 Classification Reason
               </Heading>
-              <Text size="2" color="gray">{job.score_reason}</Text>
+              <Text size="2" color="gray">
+                {job.score_reason}
+              </Text>
             </Card>
           )}
 

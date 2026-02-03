@@ -1,6 +1,6 @@
 :root {
   --font-geist-sans: system-ui, -apple-system, sans-serif;
-  --font-geist-mono: 'Courier New', monospace;
+  --font-geist-mono: "Courier New", monospace;
 }
 
 body {

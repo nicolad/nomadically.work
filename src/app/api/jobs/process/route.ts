@@ -11,13 +11,6 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get("Authorization");
     const expectedAuth = `Bearer ${process.env.WEBHOOK_SECRET}`;
 
-    console.log("🔍 Webhook auth check:", {
-      hasSecret: !!process.env.WEBHOOK_SECRET,
-      secretLength: process.env.WEBHOOK_SECRET?.length,
-      authHeaderReceived: !!authHeader,
-      authHeaderLength: authHeader?.length,
-    });
-
     if (!process.env.WEBHOOK_SECRET) {
       console.error("⚠️ WEBHOOK_SECRET not configured");
       return NextResponse.json(

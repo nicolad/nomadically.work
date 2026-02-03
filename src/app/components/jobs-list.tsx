@@ -71,11 +71,10 @@ export function JobsList() {
       ) : (
         <Flex direction="column" gap="3">
           {jobs.map((job) => (
-            <a
+            <Link
               key={job.id}
               href={`/jobs/${job.id}`}
               target="_blank"
-              rel="noopener noreferrer"
               style={{ textDecoration: "none", color: "inherit" }}
             >
               <Card
@@ -125,7 +124,7 @@ export function JobsList() {
                   )}
                 </Flex>
               </Card>
-            </a>
+            </Link>
           ))}
         </Flex>
       )}

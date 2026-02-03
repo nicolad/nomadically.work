@@ -1,14 +1,47 @@
 /**
- * Cloudflare Worker for Inserting Jobs into Turso
- * Accepts POST requests with job data and inserts them into the database
+ * Cloudflare Worker for Inserting Jobs into Turso + Enqueueing for Processing
+ * - Accepts POST requests with job data and inserts/upserts into Turso
+ * - Enqueues inserted job IDs into Cloudflare Queue
+ * - Queue consumer forwards messages one-by-one to the Next.js webhook
  */
 
 import { createClient, type Client } from "@libsql/client";
 
+// Cloudflare Workers types
+type Queue<T = unknown> = {
+  send(message: T): Promise<void>;
+};
+
+type Message<T = unknown> = {
+  body: T;
+  ack(): void;
+  retry(): void;
+};
+
+type MessageBatch<T = unknown> = {
+  messages: Message<T>[];
+};
+
+type ExecutionContext = {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
+};
+
 interface Env {
   TURSO_DB_URL: string;
   TURSO_DB_AUTH_TOKEN: string;
-  API_SECRET?: string; // Optional API key for authentication
+
+  // Auth for the ingest endpoint (optional)
+  API_SECRET?: string;
+
+  // Cloudflare Queue binding
+  JOBS_QUEUE: Queue;
+
+  // Next step webhook (e.g. Next.js route handler that runs Mastra)
+  NEXT_WEBHOOK_URL: string;
+
+  // Shared secret to authenticate Worker -> Next webhook
+  WEBHOOK_SECRET: string;
 }
 
 interface JobInput {
@@ -30,96 +63,122 @@ interface InsertJobsRequest {
   jobs: JobInput[];
 }
 
+type QueueMessage = {
+  jobId: number;
+};
+
 function validateJob(job: JobInput): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // Required fields based on schema
-  if (!job.title?.trim()) {
-    errors.push("title is required");
-  }
+  if (!job.title?.trim()) errors.push("title is required");
+  if (!job.companyKey?.trim()) errors.push("companyKey is required");
+  if (!job.url?.trim()) errors.push("url is required");
+  if (!job.externalId?.trim()) errors.push("externalId is required");
+  if (!job.sourceKind?.trim()) errors.push("sourceKind is required");
 
-  if (!job.companyKey?.trim()) {
-    errors.push("companyKey is required");
-  }
+  return { valid: errors.length === 0, errors };
+}
 
-  if (!job.url?.trim()) {
-    errors.push("url is required");
-  }
-
-  if (!job.externalId?.trim()) {
-    errors.push("externalId is required");
-  }
-
-  if (!job.sourceKind?.trim()) {
-    errors.push("sourceKind is required");
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+function jsonResponse(data: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
 }
 
 async function insertJob(
   turso: Client,
   job: JobInput,
-): Promise<{ success: boolean; id?: string; error?: string }> {
+): Promise<{ success: boolean; jobId?: number; error?: string }> {
   try {
     const now = new Date().toISOString();
 
+    // Default status is "new" (but see conflict behavior below to avoid resetting processed jobs)
+    const incomingStatus = (job.status ?? "new").trim();
+
     const args: (string | number | null)[] = [
-      job.externalId!,
-      job.sourceId || null,
-      job.sourceKind!,
-      job.companyKey!,
-      job.title!,
-      job.location || null,
-      job.url!,
-      job.description || null,
-      job.postedAt || now,
-      job.score || null,
-      job.scoreReason || null,
-      job.status || "new",
-      now, // created_at
-      now, // updated_at
-      now, // updated_at for UPDATE clause
+      job.externalId!, // 1
+      job.sourceId ?? null, // 2
+      job.sourceKind!, // 3
+      job.companyKey!, // 4
+      job.title!, // 5
+      job.location ?? null, // 6
+      job.url!, // 7
+      job.description ?? null, // 8
+      job.postedAt ?? now, // 9
+      job.score ?? null, // 10
+      job.scoreReason ?? null, // 11
+      incomingStatus, // 12
+      now, // 13 created_at
+      now, // 14 updated_at
     ];
 
+    /**
+     * Important: ON CONFLICT update tries to avoid clobbering downstream processing.
+     * - If a job is already processed (status != 'new'), and we re-ingest it with status 'new',
+     *   we keep the existing status (do not reset).
+     * - If incoming score/score_reason are null, keep existing values.
+     *
+     * This prevents re-ingestion from undoing classification/scoring.
+     */
     const result = await turso.execute({
-      sql: `INSERT INTO jobs (
-        external_id,
-        source_id,
-        source_kind,
-        company_key,
-        title,
-        location,
-        url,
-        description,
-        posted_at,
-        score,
-        score_reason,
-        status,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(source_kind, company_key, external_id) DO UPDATE SET
-        source_id = excluded.source_id,
-        title = excluded.title,
-        location = excluded.location,
-        url = excluded.url,
-        description = excluded.description,
-        posted_at = excluded.posted_at,
-        score = excluded.score,
-        score_reason = excluded.score_reason,
-        status = excluded.status,
-        updated_at = ?`,
+      sql: `
+        INSERT INTO jobs (
+          external_id,
+          source_id,
+          source_kind,
+          company_key,
+          title,
+          location,
+          url,
+          description,
+          posted_at,
+          score,
+          score_reason,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(source_kind, company_key, external_id) DO UPDATE SET
+          source_id    = COALESCE(excluded.source_id, jobs.source_id),
+          title        = excluded.title,
+          location     = COALESCE(excluded.location, jobs.location),
+          url          = excluded.url,
+          description  = COALESCE(excluded.description, jobs.description),
+          posted_at    = excluded.posted_at,
+          score        = COALESCE(excluded.score, jobs.score),
+          score_reason = COALESCE(excluded.score_reason, jobs.score_reason),
+          status = CASE
+            WHEN jobs.status IS NOT NULL AND jobs.status != 'new' AND excluded.status = 'new'
+              THEN jobs.status
+            ELSE excluded.status
+          END,
+          updated_at   = excluded.updated_at
+        RETURNING id;
+      `,
       args,
     });
 
-    return {
-      success: true,
-      id: result.lastInsertRowid?.toString() || job.externalId,
-    };
+    const row = result.rows?.[0] as { id?: unknown } | undefined;
+    const id =
+      row?.id != null ? Number(row.id) : Number(result.lastInsertRowid);
+
+    if (!Number.isFinite(id)) {
+      // Fallback: if RETURNING isn't available for some reason
+      // Try to look up by unique key (source_kind, company_key, external_id)
+      const lookup = await turso.execute({
+        sql: `SELECT id FROM jobs WHERE source_kind = ? AND company_key = ? AND external_id = ? LIMIT 1`,
+        args: [job.sourceKind!, job.companyKey!, job.externalId!],
+      });
+      const found = lookup.rows?.[0] as { id?: unknown } | undefined;
+      const fallbackId = found?.id != null ? Number(found.id) : NaN;
+      if (!Number.isFinite(fallbackId)) {
+        throw new Error("Inserted/upserted but could not determine job id");
+      }
+      return { success: true, jobId: fallbackId };
+    }
+
+    return { success: true, jobId: id };
   } catch (error) {
     console.error("Failed to insert job:", error);
     return {
@@ -129,7 +188,26 @@ async function insertJob(
   }
 }
 
+async function forwardToNextWebhook(env: Env, jobId: number): Promise<void> {
+  const res = await fetch(env.NEXT_WEBHOOK_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.WEBHOOK_SECRET}`,
+    },
+    body: JSON.stringify({ jobId }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`NEXT_WEBHOOK failed ${res.status}: ${text}`);
+  }
+}
+
 export default {
+  /**
+   * Ingest endpoint: Insert jobs into Turso, then enqueue IDs.
+   */
   async fetch(request: Request, env: Env): Promise<Response> {
     // CORS headers
     const corsHeaders = {
@@ -145,15 +223,12 @@ export default {
 
     // Only allow POST requests
     if (request.method !== "POST") {
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           success: false,
           error: "Method not allowed. Use POST to insert jobs.",
-        }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+        { status: 405, headers: { ...corsHeaders } },
       );
     }
 
@@ -162,15 +237,9 @@ export default {
       const authHeader = request.headers.get("Authorization");
       const providedSecret = authHeader?.replace("Bearer ", "");
       if (providedSecret !== env.API_SECRET) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Unauthorized",
-          }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
+        return jsonResponse(
+          { success: false, error: "Unauthorized" },
+          { status: 401, headers: { ...corsHeaders } },
         );
       }
     }
@@ -180,15 +249,9 @@ export default {
       const body = (await request.json()) as InsertJobsRequest;
 
       if (!body.jobs || !Array.isArray(body.jobs)) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Request body must contain a 'jobs' array",
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
+        return jsonResponse(
+          { success: false, error: "Request body must contain a 'jobs' array" },
+          { status: 400, headers: { ...corsHeaders } },
         );
       }
 
@@ -200,19 +263,16 @@ export default {
 
       const invalidJobs = validationResults.filter((r) => !r.valid);
       if (invalidJobs.length > 0) {
-        return new Response(
-          JSON.stringify({
+        return jsonResponse(
+          {
             success: false,
             error: "Some jobs failed validation",
             invalidJobs: invalidJobs.map((j) => ({
               index: j.index,
               errors: j.errors,
             })),
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
           },
+          { status: 400, headers: { ...corsHeaders } },
         );
       }
 
@@ -222,47 +282,73 @@ export default {
         authToken: env.TURSO_DB_AUTH_TOKEN,
       });
 
-      // Insert jobs
-      const results = await Promise.all(
+      // Insert/upsert jobs
+      const insertResults = await Promise.all(
         body.jobs.map((job) => insertJob(turso, job)),
       );
 
-      const successful = results.filter((r) => r.success);
-      const failed = results.filter((r) => !r.success);
+      const successful = insertResults.filter(
+        (r) => r.success && r.jobId != null,
+      );
+      const failed = insertResults.filter((r) => !r.success);
+
+      // Enqueue successfully inserted job IDs
+      let enqueued = 0;
+      for (const r of successful) {
+        await env.JOBS_QUEUE.send({ jobId: r.jobId! } satisfies QueueMessage);
+        enqueued++;
+      }
 
       console.log(
-        `✅ Inserted ${successful.length}/${body.jobs.length} jobs successfully`,
+        `✅ Inserted ${successful.length}/${body.jobs.length} jobs; enqueued ${enqueued}`,
       );
 
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           success: failed.length === 0,
-          message: `Inserted ${successful.length}/${body.jobs.length} jobs`,
+          message: `Inserted ${successful.length}/${body.jobs.length} jobs; enqueued ${enqueued}`,
           data: {
             totalJobs: body.jobs.length,
             successCount: successful.length,
             failCount: failed.length,
-            successfulIds: successful.map((r) => r.id),
+            enqueuedCount: enqueued,
+            jobIds: successful.map((r) => r.jobId),
             failures: failed.map((r) => r.error),
           },
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+        { status: 200, headers: { ...corsHeaders } },
       );
     } catch (error) {
       console.error("❌ Error processing request:", error);
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           success: false,
           error: error instanceof Error ? error.message : "Unknown error",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+        { status: 500, headers: { ...corsHeaders } },
       );
+    }
+  },
+
+  /**
+   * Queue consumer: forwards messages one-by-one to Next.js webhook.
+   * Configure wrangler with max_batch_size = 1 for strict per-invocation one-by-one processing.
+   */
+  async queue(
+    batch: MessageBatch<QueueMessage>,
+    env: Env,
+    _ctx: ExecutionContext,
+  ) {
+    for (const message of batch.messages) {
+      try {
+        const { jobId } = message.body;
+        await forwardToNextWebhook(env, jobId);
+        message.ack();
+      } catch (err) {
+        console.error("❌ Failed to forward to webhook:", err);
+        // Let Cloudflare Queues retry with backoff
+        message.retry();
+      }
     }
   },
 };

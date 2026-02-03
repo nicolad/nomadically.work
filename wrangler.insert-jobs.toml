@@ -9,6 +9,19 @@ TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
 # Secrets (set via: npx wrangler secret put SECRET_NAME --name nomadically-work-insert-jobs)
 # - TURSO_DB_AUTH_TOKEN (required)
 # - API_SECRET (optional, for authentication)
+# - NEXT_WEBHOOK_URL (required, e.g., https://nomadically.work/api/jobs/process)
+# - WEBHOOK_SECRET (required, shared secret for Worker -> Next webhook)
+
+# Queue configuration for async job processing pipeline
+[[queues.producers]]
+queue = "jobs-pipeline"
+binding = "JOBS_QUEUE"
+
+[[queues.consumers]]
+queue = "jobs-pipeline"
+max_batch_size = 1
+max_batch_timeout = 1
+max_retries = 10
 
 # Observability - Enable logging
 [observability]

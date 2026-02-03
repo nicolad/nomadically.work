@@ -39,12 +39,22 @@ Title: ${title}
 Location: ${location}
 Description: ${description}
 
-Consider:
-- EMEA includes non-EU countries (UK post-Brexit, Switzerland, Middle East)
-- CET timezone is not exclusive to EU
-- UK is not part of EU since Brexit
-- EU work authorization suggests EU remote
-- Must be fully remote, not hybrid or onsite
+EU Countries include: Germany, France, Ireland, Poland, Romania, Netherlands, Belgium, Spain, Italy, Portugal, Austria, Sweden, Denmark, Finland, Czech Republic, Greece, Hungary, and others in the European Union.
+
+NOT EU: UK (post-Brexit), Switzerland, Norway, Turkey, Middle East countries.
+
+Consider ALL locations listed (primary and secondary). A job is Remote EU if:
+- It explicitly mentions remote work in EU countries
+- Lists specific EU cities/countries in locations (e.g., "Germany - Berlin", "Poland - Warsaw", "Ireland - Dublin")
+- States "EU remote" or "European Union"
+- Requires EU work authorization
+
+NOT Remote EU if:
+- Only mentions EMEA (includes non-EU)
+- Only mentions CET timezone (not specific to EU)
+- Only UK locations (UK is not EU)
+- Hybrid or office-based only
+- Only non-EU European countries (Switzerland, Norway, UK)
 
 Provide your classification with confidence level and reasoning.`,
             },

@@ -206,9 +206,21 @@ function JobPageContent() {
     setClassifying(true);
     setClassificationError(null);
 
+    // Build comprehensive location string including secondary locations
+    let locationString = job.location;
+    if (
+      ashbyData?.secondaryLocations &&
+      ashbyData.secondaryLocations.length > 0
+    ) {
+      const secondaryLocs = ashbyData.secondaryLocations
+        .map((loc) => loc.location)
+        .join(", ");
+      locationString = `${job.location}, ${secondaryLocs}`;
+    }
+
     const result = await classifyJob({
       title: job.title,
-      location: job.location,
+      location: locationString,
       description: job.description,
     });
 

@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq, and, or, like, desc } from "drizzle-orm";
 import type { GraphQLContext } from "./context";
+import { last, split } from "lodash";
 
 export const resolvers = {
   Query: {
@@ -62,12 +63,14 @@ export const resolvers = {
     },
     async job(_parent: any, args: { id: string }, _context: GraphQLContext) {
       try {
-        const result = await db
-          .select()
-          .from(jobs)
-          .where(eq(jobs.id, parseInt(args.id)))
-          .limit(1);
-        return result?.[0] || null;
+        // The id might be just a UUID, so we need to match against external_id which contains full URL
+        // Find by checking if external_id ends with the provided id
+        const allJobs = await db.select().from(jobs);
+        const result = allJobs.find(job => {
+          const jobId = last(split(job.external_id, '/'));
+          return jobId === args.id;
+        });
+        return result || null;
       } catch (error) {
         console.error("Error fetching job:", error);
         return null;

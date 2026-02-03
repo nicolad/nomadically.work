@@ -29,6 +29,7 @@
     "@libsql/client": "^0.17.0",
     "@mastra/core": "latest",
     "@mastra/evals": "^1.0.1",
+    "@mastra/libsql": "^1.1.0",
     "@radix-ui/themes": "^3.3.0",
     "braintrust": "^0.0.168",
     "clsx": "^2.1.1",

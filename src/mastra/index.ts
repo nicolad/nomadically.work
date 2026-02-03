@@ -1,8 +1,21 @@
 import { Mastra } from "@mastra/core";
+import { MastraCompositeStore } from "@mastra/core/storage";
+import { MemoryLibSQL } from "@mastra/libsql";
 
 import { jobClassifierAgent } from "./agents";
 
-// Mastra will use TURSO_DB_URL and TURSO_DB_AUTH_TOKEN from environment
+// Configure composite storage with libSQL for all domains
+const storage = new MastraCompositeStore({
+  id: "turso-storage",
+  domains: {
+    memory: new MemoryLibSQL({
+      url: process.env.TURSO_DB_URL!,
+      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
+    }),
+  },
+});
+
 export const mastra = new Mastra({
   agents: { jobClassifierAgent },
+  storage,
 });

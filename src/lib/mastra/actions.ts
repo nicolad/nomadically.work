@@ -2,6 +2,7 @@
 
 import { mastra } from "@/mastra";
 import { z } from "zod";
+import { createWorkflow, createStep } from "@mastra/core/workflows";
 import type { RemoteEUClassification } from "@/lib/evals/scorers/remote-eu-scorer";
 
 export type JobClassificationInput = {

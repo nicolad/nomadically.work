@@ -23,14 +23,6 @@ export function JobsList() {
     },
   });
 
-  if (loading) {
-    return (
-      <Flex justify="center" align="center" style={{ minHeight: "200px" }}>
-        <Text>Loading jobs...</Text>
-      </Flex>
-    );
-  }
-
   if (error) {
     return (
       <Flex justify="center" align="center" style={{ minHeight: "200px" }}>

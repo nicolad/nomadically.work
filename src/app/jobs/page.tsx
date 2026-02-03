@@ -1,9 +1,16 @@
 import { JobsProvider } from "@/components/jobs-provider";
 import { Suspense } from "react";
+import { Container, Text } from "@radix-ui/themes";
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <Container size="4" p="8">
+          <Text color="gray">Loading...</Text>
+        </Container>
+      }
+    >
       <JobsProvider />
     </Suspense>
   );

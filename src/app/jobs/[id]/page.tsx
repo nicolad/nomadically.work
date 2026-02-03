@@ -1,8 +1,18 @@
 "use client";
 
 import { useGetJobQuery } from "@/__generated__/hooks";
-import { Card } from "@/components/ui/card";
-import { Badge, Skeleton } from "@radix-ui/themes";
+import {
+  Card,
+  Badge,
+  Skeleton,
+  Container,
+  Heading,
+  Text,
+  Flex,
+  Box,
+  Button,
+  Link as RadixLink,
+} from "@radix-ui/themes";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -16,59 +26,57 @@ export default function JobPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <Container size="4" p="8">
         <Skeleton height="400px" />
-      </div>
+      </Container>
     );
   }
 
   if (error || !data?.job) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Job Not Found</h1>
-          <p className="text-gray-600 mb-4">
-            The job you're looking for doesn't exist or has been removed.
-          </p>
-          <Link
-            href="/jobs"
-            className="text-blue-600 hover:text-blue-800 underline"
-          >
-            ← Back to Jobs
-          </Link>
+      <Container size="4" p="8">
+        <Card>
+          <Flex direction="column" align="center" gap="4">
+            <Heading size="6">Job Not Found</Heading>
+            <Text color="gray">
+              The job you're looking for doesn't exist or has been removed.
+            </Text>
+            <Button asChild>
+              <Link href="/jobs">← Back to Jobs</Link>
+            </Button>
+          </Flex>
         </Card>
-      </div>
+      </Container>
     );
   }
 
   const job = data.job;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link
-          href="/jobs"
-          className="text-blue-600 hover:text-blue-800 underline text-sm"
-        >
-          ← Back to Jobs
-        </Link>
-      </div>
+    <Container size="4" p="8">
+      <Box mb="6">
+        <Button variant="ghost" asChild>
+          <Link href="/jobs">← Back to Jobs</Link>
+        </Button>
+      </Box>
 
-      <Card className="p-8">
-        <div className="mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-2">{job.title}</h1>
-              <div className="flex items-center gap-4 text-gray-600 mb-4">
+      <Card size="4">
+        <Box mb="6">
+          <Flex justify="between" align="start" mb="4">
+            <Box style={{ flex: 1 }}>
+              <Heading size="8" mb="2">
+                {job.title}
+              </Heading>
+              <Flex gap="4" mb="4">
                 {job.company_key && (
-                  <span className="font-medium">{job.company_key}</span>
+                  <Text weight="medium">{job.company_key}</Text>
                 )}
-                {job.location && <span>📍 {job.location}</span>}
-              </div>
-            </div>
-          </div>
+                {job.location && <Text color="gray">📍 {job.location}</Text>}
+              </Flex>
+            </Box>
+          </Flex>
 
-          <div className="flex flex-wrap gap-2 mb-6">
+          <Flex gap="2" mb="6" wrap="wrap">
             {job.status && (
               <Badge
                 color={
@@ -86,65 +94,91 @@ export default function JobPage() {
             {job.score && (
               <Badge color="blue">Score: {(job.score * 100).toFixed(0)}%</Badge>
             )}
-          </div>
-        </div>
+          </Flex>
+        </Box>
 
-        <div className="prose max-w-none mb-8">
-          <h2 className="text-xl font-semibold mb-3">Description</h2>
-          <div
-            className="text-gray-700 whitespace-pre-wrap"
+        <Box mb="8">
+          <Heading size="5" mb="3">
+            Description
+          </Heading>
+          <Text
+            as="div"
+            color="gray"
+            style={{ whiteSpace: "pre-wrap" }}
             dangerouslySetInnerHTML={{
               __html: job.description || "No description available",
             }}
           />
-        </div>
+        </Box>
 
         {job.score_reason && (
-          <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-            <h2 className="text-xl font-semibold mb-2">
+          <Box
+            mb="8"
+            p="4"
+            style={{
+              backgroundColor: "var(--gray-3)",
+              borderRadius: "var(--radius-3)",
+            }}
+          >
+            <Heading size="5" mb="2">
               Classification Reason
-            </h2>
-            <p className="text-gray-700">{job.score_reason}</p>
-          </div>
+            </Heading>
+            <Text color="gray">{job.score_reason}</Text>
+          </Box>
         )}
 
-        <div className="border-t pt-6 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-6">
-            <div>
-              <span className="font-medium">Source:</span> {job.source_kind}
-            </div>
-            {job.posted_at && (
-              <div>
-                <span className="font-medium">Posted:</span>{" "}
-                {new Date(job.posted_at).toLocaleDateString()}
-              </div>
-            )}
-            {job.created_at && (
-              <div>
-                <span className="font-medium">Added:</span>{" "}
-                {new Date(job.created_at).toLocaleDateString()}
-              </div>
-            )}
+        <Box pt="6" mt="6" style={{ borderTop: "1px solid var(--gray-6)" }}>
+          <Flex direction="column" gap="4" mb="6">
+            <Flex gap="4" wrap="wrap">
+              <Text size="2" color="gray">
+                <Text weight="medium" as="span">
+                  Source:
+                </Text>{" "}
+                {job.source_kind}
+              </Text>
+              {job.posted_at && (
+                <Text size="2" color="gray">
+                  <Text weight="medium" as="span">
+                    Posted:
+                  </Text>{" "}
+                  {new Date(job.posted_at).toLocaleDateString()}
+                </Text>
+              )}
+              {job.created_at && (
+                <Text size="2" color="gray">
+                  <Text weight="medium" as="span">
+                    Added:
+                  </Text>{" "}
+                  {new Date(job.created_at).toLocaleDateString()}
+                </Text>
+              )}
+            </Flex>
             {job.external_id && (
-              <div className="col-span-2">
-                <span className="font-medium">External ID:</span>{" "}
-                <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+              <Text size="2" color="gray">
+                <Text weight="medium" as="span">
+                  External ID:
+                </Text>{" "}
+                <code
+                  style={{
+                    fontSize: "var(--font-size-1)",
+                    backgroundColor: "var(--gray-3)",
+                    padding: "var(--space-1) var(--space-2)",
+                    borderRadius: "var(--radius-2)",
+                  }}
+                >
                   {job.external_id}
                 </code>
-              </div>
+              </Text>
             )}
-          </div>
+          </Flex>
 
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors"
-          >
-            Apply Now →
-          </a>
-        </div>
+          <Button size="3" asChild>
+            <a href={job.url} target="_blank" rel="noopener noreferrer">
+              Apply Now →
+            </a>
+          </Button>
+        </Box>
       </Card>
-    </div>
+    </Container>
   );
 }

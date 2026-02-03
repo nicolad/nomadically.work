@@ -4,7 +4,6 @@ import "@radix-ui/themes/styles.css";
 import "./globals.css";
 import styles from "./layout.module.css";
 import { Theme } from "@radix-ui/themes";
-import { Toaster } from "@/components/ui/sonner";
 import Image from "next/image";
 
 const geistSans = localFont({
@@ -29,16 +28,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ fontFamily: 'var(--font-geist-sans)' }}>
+    <html lang="en" style={{ fontFamily: "var(--font-geist-sans)" }}>
       <body>
         <Theme appearance="dark">
-          <Toaster />
           <header className={styles.header}>
             <div className={styles.logoContainer}>
-              <Image 
-                src="/logo.svg" 
-                alt="Nomadically Logo" 
-                width={240} 
+              <Image
+                src="/logo.svg"
+                alt="Nomadically Logo"
+                width={240}
                 height={56}
                 priority
                 className={styles.logo}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGetJobsQuery } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
@@ -13,7 +14,6 @@ import {
   Card,
   Badge,
   Button,
-  Tabs,
   TextField,
 } from "@radix-ui/themes";
 
@@ -81,14 +81,6 @@ export function JobsList() {
     pollInterval: 60000, // Refresh every minute
   });
 
-  if (loading) {
-    return (
-      <Container size="4" p="8">
-        <Text color="gray">Loading jobs...</Text>
-      </Container>
-    );
-  }
-
   if (error) {
     return (
       <Container size="4" p="8">
@@ -122,63 +114,67 @@ export function JobsList() {
 
       <Flex direction="column" gap="4">
         {jobs.map((job) => (
-          <Card key={job.id} size="3">
-            <Flex justify="between" align="start" mb="2">
-              <Heading size="5">{job.title}</Heading>
-              {job.status && (
-                <Badge color={getStatusBadgeColor(job.status)}>
-                  {getStatusLabel(job.status)}
-                </Badge>
-              )}
-            </Flex>
-
-            <Flex gap="2" mb="2" wrap="wrap">
-              {job.company_key && (
-                <Text weight="medium">{job.company_key}</Text>
-              )}
-              {job.location && <Text color="gray">• {job.location}</Text>}
-            </Flex>
-
-            {job.source_kind && (
-              <Text size="2" color="gray" mb="2">
-                {job.source_kind}
-              </Text>
-            )}
-
-            {job.description && (
-              <Text
-                size="2"
-                color="gray"
-                mb="3"
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {job.description}
-              </Text>
-            )}
-
-            <Flex justify="between" align="center" mt="4">
-              <Text size="1" color="gray">
-                {job.source_kind && <span>Source: {job.source_kind}</span>}
-                {job.posted_at && (
-                  <span style={{ marginLeft: "12px" }}>
-                    Posted: {new Date(job.posted_at).toLocaleDateString()}
-                  </span>
+          <Card key={job.id} size="3" asChild>
+            <Link
+              href={`/jobs/${job.id}`}
+              target="_blank"
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                cursor: "pointer",
+              }}
+            >
+              <Flex justify="between" align="start" mb="2">
+                <Heading size="5">{job.title}</Heading>
+                {job.status && (
+                  <Badge color={getStatusBadgeColor(job.status)}>
+                    {getStatusLabel(job.status)}
+                  </Badge>
                 )}
-              </Text>
+              </Flex>
 
-              {job.url && (
-                <Button asChild size="2">
-                  <a href={job.url} target="_blank" rel="noopener noreferrer">
-                    View Job
-                  </a>
-                </Button>
+              <Flex gap="2" mb="2" wrap="wrap">
+                {job.company_key && (
+                  <Text weight="medium">{job.company_key}</Text>
+                )}
+                {job.location && <Text color="gray">• {job.location}</Text>}
+              </Flex>
+
+              {job.source_kind && (
+                <Text size="2" color="gray" mb="2">
+                  {job.source_kind}
+                </Text>
               )}
-            </Flex>
+
+              {job.description && (
+                <Text
+                  size="2"
+                  color="gray"
+                  mb="3"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {job.description}
+                </Text>
+              )}
+
+              <Flex justify="between" align="center" mt="4">
+                <Text size="1" color="gray">
+                  {job.source_kind && <span>Source: {job.source_kind}</span>}
+                  {job.posted_at && (
+                    <span style={{ marginLeft: "12px" }}>
+                      Posted: {new Date(job.posted_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </Text>
+
+                {job.url && <Button size="2">View Job</Button>}
+              </Flex>
+            </Link>
           </Card>
         ))}
       </Flex>

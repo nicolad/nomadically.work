@@ -218,11 +218,14 @@ function JobPageContent() {
       locationString = `${job.location}, ${secondaryLocs}`;
     }
 
-    const result = await classifyJob({
-      title: job.title,
-      location: locationString,
-      description: job.description,
-    });
+    const result = await classifyJob(
+      {
+        title: job.title,
+        location: locationString,
+        description: job.description,
+      },
+      job.id,
+    );
 
     setClassifying(false);
 

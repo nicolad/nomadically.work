@@ -38,7 +38,10 @@ const classifyJobStep = createStep({
 
     const jobClassifierAgent = mastra.getAgent("jobClassifierAgent");
 
-    console.log("Calling job classifier agent");
+    console.log("=== Job Classification Debug ===");
+    console.log("Title:", title);
+    console.log("Location:", location);
+    console.log("Description preview:", description.substring(0, 200));
 
     const response = await jobClassifierAgent.generate(
       [
@@ -86,10 +89,11 @@ Provide your classification with confidence level and reasoning.`,
     if (!object)
       throw new Error("Job classifier agent returned no structured output");
 
-    console.log(
-      "Job classification response:",
-      JSON.stringify(object, null, 2),
-    );
+    console.log("=== Classification Result ===");
+    console.log("IsRemoteEU:", object.isRemoteEU);
+    console.log("Confidence:", object.confidence);
+    console.log("Reason:", object.reason);
+    console.log("=============================");
 
     return object;
   },

@@ -96,7 +96,7 @@ function JobPageContent() {
   const [ashbyData, setAshbyData] = useState<AshbyJobPosting | null>(null);
   const [ashbyLoading, setAshbyLoading] = useState(false);
 
-  const { data, loading, error } = useGetJobQuery({
+  const { data, loading, error, refetch } = useGetJobQuery({
     variables: { id },
   });
 
@@ -231,6 +231,8 @@ function JobPageContent() {
 
     if (result.ok && result.data) {
       setClassification(result.data);
+      // Refetch all GraphQL data to update UI with new classification
+      await refetch();
     } else {
       setClassificationError(result.error || "Classification failed");
     }

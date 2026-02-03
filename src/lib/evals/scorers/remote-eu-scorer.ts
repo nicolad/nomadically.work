@@ -74,12 +74,15 @@ export function scoreRemoteEUClassification(
   };
 }
 
-// Mastra-compatible scorer function
-export const remoteEUScorer = {
-  name: "remote-eu-classifier",
+import { createScorer } from "@mastra/core/evals";
+
+// Mastra-compatible scorer using createScorer builder
+export const remoteEUScorer = createScorer({
+  id: "remote-eu-classifier",
   description: "Evaluates job classification accuracy for Remote EU positions",
-  scorer: async ({ output }: { output: any }) => {
-    const classification = output as RemoteEUClassification;
+})
+  .generateScore(({ run }) => {
+    const classification = run.output as RemoteEUClassification;
 
     // Higher score for high confidence classifications
     const confidenceScore =
@@ -89,14 +92,9 @@ export const remoteEUScorer = {
           ? 0.7
           : 0.4;
 
-    return {
-      score: confidenceScore,
-      label: classification.isRemoteEU ? "eu-remote" : "non-eu",
-      metadata: {
-        confidence: classification.confidence,
-        reason: classification.reason,
-        isRemoteEU: classification.isRemoteEU,
-      },
-    };
-  },
-};
+    return confidenceScore;
+  })
+  .generateReason(({ run }) => {
+    const classification = run.output as RemoteEUClassification;
+    return `Classification: ${classification.isRemoteEU ? "EU Remote" : "Non-EU"} (${classification.confidence} confidence) - ${classification.reason}`;
+  });

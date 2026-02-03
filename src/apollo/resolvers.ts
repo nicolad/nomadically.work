@@ -66,8 +66,8 @@ export const resolvers = {
         // The id might be just a UUID, so we need to match against external_id which contains full URL
         // Find by checking if external_id ends with the provided id
         const allJobs = await db.select().from(jobs);
-        const result = allJobs.find(job => {
-          const jobId = last(split(job.external_id, '/'));
+        const result = allJobs.find((job) => {
+          const jobId = last(split(job.external_id, "/"));
           return jobId === args.id;
         });
         return result || null;

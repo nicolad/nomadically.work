@@ -37,3 +37,10 @@ body {
     mask-position: 0;
   }
 }
+
+/* Responsive grid for job detail page */
+@media (max-width: 968px) {
+  .job-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -3,7 +3,6 @@ import { z } from "zod";
 /**
  * Remote EU Classification Scorer
  * Scores job classification accuracy for Remote EU jobs
- * Called automatically after cron inserts new jobs via /api/jobs/score endpoint
  */
 
 const remoteEUClassificationSchema = z.object({
@@ -74,3 +73,30 @@ export function scoreRemoteEUClassification(
     },
   };
 }
+
+// Mastra-compatible scorer function
+export const remoteEUScorer = {
+  name: "remote-eu-classifier",
+  description: "Evaluates job classification accuracy for Remote EU positions",
+  scorer: async ({ output }: { output: any }) => {
+    const classification = output as RemoteEUClassification;
+
+    // Higher score for high confidence classifications
+    const confidenceScore =
+      classification.confidence === "high"
+        ? 1.0
+        : classification.confidence === "medium"
+          ? 0.7
+          : 0.4;
+
+    return {
+      score: confidenceScore,
+      label: classification.isRemoteEU ? "eu-remote" : "non-eu",
+      metadata: {
+        confidence: classification.confidence,
+        reason: classification.reason,
+        isRemoteEU: classification.isRemoteEU,
+      },
+    };
+  },
+};

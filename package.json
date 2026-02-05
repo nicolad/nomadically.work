@@ -14,6 +14,7 @@
     "mastra:dev": "pnpm dlx mastra dev",
     "braintrust:eval": "npx braintrust eval src/lib/evals",
     "cron:trigger": "tsx scripts/trigger-cron.ts",
+    "boards:discover": "tsx scripts/discover-ashby-boards.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

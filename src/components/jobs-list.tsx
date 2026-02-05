@@ -77,6 +77,7 @@ export function JobsList() {
   const { loading, error, data, refetch } = useGetJobsQuery({
     variables: {
       search: debouncedSearch || undefined,
+      limit: 100,
       offset: 0,
     },
     pollInterval: 60000, // Refresh every minute
@@ -138,9 +139,29 @@ export function JobsList() {
                   )}
                 </Flex>
 
-                <Flex gap="2" mb="2" wrap="wrap">
+                <Flex gap="2" mb="2" wrap="wrap" align="center">
                   {job.company_key && (
-                    <Text weight="medium">{job.company_key}</Text>
+                    <Link
+                      href={`/boards/${job.company_key}`}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        textDecoration: "none",
+                        color: "inherit",
+                        position: "relative",
+                        zIndex: 10,
+                      }}
+                    >
+                      <Text
+                        weight="medium"
+                        style={{
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          textUnderlineOffset: "2px",
+                        }}
+                      >
+                        {job.company_key}
+                      </Text>
+                    </Link>
                   )}
                   {job.location && <Text color="gray">• {job.location}</Text>}
                 </Flex>

@@ -5,6 +5,7 @@ import "./globals.css";
 import styles from "./layout.module.css";
 import { Theme } from "@radix-ui/themes";
 import Image from "next/image";
+import Link from "next/link";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -32,7 +33,7 @@ export default function RootLayout({
       <body>
         <Theme appearance="dark">
           <header className={styles.header}>
-            <div className={styles.logoContainer}>
+            <Link href="/" className={styles.logoContainer}>
               <Image
                 src="/logo.svg"
                 alt="Nomadically Logo"
@@ -41,7 +42,7 @@ export default function RootLayout({
                 priority
                 className={styles.logo}
               />
-            </div>
+            </Link>
           </header>
           {children}
         </Theme>

@@ -251,8 +251,27 @@ function JobPageContent() {
         <Heading size="8" mb="2">
           {job.title}
         </Heading>
-        <Flex gap="4" mb="4">
-          {job.company_key && <Text weight="medium">{job.company_key}</Text>}
+        <Flex gap="4" mb="4" align="center">
+          {job.company_key && (
+            <Link
+              href={`/boards/${job.company_key}`}
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              <Text
+                weight="medium"
+                style={{
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                {job.company_key}
+              </Text>
+            </Link>
+          )}
           {job.location && <Text color="gray">📍 {job.location}</Text>}
         </Flex>
         <Flex gap="2" wrap="wrap">

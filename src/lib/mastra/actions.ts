@@ -377,7 +377,7 @@ const contextRelevanceScorer = wrapBuiltInScorerForStep({
         const inputStr = String(input);
         const contextMatch = inputStr.match(/Context:\n([\s\S]*?)\n\nTask:/);
         if (contextMatch) {
-          return contextMatch[1].split('\n').filter(line => line.trim());
+          return contextMatch[1].split("\n").filter((line) => line.trim());
         }
         return [inputStr];
       },

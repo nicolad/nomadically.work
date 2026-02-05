@@ -108,7 +108,7 @@ export function JobsList() {
 
       <Box mb="4">
         <TextField.Root
-          placeholder="Search jobs by title, company, or location..."
+          placeholder="Search jobs by title, company, location, or description..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           size="3"

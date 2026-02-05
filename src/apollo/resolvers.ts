@@ -31,6 +31,7 @@ export const resolvers = {
               like(jobs.title, searchPattern),
               like(jobs.company_key, searchPattern),
               like(jobs.location, searchPattern),
+              like(jobs.description, searchPattern),
             )!,
           );
         }

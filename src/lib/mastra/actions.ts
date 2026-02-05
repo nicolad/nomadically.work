@@ -371,7 +371,16 @@ const contextRelevanceScorer = wrapBuiltInScorerForStep({
   baseScorer: createContextRelevanceScorerLLM({
     model: JUDGE_MODEL,
     options: {
-      context: [], // We'll pass context via input string
+      // We'll extract context from the input string we provide
+      contextExtractor: (input) => {
+        // input is a string here - extract the context pieces from it
+        const inputStr = String(input);
+        const contextMatch = inputStr.match(/Context:\n([\s\S]*?)\n\nTask:/);
+        if (contextMatch) {
+          return contextMatch[1].split('\n').filter(line => line.trim());
+        }
+        return [inputStr];
+      },
     },
   }),
   buildInput: (input) =>

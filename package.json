@@ -53,7 +53,6 @@
     "@graphql-codegen/typescript": "^5.0.7",
     "@graphql-codegen/typescript-operations": "^5.0.7",
     "@graphql-codegen/typescript-react-apollo": "^4.4.0",
-    "@next/swc-darwin-arm64": "15.5.7",
     "@types/lodash": "^4.17.23",
     "@types/node": "22.19.7",
     "@types/react": "^19.1.12",

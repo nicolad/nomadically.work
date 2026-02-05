@@ -42,7 +42,7 @@ interface AshbyBoardData {
 
 export default function BoardPage() {
   const params = useParams();
-  const boardName = params.name as string;
+  const boardName = decodeURIComponent(params.name as string);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

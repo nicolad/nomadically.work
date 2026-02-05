@@ -12,20 +12,23 @@ query GetJobs(
     limit: $limit
     offset: $offset
   ) {
-    id
-    external_id
-    source_id
-    source_kind
-    company_key
-    title
-    location
-    url
-    description
-    posted_at
-    score
-    score_reason
-    status
-    created_at
-    updated_at
+    jobs {
+      id
+      external_id
+      source_id
+      source_kind
+      company_key
+      title
+      location
+      url
+      description
+      posted_at
+      score
+      score_reason
+      status
+      created_at
+      updated_at
+    }
+    totalCount
   }
 }

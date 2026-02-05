@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { jobs } from "@/db/schema";
-import { eq, and, or, like, desc } from "drizzle-orm";
+import { eq, and, or, like, desc, count } from "drizzle-orm";
 import type { GraphQLContext } from "./context";
 import { last, split } from "lodash";
 
@@ -36,9 +36,11 @@ export const resolvers = {
         }
 
         let query = db.select().from(jobs);
+        let countQuery = db.select({ count: count() }).from(jobs);
 
         if (conditions.length > 0) {
           query = query.where(and(...conditions)!) as any;
+          countQuery = countQuery.where(and(...conditions)!) as any;
         }
 
         query = query.orderBy(
@@ -54,11 +56,18 @@ export const resolvers = {
           query = query.offset(args.offset) as any;
         }
 
-        const result = await query;
-        return result || [];
+        const [result, totalCountResult] = await Promise.all([
+          query,
+          countQuery,
+        ]);
+
+        return {
+          jobs: result || [],
+          totalCount: totalCountResult[0]?.count || 0,
+        };
       } catch (error) {
         console.error("Error fetching jobs:", error);
-        return [];
+        return { jobs: [], totalCount: 0 };
       }
     },
     async job(_parent: any, args: { id: string }, _context: GraphQLContext) {

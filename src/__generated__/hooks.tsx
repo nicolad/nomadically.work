@@ -37,10 +37,16 @@ export type Job = {
   url: Scalars['String']['output'];
 };
 
+export type JobsResponse = {
+  __typename?: 'JobsResponse';
+  jobs: Array<Job>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type Query = {
   __typename?: 'Query';
   job?: Maybe<Job>;
-  jobs: Array<Job>;
+  jobs: JobsResponse;
 };
 
 
@@ -73,7 +79,7 @@ export type GetJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string }> };
+export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string }> } };
 
 
 export const GetJobDocument = gql`
@@ -142,21 +148,24 @@ export const GetJobsDocument = gql`
     limit: $limit
     offset: $offset
   ) {
-    id
-    external_id
-    source_id
-    source_kind
-    company_key
-    title
-    location
-    url
-    description
-    posted_at
-    score
-    score_reason
-    status
-    created_at
-    updated_at
+    jobs {
+      id
+      external_id
+      source_id
+      source_kind
+      company_key
+      title
+      location
+      url
+      description
+      posted_at
+      score
+      score_reason
+      status
+      created_at
+      updated_at
+    }
+    totalCount
   }
 }
     `;

@@ -18,7 +18,7 @@ import {
   TextField,
 } from "@radix-ui/themes";
 
-type Job = GetJobsQuery["jobs"][number];
+type Job = GetJobsQuery["jobs"]["jobs"][number];
 type BadgeColor = "green" | "orange" | "blue" | "gray";
 
 type JobStatus = "eu-remote" | "non-eu-remote" | "eu-onsite" | "non-eu" | "all";
@@ -94,14 +94,15 @@ export function JobsList() {
     );
   }
 
-  const jobs = data?.jobs || [];
+  const jobs = data?.jobs.jobs || [];
+  const totalCount = data?.jobs.totalCount || 0;
 
   return (
     <Container size="4" px="8">
       <Flex justify="between" align="center" mb="6">
         <Heading size="8">Remote Jobs</Heading>
         <Text size="2" color="gray">
-          {jobs.length} of {jobs.length} jobs
+          {jobs.length} of {totalCount} jobs
         </Text>
       </Flex>
 

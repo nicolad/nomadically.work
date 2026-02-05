@@ -31,7 +31,7 @@ export function JobsList() {
     );
   }
 
-  const jobs = data?.jobs || [];
+  const jobs = data?.jobs.jobs || [];
 
   if (jobs.length === 0 && !loading) {
     return (

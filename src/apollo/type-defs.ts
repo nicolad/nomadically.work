@@ -21,6 +21,11 @@ export const typeDefs = gql`
     updated_at: String!
   }
 
+  type JobsResponse {
+    jobs: [Job!]!
+    totalCount: Int!
+  }
+
   type Query {
     jobs(
       sourceType: String
@@ -28,7 +33,7 @@ export const typeDefs = gql`
       search: String
       limit: Int
       offset: Int
-    ): [Job!]!
+    ): JobsResponse!
     job(id: String!): Job
   }
 `;

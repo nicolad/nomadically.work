@@ -16,47 +16,80 @@ import {
 } from "@radix-ui/themes";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
-import {
-  useGetUserSettingsQuery,
-  useUpdateUserSettingsMutation,
-} from "@/__generated__/hooks";
+import { useQuery, useMutation } from "@apollo/client";
+import { gql } from "@/__generated__";
+import type {
+  GetUserSettingsQuery,
+  GetUserSettingsQueryVariables,
+  UpdateUserSettingsMutation,
+  UpdateUserSettingsMutationVariables,
+} from "@/__generated__/graphql";
 import { ApolloProvider, useApollo } from "@/apollo/client";
 
 export const dynamic = "force-dynamic";
 
+// GraphQL operations
+const GET_USER_SETTINGS = gql(`query GetUserSettings($userId: String!) {
+  userSettings(userId: $userId) {
+    id
+    user_id
+    email_notifications
+    daily_digest
+    new_job_alerts
+    preferred_locations
+    preferred_skills
+    excluded_companies
+    dark_mode
+    jobs_per_page
+    created_at
+    updated_at
+  }
+}`);
+
+const UPDATE_USER_SETTINGS =
+  gql(`mutation UpdateUserSettings($userId: String!, $settings: UserSettingsInput!) {
+  updateUserSettings(userId: $userId, settings: $settings) {
+    id
+    user_id
+    email_notifications
+    daily_digest
+    new_job_alerts
+    preferred_locations
+    preferred_skills
+    excluded_companies
+    dark_mode
+    jobs_per_page
+    created_at
+    updated_at
+  }
+}`);
+
 function SettingsPageContent() {
   const { user, isLoaded } = useUser();
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [dailyDigest, setDailyDigest] = useState(false);
-  const [newJobAlerts, setNewJobAlerts] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
-  const [jobsPerPage, setJobsPerPage] = useState("20");
   const [preferredLocations, setPreferredLocations] = useState(
     "Fully Remote EU, Fully Remote Worldwide",
   );
-  const [preferredSkills, setPreferredSkills] = useState("React, AI");
-  const [excludedCompanies, setExcludedCompanies] = useState("");
+  const [preferredSkills, setPreferredSkills] = useState("React");
 
-  const { data, loading, refetch } = useGetUserSettingsQuery({
+  const { data, loading, refetch } = useQuery<
+    GetUserSettingsQuery,
+    GetUserSettingsQueryVariables
+  >(GET_USER_SETTINGS, {
     variables: { userId: user?.id || "" },
     skip: !user?.id,
   });
 
-  const [updateSettings, { loading: updateLoading }] =
-    useUpdateUserSettingsMutation();
+  const [updateSettings, { loading: updateLoading }] = useMutation<
+    UpdateUserSettingsMutation,
+    UpdateUserSettingsMutationVariables
+  >(UPDATE_USER_SETTINGS);
 
   // Load settings when data is available
   useEffect(() => {
     if (data?.userSettings) {
       const settings = data.userSettings;
-      setEmailNotifications(settings.email_notifications);
-      setDailyDigest(settings.daily_digest);
-      setNewJobAlerts(settings.new_job_alerts);
-      setDarkMode(settings.dark_mode);
-      setJobsPerPage(String(settings.jobs_per_page));
       setPreferredLocations(settings.preferred_locations?.join(", ") || "");
       setPreferredSkills(settings.preferred_skills?.join(", ") || "");
-      setExcludedCompanies(settings.excluded_companies?.join(", ") || "");
     }
   }, [data]);
 
@@ -71,11 +104,11 @@ function SettingsPageContent() {
         variables: {
           userId: user.id,
           settings: {
-            email_notifications: emailNotifications,
-            daily_digest: dailyDigest,
-            new_job_alerts: newJobAlerts,
-            dark_mode: darkMode,
-            jobs_per_page: parseInt(jobsPerPage, 10),
+            email_notifications: true,
+            daily_digest: false,
+            new_job_alerts: true,
+            dark_mode: true,
+            jobs_per_page: 50,
             preferred_locations: preferredLocations
               .split(",")
               .map((s) => s.trim())
@@ -84,10 +117,7 @@ function SettingsPageContent() {
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),
-            excluded_companies: excludedCompanies
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
+            excluded_companies: [],
           },
         },
       });
@@ -131,54 +161,6 @@ function SettingsPageContent() {
           </Link>
         </Flex>
 
-        {/* Notifications Settings */}
-        <Card size="3">
-          <Flex direction="column" gap="4">
-            <Heading size="5">Notifications</Heading>
-            <Text size="2" color="gray">
-              Manage how you receive updates about new job postings
-            </Text>
-
-            <Separator size="4" />
-
-            <Flex justify="between" align="center">
-              <Flex direction="column" gap="1">
-                <Text weight="medium">Email Notifications</Text>
-                <Text size="2" color="gray">
-                  Receive emails about new job postings
-                </Text>
-              </Flex>
-              <Switch
-                checked={emailNotifications}
-                onCheckedChange={setEmailNotifications}
-              />
-            </Flex>
-
-            <Flex justify="between" align="center">
-              <Flex direction="column" gap="1">
-                <Text weight="medium">Daily Digest</Text>
-                <Text size="2" color="gray">
-                  Get a daily summary of new remote jobs
-                </Text>
-              </Flex>
-              <Switch checked={dailyDigest} onCheckedChange={setDailyDigest} />
-            </Flex>
-
-            <Flex justify="between" align="center">
-              <Flex direction="column" gap="1">
-                <Text weight="medium">New Job Alerts</Text>
-                <Text size="2" color="gray">
-                  Instant notifications for matching jobs
-                </Text>
-              </Flex>
-              <Switch
-                checked={newJobAlerts}
-                onCheckedChange={setNewJobAlerts}
-              />
-            </Flex>
-          </Flex>
-        </Card>
-
         {/* Job Preferences */}
         <Card size="3">
           <Flex direction="column" gap="4">
@@ -212,84 +194,6 @@ function SettingsPageContent() {
                 Jobs matching these skills will be highlighted
               </Text>
             </Flex>
-
-            <Flex direction="column" gap="2">
-              <Text weight="medium">Excluded Companies</Text>
-              <TextField.Root
-                placeholder="e.g., company1, company2..."
-                value={excludedCompanies}
-                onChange={(e) => setExcludedCompanies(e.target.value)}
-              />
-              <Text size="1" color="gray">
-                Hide jobs from specific companies
-              </Text>
-            </Flex>
-          </Flex>
-        </Card>
-
-        {/* Display Settings */}
-        <Card size="3">
-          <Flex direction="column" gap="4">
-            <Heading size="5">Display Settings</Heading>
-            <Text size="2" color="gray">
-              Personalize how jobs are displayed
-            </Text>
-
-            <Separator size="4" />
-
-            <Flex justify="between" align="center">
-              <Flex direction="column" gap="1">
-                <Text weight="medium">Dark Mode</Text>
-                <Text size="2" color="gray">
-                  Use dark theme (currently enabled by default)
-                </Text>
-              </Flex>
-              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
-            </Flex>
-
-            <Flex direction="column" gap="2">
-              <Text weight="medium">Jobs Per Page</Text>
-              <Select.Root value={jobsPerPage} onValueChange={setJobsPerPage}>
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="25">25 jobs</Select.Item>
-                  <Select.Item value="50">50 jobs</Select.Item>
-                  <Select.Item value="100">100 jobs</Select.Item>
-                  <Select.Item value="200">200 jobs</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </Flex>
-          </Flex>
-        </Card>
-
-        {/* Account Settings */}
-        <Card size="3">
-          <Flex direction="column" gap="4">
-            <Heading size="5">Account</Heading>
-            <Text size="2" color="gray">
-              Manage your account settings
-            </Text>
-
-            <Separator size="4" />
-
-            <Flex direction="column" gap="2">
-              <Text weight="medium">Email Address</Text>
-              <TextField.Root
-                type="email"
-                placeholder="your@email.com"
-                value={user?.primaryEmailAddress?.emailAddress || ""}
-                disabled
-              />
-              <Text size="1" color="gray">
-                Email is managed through your account settings
-              </Text>
-            </Flex>
-
-            <Box>
-              <Button variant="soft" color="red">
-                Delete Account
-              </Button>
-            </Box>
           </Flex>
         </Card>
 

@@ -53,18 +53,18 @@ export default function RootLayout({
                       </SignUpButton>
                     </SignedOut>
                     <SignedIn>
+                      <Link
+                        href="/settings"
+                        style={{ display: "flex", alignItems: "center" }}
+                      >
+                        <GearIcon
+                          width={32}
+                          height={32}
+                          style={{ color: "#888888" }}
+                        />
+                      </Link>
                       <UserButton />
                     </SignedIn>
-                    <Link
-                      href="/settings"
-                      style={{ display: "flex", alignItems: "center" }}
-                    >
-                      <GearIcon
-                        width={32}
-                        height={32}
-                        style={{ color: "#888888" }}
-                      />
-                    </Link>
                     <Link
                       href="https://github.com/nicolad/nomadically.work"
                       target="_blank"

@@ -47,3 +47,33 @@ export const ashbyBoards = sqliteTable("ashby_boards", {
 
 export type AshbyBoard = typeof ashbyBoards.$inferSelect;
 export type NewAshbyBoard = typeof ashbyBoards.$inferInsert;
+
+export const userSettings = sqliteTable("user_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  user_id: text("user_id").notNull().unique(), // Clerk user ID
+  email_notifications: integer("email_notifications", { mode: "boolean" })
+    .notNull()
+    .default(sql`1`),
+  daily_digest: integer("daily_digest", { mode: "boolean" })
+    .notNull()
+    .default(sql`0`),
+  new_job_alerts: integer("new_job_alerts", { mode: "boolean" })
+    .notNull()
+    .default(sql`1`),
+  preferred_locations: text("preferred_locations"), // JSON array
+  preferred_skills: text("preferred_skills"), // JSON array
+  excluded_companies: text("excluded_companies"), // JSON array
+  dark_mode: integer("dark_mode", { mode: "boolean" })
+    .notNull()
+    .default(sql`1`),
+  jobs_per_page: integer("jobs_per_page").notNull().default(20),
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+export type UserSettings = typeof userSettings.$inferSelect;
+export type NewUserSettings = typeof userSettings.$inferInsert;

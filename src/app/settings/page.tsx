@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Container,
   Heading,
@@ -15,24 +15,106 @@ import {
   Box,
 } from "@radix-ui/themes";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
+import {
+  useGetUserSettingsQuery,
+  useUpdateUserSettingsMutation,
+} from "@/__generated__/hooks";
 
 export default function SettingsPage() {
+  const { user, isLoaded } = useUser();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [dailyDigest, setDailyDigest] = useState(false);
   const [newJobAlerts, setNewJobAlerts] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
-  const [jobsPerPage, setJobsPerPage] = useState("50");
+  const [jobsPerPage, setJobsPerPage] = useState("20");
+  const [preferredLocations, setPreferredLocations] = useState("");
+  const [preferredSkills, setPreferredSkills] = useState("");
+  const [excludedCompanies, setExcludedCompanies] = useState("");
 
-  const handleSave = () => {
-    // TODO: Save preferences to database or local storage
-    console.log("Saving preferences...", {
-      emailNotifications,
-      dailyDigest,
-      newJobAlerts,
-      darkMode,
-      jobsPerPage,
-    });
+  const { data, loading, refetch } = useGetUserSettingsQuery({
+    variables: { userId: user?.id || "" },
+    skip: !user?.id,
+  });
+
+  const [updateSettings, { loading: updateLoading }] =
+    useUpdateUserSettingsMutation();
+
+  // Load settings when data is available
+  useEffect(() => {
+    if (data?.userSettings) {
+      const settings = data.userSettings;
+      setEmailNotifications(settings.email_notifications);
+      setDailyDigest(settings.daily_digest);
+      setNewJobAlerts(settings.new_job_alerts);
+      setDarkMode(settings.dark_mode);
+      setJobsPerPage(String(settings.jobs_per_page));
+      setPreferredLocations(settings.preferred_locations?.join(", ") || "");
+      setPreferredSkills(settings.preferred_skills?.join(", ") || "");
+      setExcludedCompanies(settings.excluded_companies?.join(", ") || "");
+    }
+  }, [data]);
+
+  const handleSave = async () => {
+    if (!user?.id) {
+      alert("You must be signed in to save settings");
+      return;
+    }
+
+    try {
+      await updateSettings({
+        variables: {
+          userId: user.id,
+          settings: {
+            email_notifications: emailNotifications,
+            daily_digest: dailyDigest,
+            new_job_alerts: newJobAlerts,
+            dark_mode: darkMode,
+            jobs_per_page: parseInt(jobsPerPage, 10),
+            preferred_locations: preferredLocations
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+            preferred_skills: preferredSkills
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+            excluded_companies: excludedCompanies
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          },
+        },
+      });
+      await refetch();
+      alert("Settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Failed to save settings. Please try again.");
+    }
   };
+
+  if (!isLoaded || loading) {
+    return (
+      <Container size="3" px="8" py="6">
+        <Text>Loading...</Text>
+      </Container>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Container size="3" px="8" py="6">
+        <Flex direction="column" gap="4">
+          <Heading size="8">Settings</Heading>
+          <Text>You must be signed in to access settings.</Text>
+          <Link href="/">
+            <Button>Go to Home</Button>
+          </Link>
+        </Flex>
+      </Container>
+    );
+  }
 
   return (
     <Container size="3" px="8" py="6">
@@ -106,7 +188,8 @@ export default function SettingsPage() {
               <Text weight="medium">Preferred Locations</Text>
               <TextField.Root
                 placeholder="e.g., EU, Remote, Berlin, London..."
-                defaultValue=""
+                value={preferredLocations}
+                onChange={(e) => setPreferredLocations(e.target.value)}
               />
               <Text size="1" color="gray">
                 Separate multiple locations with commas
@@ -117,7 +200,8 @@ export default function SettingsPage() {
               <Text weight="medium">Skills & Keywords</Text>
               <TextField.Root
                 placeholder="e.g., React, Python, AI/ML, DevOps..."
-                defaultValue=""
+                value={preferredSkills}
+                onChange={(e) => setPreferredSkills(e.target.value)}
               />
               <Text size="1" color="gray">
                 Jobs matching these skills will be highlighted
@@ -128,7 +212,8 @@ export default function SettingsPage() {
               <Text weight="medium">Excluded Companies</Text>
               <TextField.Root
                 placeholder="e.g., company1, company2..."
-                defaultValue=""
+                value={excludedCompanies}
+                onChange={(e) => setExcludedCompanies(e.target.value)}
               />
               <Text size="1" color="gray">
                 Hide jobs from specific companies
@@ -187,8 +272,12 @@ export default function SettingsPage() {
               <TextField.Root
                 type="email"
                 placeholder="your@email.com"
-                defaultValue=""
+                value={user?.primaryEmailAddress?.emailAddress || ""}
+                disabled
               />
+              <Text size="1" color="gray">
+                Email is managed through your account settings
+              </Text>
             </Flex>
 
             <Box>
@@ -206,7 +295,9 @@ export default function SettingsPage() {
               Cancel
             </Button>
           </Link>
-          <Button onClick={handleSave}>Save Preferences</Button>
+          <Button onClick={handleSave} disabled={updateLoading}>
+            {updateLoading ? "Saving..." : "Save Preferences"}
+          </Button>
         </Flex>
       </Flex>
     </Container>

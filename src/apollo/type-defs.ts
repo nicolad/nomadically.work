@@ -26,6 +26,32 @@ export const typeDefs = gql`
     totalCount: Int!
   }
 
+  type UserSettings {
+    id: Int!
+    user_id: String!
+    email_notifications: Boolean!
+    daily_digest: Boolean!
+    new_job_alerts: Boolean!
+    preferred_locations: [String!]
+    preferred_skills: [String!]
+    excluded_companies: [String!]
+    dark_mode: Boolean!
+    jobs_per_page: Int!
+    created_at: String!
+    updated_at: String!
+  }
+
+  input UserSettingsInput {
+    email_notifications: Boolean
+    daily_digest: Boolean
+    new_job_alerts: Boolean
+    preferred_locations: [String!]
+    preferred_skills: [String!]
+    excluded_companies: [String!]
+    dark_mode: Boolean
+    jobs_per_page: Int
+  }
+
   type Query {
     jobs(
       sourceType: String
@@ -35,5 +61,13 @@ export const typeDefs = gql`
       offset: Int
     ): JobsResponse!
     job(id: String!): Job
+    userSettings(userId: String!): UserSettings
+  }
+
+  type Mutation {
+    updateUserSettings(
+      userId: String!
+      settings: UserSettingsInput!
+    ): UserSettings!
   }
 `;

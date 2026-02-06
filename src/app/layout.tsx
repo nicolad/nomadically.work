@@ -49,9 +49,7 @@ export default function RootLayout({
                         </Button>
                       </SignInButton>
                       <SignUpButton mode="modal">
-                        <Button style={{ cursor: "pointer" }}>
-                          Sign Up
-                        </Button>
+                        <Button style={{ cursor: "pointer" }}>Sign Up</Button>
                       </SignUpButton>
                     </SignedOut>
                     <SignedIn>

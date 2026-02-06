@@ -19,14 +19,14 @@ export default function RootLayout({
     <html lang="en" style={{ fontFamily: "var(--font-geist-sans)" }}>
       <body>
         <Theme appearance="dark">
-          <Flex asChild justify="center" align="center">
+          <Flex asChild justify="center" align="center" p="0">
             <header>
               <Link href="/" style={{ display: "flex" }}>
                 <Image
                   src="/logo.svg"
                   alt="Nomadically Logo"
-                  width={360}
-                  height={84}
+                  width={600}
+                  height={100}
                   priority
                 />
               </Link>

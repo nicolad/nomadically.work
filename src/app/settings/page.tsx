@@ -212,7 +212,14 @@ function SettingsPageContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [locationChips, skillChips, excludedCompaniesChips, initialLocations, initialSkills, initialExcludedCompanies]);
+  }, [
+    locationChips,
+    skillChips,
+    excludedCompaniesChips,
+    initialLocations,
+    initialSkills,
+    initialExcludedCompanies,
+  ]);
 
   const handleSave = async () => {
     if (!user?.id) {

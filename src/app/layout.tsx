@@ -22,7 +22,7 @@ export default function RootLayout({
         <Theme appearance="dark">
           <header>
             <Container size="4">
-              <Flex justify="between" align="center" p="4">
+              <Flex justify="between" align="center" py="4">
                 <Link href="/" style={{ display: "flex" }}>
                   <Image
                     src="/logo.svg"

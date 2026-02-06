@@ -20,8 +20,11 @@ import {
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
 } from "@/__generated__/hooks";
+import { ApolloProvider, useApollo } from "@/apollo/client";
 
-export default function SettingsPage() {
+export const dynamic = "force-dynamic";
+
+function SettingsPageContent() {
   const { user, isLoaded } = useUser();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [dailyDigest, setDailyDigest] = useState(false);
@@ -301,5 +304,15 @@ export default function SettingsPage() {
         </Flex>
       </Flex>
     </Container>
+  );
+}
+
+export default function SettingsPage() {
+  const apolloClient = useApollo(null);
+
+  return (
+    <ApolloProvider client={apolloClient}>
+      <SettingsPageContent />
+    </ApolloProvider>
   );
 }

@@ -1,22 +1,9 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
-import styles from "./layout.module.css";
-import { Theme } from "@radix-ui/themes";
+import { Theme, Flex } from "@radix-ui/themes";
 import Image from "next/image";
 import Link from "next/link";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
 
 export const metadata: Metadata = {
   title: "Nomadically.Work",
@@ -32,18 +19,19 @@ export default function RootLayout({
     <html lang="en" style={{ fontFamily: "var(--font-geist-sans)" }}>
       <body>
         <Theme appearance="dark">
-          <header className={styles.header}>
-            <Link href="/" className={styles.logoContainer}>
-              <Image
-                src="/logo.svg"
-                alt="Nomadically Logo"
-                width={360}
-                height={84}
-                priority
-                className={styles.logo}
-              />
-            </Link>
-          </header>
+          <Flex asChild justify="center" align="center">
+            <header>
+              <Link href="/" style={{ display: "flex" }}>
+                <Image
+                  src="/logo.svg"
+                  alt="Nomadically Logo"
+                  width={360}
+                  height={84}
+                  priority
+                />
+              </Link>
+            </header>
+          </Flex>
           {children}
         </Theme>
       </body>

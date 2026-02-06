@@ -9,6 +9,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+a img {
+  transition: opacity 0.2s;
+}
+
+a:hover img {
+  opacity: 0.9;
+}
+
 .animate-mask {
   animation: mask 3.4s cubic-bezier(0.33, 1, 0.68, 1) infinite both;
 }

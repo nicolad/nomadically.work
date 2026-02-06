@@ -471,7 +471,10 @@ function SettingsPageContent() {
 
       {/* Discard Changes Dialog */}
       <Dialog.Root open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
-        <Dialog.Content style={{ maxWidth: 450 }} aria-describedby="discard-description">
+        <Dialog.Content
+          style={{ maxWidth: 450 }}
+          aria-describedby="discard-description"
+        >
           <Dialog.Title>Discard changes?</Dialog.Title>
           <Dialog.Description id="discard-description" size="2" mb="4">
             You have unsaved changes. Are you sure you want to discard them?

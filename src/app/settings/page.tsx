@@ -24,53 +24,13 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation } from "@apollo/client";
-import { gql } from "@/__generated__";
-import type {
-  GetUserSettingsQuery,
-  GetUserSettingsQueryVariables,
-  UpdateUserSettingsMutation,
-  UpdateUserSettingsMutationVariables,
-} from "@/__generated__/graphql";
+import {
+  useGetUserSettingsQuery,
+  useUpdateUserSettingsMutation,
+} from "@/__generated__/hooks";
 import { ApolloProvider, useApollo } from "@/apollo/client";
 
 export const dynamic = "force-dynamic";
-
-// GraphQL operations
-const GET_USER_SETTINGS = gql(`query GetUserSettings($userId: String!) {
-  userSettings(userId: $userId) {
-    id
-    user_id
-    email_notifications
-    daily_digest
-    new_job_alerts
-    preferred_locations
-    preferred_skills
-    excluded_companies
-    dark_mode
-    jobs_per_page
-    created_at
-    updated_at
-  }
-}`);
-
-const UPDATE_USER_SETTINGS =
-  gql(`mutation UpdateUserSettings($userId: String!, $settings: UserSettingsInput!) {
-  updateUserSettings(userId: $userId, settings: $settings) {
-    id
-    user_id
-    email_notifications
-    daily_digest
-    new_job_alerts
-    preferred_locations
-    preferred_skills
-    excluded_companies
-    dark_mode
-    jobs_per_page
-    created_at
-    updated_at
-  }
-}`);
 
 const LOCATION_SUGGESTIONS = [
   "Fully Remote EU",
@@ -112,18 +72,13 @@ function SettingsPageContent() {
   const locationInputRef = useRef<HTMLInputElement>(null);
   const skillInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, loading, refetch } = useQuery<
-    GetUserSettingsQuery,
-    GetUserSettingsQueryVariables
-  >(GET_USER_SETTINGS, {
+  const { data, loading, refetch } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
     skip: !user?.id,
   });
 
-  const [updateSettings, { loading: updateLoading }] = useMutation<
-    UpdateUserSettingsMutation,
-    UpdateUserSettingsMutationVariables
-  >(UPDATE_USER_SETTINGS);
+  const [updateSettings, { loading: updateLoading }] =
+    useUpdateUserSettingsMutation();
 
   // Load settings when data is available
   useEffect(() => {
@@ -516,9 +471,9 @@ function SettingsPageContent() {
 
       {/* Discard Changes Dialog */}
       <Dialog.Root open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
-        <Dialog.Content style={{ maxWidth: 450 }}>
+        <Dialog.Content style={{ maxWidth: 450 }} aria-describedby="discard-description">
           <Dialog.Title>Discard changes?</Dialog.Title>
-          <Dialog.Description size="2" mb="4">
+          <Dialog.Description id="discard-description" size="2" mb="4">
             You have unsaved changes. Are you sure you want to discard them?
           </Dialog.Description>
 

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
-import { Theme, Flex, Container } from "@radix-ui/themes";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { Theme, Flex, Container, Button } from "@radix-ui/themes";
+import { GitHubLogoIcon, GearIcon } from "@radix-ui/react-icons";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -44,29 +44,29 @@ export default function RootLayout({
                   <Flex gap="4" align="center">
                     <SignedOut>
                       <SignInButton mode="modal">
-                        <button style={{ cursor: "pointer" }}>Sign In</button>
+                        <Button variant="ghost" style={{ cursor: "pointer" }}>
+                          Sign In
+                        </Button>
                       </SignInButton>
                       <SignUpButton mode="modal">
-                        <button
-                          style={{
-                            backgroundColor: "#6c47ff",
-                            color: "white",
-                            borderRadius: "9999px",
-                            fontWeight: "500",
-                            fontSize: "14px",
-                            height: "40px",
-                            padding: "0 20px",
-                            cursor: "pointer",
-                            border: "none",
-                          }}
-                        >
+                        <Button style={{ cursor: "pointer" }}>
                           Sign Up
-                        </button>
+                        </Button>
                       </SignUpButton>
                     </SignedOut>
                     <SignedIn>
                       <UserButton />
                     </SignedIn>
+                    <Link
+                      href="/settings"
+                      style={{ display: "flex", alignItems: "center" }}
+                    >
+                      <GearIcon
+                        width={32}
+                        height={32}
+                        style={{ color: "#888888" }}
+                      />
+                    </Link>
                     <Link
                       href="https://github.com/nicolad/nomadically.work"
                       target="_blank"

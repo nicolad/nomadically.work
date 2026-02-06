@@ -17,6 +17,14 @@ a:hover img {
   opacity: 0.9;
 }
 
+a svg {
+  transition: color 0.2s;
+}
+
+a:hover svg {
+  color: #ffffff !important;
+}
+
 .animate-mask {
   animation: mask 3.4s cubic-bezier(0.33, 1, 0.68, 1) infinite both;
 }

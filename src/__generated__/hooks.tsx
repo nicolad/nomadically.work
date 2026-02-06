@@ -130,7 +130,7 @@ export type GetUserSettingsQueryVariables = Exact<{
 }>;
 
 
-export type GetUserSettingsQuery = { __typename?: 'Query', userSettings?: { __typename?: 'UserSettings', id: number, user_id: string, email_notifications: boolean, daily_digest: boolean, new_job_alerts: boolean, preferred_locations?: Array<string> | null, preferred_skills?: Array<string> | null, excluded_companies?: Array<string> | null, dark_mode: boolean, jobs_per_page: number, created_at: string, updated_at: string } | null };
+export type GetUserSettingsQuery = { __typename?: 'Query', userSettings?: { __typename?: 'UserSettings', id: number, user_id: string, preferred_locations?: Array<string> | null, preferred_skills?: Array<string> | null, excluded_companies?: Array<string> | null } | null };
 
 export type UpdateUserSettingsMutationVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -273,16 +273,9 @@ export const GetUserSettingsDocument = gql`
   userSettings(userId: $userId) {
     id
     user_id
-    email_notifications
-    daily_digest
-    new_job_alerts
     preferred_locations
     preferred_skills
     excluded_companies
-    dark_mode
-    jobs_per_page
-    created_at
-    updated_at
   }
 }
     `;

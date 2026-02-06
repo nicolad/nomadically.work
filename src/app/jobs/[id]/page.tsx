@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useGetJobQuery } from "@/__generated__/hooks";
+import {
+  useGetJobQuery,
+  useGetUserSettingsQuery,
+  useUpdateUserSettingsMutation,
+} from "@/__generated__/hooks";
 import { ApolloProvider, useApollo } from "@/apollo/client";
 import {
   Card,
@@ -17,6 +21,7 @@ import {
 } from "@radix-ui/themes";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { classifyJob } from "@/lib/mastra/actions";
 import type { JobClassificationResponse } from "@/lib/mastra/actions";
 
@@ -86,6 +91,7 @@ function JobPageContent() {
   const id = params.id as string;
   const company = searchParams.get("company");
   const source = searchParams.get("source");
+  const { user } = useUser();
 
   const [classifying, setClassifying] = useState(false);
   const [classification, setClassification] =
@@ -95,10 +101,19 @@ function JobPageContent() {
   );
   const [ashbyData, setAshbyData] = useState<AshbyJobPosting | null>(null);
   const [ashbyLoading, setAshbyLoading] = useState(false);
+  const [hideCompanyLoading, setHideCompanyLoading] = useState(false);
 
   const { data, loading, error, refetch } = useGetJobQuery({
     variables: { id },
   });
+
+  const { data: userSettingsData, refetch: refetchUserSettings } =
+    useGetUserSettingsQuery({
+      variables: { userId: user?.id || "" },
+      skip: !user?.id,
+    });
+
+  const [updateSettings] = useUpdateUserSettingsMutation();
 
   // Fetch Ashby data if source is ashby
   useEffect(() => {
@@ -238,6 +253,59 @@ function JobPageContent() {
     }
   };
 
+  const handleHideCompany = async () => {
+    if (!user?.id) {
+      alert("You must be signed in to hide companies");
+      return;
+    }
+
+    if (!job.company_key) {
+      alert("No company information available");
+      return;
+    }
+
+    const companyToHide = job.company_key;
+    const currentExcludedCompanies =
+      userSettingsData?.userSettings?.excluded_companies || [];
+
+    if (currentExcludedCompanies.includes(companyToHide)) {
+      alert("This company is already hidden");
+      return;
+    }
+
+    setHideCompanyLoading(true);
+
+    try {
+      await updateSettings({
+        variables: {
+          userId: user.id,
+          settings: {
+            email_notifications:
+              userSettingsData?.userSettings?.email_notifications ?? true,
+            daily_digest: userSettingsData?.userSettings?.daily_digest ?? false,
+            new_job_alerts:
+              userSettingsData?.userSettings?.new_job_alerts ?? true,
+            dark_mode: userSettingsData?.userSettings?.dark_mode ?? true,
+            jobs_per_page: userSettingsData?.userSettings?.jobs_per_page ?? 50,
+            preferred_locations:
+              userSettingsData?.userSettings?.preferred_locations || [],
+            preferred_skills:
+              userSettingsData?.userSettings?.preferred_skills || [],
+            excluded_companies: [...currentExcludedCompanies, companyToHide],
+          },
+        },
+      });
+
+      await refetchUserSettings();
+      alert(`Successfully hidden jobs from "${companyToHide}"`);
+    } catch (error) {
+      console.error("Error hiding company:", error);
+      alert("Failed to hide company. Please try again.");
+    } finally {
+      setHideCompanyLoading(false);
+    }
+  };
+
   return (
     <Container size="4" p="8" style={{ maxWidth: "1400px", width: "100%" }}>
       <Box mb="6">
@@ -253,24 +321,48 @@ function JobPageContent() {
         </Heading>
         <Flex gap="4" mb="4" align="center">
           {job.company_key && (
-            <Link
-              href={`/boards/${job.company_key}`}
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <Text
-                weight="medium"
+            <>
+              <Link
+                href={`/boards/${job.company_key}`}
                 style={{
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  textUnderlineOffset: "2px",
+                  textDecoration: "none",
+                  color: "inherit",
                 }}
               >
-                {job.company_key}
-              </Text>
-            </Link>
+                <Text
+                  weight="medium"
+                  style={{
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "2px",
+                  }}
+                >
+                  {job.company_key}
+                </Text>
+              </Link>
+              {user && (
+                <Button
+                  size="1"
+                  variant="soft"
+                  color="red"
+                  onClick={handleHideCompany}
+                  disabled={
+                    hideCompanyLoading ||
+                    userSettingsData?.userSettings?.excluded_companies?.includes(
+                      job.company_key,
+                    )
+                  }
+                  loading={hideCompanyLoading}
+                  style={{ cursor: "pointer" }}
+                >
+                  {userSettingsData?.userSettings?.excluded_companies?.includes(
+                    job.company_key,
+                  )
+                    ? "Hidden"
+                    : "Hide Company"}
+                </Button>
+              )}
+            </>
           )}
           {job.location && <Text color="gray">📍 {job.location}</Text>}
         </Flex>

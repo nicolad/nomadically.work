@@ -53,11 +53,18 @@ function SettingsPageContent() {
 
   const [locationChips, setLocationChips] = useState<string[]>([]);
   const [skillChips, setSkillChips] = useState<string[]>(["React"]);
+  const [excludedCompaniesChips, setExcludedCompaniesChips] = useState<
+    string[]
+  >([]);
   const [locationInput, setLocationInput] = useState("");
   const [skillInput, setSkillInput] = useState("");
+  const [excludedCompaniesInput, setExcludedCompaniesInput] = useState("");
 
   const [initialLocations, setInitialLocations] = useState<string[]>([]);
   const [initialSkills, setInitialSkills] = useState<string[]>([]);
+  const [initialExcludedCompanies, setInitialExcludedCompanies] = useState<
+    string[]
+  >([]);
 
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
@@ -71,6 +78,7 @@ function SettingsPageContent() {
 
   const locationInputRef = useRef<HTMLInputElement>(null);
   const skillInputRef = useRef<HTMLInputElement>(null);
+  const excludedCompaniesInputRef = useRef<HTMLInputElement>(null);
 
   const { data, loading, refetch } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
@@ -86,11 +94,14 @@ function SettingsPageContent() {
       const settings = data.userSettings;
       const locations = settings.preferred_locations || [];
       const skills = settings.preferred_skills || ["React"];
+      const excludedCompanies = settings.excluded_companies || [];
 
       setLocationChips(locations);
       setSkillChips(skills);
+      setExcludedCompaniesChips(excludedCompanies);
       setInitialLocations(locations);
       setInitialSkills(skills);
+      setInitialExcludedCompanies(excludedCompanies);
     }
   }, [data]);
 
@@ -100,7 +111,9 @@ function SettingsPageContent() {
       JSON.stringify([...locationChips].sort()) !==
         JSON.stringify([...initialLocations].sort()) ||
       JSON.stringify([...skillChips].sort()) !==
-        JSON.stringify([...initialSkills].sort())
+        JSON.stringify([...initialSkills].sort()) ||
+      JSON.stringify([...excludedCompaniesChips].sort()) !==
+        JSON.stringify([...initialExcludedCompanies].sort())
     );
   };
 
@@ -128,6 +141,15 @@ function SettingsPageContent() {
     if (trimmed && !skillChips.includes(trimmed)) {
       setSkillChips([...skillChips, trimmed]);
       setSkillInput("");
+    }
+  };
+
+  // Add excluded company chip
+  const addExcludedCompanyChip = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed && !excludedCompaniesChips.includes(trimmed)) {
+      setExcludedCompaniesChips([...excludedCompaniesChips, trimmed]);
+      setExcludedCompaniesInput("");
     }
   };
 
@@ -159,6 +181,22 @@ function SettingsPageContent() {
     }
   };
 
+  // Handle excluded companies input key press
+  const handleExcludedCompaniesKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addExcludedCompanyChip(excludedCompaniesInput);
+    } else if (
+      e.key === "Backspace" &&
+      excludedCompaniesInput === "" &&
+      excludedCompaniesChips.length > 0
+    ) {
+      setExcludedCompaniesChips(excludedCompaniesChips.slice(0, -1));
+    }
+  };
+
   // Handle save with keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -174,7 +212,7 @@ function SettingsPageContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [locationChips, skillChips, initialLocations, initialSkills]);
+  }, [locationChips, skillChips, excludedCompaniesChips, initialLocations, initialSkills, initialExcludedCompanies]);
 
   const handleSave = async () => {
     if (!user?.id) {
@@ -196,7 +234,7 @@ function SettingsPageContent() {
             jobs_per_page: 50,
             preferred_locations: locationChips,
             preferred_skills: skillChips,
-            excluded_companies: [],
+            excluded_companies: excludedCompaniesChips,
           },
         },
       });
@@ -204,6 +242,7 @@ function SettingsPageContent() {
       await refetch();
       setInitialLocations(locationChips);
       setInitialSkills(skillChips);
+      setInitialExcludedCompanies(excludedCompaniesChips);
       setSaveStatus("saved");
       showToast("Settings saved successfully!", "success");
 
@@ -226,6 +265,7 @@ function SettingsPageContent() {
   const handleDiscard = () => {
     setLocationChips(initialLocations);
     setSkillChips(initialSkills);
+    setExcludedCompaniesChips(initialExcludedCompanies);
     setShowDiscardDialog(false);
     router.push("/");
   };
@@ -412,6 +452,68 @@ function SettingsPageContent() {
                 onBlur={() => {
                   if (skillInput.trim()) {
                     addSkillChip(skillInput);
+                  }
+                }}
+              />
+
+              <Text size="1" color="gray">
+                Press Enter or comma to add • Backspace to remove
+              </Text>
+            </Flex>
+
+            {/* Excluded Companies */}
+            <Flex direction="column" gap="2">
+              <Flex align="center" gap="2">
+                <Text weight="medium">Excluded Companies</Text>
+                <Tooltip content="Hide jobs from specific companies in your feed.">
+                  <InfoCircledIcon
+                    style={{ color: "var(--gray-9)", cursor: "help" }}
+                  />
+                </Tooltip>
+              </Flex>
+
+              {/* Excluded Company Chips */}
+              {excludedCompaniesChips.length > 0 && (
+                <Flex gap="2" wrap="wrap">
+                  {excludedCompaniesChips.map((company, index) => (
+                    <Badge
+                      key={index}
+                      size="2"
+                      variant="soft"
+                      color="red"
+                      style={{ paddingRight: "4px" }}
+                    >
+                      <Flex align="center" gap="1">
+                        {company}
+                        <Cross2Icon
+                          style={{
+                            cursor: "pointer",
+                            width: "14px",
+                            height: "14px",
+                          }}
+                          onClick={() =>
+                            setExcludedCompaniesChips(
+                              excludedCompaniesChips.filter(
+                                (_, i) => i !== index,
+                              ),
+                            )
+                          }
+                        />
+                      </Flex>
+                    </Badge>
+                  ))}
+                </Flex>
+              )}
+
+              <TextField.Root
+                ref={excludedCompaniesInputRef}
+                placeholder="company-name, another-company, etc."
+                value={excludedCompaniesInput}
+                onChange={(e) => setExcludedCompaniesInput(e.target.value)}
+                onKeyDown={handleExcludedCompaniesKeyDown}
+                onBlur={() => {
+                  if (excludedCompaniesInput.trim()) {
+                    addExcludedCompanyChip(excludedCompaniesInput);
                   }
                 }}
               />

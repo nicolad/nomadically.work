@@ -2,15 +2,8 @@ query GetUserSettings($userId: String!) {
   userSettings(userId: $userId) {
     id
     user_id
-    email_notifications
-    daily_digest
-    new_job_alerts
     preferred_locations
     preferred_skills
     excluded_companies
-    dark_mode
-    jobs_per_page
-    created_at
-    updated_at
   }
 }

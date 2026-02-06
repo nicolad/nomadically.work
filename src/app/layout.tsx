@@ -38,7 +38,11 @@ export default function RootLayout({
                   rel="noopener noreferrer"
                   style={{ display: "flex", alignItems: "center" }}
                 >
-                  <GitHubLogoIcon width={32} height={32} style={{ color: "#888888" }} />
+                  <GitHubLogoIcon
+                    width={32}
+                    height={32}
+                    style={{ color: "#888888" }}
+                  />
                 </Link>
               </Flex>
             </Container>

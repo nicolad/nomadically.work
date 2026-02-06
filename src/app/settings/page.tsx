@@ -97,9 +97,10 @@ function SettingsPageContent() {
   // Check if there are unsaved changes
   const hasUnsavedChanges = () => {
     return (
-      JSON.stringify(locationChips.sort()) !==
-        JSON.stringify(initialLocations.sort()) ||
-      JSON.stringify(skillChips.sort()) !== JSON.stringify(initialSkills.sort())
+      JSON.stringify([...locationChips].sort()) !==
+        JSON.stringify([...initialLocations].sort()) ||
+      JSON.stringify([...skillChips].sort()) !==
+        JSON.stringify([...initialSkills].sort())
     );
   };
 

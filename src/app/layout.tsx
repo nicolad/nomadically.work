@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="en" style={{ fontFamily: "var(--font-geist-sans)" }}>
       <body>
         <Theme appearance="dark">
-          <Flex asChild justify="center" align="center" p="0" gap="4">
+          <Flex asChild justify="between" align="center" p="4" px="6">
             <header>
               <Link href="/" style={{ display: "flex" }}>
                 <Image

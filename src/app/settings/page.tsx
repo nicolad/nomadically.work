@@ -31,8 +31,8 @@ function SettingsPageContent() {
   const [newJobAlerts, setNewJobAlerts] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [jobsPerPage, setJobsPerPage] = useState("20");
-  const [preferredLocations, setPreferredLocations] = useState("");
-  const [preferredSkills, setPreferredSkills] = useState("");
+  const [preferredLocations, setPreferredLocations] = useState("Fully Remote EU, Fully Remote Worldwide");
+  const [preferredSkills, setPreferredSkills] = useState("React, AI");
   const [excludedCompanies, setExcludedCompanies] = useState("");
 
   const { data, loading, refetch } = useGetUserSettingsQuery({

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGetJobsQuery } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
+import { last, split } from "lodash";
 import {
   Box,
   Container,
@@ -116,10 +117,13 @@ export function JobsList() {
 
       <Flex direction="column" gap="4">
         {jobs.map((job) => {
+          // Extract the Ashby UUID from external_id (which might be a full URL)
+          const jobId = last(split(job.external_id, "/")) || job.external_id;
+
           return (
             <Card key={job.id} size="3" asChild>
               <Link
-                href={`/jobs/${job.id}?company=${job.company_key}&source=${job.source_kind}`}
+                href={`/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`}
                 target="_blank"
                 style={{
                   textDecoration: "none",

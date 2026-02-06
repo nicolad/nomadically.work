@@ -421,11 +421,12 @@ const nonBiasScorer = wrapBuiltInScorerForStep({
  * - These are useful only when your agent is calling tools.
  * - Keep them instantiated here so you can turn them on by raising sampling rates later.
  */
-const toolCallAccuracyCode = createToolCallAccuracyScorerCode({});
-const toolCallAccuracyLLM = createToolCallAccuracyScorerLLM({
-  model: JUDGE_MODEL,
-  availableTools: [],
-});
+// Commented out until tools are implemented with proper expectedTool/expectedToolOrder parameters
+// const toolCallAccuracyCode = createToolCallAccuracyScorerCode({});
+// const toolCallAccuracyLLM = createToolCallAccuracyScorerLLM({
+//   model: JUDGE_MODEL,
+//   availableTools: [],
+// });
 
 /* ------------------------------------------------------------------------------------------------
  * Step + Workflow
@@ -491,14 +492,14 @@ const classifyJobStep = createStep({
     nonBias: { scorer: nonBiasScorer, sampling: { type: "ratio", rate: 0.1 } },
 
     // Tool-call accuracy (disabled until you enable tools)
-    toolCallAccuracyCode: {
-      scorer: toolCallAccuracyCode,
-      sampling: { type: "ratio", rate: 0 },
-    },
-    toolCallAccuracyLLM: {
-      scorer: toolCallAccuracyLLM,
-      sampling: { type: "ratio", rate: 0 },
-    },
+    // toolCallAccuracyCode: {
+    //   scorer: toolCallAccuracyCode,
+    //   sampling: { type: "ratio", rate: 0 },
+    // },
+    // toolCallAccuracyLLM: {
+    //   scorer: toolCallAccuracyLLM,
+    //   sampling: { type: "ratio", rate: 0 },
+    // },
   },
 
   execute: async ({ inputData }) => {

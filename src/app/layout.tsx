@@ -37,8 +37,8 @@ export default function RootLayout({
               <Image
                 src="/logo.svg"
                 alt="Nomadically Logo"
-                width={240}
-                height={56}
+                width={360}
+                height={84}
                 priority
                 className={styles.logo}
               />

@@ -125,7 +125,7 @@ function buildContextPieces(input: JobClassificationInput): string[] {
  * Agent (single-file)
  * ---------------------------------------------------------------------------------------------- */
 
-export const jobClassifierAgent = new Agent({
+const jobClassifierAgent = new Agent({
   id: "jobClassifierAgent",
   name: "Job Classifier Agent",
   model: AGENT_MODEL,

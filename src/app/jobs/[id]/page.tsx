@@ -423,6 +423,32 @@ function JobPageContent() {
             <Badge color="blue">Score: {(job.score * 100).toFixed(0)}%</Badge>
           )}
         </Flex>
+
+        {/* Action Buttons */}
+        <Flex gap="3" mt="4">
+          {(ashbyData?.jobUrl || job.url) && (
+            <Button asChild size="3" variant="outline">
+              <a
+                href={ashbyData?.jobUrl || job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View Job →
+              </a>
+            </Button>
+          )}
+          {(ashbyData?.applyUrl || job.url) && (
+            <Button asChild size="3">
+              <a
+                href={ashbyData?.applyUrl || job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Apply Now →
+              </a>
+            </Button>
+          )}
+        </Flex>
       </Box>
 
       {/* 2-Column Layout */}
@@ -591,33 +617,6 @@ function JobPageContent() {
                       {ashbyData.descriptionPlain}
                     </Text>
                   </Box>
-                )}
-
-                {(ashbyData.jobUrl || ashbyData.applyUrl) && (
-                  <Flex gap="2" mt="3">
-                    {ashbyData.jobUrl && (
-                      <Button asChild size="2" variant="outline">
-                        <a
-                          href={ashbyData.jobUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          View Job →
-                        </a>
-                      </Button>
-                    )}
-                    {ashbyData.applyUrl && (
-                      <Button asChild size="2">
-                        <a
-                          href={ashbyData.applyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Apply Now →
-                        </a>
-                      </Button>
-                    )}
-                  </Flex>
                 )}
               </Flex>
             </Card>
@@ -805,12 +804,6 @@ function JobPageContent() {
                   </code>
                 </Text>
               )}
-
-              <Button size="3" asChild style={{ marginTop: "12px" }}>
-                <a href={job.url} target="_blank" rel="noopener noreferrer">
-                  Apply Now →
-                </a>
-              </Button>
             </Flex>
           </Card>
         </Box>

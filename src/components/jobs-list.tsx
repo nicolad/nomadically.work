@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useGetJobsQuery } from "@/__generated__/hooks";
+import { useGetJobsQuery, useDeleteJobMutation } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
 import { last, split } from "lodash";
+import { useUser } from "@clerk/nextjs";
 import {
   Box,
   Container,
@@ -17,7 +18,10 @@ import {
   Button,
   TextField,
   Spinner,
+  IconButton,
 } from "@radix-ui/themes";
+import { TrashIcon } from "@radix-ui/react-icons";
+import { ADMIN_EMAIL } from "@/lib/constants";
 
 type Job = GetJobsQuery["jobs"]["jobs"][number];
 type BadgeColor = "green" | "orange" | "blue" | "gray";
@@ -55,6 +59,32 @@ export function JobsList() {
   );
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [hasMore, setHasMore] = useState(true);
+  const { user } = useUser();
+  const [deleteJobMutation] = useDeleteJobMutation();
+
+  // Check if current user is admin
+  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+
+  // Handle delete job
+  const handleDeleteJob = async (jobId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm("Are you sure you want to delete this job?")) {
+      return;
+    }
+
+    try {
+      await deleteJobMutation({
+        variables: { id: jobId },
+        refetchQueries: ["GetJobs"],
+        awaitRefetchQueries: true,
+      });
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      alert("Failed to delete job. Please try again.");
+    }
+  };
 
   // Debounce search term
   useEffect(() => {
@@ -194,11 +224,24 @@ export function JobsList() {
               >
                 <Flex justify="between" align="start" mb="2">
                   <Heading size="5">{job.title}</Heading>
-                  {job.status && (
-                    <Badge color={getStatusBadgeColor(job.status)}>
-                      {getStatusLabel(job.status)}
-                    </Badge>
-                  )}
+                  <Flex gap="2" align="center">
+                    {job.status && (
+                      <Badge color={getStatusBadgeColor(job.status)}>
+                        {getStatusLabel(job.status)}
+                      </Badge>
+                    )}
+                    {isAdmin && (
+                      <IconButton
+                        size="2"
+                        color="red"
+                        variant="soft"
+                        onClick={(e) => handleDeleteJob(job.id, e)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <TrashIcon />
+                      </IconButton>
+                    )}
+                  </Flex>
                 </Flex>
 
                 <Flex gap="2" mb="2" wrap="wrap" align="center">

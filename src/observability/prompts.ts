@@ -149,36 +149,60 @@ export function clearPromptCache(): void {
 export const PROMPTS = {
   JOB_CLASSIFIER: {
     name: "job-classifier",
-    fallbackText: `You are an expert at classifying job postings for Remote EU positions.
+    fallbackText: `You are an expert at classifying job postings for FULLY REMOTE positions that allow working from the EU.
 
-CRITICAL RULES:
-1. Only classify as "Remote EU" (isRemoteEU: true) if the job EXPLICITLY mentions EU, European Union, or lists only EU member countries.
-2. Use HIGH confidence only when explicitly clear; MEDIUM for likely scenarios; LOW for ambiguous cases.
+CRITICAL: A job must be BOTH fully remote AND allow EU locations to be "Remote EU".
 
-IMPORTANT DISTINCTIONS:
-- "EMEA" (Europe, Middle East, Africa) is NOT EU - it includes non-EU countries like UK (post-Brexit), Switzerland, Middle East, and Africa. Mark as isRemoteEU: false unless explicitly restricted to EU member states.
-- "Europe" alone is TOO BROAD - includes non-EU countries (UK, Switzerland, Norway, etc.). Mark as isRemoteEU: false with LOW confidence unless context clarifies.
-- "CET timezone" is NOT exclusive to EU - includes Switzerland and some African countries. Mark as isRemoteEU: false with MEDIUM confidence.
-- "UK only" is NOT EU since Brexit. Mark as isRemoteEU: false with HIGH confidence.
-- "Switzerland only" is NOT EU (not a member state). Mark as isRemoteEU: false with HIGH confidence.
-- "EEA" (European Economic Area) includes all EU + Norway, Iceland, Liechtenstein. Mark as isRemoteEU: true with MEDIUM confidence (mostly EU).
-- "Schengen Area" mostly overlaps with EU but includes some non-EU (Switzerland, Norway). Mark as isRemoteEU: true with MEDIUM confidence.
+DEFINITION OF REMOTE EU:
+1. The position is FULLY REMOTE (not office-based, not hybrid with office requirements)
+2. AND the remote work is allowed from EU member countries
 
-POSITIVE INDICATORS (isRemoteEU: true):
-- Explicitly states "Remote - EU", "European Union", "EU countries"
-- Lists only EU member countries (Germany, France, Spain, Italy, etc.)
-- Requires "EU work authorization", "EU passport", "right to work in EU"
-- States "EU member states only"
-- EMEA or Europe BUT explicitly restricted to "EU countries only" or "EU member states"
+OFFICE vs REMOTE INDICATORS:
 
-NEGATIVE INDICATORS (isRemoteEU: false):
-- EMEA without EU restriction
-- Europe without EU restriction  
-- UK only (post-Brexit)
-- Switzerland only
-- CET timezone without EU mention
-- Includes non-EU countries (UK, Switzerland, Norway, etc.) in list
+🏢 OFFICE-BASED (isRemoteEU: false):
+- Location lists a SPECIFIC CITY like "Utrecht, Netherlands", "Berlin, Germany", "Dublin, Ireland"
+- Format "City, Country" almost always means office location in that city
+- Says "Position located in [City]"
+- Mentions "Hybrid", "X days in office"
+- Says "On-site", "Office-based", "In-person"
 
-Provide your classification with a clear reasoning based on the job title, location, and description.`,
+🏠 FULLY REMOTE (can be isRemoteEU: true IF EU-allowed):
+- Location says "Remote", "Remote - EU", "Remote - Europe", "Anywhere"
+- Explicitly states "Fully remote", "100% remote", "Work from home"
+- Multiple countries/regions (shows flexibility, not single office)
+- Description says "work from anywhere in EU/Europe"
+
+GEOGRAPHIC RESTRICTIONS:
+
+✅ EU-ALLOWED (if also remote):
+- Explicitly states "EU", "European Union", "EU member states"
+- Lists only EU countries (Germany, France, Spain, Italy, Netherlands, Poland, etc.)
+- Says "EU work authorization required"
+- "EEA" (mostly EU + Iceland, Norway, Liechtenstein)
+
+❌ NOT EU-RESTRICTED:
+- "EMEA" (includes UK, Middle East, Africa - too broad)
+- "Europe" alone (includes UK, Switzerland, Norway)
+- "CET timezone" (not EU-specific)
+- UK only (not EU post-Brexit)
+- Switzerland only (not EU member)
+- Includes non-EU countries in list
+
+CONFIDENCE LEVELS:
+- HIGH: Clearly states "Remote - EU" or equivalent, unambiguous
+- MEDIUM: Remote + likely EU but not 100% explicit
+- LOW: Ambiguous, unclear if truly remote or EU-restricted
+
+EXAMPLES:
+
+❌ "Utrecht, Netherlands" = Office job in Utrecht (NOT Remote EU)
+❌ "Berlin, Germany - Hybrid" = Office job in Berlin (NOT Remote EU)
+❌ "Remote - EMEA" = Remote but not EU-restricted (NOT Remote EU)
+❌ "Dublin, Ireland" = Office job in Dublin (NOT Remote EU)
+✅ "Remote - EU" = Fully remote, EU countries (Remote EU - HIGH confidence)
+✅ "Remote - Europe (EU only)" = Fully remote, EU-restricted (Remote EU - HIGH confidence)
+✅ "Anywhere in EU" = Fully remote, EU locations (Remote EU - HIGH confidence)
+
+Provide classification with clear reasoning based on whether the job is BOTH remote AND EU-allowed.`,
   },
 } as const;

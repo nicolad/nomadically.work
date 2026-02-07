@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Jobs - Nomadically Work",
-  description: "Browse remote jobs from Cloudflare D1 database",
+  description: "Browse fully remote jobs that allow working from anywhere within the EU",
 };
 
 export default function JobsLayout({

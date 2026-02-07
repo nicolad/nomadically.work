@@ -86,7 +86,11 @@ export function JobsList() {
                               : "gray"
                         }
                       >
-                        {job.status}
+                        {job.status === "eu-remote"
+                          ? "✅ Remote EU"
+                          : job.status === "non-eu"
+                            ? "❌ Not Remote EU"
+                            : job.status}
                       </Badge>
                     )}
                   </Flex>

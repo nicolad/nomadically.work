@@ -17,6 +17,9 @@ export const typeDefs = gql`
     score: Float
     score_reason: String
     status: String
+    is_remote_eu: Boolean
+    remote_eu_confidence: String
+    remote_eu_reason: String
     created_at: String!
     updated_at: String!
   }
@@ -69,5 +72,11 @@ export const typeDefs = gql`
       userId: String!
       settings: UserSettingsInput!
     ): UserSettings!
+    deleteJob(id: Int!): DeleteJobResponse!
+  }
+
+  type DeleteJobResponse {
+    success: Boolean!
+    message: String
   }
 `;

@@ -22,17 +22,13 @@ config({ path: ".env.local" });
 // ============================================================================
 
 interface Config {
-  insertJobsUrl: string;
   nextBaseUrl: string;
-  apiSecret?: string;
   tursoDbUrl: string;
   tursoAuthToken: string;
 }
 
 function getConfig(): Config {
-  const insertJobsUrl = process.env.INSERT_JOBS_URL || "http://localhost:8787";
   const nextBaseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-  const apiSecret = process.env.API_SECRET;
   const tursoDbUrl = process.env.TURSO_DB_URL;
   const tursoAuthToken = process.env.TURSO_DB_AUTH_TOKEN;
 
@@ -43,92 +39,48 @@ function getConfig(): Config {
   }
 
   return {
-    insertJobsUrl,
     nextBaseUrl,
-    apiSecret,
     tursoDbUrl,
     tursoAuthToken,
   };
 }
 
 // ============================================================================
-// Types
-// ============================================================================
-
-// ============================================================================
 // Database Operations
 // ============================================================================
 
-async function getJobStats(config: Config): Promise<JobStats> {
+async function getJobsNeedingSkillExtraction(
+  config: Config,
+  limit: number = 100,
+): Promise<any[]> {
   const db = createClient({
     url: config.tursoDbUrl,
     authToken: config.tursoAuthToken,
   });
 
   try {
-    // Total count
-    const totalResult = await db.execute("SELECT COUNT(*) as count FROM jobs");
-    const total = Number(totalResult.rows[0]?.count || 0);
-
-    // By status
-    const statusResult = await db.execute(`
-      SELECT status, COUNT(*) as count 
-      FROM jobs 
-      GROUP BY status
-    `);
-    const byStatus: Record<string, number> = {};
-    for (const row of statusResult.rows) {
-      const status = (row.status as string) || "null";
-      byStatus[status] = Number(row.count || 0);
-    }
-
-    // By source kind
-    const sourceResult = await db.execute(`
-      SELECT source_kind, COUNT(*) as count 
-      FROM jobs 
-      GROUP BY source_kind
-    `);
-    const bySourceKin==========================================================
-// API Operations
-// ============================================================================
-
-async function insertJobs(
-  config: Config,
-  jobs: JobInput[],
-): Promise<IngestionResult> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (config.apiSecret) {
-    headers["Authorization"] = `Bearer ${config.apiSecret}`;
-  }
-
-  try {
-    const response = await fetch(config.insertJobsUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ jobs }),
+    // Get jobs that have a description (needed for skill extraction)
+    const result = await db.execute({
+      sql: `
+        SELECT id, title, company_key, status, description, created_at, updated_at
+        FROM jobs
+        WHERE description IS NOT NULL
+          AND description != ''
+        ORDER BY created_at DESC
+        LIMIT ?
+      `,
+      args: [limit],
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to insert jobs: ${response.status} ${errorText}`);
-    }
-
-    const result = await response.json();
-
-    return {
-      success: result.success || false,
-      inserted: result.inserted || 0,
-      failed: result.failed || 0,
-      errors: result.errors || [],
-    };
-  } catch (error) {
-    console.error("Error inserting jobs:", error);
-    throw error;
+    return result.rows;
+  } finally {
+    db.close();
   }
 }
+
+// ============================================================================
+// API Operations
+// ============================================================================
 
 async function extractSkillsForJob(
   config: Config,
@@ -165,162 +117,58 @@ async function extractSkillsForJob(
 }
 
 // ============================================================================
-// File Operations
+// Skill Extraction Operations
 // ============================================================================
 
-async function loadJobsFromFile(filePath: string): Promise<JobInput[]> {
-  const absolutePath = path.resolve(filePath);
-  const content = await fs.readFile(absolutePath, "utf-8");
+async function extractSkills(jobIds: number[]) {
+  console.log(`🔍 Extracting skills for ${jobIds.length} jobs\n`);
 
-  const data = JSON.parse(content);
+  const config = getConfig();
+  let successCount = 0;
+  let failCount = 0;
+  let totalSkills = 0;
 
-  // Support both array of jobs and object with jobs property
-  const jobs = Array.isArray(data) ? data : data.jobs || [];
+  for (const jobId of jobIds) {
+    process.stdout.write(`  Processing job ${jobId}... `);
 
-  return jobs;
+    const result = await extractSkillsForJob(config, jobId);
+
+    if (result.success) {
+      successCount++;
+      totalSkills += result.skillsExtracted;
+      console.log(`✅ (${result.skillsExtracted} skills)`);
+    } else {
+      failCount++;
+      console.log("❌ Failed");
+    }
+  }
+
+  console.log("\n📊 Extraction Summary:");
+  console.log(`  ✅ Successful: ${successCount}`);
+  console.log(`  ❌ Failed: ${failCount}`);
+  console.log(`  🏷️  Total Skills Extracted: ${totalSkills}`);
 }
 
-// ============================================================================
-// CLI Operations
-// ============================================================================
+async function extractSkillsFromDatabase(limit: number = 100) {
+  const config = getConfig();
 
-function printStats(stats: JobStats) {
-  console.log("\n📊 Job Database Statistics");
-  console.log("═".repeat(50));
-  console.log(`Total Jobs: ${stats.total}`);
-  console.log(`Added in last 24h: ${stats.recent}`);
+  console.log("🔍 Fetching jobs from database...\n");
 
-  console.log("\nBy Status:");
-  for (const [status, count] of Object.entries(stats.byStatus)) {
-    const emoji🔍 Validating jobs...");
-  const validJobs = jobs.filter((job) => {
-    if (!job.title || !job.companyKey || !job.url || !job.externalId) {
-      console.warn(
-        `⚠️  Skipping invalid job: ${job.title || "unknown"} - missing required fields`,
-      );
-      return false;
-    }
-    return true;
-  });
-  console.log(`✅ ${validJobs.length} valid jobs\n`);
+  const jobs = await getJobsNeedingSkillExtraction(config, limit);
 
-  if (validJobs.length === 0) {
-    console.log("❌ No valid jobs to insert");
+  if (jobs.length === 0) {
+    console.log("❌ No jobs with descriptions found in database");
     return;
   }
 
-  // Insert jobs
-  console.log("📥 Inserting jobs into database...");
-  const result = await insertJobs(config, validJobs);
-
-  console.log("\n📊 Ingestion Results:");
-  console.log(`  ✅ Inserted: ${result.inserted}`);
-  console.log(`  ❌ Failed: ${result.failed}`);
-
-  if (result.errors.length > 0) {
-    console.log("\n⚠️  Errors:");
-    for (const error of result.errors.slice(0, 5)) {
-      console.log(`  - ${error.job.title || "unknown"}: ${error.error}`);
-    }
-    if (result.errors.length > 5) {
-      console.log(`  ... and ${result.errors.length - 5} more errors`);
-    }
-  }
-
-  // Show updated stats
-  console.log("\n");
-  const stats = await getJobStats(config);
-  printStats(stats);
-
-  console.log("\n✅ Ingestion complete!");
   console.log(
-    "\n💡 Next steps:\n" +
-      "   • Jobs are now queued for processing\n" +
-      "   • Classification will run automatically\n" +
-      "   • Use --extract-skills to manually trigger skill extraction\n",
+    `Found ${jobs.length} job${jobs.length === 1 ? "" : "s"} with descriptions\n`,
   );
-}
 
-async function checkStatus() {
-  console.log("📊 Checking Job Pipeline Status\n");
-
-  const config = getConfig();
-  const stats = await getJobStats(config);
-
-  printStats(stats);
-
-  // Show some recent jobs
-  console.log("\n📋 Recent Jobs (last 10):");
-  const db = createClient({
-    url: config.tursoDbUrl,
-    authToken: config.tursoAuthToken,
-  });
-
-  try {
-    const result = await db.execute(`
-      SELECT id, title, company_key, status, created_at
-      FROM jobs
-      ORDER BY created_at DESC
-      LIMIT 10
-    `);
-
-    for (const row of result.rows) {
-   Skill Extraction Operations
-// ============================================================================   if (args.includes("--check-status")) {
-      await checkStatus();
-      return;
-    }
-
-    if (args.includes("--extract-skills")) {
-      const jobIdsIndex = args.indexOf("--jobIds");
-      const statusIndex = args.indexOf("--status");
-      const limitIndex = args.indexOf("--limit");
-
-      const limit =
-        limitIndex !== -1 ? parseInt(args[limitIndex + 1], 10) : 100;
-
-      if (jobIdsIndex !== -1) {
-        // Extract for specific job IDs
-        const jobIdsStr = args[jobIdsIndex + 1];
-        const jobIds = jobIdsStr
-          .split(",")
-          .map((id) => parseInt(id.trim(), 10));
-        await extractSkills(jobIds);
-      } else if (statusIndex !== -1) {
-        // Extract for jobs with specific status
-        const status = args[statusIndex + 1];
-        await extractSkillsForStatus(status, limit);
-      } else {
-        // Extract for jobs in database
-        await extractSkillsFromDatabase(limit);
-      }
-      return;
-    }
-
-    if (args.includes("--file")) {
-      const fileIndex = args.indexOf("--file");
-      const filePath = args[fileIndex + 1];
-
-      if (!filePath) {
-        console.error("❌ --file requires a path argument");
-        process.exit(1);
-      }
-
-      await runIngestion(filePath);
-      return;
-    }
-
-    console.error("❌ Unknown command");
-    printUsage();
-    process.exit(1);
-  } catch (error) {
-    console.error("\n❌ Fatal Error:", error);
-    process.exit(1);
-  }
-}
-
-main();
-ole.log(`  📄 [${job.id}] ${job.title} - ${job.company_key}`);
+  // Show preview of jobs to be processed
+  console.log("Jobs to process:");
+  for (const job of jobs.slice(0, 5)) {
+    console.log(`  📄 [${job.id}] ${job.title} - ${job.company_key}`);
   }
   if (jobs.length > 5) {
     console.log(`  ... and ${jobs.length - 5} more`);
@@ -358,7 +206,24 @@ Environment Variables:
   TURSO_DB_URL              Turso database URL (required)
   TURSO_DB_AUTH_TOKEN       Turso auth token (required)
   NEXT_PUBLIC_URL           Next.js base URL (default: http://localhost:3000)
-  OPENAI_API_KEY            OpenAI API key (required for embeddingsextract-skills")) {
+  OPENAI_API_KEY            OpenAI API key (required for embeddings)
+`);
+}
+
+// ============================================================================
+// Main
+// ============================================================================
+
+async function main() {
+  const args = process.argv.slice(2);
+
+  try {
+    if (args.length === 0 || args.includes("--help")) {
+      printUsage();
+      return;
+    }
+
+    if (args.includes("--extract-skills")) {
       const jobIdsIndex = args.indexOf("--jobIds");
       const limitIndex = args.indexOf("--limit");
 
@@ -379,4 +244,13 @@ Environment Variables:
       return;
     }
 
-    console.error("❌ Unknown command. Use --extract-skills or --help
+    console.error("❌ Unknown command. Use --extract-skills or --help");
+    printUsage();
+    process.exit(1);
+  } catch (error) {
+    console.error("\n❌ Fatal Error:", error);
+    process.exit(1);
+  }
+}
+
+main();

@@ -71,18 +71,34 @@ EU Countries include: Germany, France, Ireland, Poland, Romania, Netherlands, Be
 
 NOT EU: UK (post-Brexit), Switzerland, Norway, Turkey, Middle East countries.
 
-Consider ALL locations listed (primary and secondary). A job is Remote EU if:
-- It explicitly mentions remote work in EU countries
-- Lists specific EU cities/countries in locations (e.g., "Germany - Berlin", "Poland - Warsaw", "Ireland - Dublin")
-- States "EU remote" or "European Union"
-- Requires EU work authorization
+CRITICAL: A job must be BOTH remote AND allow EU locations to be classified as "Remote EU".
 
-NOT Remote EU if:
-- Only mentions EMEA (includes non-EU)
-- Only mentions CET timezone (not specific to EU)
+✅ Remote EU - ALL of these conditions must be met:
+1. The job is FULLY REMOTE (not office-based, not hybrid requiring office presence)
+2. AND remote work is allowed from EU countries
+
+Positive indicators:
+- Explicitly states "Remote", "Work from home", "Fully remote", "100% remote"
+- Location says "Remote - EU", "Remote - Europe", "Remote", "Anywhere" combined with EU restriction
+- Description mentions "work from anywhere in the EU", "remote across Europe"
+- Multiple countries/regions listed (indicating flexibility, not a single office)
+- States "EU remote" or "European Union remote"
+
+❌ NOT Remote EU if:
+- Lists a SPECIFIC CITY as the primary location (e.g., "Utrecht, Netherlands", "Berlin, Germany", "Dublin, Ireland")
+  → This indicates an OFFICE-BASED or HYBRID position in that city, NOT remote
+- Says "Hybrid" or mentions office days/requirements
+- Says "Office-based", "On-site", "In-person"
+- Only mentions EMEA without EU restriction (includes non-EU)
+- Only mentions CET timezone without remote/EU clarification
 - Only UK locations (UK is not EU)
-- Hybrid or office-based only
 - Only non-EU European countries (Switzerland, Norway, UK)
+- Location format like "City, Country" typically means office location, not remote
+
+Confidence levels:
+- HIGH: Explicitly states "Remote - EU" or equivalent, very clear
+- MEDIUM: Says "Remote" with EU countries mentioned but not 100% explicit
+- LOW: Ambiguous wording, unclear if truly remote or if EU-restricted
 `.trim();
 
 function buildJobClassificationPrompt(input: JobClassificationInput): string {
@@ -574,6 +590,9 @@ export const classifyJob = async (
             status,
             score,
             score_reason: classification.reason,
+            is_remote_eu: classification.isRemoteEU,
+            remote_eu_confidence: classification.confidence,
+            remote_eu_reason: classification.reason,
             updated_at: new Date().toISOString(),
           })
           .where(eq(jobs.id, jobId));

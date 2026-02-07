@@ -3,6 +3,7 @@ import { jobs, userSettings } from "@/db/schema";
 import { eq, and, or, like, desc, count } from "drizzle-orm";
 import type { GraphQLContext } from "./context";
 import { last, split } from "lodash";
+import { isAdminEmail } from "@/lib/admin";
 
 export const resolvers = {
   Query: {
@@ -212,6 +213,34 @@ export const resolvers = {
       } catch (error) {
         console.error("Error updating user settings:", error);
         throw new Error("Failed to update user settings");
+      }
+    },
+    async deleteJob(
+      _parent: any,
+      args: { id: number },
+      context: GraphQLContext,
+    ) {
+      try {
+        // Check if user is authenticated
+        if (!context.userId) {
+          throw new Error("Unauthorized");
+        }
+
+        // Check if user is admin
+        if (!isAdminEmail(context.userEmail)) {
+          throw new Error("Forbidden - Admin access required");
+        }
+
+        // Delete the job
+        const result = await db.delete(jobs).where(eq(jobs.id, args.id));
+
+        return {
+          success: true,
+          message: "Job deleted successfully",
+        };
+      } catch (error) {
+        console.error("Error deleting job:", error);
+        throw error;
       }
     },
   },

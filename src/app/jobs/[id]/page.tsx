@@ -377,7 +377,11 @@ function JobPageContent() {
                     : "gray"
               }
             >
-              {job.status}
+              {job.status === "eu-remote"
+                ? "✅ Fully Remote (EU)"
+                : job.status === "non-eu"
+                  ? "❌ Not Remote EU"
+                  : job.status}
             </Badge>
           )}
           {job.source_kind && <Badge>{job.source_kind}</Badge>}
@@ -607,21 +611,69 @@ function JobPageContent() {
         <Box style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* AI Classification */}
           <Card>
-            <Flex justify="between" align="center" mb="3">
-              <Heading size="5">AI Classification</Heading>
+            <Flex justify="between" align="center" mb="2">
+              <Heading size="5">Remote EU Classification</Heading>
               <Button size="2" onClick={handleClassify} disabled={classifying}>
-                {classifying ? "Classifying..." : "Classify"}
+                {classifying ? "Classifying..." : "Re-classify"}
               </Button>
             </Flex>
+            <Text size="1" color="gray" mb="3">
+              Fully remote positions that allow working from anywhere in the EU
+            </Text>
 
-            {classification && (
+            {/* Show existing classification from database */}
+            {job.is_remote_eu !== null && job.is_remote_eu !== undefined && (
               <Flex direction="column" gap="3">
+                <Flex gap="2" align="center">
+                  <Badge color={job.is_remote_eu ? "green" : "red"} size="2">
+                    {job.is_remote_eu ? "✅ Remote EU" : "❌ Not Remote EU"}
+                  </Badge>
+                  {job.remote_eu_confidence && (
+                    <Badge
+                      color={
+                        job.remote_eu_confidence === "high"
+                          ? "green"
+                          : job.remote_eu_confidence === "medium"
+                            ? "orange"
+                            : "gray"
+                      }
+                      size="2"
+                    >
+                      {job.remote_eu_confidence} confidence
+                    </Badge>
+                  )}
+                </Flex>
+                {job.remote_eu_reason && (
+                  <Text size="2" color="gray">
+                    <Text weight="medium" as="span">
+                      Reason:
+                    </Text>{" "}
+                    {job.remote_eu_reason}
+                  </Text>
+                )}
+              </Flex>
+            )}
+
+            {/* Show live classification result if just classified */}
+            {classification && (
+              <Flex
+                direction="column"
+                gap="3"
+                mt={job.is_remote_eu !== null ? "3" : "0"}
+              >
+                {job.is_remote_eu !== null && (
+                  <Text size="1" weight="bold" color="blue">
+                    New Classification:
+                  </Text>
+                )}
                 <Flex gap="2" align="center">
                   <Badge
                     color={classification.isRemoteEU ? "green" : "red"}
                     size="2"
                   >
-                    {classification.isRemoteEU ? "Remote EU" : "Not Remote EU"}
+                    {classification.isRemoteEU
+                      ? "✅ Remote EU"
+                      : "❌ Not Remote EU"}
                   </Badge>
                   <Badge
                     color={
@@ -651,11 +703,13 @@ function JobPageContent() {
               </Text>
             )}
 
-            {!classification && !classificationError && (
-              <Text size="2" color="gray">
-                Click the button to analyze this job posting with AI
-              </Text>
-            )}
+            {!classification &&
+              !classificationError &&
+              job.is_remote_eu === null && (
+                <Text size="2" color="gray">
+                  Click the button to analyze this job posting with AI
+                </Text>
+              )}
           </Card>
 
           {/* Score Reason */}

@@ -18,6 +18,12 @@ export type Scalars = {
   JSON: { input: any; output: any; }
 };
 
+export type DeleteJobResponse = {
+  __typename?: 'DeleteJobResponse';
+  message?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type Job = {
   __typename?: 'Job';
   company_key: Scalars['String']['output'];
@@ -25,8 +31,11 @@ export type Job = {
   description?: Maybe<Scalars['String']['output']>;
   external_id: Scalars['String']['output'];
   id: Scalars['Int']['output'];
+  is_remote_eu?: Maybe<Scalars['Boolean']['output']>;
   location?: Maybe<Scalars['String']['output']>;
   posted_at: Scalars['String']['output'];
+  remote_eu_confidence?: Maybe<Scalars['String']['output']>;
+  remote_eu_reason?: Maybe<Scalars['String']['output']>;
   score?: Maybe<Scalars['Float']['output']>;
   score_reason?: Maybe<Scalars['String']['output']>;
   source_id?: Maybe<Scalars['String']['output']>;
@@ -45,7 +54,13 @@ export type JobsResponse = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  deleteJob: DeleteJobResponse;
   updateUserSettings: UserSettings;
+};
+
+
+export type MutationDeleteJobArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -107,12 +122,19 @@ export type UserSettingsInput = {
   preferred_skills?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type DeleteJobMutationVariables = Exact<{
+  id: Scalars['Int']['input'];
+}>;
+
+
+export type DeleteJobMutation = { __typename?: 'Mutation', deleteJob: { __typename?: 'DeleteJobResponse', success: boolean, message?: string | null } };
+
 export type GetJobQueryVariables = Exact<{
   id: Scalars['String']['input'];
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string } | null };
+export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, is_remote_eu?: boolean | null, remote_eu_confidence?: string | null, remote_eu_reason?: string | null, created_at: string, updated_at: string } | null };
 
 export type GetJobsQueryVariables = Exact<{
   sourceType?: InputMaybe<Scalars['String']['input']>;
@@ -141,6 +163,40 @@ export type UpdateUserSettingsMutationVariables = Exact<{
 export type UpdateUserSettingsMutation = { __typename?: 'Mutation', updateUserSettings: { __typename?: 'UserSettings', id: number, user_id: string, email_notifications: boolean, daily_digest: boolean, new_job_alerts: boolean, preferred_locations?: Array<string> | null, preferred_skills?: Array<string> | null, excluded_companies?: Array<string> | null, dark_mode: boolean, jobs_per_page: number, created_at: string, updated_at: string } };
 
 
+export const DeleteJobDocument = gql`
+    mutation DeleteJob($id: Int!) {
+  deleteJob(id: $id) {
+    success
+    message
+  }
+}
+    `;
+export type DeleteJobMutationFn = Apollo.MutationFunction<DeleteJobMutation, DeleteJobMutationVariables>;
+
+/**
+ * __useDeleteJobMutation__
+ *
+ * To run a mutation, you first call `useDeleteJobMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteJobMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteJobMutation, { data, loading, error }] = useDeleteJobMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteJobMutation(baseOptions?: Apollo.MutationHookOptions<DeleteJobMutation, DeleteJobMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteJobMutation, DeleteJobMutationVariables>(DeleteJobDocument, options);
+      }
+export type DeleteJobMutationHookResult = ReturnType<typeof useDeleteJobMutation>;
+export type DeleteJobMutationResult = Apollo.MutationResult<DeleteJobMutation>;
+export type DeleteJobMutationOptions = Apollo.BaseMutationOptions<DeleteJobMutation, DeleteJobMutationVariables>;
 export const GetJobDocument = gql`
     query GetJob($id: String!) {
   job(id: $id) {
@@ -157,6 +213,9 @@ export const GetJobDocument = gql`
     score
     score_reason
     status
+    is_remote_eu
+    remote_eu_confidence
+    remote_eu_reason
     created_at
     updated_at
   }

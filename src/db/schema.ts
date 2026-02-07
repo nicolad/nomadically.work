@@ -15,6 +15,11 @@ export const jobs = sqliteTable("jobs", {
   score: real("score"),
   score_reason: text("score_reason"),
   status: text("status"),
+  is_remote_eu: integer("is_remote_eu", { mode: "boolean" }),
+  remote_eu_confidence: text("remote_eu_confidence", {
+    enum: ["high", "medium", "low"],
+  }),
+  remote_eu_reason: text("remote_eu_reason"),
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

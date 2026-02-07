@@ -3,15 +3,16 @@
 /**
  * Remote EU Job Classification - Bulk Processing
  *
- * Classifies all jobs in the database for Remote EU eligibility.
+ * Classifies jobs for Remote EU eligibility.
+ * 
+ * Remote EU Definition:
+ * - Position must be FULLY REMOTE (not office-based, not hybrid)
+ * - AND remote work must be allowed from EU member countries
+ * 
  * Tracks results in Langfuse for observability and analysis.
  *
  * Usage:
- *   pnpm tsx scripts/classify-remote-eu-jobs.ts [--limit N] [--dry-run]
- *
- * Options:
- *   --limit N     Process only N jobs (for testing)
- *   --dry-run     Don't save results, just analyze
+ *   pnpm tsx scripts/classify-remote-eu-jobs.ts
  *
  * Environment variables (loaded from .env.local via config/env):
  * - LANGFUSE_SECRET_KEY
@@ -34,7 +35,7 @@ import {
 } from "../src/config/env";
 import { db } from "../src/db";
 import { jobs } from "../src/db/schema";
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 // Initialize Langfuse client
 const langfuse = new Langfuse({
@@ -45,7 +46,7 @@ const langfuse = new Langfuse({
 
 // Remote EU classification schema
 const remoteEUSchema = z.object({
-  isRemoteEU: z.boolean().describe("Whether the job is a remote EU position"),
+  isRemoteEU: z.boolean().describe("Whether the job is fully remote AND allows working from EU countries"),
   confidence: z
     .enum(["high", "medium", "low"])
     .describe("Confidence level of the classification"),
@@ -155,37 +156,13 @@ Classify this job posting.`,
 }
 
 /**
- * Parse command line arguments
- */
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let limit: number | undefined = undefined;
-  let dryRun = false;
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--limit" && args[i + 1]) {
-      limit = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === "--dry-run") {
-      dryRun = true;
-    }
-  }
-
-  return { limit, dryRun };
-}
-
-/**
  * Main classification process
  */
 async function runClassification() {
-  const { limit, dryRun } = parseArgs();
-
   console.log("🚀 Remote EU Job Classification - Bulk Processing");
+  console.log("=================================================");
+  console.log("📋 Finding fully remote jobs that allow working from anywhere in the EU");
   console.log("=================================================\n");
-
-  if (dryRun) {
-    console.log("🔍 DRY RUN MODE - No changes will be saved\n");
-  }
 
   // Fetch prompt from Langfuse
   console.log("📝 Fetching prompt from Langfuse...");
@@ -202,7 +179,7 @@ async function runClassification() {
 
   // Fetch jobs from database
   console.log("📊 Fetching jobs from database...");
-  let query = db
+  const jobsList = await db
     .select({
       id: jobs.id,
       external_id: jobs.external_id,
@@ -212,12 +189,6 @@ async function runClassification() {
     })
     .from(jobs)
     .orderBy(jobs.created_at);
-
-  if (limit) {
-    query = query.limit(limit) as any;
-  }
-
-  const jobsList = await query;
 
   console.log(`✅ Found ${jobsList.length} jobs\n`);
 
@@ -247,9 +218,20 @@ async function runClassification() {
       const result = await classifyJob(job, promptText, sessionId, agent);
       results.push(result);
 
+      // Save classification to database
+      await db
+        .update(jobs)
+        .set({
+          is_remote_eu: result.classification.isRemoteEU,
+          remote_eu_confidence: result.classification.confidence,
+          remote_eu_reason: result.classification.reason,
+          updated_at: new Date().toISOString(),
+        })
+        .where(eq(jobs.id, job.id));
+
       const icon = result.classification.isRemoteEU ? "✅" : "❌";
       console.log(
-        `         ${icon} ${result.classification.isRemoteEU ? "EU Remote" : "Non-EU"} (${result.classification.confidence}) - ${result.processingTimeMs}ms`,
+        `         ${icon} ${result.classification.isRemoteEU ? "Fully Remote (EU)" : "Not Remote EU"} (${result.classification.confidence}) - ${result.processingTimeMs}ms`,
       );
 
       // Rate limiting: small delay between requests
@@ -292,13 +274,13 @@ async function runClassification() {
     `Average Time per Job: ${(totalTime / results.length).toFixed(0)}ms`,
   );
   console.log(
-    `\nRemote EU Jobs: ${euJobs.length} (${((euJobs.length / results.length) * 100).toFixed(1)}%)`,
+    `\nFully Remote (EU): ${euJobs.length} (${((euJobs.length / results.length) * 100).toFixed(1)}%)`,
   );
   console.log(`  High Confidence: ${highConfidenceEu}`);
   console.log(`  Medium Confidence: ${mediumConfidenceEu}`);
   console.log(`  Low Confidence: ${lowConfidenceEu}`);
   console.log(
-    `\nNon-EU Jobs: ${nonEuJobs.length} (${((nonEuJobs.length / results.length) * 100).toFixed(1)}%)`,
+    `\nNot Remote EU: ${nonEuJobs.length} (${((nonEuJobs.length / results.length) * 100).toFixed(1)}%)`,
   );
 
   if (errors.length > 0) {
@@ -310,7 +292,7 @@ async function runClassification() {
 
   // Show sample EU jobs
   if (euJobs.length > 0) {
-    console.log("\n\n📋 Sample Remote EU Jobs:");
+    console.log("\n\n📋 Sample Fully Remote (EU) Jobs:");
     euJobs.slice(0, 5).forEach((job) => {
       console.log(
         `\n  ${job.title} (${job.classification.confidence} confidence)`,

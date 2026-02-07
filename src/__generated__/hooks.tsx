@@ -38,12 +38,21 @@ export type Job = {
   remote_eu_reason?: Maybe<Scalars['String']['output']>;
   score?: Maybe<Scalars['Float']['output']>;
   score_reason?: Maybe<Scalars['String']['output']>;
+  skills?: Maybe<Array<JobSkill>>;
   source_id?: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
   status?: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
+};
+
+export type JobSkill = {
+  __typename?: 'JobSkill';
+  confidence?: Maybe<Scalars['Float']['output']>;
+  evidence?: Maybe<Scalars['String']['output']>;
+  level: Scalars['String']['output'];
+  tag: Scalars['String']['output'];
 };
 
 export type JobsResponse = {
@@ -135,7 +144,7 @@ export type GetJobQueryVariables = Exact<{
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, is_remote_eu?: boolean | null, remote_eu_confidence?: string | null, remote_eu_reason?: string | null, created_at: string, updated_at: string } | null };
+export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, is_remote_eu?: boolean | null, remote_eu_confidence?: string | null, remote_eu_reason?: string | null, created_at: string, updated_at: string, skills?: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence?: number | null, evidence?: string | null }> | null } | null };
 
 export type GetJobsQueryVariables = Exact<{
   sourceType?: InputMaybe<Scalars['String']['input']>;
@@ -147,7 +156,7 @@ export type GetJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string }> } };
+export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string, skills?: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null }> } };
 
 export type GetUserSettingsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -218,6 +227,12 @@ export const GetJobDocument = gql`
     is_remote_eu
     remote_eu_confidence
     remote_eu_reason
+    skills {
+      tag
+      level
+      confidence
+      evidence
+    }
     created_at
     updated_at
   }
@@ -283,6 +298,10 @@ export const GetJobsDocument = gql`
       score
       score_reason
       status
+      skills {
+        tag
+        level
+      }
       created_at
       updated_at
     }

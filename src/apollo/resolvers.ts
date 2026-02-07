@@ -1,11 +1,25 @@
 import { db } from "@/db";
-import { jobs, userSettings } from "@/db/schema";
+import { jobs, userSettings, jobSkillTags } from "@/db/schema";
 import { eq, and, or, like, desc, count } from "drizzle-orm";
 import type { GraphQLContext } from "./context";
 import { last, split } from "lodash";
 import { isAdminEmail } from "@/lib/admin";
 
 export const resolvers = {
+  Job: {
+    async skills(parent: any) {
+      try {
+        const skills = await db
+          .select()
+          .from(jobSkillTags)
+          .where(eq(jobSkillTags.job_id, parent.id));
+        return skills;
+      } catch (error) {
+        console.error("Error fetching job skills:", error);
+        return [];
+      }
+    },
+  },
   Query: {
     async jobs(
       _parent: any,
@@ -38,46 +52,40 @@ export const resolvers = {
           );
         }
 
+        // Query all jobs (without pagination yet)
         let query = db.select().from(jobs);
-        let countQuery = db.select({ count: count() }).from(jobs);
 
         if (conditions.length > 0) {
           query = query.where(and(...conditions)!) as any;
-          countQuery = countQuery.where(and(...conditions)!) as any;
         }
-
-        // Execute query first, then filter excluded companies in memory
-        // (since Drizzle doesn't have a simple NOT IN for arrays)
 
         query = query.orderBy(
           desc(jobs.posted_at),
           desc(jobs.created_at),
         ) as any;
 
-        if (args.limit) {
-          query = query.limit(args.limit) as any;
-        }
-
-        if (args.offset) {
-          query = query.offset(args.offset) as any;
-        }
-
-        const [result, totalCountResult] = await Promise.all([
-          query,
-          countQuery,
-        ]);
+        // Get all results first
+        const allResults = await query;
 
         // Filter out excluded companies
-        let filteredJobs = result || [];
+        let filteredJobs = allResults || [];
         if (args.excludedCompanies && args.excludedCompanies.length > 0) {
           filteredJobs = filteredJobs.filter(
-            (job) => !args.excludedCompanies!.includes(job.company_key)
+            (job) => !args.excludedCompanies!.includes(job.company_key),
           );
         }
 
+        // Calculate total count from filtered results
+        const totalCount = filteredJobs.length;
+
+        // Apply pagination to filtered results
+        const limit = args.limit ?? 20;
+        const offset = args.offset ?? 0;
+        const paginatedJobs = filteredJobs.slice(offset, offset + limit);
+
         return {
-          jobs: filteredJobs,
-          totalCount: filteredJobs.length,
+          jobs: paginatedJobs,
+          totalCount,
         };
       } catch (error) {
         console.error("Error fetching jobs:", error);

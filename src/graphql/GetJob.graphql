@@ -16,6 +16,12 @@ query GetJob($id: String!) {
     is_remote_eu
     remote_eu_confidence
     remote_eu_reason
+    skills {
+      tag
+      level
+      confidence
+      evidence
+    }
     created_at
     updated_at
   }

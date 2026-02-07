@@ -4,11 +4,11 @@
  * Remote EU Job Classification - Bulk Processing
  *
  * Classifies jobs for Remote EU eligibility.
- * 
+ *
  * Remote EU Definition:
  * - Position must be FULLY REMOTE (not office-based, not hybrid)
  * - AND remote work must be allowed from EU member countries
- * 
+ *
  * Tracks results in Langfuse for observability and analysis.
  *
  * Usage:
@@ -46,7 +46,11 @@ const langfuse = new Langfuse({
 
 // Remote EU classification schema
 const remoteEUSchema = z.object({
-  isRemoteEU: z.boolean().describe("Whether the job is fully remote AND allows working from EU countries"),
+  isRemoteEU: z
+    .boolean()
+    .describe(
+      "Whether the job is fully remote AND allows working from EU countries",
+    ),
   confidence: z
     .enum(["high", "medium", "low"])
     .describe("Confidence level of the classification"),
@@ -161,7 +165,9 @@ Classify this job posting.`,
 async function runClassification() {
   console.log("🚀 Remote EU Job Classification - Bulk Processing");
   console.log("=================================================");
-  console.log("📋 Finding fully remote jobs that allow working from anywhere in the EU");
+  console.log(
+    "📋 Finding fully remote jobs that allow working from anywhere in the EU",
+  );
   console.log("=================================================\n");
 
   // Fetch prompt from Langfuse

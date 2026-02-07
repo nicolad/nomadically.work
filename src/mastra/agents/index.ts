@@ -6,23 +6,22 @@ import {
   createBiasScorer,
   createHallucinationScorer,
 } from "@mastra/evals/scorers/prebuilt";
+import { getPrompt, PROMPTS } from "@/observability";
 
 /**
- * Job Classifier Agent with built-in quality scorers.
+ * Job Classifier Agent with built-in quality scorers and Langfuse prompt management.
  *
  * Agent-level scorers run on the message I/O (better fit for built-in scorers).
  * Workflow-step scorers run on structured I/O (better for domain-specific scorers).
  *
  * Live evaluations run asynchronously and store results in `mastra_scorers` table.
+ * Prompts are managed in Langfuse and linked for version tracking.
  */
-export const jobClassifierAgent = new Agent({
-  id: "job-classifier-agent",
-  name: "Job Classifier Agent",
-  instructions:
-    "You are an expert at classifying job postings. You can analyze job titles, locations, and descriptions to determine if they are remote EU jobs, UK remote jobs, or other types of positions. You understand geographical nuances like EMEA vs EU, timezone requirements, and work authorization implications.",
-  model: deepseek("deepseek-chat"),
+async function createJobClassifierAgent() {
+  // Fetch the prompt from Langfuse (with caching and fallback)
+  const { text, tracingOptions } = await getPrompt(PROMPTS.JOB_CLASSIFIER);
 
-  scorers: {
+  const scorers = {
     // Answer relevancy: is the agent's output relevant to the input prompt?
     answerRelevancy: {
       scorer: createAnswerRelevancyScorer({ model: "deepseek/deepseek-chat" }),
@@ -46,5 +45,17 @@ export const jobClassifierAgent = new Agent({
       scorer: createHallucinationScorer({ model: "deepseek/deepseek-chat" }),
       sampling: { type: "ratio", rate: 0.25 },
     },
-  },
-});
+  };
+
+  return new Agent({
+    id: "job-classifier-agent",
+    name: "Job Classifier Agent",
+    instructions: text,
+    model: deepseek("deepseek-chat"),
+    defaultGenerateOptions: tracingOptions ? { tracingOptions } : undefined,
+    scorers,
+  });
+}
+
+// Export the agent as a promise that resolves to the configured agent
+export const jobClassifierAgent = await createJobClassifierAgent();

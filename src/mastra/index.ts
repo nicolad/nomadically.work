@@ -2,6 +2,7 @@ import { Mastra } from "@mastra/core";
 import { MastraCompositeStore } from "@mastra/core/storage";
 import { MemoryLibSQL, ScoresLibSQL } from "@mastra/libsql";
 
+import { observability } from "@/observability";
 import { jobClassifierAgent } from "./agents";
 import {
   skillsVector,
@@ -33,4 +34,5 @@ export const mastra = new Mastra({
   workflows: {
     extractJobSkillsWorkflow,
   },
+  observability,
 });

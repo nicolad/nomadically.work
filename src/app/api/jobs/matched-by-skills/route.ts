@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getSkillFilteredJobs } from "@/lib/skill-filtering";
+import { getSkillFilteredJobs } from "@/lib/skills";
 
 export const dynamic = 'force-dynamic';
 

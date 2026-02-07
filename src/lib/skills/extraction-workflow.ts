@@ -3,8 +3,8 @@ import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { Agent } from "@mastra/core/agent";
 import { createClient } from "@libsql/client";
 
-import { skillTaxonomyQueryTool } from "../tools/skill-taxonomy-query-tool";
-import { jobSkillsOutputSchema } from "../schemas/job-skills";
+import { getSkillTaxonomyQueryTool } from "./taxonomy-tool";
+import { jobSkillsOutputSchema } from "./schema";
 
 const extractInputSchema = z.object({
   jobId: z.number().int(),
@@ -52,7 +52,8 @@ const candidatesStep = createStep({
       20_000,
     );
 
-    const res = await skillTaxonomyQueryTool.execute(
+    const tool = getSkillTaxonomyQueryTool();
+    const res = await tool.execute(
       {
         query: text,
         topK: 50,

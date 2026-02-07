@@ -4,6 +4,7 @@ query GetJobs(
   $search: String
   $limit: Int
   $offset: Int
+  $excludedCompanies: [String!]
 ) {
   jobs(
     sourceType: $sourceType
@@ -11,6 +12,7 @@ query GetJobs(
     search: $search
     limit: $limit
     offset: $offset
+    excludedCompanies: $excludedCompanies
   ) {
     jobs {
       id

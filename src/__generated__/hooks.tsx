@@ -83,6 +83,7 @@ export type QueryJobArgs = {
 
 
 export type QueryJobsArgs = {
+  excludedCompanies?: InputMaybe<Array<Scalars['String']['input']>>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
@@ -142,6 +143,7 @@ export type GetJobsQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+  excludedCompanies?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
 }>;
 
 
@@ -258,13 +260,14 @@ export type GetJobLazyQueryHookResult = ReturnType<typeof useGetJobLazyQuery>;
 export type GetJobSuspenseQueryHookResult = ReturnType<typeof useGetJobSuspenseQuery>;
 export type GetJobQueryResult = Apollo.QueryResult<GetJobQuery, GetJobQueryVariables>;
 export const GetJobsDocument = gql`
-    query GetJobs($sourceType: String, $status: String, $search: String, $limit: Int, $offset: Int) {
+    query GetJobs($sourceType: String, $status: String, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!]) {
   jobs(
     sourceType: $sourceType
     status: $status
     search: $search
     limit: $limit
     offset: $offset
+    excludedCompanies: $excludedCompanies
   ) {
     jobs {
       id
@@ -305,6 +308,7 @@ export const GetJobsDocument = gql`
  *      search: // value for 'search'
  *      limit: // value for 'limit'
  *      offset: // value for 'offset'
+ *      excludedCompanies: // value for 'excludedCompanies'
  *   },
  * });
  */

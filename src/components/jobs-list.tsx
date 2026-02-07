@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useGetJobsQuery, useDeleteJobMutation } from "@/__generated__/hooks";
+import {
+  useGetJobsQuery,
+  useDeleteJobMutation,
+  useGetUserSettingsQuery,
+} from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
 import { last, split } from "lodash";
 import { useUser } from "@clerk/nextjs";
@@ -65,14 +69,19 @@ export function JobsList() {
   // Check if current user is admin
   const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
 
+  // Fetch user settings to get excluded companies
+  const { data: userSettingsData } = useGetUserSettingsQuery({
+    variables: { userId: user?.id || "" },
+    skip: !user?.id,
+  });
+
+  const excludedCompanies =
+    userSettingsData?.userSettings?.excluded_companies || [];
+
   // Handle delete job
   const handleDeleteJob = async (jobId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!confirm("Are you sure you want to delete this job?")) {
-      return;
-    }
 
     try {
       await deleteJobMutation({
@@ -112,6 +121,7 @@ export function JobsList() {
       search: debouncedSearch || undefined,
       limit: 20,
       offset: 0,
+      excludedCompanies: excludedCompanies.length > 0 ? excludedCompanies : undefined,
     },
     pollInterval: 60000, // Refresh every minute
     notifyOnNetworkStatusChange: true,
@@ -138,6 +148,7 @@ export function JobsList() {
       await fetchMore({
         variables: {
           offset: jobs.length,
+          excludedCompanies: excludedCompanies.length > 0 ? excludedCompanies : undefined,
         },
         updateQuery: (prev, { fetchMoreResult }) => {
           if (!fetchMoreResult) return prev;
@@ -152,7 +163,7 @@ export function JobsList() {
     } catch (err) {
       console.error("Error loading more jobs:", err);
     }
-  }, [hasMore, loading, jobs.length, fetchMore]);
+  }, [hasMore, loading, jobs.length, fetchMore, excludedCompanies]);
 
   // Infinite scroll observer
   useEffect(() => {

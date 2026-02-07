@@ -15,6 +15,7 @@ export const resolvers = {
         search?: string;
         limit?: number;
         offset?: number;
+        excludedCompanies?: string[];
       },
       _context: GraphQLContext,
     ) {
@@ -45,6 +46,9 @@ export const resolvers = {
           countQuery = countQuery.where(and(...conditions)!) as any;
         }
 
+        // Execute query first, then filter excluded companies in memory
+        // (since Drizzle doesn't have a simple NOT IN for arrays)
+
         query = query.orderBy(
           desc(jobs.posted_at),
           desc(jobs.created_at),
@@ -63,9 +67,17 @@ export const resolvers = {
           countQuery,
         ]);
 
+        // Filter out excluded companies
+        let filteredJobs = result || [];
+        if (args.excludedCompanies && args.excludedCompanies.length > 0) {
+          filteredJobs = filteredJobs.filter(
+            (job) => !args.excludedCompanies!.includes(job.company_key)
+          );
+        }
+
         return {
-          jobs: result || [],
-          totalCount: totalCountResult[0]?.count || 0,
+          jobs: filteredJobs,
+          totalCount: filteredJobs.length,
         };
       } catch (error) {
         console.error("Error fetching jobs:", error);

@@ -62,6 +62,7 @@ export const typeDefs = gql`
       search: String
       limit: Int
       offset: Int
+      excludedCompanies: [String!]
     ): JobsResponse!
     job(id: String!): Job
     userSettings(userId: String!): UserSettings

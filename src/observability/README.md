@@ -54,6 +54,27 @@ Langfuse Prompt Management adds **zero latency** to your application:
 - Retrieving prompts is as fast as reading from memory
 - Your application continues working even if Langfuse is temporarily unavailable (uses fallbacks)
 
+## Evaluation Workflow
+
+### Testing Remote EU Job Classification
+
+The application uses a comprehensive evaluation workflow for remote EU job classification:
+
+1. **Define Test Cases** - Curated dataset of edge cases ([test-data.ts](../lib/evals/remote-eu/test-data.ts))
+2. **Create Prompts** - Manage prompts in Langfuse UI with versioning
+3. **Run Evaluations** - Execute `eval-remote-eu-langfuse.ts` script to test classification accuracy
+4. **Analyze Results** - Review traces, scores, and failures in Langfuse dashboard
+5. **Iterate** - Update prompts based on insights, repeat evaluation
+
+This workflow enables:
+
+- **Regression Testing** - Ensure prompt changes don't break existing scenarios
+- **Version Comparison** - A/B test different prompt versions quantitatively
+- **Edge Case Coverage** - Validate handling of tricky cases (EMEA vs EU, UK post-Brexit, etc.)
+- **Continuous Improvement** - Data-driven prompt refinement
+
+See [Remote EU Classification Evaluation](#remote-eu-classification-evaluation) for usage details.
+
 ## Core Concepts
 
 ### Prompt Types
@@ -92,12 +113,41 @@ Langfuse Prompt Management adds **zero latency** to your application:
    - **Name**: `job-classifier` (must match code)
    - **Type**: Text
    - **Prompt Content**:
+
      ```
-     You are an expert at classifying job postings. You can analyze job titles,
-     locations, and descriptions to determine if they are remote EU jobs, UK remote
-     jobs, or other types of positions. You understand geographical nuances like
-     EMEA vs EU, timezone requirements, and work authorization implications.
+     You are an expert at classifying job postings for Remote EU positions.
+
+     CRITICAL RULES:
+     1. Only classify as "Remote EU" (isRemoteEU: true) if the job EXPLICITLY mentions EU, European Union, or lists only EU member countries.
+     2. Use HIGH confidence only when explicitly clear; MEDIUM for likely scenarios; LOW for ambiguous cases.
+
+     IMPORTANT DISTINCTIONS:
+     - "EMEA" (Europe, Middle East, Africa) is NOT EU - includes non-EU countries like UK (post-Brexit), Switzerland, Middle East, Africa. Mark as isRemoteEU: false unless explicitly restricted to EU member states.
+     - "Europe" alone is TOO BROAD - includes non-EU countries (UK, Switzerland, Norway, etc.). Mark as isRemoteEU: false with LOW confidence unless context clarifies.
+     - "CET timezone" is NOT exclusive to EU - includes Switzerland and some African countries. Mark as isRemoteEU: false with MEDIUM confidence.
+     - "UK only" is NOT EU since Brexit. Mark as isRemoteEU: false with HIGH confidence.
+     - "Switzerland only" is NOT EU (not a member state). Mark as isRemoteEU: false with HIGH confidence.
+     - "EEA" (European Economic Area) includes all EU + Norway, Iceland, Liechtenstein. Mark as isRemoteEU: true with MEDIUM confidence (mostly EU).
+     - "Schengen Area" mostly overlaps with EU but includes some non-EU (Switzerland, Norway). Mark as isRemoteEU: true with MEDIUM confidence.
+
+     POSITIVE INDICATORS (isRemoteEU: true):
+     - Explicitly states "Remote - EU", "European Union", "EU countries"
+     - Lists only EU member countries (Germany, France, Spain, Italy, etc.)
+     - Requires "EU work authorization", "EU passport", "right to work in EU"
+     - States "EU member states only"
+     - EMEA or Europe BUT explicitly restricted to "EU countries only" or "EU member states"
+
+     NEGATIVE INDICATORS (isRemoteEU: false):
+     - EMEA without EU restriction
+     - Europe without EU restriction
+     - UK only (post-Brexit)
+     - Switzerland only
+     - CET timezone without EU mention
+     - Includes non-EU countries (UK, Switzerland, Norway, etc.) in list
+
+     Provide your classification with a clear reasoning based on the job title, location, and description.
      ```
+
    - Click "Create"
 
 4. **Set Labels (Optional)**
@@ -293,10 +343,54 @@ Access at https://cloud.langfuse.com
 - Ensure `tracingOptions` is passed to agent's `defaultGenerateOptions`
 - Verify prompt was fetched successfully (check for fallback warnings)
 
+## Remote EU Classification Evaluation
+
+### Running Evaluations with Langfuse
+
+Use the evaluation script to test the latest prompt against all remote EU test cases using DeepSeek:
+
+```bash
+# Run full evaluation with latest prompt
+pnpm tsx scripts/eval-remote-eu-langfuse.ts
+```
+
+The script will:
+
+- ✅ Fetch the latest prompt from Langfuse
+- ✅ Run classification on all 12 test cases
+- ✅ Send full traces to Langfuse with scores
+- ✅ Generate accuracy report
+- ✅ Link all traces in a single session for analysis
+
+**View results:**
+
+- Session link printed at end of run
+- Navigate to Langfuse → Sessions to see grouped traces
+- View individual traces with full context
+- Analyze failures with expected vs actual classifications
+
+**Output includes:**
+
+- Per-case results with scores
+- Overall accuracy percentage
+- Confidence match rate
+- Detailed failure analysis
+- Direct link to Langfuse session
+
+### Comparing Prompt Versions
+
+To compare different prompt versions:
+
+1. Run evaluation with current prompt (creates baseline)
+2. Update prompt in Langfuse UI (creates new version)
+3. Run evaluation again with new version
+4. Compare sessions in Langfuse dashboard to see accuracy changes
+
 ## Resources
 
 - [Langfuse Prompt Management Docs](https://langfuse.com/docs/prompts)
 - [Langfuse Tracing](https://langfuse.com/docs/tracing)
+- [Langfuse Scores](https://langfuse.com/docs/scores)
 - [Caching Details](https://langfuse.com/docs/prompts/get-started#caching)
 - [Version Control Guide](https://langfuse.com/docs/prompts/concepts#versioning)
 
@@ -355,6 +449,7 @@ Ensure these are set in `.env`:
 LANGFUSE_SECRET_KEY="***REMOVED***"
 LANGFUSE_PUBLIC_KEY="***REMOVED***"
 LANGFUSE_BASE_URL="https://cloud.langfuse.com"
+DEEPSEEK_API_KEY="your-deepseek-api-key"
 ```
 
 ## Monitoring

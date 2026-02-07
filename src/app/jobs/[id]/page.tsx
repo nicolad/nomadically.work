@@ -5,6 +5,7 @@ import {
   useGetJobQuery,
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
+  useDeleteJobMutation,
 } from "@/__generated__/hooks";
 import { ApolloProvider, useApollo } from "@/apollo/client";
 import {
@@ -18,12 +19,15 @@ import {
   Box,
   Button,
   Link as RadixLink,
+  IconButton,
 } from "@radix-ui/themes";
+import { TrashIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { classifyJob } from "@/lib/mastra/actions";
 import type { JobClassificationResponse } from "@/lib/mastra/actions";
+import { ADMIN_EMAIL } from "@/lib/constants";
 
 interface AshbySecondaryLocation {
   location: string;
@@ -88,6 +92,7 @@ interface AshbyJobPosting {
 function JobPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const id = params.id as string;
   const company = searchParams.get("company");
   const source = searchParams.get("source");
@@ -114,6 +119,31 @@ function JobPageContent() {
     });
 
   const [updateSettings] = useUpdateUserSettingsMutation();
+  const [deleteJobMutation] = useDeleteJobMutation();
+
+  // Check if current user is admin
+  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+
+  // Handle delete job
+  const handleDeleteJob = async () => {
+    if (!data?.job?.id) return;
+
+    if (!confirm("Are you sure you want to delete this job?")) {
+      return;
+    }
+
+    try {
+      await deleteJobMutation({
+        variables: { id: data.job.id },
+      });
+      
+      // Navigate back to jobs list
+      router.push("/jobs");
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      alert("Failed to delete job. Please try again.");
+    }
+  };
 
   // Fetch Ashby data if source is ashby
   useEffect(() => {
@@ -316,9 +346,20 @@ function JobPageContent() {
 
       {/* Header */}
       <Box mb="6">
-        <Heading size="8" mb="2">
-          {job.title}
-        </Heading>
+        <Flex justify="between" align="start" mb="2">
+          <Heading size="8">{job.title}</Heading>
+          {isAdmin && (
+            <IconButton
+              size="3"
+              color="red"
+              variant="soft"
+              onClick={handleDeleteJob}
+              style={{ cursor: "pointer" }}
+            >
+              <TrashIcon width="18" height="18" />
+            </IconButton>
+          )}
+        </Flex>
         <Flex gap="4" mb="4" align="center">
           {job.company_key && (
             <>

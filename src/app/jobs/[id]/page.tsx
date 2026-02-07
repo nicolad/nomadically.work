@@ -130,7 +130,7 @@ function JobPageContent() {
       await deleteJobMutation({
         variables: { id: data.job.id },
       });
-      
+
       // Navigate back to jobs list
       router.push("/jobs");
     } catch (error) {
@@ -423,6 +423,34 @@ function JobPageContent() {
             <Badge color="blue">Score: {(job.score * 100).toFixed(0)}%</Badge>
           )}
         </Flex>
+
+        {/* Skills Section */}
+        {job.skills && job.skills.length > 0 && (
+          <Box mt="4">
+            <Text size="2" weight="bold" mb="2">
+              Skills & Technologies
+            </Text>
+            <Flex gap="2" wrap="wrap">
+              {job.skills.map((skill) => (
+                <Badge
+                  key={skill.tag}
+                  size="2"
+                  color={
+                    skill.level === "required"
+                      ? "red"
+                      : skill.level === "preferred"
+                        ? "blue"
+                        : "gray"
+                  }
+                  variant="soft"
+                >
+                  {skill.tag}
+                  {skill.level === "required" && " ⚠️"}
+                </Badge>
+              ))}
+            </Flex>
+          </Box>
+        )}
 
         {/* Action Buttons */}
         <Flex gap="3" mt="4">

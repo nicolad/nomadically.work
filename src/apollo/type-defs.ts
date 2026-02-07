@@ -3,6 +3,13 @@ import { gql } from "@apollo/client";
 export const typeDefs = gql`
   scalar JSON
 
+  type JobSkill {
+    tag: String!
+    level: String!
+    confidence: Float
+    evidence: String
+  }
+
   type Job {
     id: Int!
     external_id: String!
@@ -20,6 +27,7 @@ export const typeDefs = gql`
     is_remote_eu: Boolean
     remote_eu_confidence: String
     remote_eu_reason: String
+    skills: [JobSkill!]
     created_at: String!
     updated_at: String!
   }

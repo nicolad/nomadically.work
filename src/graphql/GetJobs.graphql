@@ -28,6 +28,10 @@ query GetJobs(
       score
       score_reason
       status
+      skills {
+        tag
+        level
+      }
       created_at
       updated_at
     }

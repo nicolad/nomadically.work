@@ -121,7 +121,8 @@ export function JobsList() {
       search: debouncedSearch || undefined,
       limit: 20,
       offset: 0,
-      excludedCompanies: excludedCompanies.length > 0 ? excludedCompanies : undefined,
+      excludedCompanies:
+        excludedCompanies.length > 0 ? excludedCompanies : undefined,
     },
     pollInterval: 60000, // Refresh every minute
     notifyOnNetworkStatusChange: true,
@@ -148,7 +149,8 @@ export function JobsList() {
       await fetchMore({
         variables: {
           offset: jobs.length,
-          excludedCompanies: excludedCompanies.length > 0 ? excludedCompanies : undefined,
+          excludedCompanies:
+            excludedCompanies.length > 0 ? excludedCompanies : undefined,
         },
         updateQuery: (prev, { fetchMoreResult }) => {
           if (!fetchMoreResult) return prev;
@@ -173,7 +175,7 @@ export function JobsList() {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     const currentRef = loadMoreRef.current;
@@ -302,6 +304,27 @@ export function JobsList() {
                   >
                     {job.description}
                   </Text>
+                )}
+
+                {/* Skills */}
+                {job.skills && job.skills.length > 0 && (
+                  <Flex gap="1" wrap="wrap" mb="3">
+                    {job.skills.slice(0, 5).map((skill) => (
+                      <Badge
+                        key={skill.tag}
+                        size="1"
+                        color={skill.level === "required" ? "red" : "gray"}
+                        variant="soft"
+                      >
+                        {skill.tag}
+                      </Badge>
+                    ))}
+                    {job.skills.length > 5 && (
+                      <Badge size="1" variant="soft" color="gray">
+                        +{job.skills.length - 5} more
+                      </Badge>
+                    )}
+                  </Flex>
                 )}
 
                 <Flex justify="between" align="center" mt="4">

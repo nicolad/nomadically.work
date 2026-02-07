@@ -24,6 +24,9 @@ declare -a env_vars=(
   "LANGFUSE_SECRET_KEY"
   "LANGFUSE_PUBLIC_KEY"
   "LANGFUSE_BASE_URL"
+  "CLOUDFLARE_API_TOKEN"
+  "CLOUDFLARE_API_KEY"
+  "CLOUDFLARE_ACCOUNT_ID"
 )
 
 # Push each variable to all environments

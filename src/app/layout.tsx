@@ -16,7 +16,8 @@ import {
 
 export const metadata: Metadata = {
   title: "Nomadically.Work",
-  description: "Fully remote jobs within the EU - Find remote positions you can work from anywhere in Europe",
+  description:
+    "Fully remote jobs within the EU - Find remote positions you can work from anywhere in Europe",
 };
 
 export default function RootLayout({

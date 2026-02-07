@@ -15,6 +15,10 @@
     "braintrust:eval": "npx braintrust eval src/lib/evals",
     "cron:trigger": "tsx scripts/trigger-cron.ts",
     "boards:discover": "tsx scripts/discover-ashby-boards.ts",
+    "skills:seed": "tsx scripts/seed-skill-taxonomy.ts",
+    "jobs:ingest": "tsx scripts/ingest-jobs.ts",
+    "jobs:status": "tsx scripts/ingest-jobs.ts --check-status",
+    "jobs:extract-skills": "tsx scripts/ingest-jobs.ts --extract-skills",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -33,6 +37,7 @@
     "@mastra/core": "latest",
     "@mastra/evals": "^1.0.1",
     "@mastra/libsql": "^1.1.0",
+    "@mastra/rag": "^2.1.0",
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/themes": "^3.3.0",
     "braintrust": "^0.0.168",

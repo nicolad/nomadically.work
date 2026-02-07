@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTursoClient } from "@/lib/turso";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Webhook endpoint for processing jobs sent by Cloudflare Queue consumer
  * Called one-by-one for each job that needs processing

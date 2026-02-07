@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 import { schema } from "@/apollo/schema";
 import { GraphQLContext } from "@/apollo/context";
 
+export const dynamic = 'force-dynamic';
+
 const apolloServer = new ApolloServer<GraphQLContext>({ schema });
 
 const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(

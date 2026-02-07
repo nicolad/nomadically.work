@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGetJobsQuery } from "@/__generated__/hooks";
@@ -16,6 +16,7 @@ import {
   Badge,
   Button,
   TextField,
+  Spinner,
 } from "@radix-ui/themes";
 
 type Job = GetJobsQuery["jobs"]["jobs"][number];
@@ -52,6 +53,8 @@ export function JobsList() {
   const [debouncedSearch, setDebouncedSearch] = useState(
     searchParams.get("q") || "",
   );
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   // Debounce search term
   useEffect(() => {
@@ -72,16 +75,77 @@ export function JobsList() {
     }
     const newUrl = params.toString() ? `?${params.toString()}` : "/";
     router.replace(newUrl, { scroll: false });
-  }, [debouncedSearch, router, searchParams]);
+  }, [debouncedSearch, router]);
 
-  const { loading, error, data, refetch } = useGetJobsQuery({
+  const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
     variables: {
       search: debouncedSearch || undefined,
-      limit: 100,
+      limit: 20,
       offset: 0,
     },
     pollInterval: 60000, // Refresh every minute
+    notifyOnNetworkStatusChange: true,
   });
+
+  const jobs = data?.jobs.jobs || [];
+  const totalCount = data?.jobs.totalCount || 0;
+
+  // Check if we have more jobs to load
+  useEffect(() => {
+    setHasMore(jobs.length < totalCount);
+  }, [jobs.length, totalCount]);
+
+  // Reset hasMore when search changes
+  useEffect(() => {
+    setHasMore(true);
+  }, [debouncedSearch]);
+
+  // Load more jobs
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loading) return;
+
+    try {
+      await fetchMore({
+        variables: {
+          offset: jobs.length,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult) return prev;
+          return {
+            jobs: {
+              ...fetchMoreResult.jobs,
+              jobs: [...prev.jobs.jobs, ...fetchMoreResult.jobs.jobs],
+            },
+          };
+        },
+      });
+    } catch (err) {
+      console.error("Error loading more jobs:", err);
+    }
+  }, [hasMore, loading, jobs.length, fetchMore]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, loading, loadMore]);
 
   if (error) {
     return (
@@ -93,9 +157,6 @@ export function JobsList() {
       </Container>
     );
   }
-
-  const jobs = data?.jobs.jobs || [];
-  const totalCount = data?.jobs.totalCount || 0;
 
   return (
     <Container size="4" px="8">
@@ -206,6 +267,29 @@ export function JobsList() {
           );
         })}
       </Flex>
+
+      {/* Infinite scroll trigger */}
+      <Box ref={loadMoreRef} py="6">
+        {loading && (
+          <Flex justify="center" align="center">
+            <Spinner size="3" />
+          </Flex>
+        )}
+        {!loading && hasMore && (
+          <Flex justify="center">
+            <Text size="2" color="gray">
+              Scroll for more...
+            </Text>
+          </Flex>
+        )}
+        {!loading && !hasMore && jobs.length > 0 && (
+          <Flex justify="center">
+            <Text size="2" color="gray">
+              No more jobs to load
+            </Text>
+          </Flex>
+        )}
+      </Box>
     </Container>
   );
 }

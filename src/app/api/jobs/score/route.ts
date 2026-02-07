@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTursoClient } from "@/lib/turso";
 import { scoreRemoteEUClassification } from "@/lib/evals/scorers/remote-eu-scorer";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Score jobs endpoint - runs after cron inserts new jobs
  * Triggered by cron webhook or manually

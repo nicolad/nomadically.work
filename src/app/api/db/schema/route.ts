@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getD1Client } from "@/lib/cloudflare-d1";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const d1Client = getD1Client();

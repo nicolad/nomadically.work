@@ -25,25 +25,25 @@ export const jobClassifierAgent = new Agent({
   scorers: {
     // Answer relevancy: is the agent's output relevant to the input prompt?
     answerRelevancy: {
-      scorer: createAnswerRelevancyScorer({ model: "openai/gpt-4o-mini" }),
+      scorer: createAnswerRelevancyScorer({ model: "deepseek/deepseek-chat" }),
       sampling: { type: "ratio", rate: 0.25 },
     },
 
     // Toxicity: safety check (should always be near-zero for job classifications)
     toxicity: {
-      scorer: createToxicityScorer({ model: "openai/gpt-4o-mini" }),
+      scorer: createToxicityScorer({ model: "deepseek/deepseek-chat" }),
       sampling: { type: "ratio", rate: 1 },
     },
 
     // Bias: fairness check (important for job-related content)
     bias: {
-      scorer: createBiasScorer({ model: "openai/gpt-4o-mini" }),
+      scorer: createBiasScorer({ model: "deepseek/deepseek-chat" }),
       sampling: { type: "ratio", rate: 0.25 },
     },
 
     // Hallucination: does the output invent facts not in the input?
     hallucination: {
-      scorer: createHallucinationScorer({ model: "openai/gpt-4o-mini" }),
+      scorer: createHallucinationScorer({ model: "deepseek/deepseek-chat" }),
       sampling: { type: "ratio", rate: 0.25 },
     },
   },

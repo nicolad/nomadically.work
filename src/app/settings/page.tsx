@@ -408,18 +408,11 @@ function SettingsPageContent() {
               </Text>
             </Flex>
 
-            {/* Skills & Keywords */}
             <Flex direction="column" gap="2">
               <Flex align="center" gap="2">
                 <Text weight="medium">Skills & Keywords</Text>
-                <Tooltip content="Jobs mentioning these terms will be highlighted in your feed.">
-                  <InfoCircledIcon
-                    style={{ color: "var(--gray-9)", cursor: "help" }}
-                  />
-                </Tooltip>
               </Flex>
 
-              {/* Skill Chips */}
               {skillChips.length > 0 && (
                 <Flex gap="2" wrap="wrap">
                   {skillChips.map((skill, index) => (

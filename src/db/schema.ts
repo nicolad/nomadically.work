@@ -77,3 +77,39 @@ export const userSettings = sqliteTable("user_settings", {
 
 export type UserSettings = typeof userSettings.$inferSelect;
 export type NewUserSettings = typeof userSettings.$inferInsert;
+
+export const jobSkillTags = sqliteTable(
+  "job_skill_tags",
+  {
+    job_id: integer("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    level: text("level", {
+      enum: ["required", "preferred", "nice"],
+    }).notNull(),
+    confidence: real("confidence"),
+    evidence: text("evidence"),
+    extracted_at: text("extracted_at").notNull(),
+    version: text("version").notNull(),
+  },
+  (table) => ({
+    pk: { name: "job_skill_tags_pk", columns: [table.job_id, table.tag] },
+    tagJobIdx: {
+      name: "idx_job_skill_tags_tag_job",
+      columns: [table.tag, table.job_id],
+    },
+    jobIdIdx: { name: "idx_job_skill_tags_job_id", columns: [table.job_id] },
+  }),
+);
+
+export type JobSkillTag = typeof jobSkillTags.$inferSelect;
+export type NewJobSkillTag = typeof jobSkillTags.$inferInsert;
+
+export const skillAliases = sqliteTable("skill_aliases", {
+  alias: text("alias").primaryKey(),
+  tag: text("tag").notNull(),
+});
+
+export type SkillAlias = typeof skillAliases.$inferSelect;
+export type NewSkillAlias = typeof skillAliases.$inferInsert;

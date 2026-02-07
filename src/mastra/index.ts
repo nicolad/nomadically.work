@@ -3,6 +3,11 @@ import { MastraCompositeStore } from "@mastra/core/storage";
 import { MemoryLibSQL, ScoresLibSQL } from "@mastra/libsql";
 
 import { jobClassifierAgent } from "./agents";
+import {
+  skillsVector,
+  SKILLS_VECTOR_STORE_NAME,
+} from "./vectors/skills-vector";
+import { extractJobSkillsWorkflow } from "./workflows/extract-job-skills";
 
 // Configure composite storage with libSQL for all domains
 const storage = new MastraCompositeStore({
@@ -22,4 +27,10 @@ const storage = new MastraCompositeStore({
 export const mastra = new Mastra({
   agents: { jobClassifierAgent },
   storage,
+  vectors: {
+    [SKILLS_VECTOR_STORE_NAME]: skillsVector,
+  },
+  workflows: {
+    extractJobSkillsWorkflow,
+  },
 });

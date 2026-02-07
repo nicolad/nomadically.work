@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTursoClient } from "@/lib/turso";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const company = searchParams.get("company");

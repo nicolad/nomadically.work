@@ -48,3 +48,6 @@ next-env.d.ts
 # wrangler
 .wrangler/
 .env*.local
+
+# clerk configuration (can include secrets)
+/.clerk/

@@ -91,7 +91,6 @@ export function JobsList() {
       });
     } catch (error) {
       console.error("Error deleting job:", error);
-      alert("Failed to delete job. Please try again.");
     }
   };
 

@@ -40,6 +40,7 @@ export const getSkillTaxonomyQueryTool = () => {
       vectorStoreName: SKILLS_VECTOR_STORE_NAME,
       indexName: SKILLS_VECTOR_INDEX,
       model: embeddingModel,
+      includeSources: true,
     });
   }
   return _tool;
@@ -69,6 +70,7 @@ export const skillTaxonomyQueryTool = (() => {
       vectorStoreName: SKILLS_VECTOR_STORE_NAME,
       indexName: SKILLS_VECTOR_INDEX,
       model: embeddingModel,
+      includeSources: true,
     });
   } catch (e) {
     // Return a dummy object during build time

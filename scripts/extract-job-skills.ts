@@ -25,7 +25,7 @@
 
 import { db } from "../src/db";
 import { jobs, jobSkillTags } from "../src/db/schema";
-import { eq, ne, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { mastra } from "../src/mastra";
 import { ensureSkillsVectorIndex } from "../src/lib/skills";
 

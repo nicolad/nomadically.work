@@ -12,6 +12,18 @@ const extractInputSchema = z.object({
   description: z.string().nullable(),
 });
 
+const candidatesOutputSchema = z.object({
+  candidates: z.array(
+    z.object({
+      tag: z.string(),
+      label: z.string().optional(),
+      aliases: z.array(z.string()).optional(),
+      score: z.number().optional(),
+    }),
+  ),
+});
+type CandidatesStepOutput = z.infer<typeof candidatesOutputSchema>;
+
 // Agent that extracts skills with structured output
 const skillExtractorAgent = new Agent({
   id: "skill-extractor",
@@ -36,39 +48,45 @@ const skillExtractorAgent = new Agent({
 const candidatesStep = createStep({
   id: "skill-candidates",
   inputSchema: extractInputSchema,
-  outputSchema: z.object({
-    candidates: z.array(
-      z.object({
-        tag: z.string(),
-        label: z.string().optional(),
-        aliases: z.array(z.string()).optional(),
-        score: z.number().optional(),
-      }),
-    ),
-  }),
-  execute: async ({ inputData, requestContext }) => {
+  outputSchema: candidatesOutputSchema,
+  execute: async ({
+    inputData,
+    requestContext,
+  }): Promise<CandidatesStepOutput> => {
     const text = `${inputData.title}\n\n${inputData.description ?? ""}`.slice(
       0,
       20_000,
     );
 
     const tool = getSkillTaxonomyQueryTool();
+
+    // 🔎 sanity log: if this prints queryText, but the tool error still shows "query",
+    // you're running different code than you edited.
+    console.log(
+      "Calling skill-taxonomy-query with keys:",
+      Object.keys({ queryText: text, topK: 50 }),
+    );
+
     const res = await tool.execute(
       {
-        query: text,
+        queryText: text, // ✅ MUST be queryText (NOT query)
         topK: 50,
-      } as any,
+      },
       { requestContext },
     );
 
-    // Tool returns retrieval results; normalize to what we need
-    const candidates = (res?.results ?? []).map((r: any) => ({
+    console.log("Tool result:", JSON.stringify(res, null, 2));
+
+    const sources = Array.isArray(res?.sources) ? res.sources : [];
+
+    const candidates = sources.map((r: any) => ({
       tag: r.metadata?.tag ?? r.id,
       label: r.metadata?.label,
       aliases: r.metadata?.aliases,
       score: r.score,
     }));
 
+    console.log(`Found ${candidates.length} candidate skills`);
     return { candidates };
   },
 });
@@ -172,12 +190,21 @@ export const extractJobSkillsWorkflow = createWorkflow({
   .then(candidatesStep)
   // 2) Map to agent input: build prompt with candidates
   .map(async ({ inputData, getStepResult }) => {
-    const { candidates } = getStepResult<any>({ step: candidatesStep });
-    const init = inputData as any;
-    const title = init.title as string;
-    const description = (init.description ?? "") as string;
+    const stepResult = getStepResult(
+      "skill-candidates",
+    ) as CandidatesStepOutput | null;
 
-    const candidateTags = candidates.map((c: any) => c.tag).join(", ");
+    if (!stepResult) {
+      throw new Error(`Candidates step returned null. Step likely failed.`);
+    }
+
+    const { candidates } = stepResult;
+
+    const init = inputData as z.infer<typeof extractInputSchema>;
+    const title = init.title;
+    const description = init.description ?? "";
+
+    const candidateTags = candidates.map((c) => c.tag).join(", ");
 
     return {
       prompt: [
@@ -197,14 +224,23 @@ export const extractJobSkillsWorkflow = createWorkflow({
   .then(extractStructuredStep)
   // 4) Map to validation input
   .map(async ({ getStepResult, inputData }) => {
-    const extracted = getStepResult<any>({ step: extractStructuredStep });
-    const { candidates } = getStepResult<any>({ step: candidatesStep });
-    const init = inputData as any;
+    const extracted = getStepResult("skill-extractor") as any;
+
+    const candidatesResult = getStepResult(
+      "skill-candidates",
+    ) as CandidatesStepOutput | null;
+    if (!candidatesResult) {
+      throw new Error(
+        `Candidates step result not available in validation mapping.`,
+      );
+    }
+
+    const init = inputData as z.infer<typeof extractInputSchema>;
 
     return {
-      jobId: init.jobId as number,
+      jobId: init.jobId,
       extracted,
-      candidates,
+      candidates: candidatesResult.candidates,
     };
   })
   // 5) Validate against candidates
@@ -212,7 +248,7 @@ export const extractJobSkillsWorkflow = createWorkflow({
   // 6) Map to persist input
   .map(async ({ getStepResult, inputData }) => {
     const init = inputData as any;
-    const validated = getStepResult<any>({ step: validateStep });
+    const validated = getStepResult("validate-skills");
 
     return {
       jobId: init.jobId as number,

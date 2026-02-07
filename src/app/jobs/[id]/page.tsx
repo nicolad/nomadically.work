@@ -121,16 +121,10 @@ function JobPageContent() {
   const [updateSettings] = useUpdateUserSettingsMutation();
   const [deleteJobMutation] = useDeleteJobMutation();
 
-  // Check if current user is admin
   const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
 
-  // Handle delete job
   const handleDeleteJob = async () => {
     if (!data?.job?.id) return;
-
-    if (!confirm("Are you sure you want to delete this job?")) {
-      return;
-    }
 
     try {
       await deleteJobMutation({
@@ -327,7 +321,6 @@ function JobPageContent() {
       });
 
       await refetchUserSettings();
-      alert(`Successfully hidden jobs from "${companyToHide}"`);
     } catch (error) {
       console.error("Error hiding company:", error);
       alert("Failed to hide company. Please try again.");

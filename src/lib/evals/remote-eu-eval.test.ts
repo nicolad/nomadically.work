@@ -3,12 +3,16 @@
  * Regression tests for job posting classification accuracy
  *
  * Run with: pnpm test:eval
+ * 
+ * @see src/lib/evals/remote-eu/ - Centralized evaluation module
  */
 
 import { describe, it, expect } from "vitest";
-import { scoreRemoteEUClassification } from "./scorers/remote-eu-scorer";
-import { remoteEUTestCases } from "./remote-eu-test-data";
-import type { RemoteEUClassification } from "./scorers/remote-eu-scorer";
+import {
+  scoreRemoteEUClassification,
+  remoteEUTestCases,
+  type RemoteEUClassification,
+} from "./remote-eu";
 
 // Mock classifier function - replace this with your actual implementation
 async function classifyRemoteEU(jobPosting: {

@@ -1,71 +1,31 @@
-import { Eval } from "braintrust";
-import { remoteEUTestCases } from "./test-data";
-import { jobClassificationScorer } from "./scorers";
-import type { RemoteEUClassification } from "./schema";
-
 /**
- * Classification function - should be imported from your agent/action
- * Replace this with your actual classification logic
- */
-type ClassifyJobInput = {
-  title: string;
-  location: string;
-  description: string;
-};
-
-type ClassifyJobResult = {
-  ok: boolean;
-  data?: RemoteEUClassification;
-};
-
-/**
- * Import your actual classifyJob function here
- * For now, this is a placeholder type
- */
-declare function classifyJob(
-  input: ClassifyJobInput,
-): Promise<ClassifyJobResult>;
-
-/**
- * Braintrust evaluation for Remote EU job classification.
+ * Remote EU Evaluation Utilities
  * 
- * Evaluates the model's ability to correctly classify jobs as Remote EU or not.
- * Tests against labeled data with tricky edge cases like:
- * - EMEA vs EU distinction
- * - UK post-Brexit
- * - Switzerland (not EU)
- * - Work authorization requirements
+ * Evaluations for Remote EU job classification are handled through:
  * 
- * Run with: pnpm braintrust:eval
+ * 1. **Live Evaluation (Mastra/Langfuse)**:
+ *    - Use `remoteEUScorer` with agents
+ *    - Automatically tracked in Langfuse
+ *    - See: src/mastra/agents/index.ts
+ * 
+ * 2. **Regression Testing (Vitest)**:
+ *    - See: src/lib/evals/remote-eu-eval.test.ts
+ *    - Run with: pnpm test:eval
+ * 
+ * Example live evaluation:
+ * ```typescript
+ * import { remoteEUScorer } from "@/lib/evals/remote-eu";
+ * 
+ * const agent = new Agent({
+ *   scorers: {
+ *     remoteEU: {
+ *       scorer: remoteEUScorer,
+ *       sampling: { type: "ratio", rate: 0.25 },
+ *     },
+ *   },
+ * });
+ * ```
+ * 
+ * All scores are automatically sent to Langfuse for analysis.
+ * View results at: https://cloud.langfuse.com
  */
-export const remoteEUEval = Eval("Remote EU Job Classification", {
-  data: () => {
-    // Use first 5 test cases for quick evaluation
-    // Remove .slice() to run full test suite
-    return remoteEUTestCases.slice(0, 5).map((testCase) => ({
-      input: testCase.jobPosting,
-      expected: testCase.expectedClassification,
-    }));
-  },
-  task: async (input) => {
-    // Dynamically import to avoid circular dependencies
-    const { classifyJob } = await import("@/lib/mastra/actions");
-
-    const result = await classifyJob({
-      title: input.title,
-      location: input.location,
-      description: input.description,
-    });
-
-    if (!result.ok || !result.data) {
-      return {
-        isRemoteEU: false,
-        confidence: "low" as const,
-        reason: "Classification failed",
-      };
-    }
-
-    return result.data;
-  },
-  scores: [jobClassificationScorer],
-});

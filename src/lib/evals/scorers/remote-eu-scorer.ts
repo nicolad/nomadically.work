@@ -3,9 +3,8 @@
  * 
  * All Remote EU evaluation logic is now centralized in:
  * - src/lib/evals/remote-eu/schema.ts - Types and schemas
- * - src/lib/evals/remote-eu/scorers.ts - Scorer functions
+ * - src/lib/evals/remote-eu/scorers.ts - Scorer functions (Mastra/Langfuse)
  * - src/lib/evals/remote-eu/test-data.ts - Test cases
- * - src/lib/evals/remote-eu/eval.ts - Braintrust eval
  * 
  * Please import from "@/lib/evals/remote-eu" instead.
  */

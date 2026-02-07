@@ -81,27 +81,4 @@ export const remoteEUScorer = createScorer({
     return `Classification: ${classification.isRemoteEU ? "EU Remote" : "Non-EU"} (${classification.confidence} confidence) - ${classification.reason}`;
   });
 
-/**
- * Braintrust-compatible scorer for job classification.
- * 
- * Simpler scorer for use with Braintrust Eval framework.
- * 
- * @param output - Actual classification from the model
- * @param expected - Expected classification from test data
- * @returns Score object with name and score (0-1)
- */
-export function jobClassificationScorer({
-  output,
-  expected,
-}: {
-  output: RemoteEUClassification;
-  expected: RemoteEUClassification;
-}) {
-  const isCorrect = output?.isRemoteEU === expected?.isRemoteEU;
-  const confidenceMatch = output?.confidence === expected?.confidence;
 
-  return {
-    name: "jobClassificationScorer",
-    score: isCorrect ? (confidenceMatch ? 1 : 0.5) : 0,
-  };
-}

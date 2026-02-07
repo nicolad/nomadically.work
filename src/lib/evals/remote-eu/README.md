@@ -9,8 +9,7 @@ src/lib/evals/remote-eu/
 ├── index.ts          # Main exports
 ├── schema.ts         # Zod schemas and TypeScript types
 ├── test-data.ts      # Labeled test cases
-├── scorers.ts        # Scoring functions (Braintrust & Mastra)
-└── eval.ts           # Braintrust evaluation definition
+└── scorers.ts        # Scoring functions for Mastra/Langfuse
 ```
 
 ## Usage
@@ -22,35 +21,32 @@ import {
   // Types
   RemoteEUClassification,
   RemoteEUTestCase,
-  
+
   // Test Data
   remoteEUTestCases,
-  
+
   // Scorers
   scoreRemoteEUClassification,
   remoteEUScorer,
-  jobClassificationScorer,
-  
-  // Eval
-  remoteEUEval,
 } from "@/lib/evals/remote-eu";
 ```
 
 ### Run Evaluations
 
-**Braintrust:**
-```bash
-pnpm braintrust:eval
-```
+**Vitest Tests:**
 
-**Vitest:**
 ```bash
 pnpm test:eval
 ```
 
+**Live Evaluation with Mastra:**
+
+Scorers automatically track evaluations in Langfuse when used with agents.
+
 ### Use in Code
 
 **With Mastra:**
+
 ```typescript
 import { remoteEUScorer } from "@/lib/evals/remote-eu";
 
@@ -65,12 +61,17 @@ const agent = new Agent({
 ```
 
 **Standalone Scoring:**
+
 ```typescript
 import { scoreRemoteEUClassification } from "@/lib/evals/remote-eu";
 
 const result = scoreRemoteEUClassification({
   jobPosting: { title: "...", location: "...", description: "..." },
-  expectedClassification: { isRemoteEU: true, confidence: "high", reason: "..." },
+  expectedClassification: {
+    isRemoteEU: true,
+    confidence: "high",
+    reason: "...",
+  },
   actualClassification: { isRemoteEU: true, confidence: "high", reason: "..." },
 });
 
@@ -81,6 +82,7 @@ console.log(result.metadata); // Detailed breakdown
 ## Test Cases
 
 12 labeled test cases covering edge cases:
+
 - ✅ Clear Remote EU positions
 - ✅ EMEA vs EU distinction
 - ✅ UK post-Brexit status
@@ -93,16 +95,15 @@ console.log(result.metadata); // Detailed breakdown
 ## Scoring Logic
 
 **scoreRemoteEUClassification:**
+
 - Correct + matching confidence = 1.0
 - Correct + mismatched confidence = 0.5
 - Incorrect = 0.0
 
-**remoteEUScorer (Mastra):**
+**remoteEUScorer (Mastra/Langfuse):**
+
 - High confidence = 1.0
 - Medium confidence = 0.7
 - Low confidence = 0.4
 
-**jobClassificationScorer (Braintrust):**
-- Correct + matching confidence = 1.0
-- Correct only = 0.5
-- Incorrect = 0.0
+All scores are automatically tracked in Langfuse when the scorer is attached to an agent.

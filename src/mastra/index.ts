@@ -7,8 +7,8 @@ import { jobClassifierAgent } from "./agents";
 import {
   skillsVector,
   SKILLS_VECTOR_STORE_NAME,
-} from "./vectors/skills-vector";
-import { extractJobSkillsWorkflow } from "./workflows/extract-job-skills";
+  extractJobSkillsWorkflow,
+} from "@/lib/skills";
 
 // Configure composite storage with libSQL for all domains
 const storage = new MastraCompositeStore({

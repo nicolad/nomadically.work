@@ -54,3 +54,10 @@ next-env.d.ts
 
 # script logs
 scripts/*.log
+
+# workspace runtime files
+workspace/*
+!workspace/.gitkeep
+!workspace/skills/
+workspace/skills/*
+!workspace/skills/README.md

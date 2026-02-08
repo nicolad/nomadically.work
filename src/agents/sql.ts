@@ -1,7 +1,7 @@
-
 import { deepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
 import { executeSqlQuery } from "@/tools/libsql-query";
+import { sqlWorkspace } from "@/workspace";
 
 export const sqlAgent = new Agent({
   name: "SQL Agent",
@@ -179,4 +179,5 @@ export const sqlAgent = new Agent({
   tools: {
     executeSqlQuery: executeSqlQuery,
   },
+  workspace: sqlWorkspace,
 });

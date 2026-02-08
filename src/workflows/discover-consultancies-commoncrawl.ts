@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createStep, createWorkflow } from "@mastra/core/workflows";
+import { createStep, createWorkflow } from "@/mastra/workflows";
 import {
   ccxGetRecentCrawlIdsTool,
   ccxCdxLatestTool,

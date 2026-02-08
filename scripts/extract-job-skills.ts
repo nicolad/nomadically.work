@@ -27,6 +27,7 @@ import { db } from "../src/db";
 import { jobs, jobSkillTags } from "../src/db/schema";
 import { sql } from "drizzle-orm";
 import { mastra } from "../src/mastra";
+import { extractJobSkillsWorkflow } from "../src/lib/skills";
 import { LibSQLVector } from "@mastra/libsql";
 import {
   CLOUDFLARE_ACCOUNT_ID,
@@ -360,16 +361,6 @@ async function jobAlreadyHasSkills(jobId: number): Promise<boolean> {
   return rows.length > 0;
 }
 
-// Cached workflow instance (avoids repeated lookups)
-let _extractJobSkillsWorkflow: ReturnType<typeof mastra.getWorkflow> | null =
-  null;
-
-function getExtractJobSkillsWorkflow() {
-  return (_extractJobSkillsWorkflow ??= mastra.getWorkflow(
-    "extractJobSkillsWorkflow",
-  ));
-}
-
 /**
  * Extract skills for a single job
  */
@@ -394,11 +385,8 @@ async function extractSkillsForJob(job: {
 
     console.log(`  Processing: ${job.title} (ID: ${job.id})`);
 
-    // ✅ Cached workflow instance (avoids repeated lookups)
-    const workflow = getExtractJobSkillsWorkflow();
-
     // Create and execute the workflow run
-    const run = await workflow.createRun();
+    const run = await extractJobSkillsWorkflow.createRun();
     const result = await run.start({
       inputData: {
         jobId: job.id,

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useGetJobsQuery,
   useDeleteJobMutation,
@@ -56,6 +56,7 @@ const getStatusLabel = (status: Job["status"]): string => {
 };
 
 export function JobsList() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -221,27 +222,21 @@ export function JobsList() {
 
                 <Flex gap="2" mb="2" wrap="wrap" align="center">
                   {job.company_key && (
-                    <Link
-                      href={`/boards/${job.company_key}`}
-                      onClick={(e) => e.stopPropagation()}
+                    <Text
+                      weight="medium"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        router.push(`/boards/${job.company_key}`);
+                      }}
                       style={{
-                        textDecoration: "none",
-                        color: "inherit",
-                        position: "relative",
-                        zIndex: 10,
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        textUnderlineOffset: "2px",
                       }}
                     >
-                      <Text
-                        weight="medium"
-                        style={{
-                          cursor: "pointer",
-                          textDecoration: "underline",
-                          textUnderlineOffset: "2px",
-                        }}
-                      >
-                        {job.company_key}
-                      </Text>
-                    </Link>
+                      {job.company_key}
+                    </Text>
                   )}
                   {job.location && <Text color="gray">• {job.location}</Text>}
                 </Flex>

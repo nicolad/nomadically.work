@@ -9,6 +9,7 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { z } from "zod";
 import { preferenceManager, PREFERENCE_FIELDS } from "@/lib/preferences";
+import { personalizationWorkspace } from "@/workspace";
 
 // Working memory schema for user context
 const userContextSchema = z.object({
@@ -83,6 +84,7 @@ RESPONSE STYLE:
     id: "deepseek/deepseek-reasoner",
   },
   memory,
+  workspace: personalizationWorkspace,
 });
 
 /**

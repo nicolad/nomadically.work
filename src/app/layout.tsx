@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
-import { Theme, Flex, Container, Button } from "@radix-ui/themes";
-import { GitHubLogoIcon, GearIcon } from "@radix-ui/react-icons";
+import { Theme, Flex, Container } from "@radix-ui/themes";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
+import { ClerkHeader } from "@/components/clerk-header";
 
 export const metadata: Metadata = {
   title: "Nomadically.Work",
@@ -43,29 +37,7 @@ export default function RootLayout({
                     />
                   </Link>
                   <Flex gap="4" align="center">
-                    <SignedOut>
-                      <SignInButton mode="modal">
-                        <Button variant="ghost" style={{ cursor: "pointer" }}>
-                          Sign In
-                        </Button>
-                      </SignInButton>
-                      <SignUpButton mode="modal">
-                        <Button style={{ cursor: "pointer" }}>Sign Up</Button>
-                      </SignUpButton>
-                    </SignedOut>
-                    <SignedIn>
-                      <Link
-                        href="/settings"
-                        style={{ display: "flex", alignItems: "center" }}
-                      >
-                        <GearIcon
-                          width={32}
-                          height={32}
-                          style={{ color: "#888888" }}
-                        />
-                      </Link>
-                      <UserButton />
-                    </SignedIn>
+                    <ClerkHeader />
                     <Link
                       href="https://github.com/nicolad/nomadically.work"
                       target="_blank"

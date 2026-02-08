@@ -47,7 +47,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_DIR = path.join(__dirname);
 const LOG_FILE = path.join(
   LOG_DIR,
-  `extract-job-skills-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}.log`,
+  `extract-job-skills-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}-${process.pid}.log`,
 );
 
 let logStream: fs.WriteStream | null = null;
@@ -83,26 +83,85 @@ const logger = {
 };
 
 function initializeLogging() {
-  logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
+  // Ensure log directory exists (prevents EENOENT if LOG_DIR ever changes)
+  fs.mkdirSync(LOG_DIR, { recursive: true });
 
-  // Tee ALL console output into the log file without changing existing calls.
-  console.log = logger.log;
-  console.error = logger.error;
-  console.warn = logger.warn;
+  try {
+    logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
 
-  console.log(`📝 Log file: ${LOG_FILE}\n`);
+    // If the stream errors later (disk full, permission change, etc.), stop writing to file.
+    logStream.on("error", (err) => {
+      originalConsole.error(
+        `⚠️  Log stream error; continuing with console-only logging: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      logStream = null;
+    });
+
+    // Tee ALL console output into the log file without changing existing calls.
+    console.log = logger.log;
+    console.error = logger.error;
+    console.warn = logger.warn;
+
+    console.log(`📝 Log file: ${LOG_FILE}\n`);
+  } catch (err) {
+    // If we can't open the log file at all, keep console working normally.
+    originalConsole.error(
+      `⚠️  Could not open log file; continuing with console-only logging: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    logStream = null;
+  }
 }
 
-function shutdownLogging() {
-  // Restore console first (avoid any write attempts during shutdown going to a closed stream)
+function shutdownLogging(): Promise<void> {
+  // Restore console first (avoid any write attempts during shutdown going to a closing stream)
   console.log = originalConsole.log;
   console.error = originalConsole.error;
   console.warn = originalConsole.warn;
 
-  if (logStream) {
-    logStream.end();
-    logStream = null;
-  }
+  if (!logStream) return Promise.resolve();
+
+  const stream = logStream;
+  logStream = null;
+
+  // Ensure all buffered log data is flushed before the process exits.
+  return new Promise<void>((resolve) => {
+    stream.end(() => resolve());
+  });
+}
+
+// ✅ Tiny improvement: ensure fatal async errors are logged + file stream is closed.
+let fatalHandlersInstalled = false;
+function installFatalErrorHandlers() {
+  if (fatalHandlersInstalled) return;
+  fatalHandlersInstalled = true;
+
+  const handleFatal = (label: string, err: unknown) => {
+    try {
+      const message =
+        err instanceof Error
+          ? `${err.name}: ${err.message}${err.stack ? `\n${err.stack}` : ""}`
+          : safeFormat([err]);
+
+      // This will tee into the log file if logging is initialized.
+      console.error(`\n💥 ${label}: ${message}`);
+    } finally {
+      process.exitCode = 1;
+      try {
+        shutdownLogging();
+      } catch {
+        // ignore shutdown errors
+      }
+      // eslint-disable-next-line no-process-exit
+      process.exit(1);
+    }
+  };
+
+  process.once("uncaughtException", (err) =>
+    handleFatal("Uncaught exception", err),
+  );
+  process.once("unhandledRejection", (reason) =>
+    handleFatal("Unhandled promise rejection", reason),
+  );
 }
 
 // ============================================================================
@@ -163,34 +222,53 @@ async function embedWithCloudflareBgeSmall(
     );
   }
 
-  // Call Cloudflare Workers AI API directly to avoid AI SDK compatibility issues
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/baai/bge-small-en-v1.5`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${CLOUDFLARE_WORKERS_AI_KEY}`,
-        "Content-Type": "application/json",
+  // Tiny improvement: protect against hung requests
+  const TIMEOUT_MS = 45_000;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    // Call Cloudflare Workers AI API directly to avoid AI SDK compatibility issues
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/baai/bge-small-en-v1.5`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${CLOUDFLARE_WORKERS_AI_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: values }),
+        signal: controller.signal,
       },
-      body: JSON.stringify({ text: values }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Cloudflare API error (${response.status}): ${errorText}`);
-  }
-
-  const result = await response.json();
-
-  // Cloudflare returns { result: { shape: [n, 384], data: [[...], [...]] } }
-  if (!result.success || !result.result?.data) {
-    throw new Error(
-      `Unexpected Cloudflare API response: ${JSON.stringify(result)}`,
     );
-  }
 
-  return result.result.data as number[][];
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Cloudflare API error (${response.status}): ${errorText}`,
+      );
+    }
+
+    const result = await response.json();
+
+    // Cloudflare returns { result: { shape: [n, 384], data: [[...], [...]] } }
+    if (!result.success || !result.result?.data) {
+      throw new Error(
+        `Unexpected Cloudflare API response: ${JSON.stringify(result)}`,
+      );
+    }
+
+    return result.result.data as number[][];
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        `Cloudflare embedding request timed out after ${TIMEOUT_MS}ms`,
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function ensureSkillsVectorIndex(): Promise<void> {
@@ -282,6 +360,16 @@ async function jobAlreadyHasSkills(jobId: number): Promise<boolean> {
   return rows.length > 0;
 }
 
+// Cached workflow instance (avoids repeated lookups)
+let _extractJobSkillsWorkflow: ReturnType<typeof mastra.getWorkflow> | null =
+  null;
+
+function getExtractJobSkillsWorkflow() {
+  return (_extractJobSkillsWorkflow ??= mastra.getWorkflow(
+    "extractJobSkillsWorkflow",
+  ));
+}
+
 /**
  * Extract skills for a single job
  */
@@ -306,8 +394,8 @@ async function extractSkillsForJob(job: {
 
     console.log(`  Processing: ${job.title} (ID: ${job.id})`);
 
-    // Get the workflow from Mastra
-    const workflow = mastra.getWorkflow("extractJobSkillsWorkflow");
+    // ✅ Cached workflow instance (avoids repeated lookups)
+    const workflow = getExtractJobSkillsWorkflow();
 
     // Create and execute the workflow run
     const run = await workflow.createRun();
@@ -404,6 +492,7 @@ async function getJobsToProcess(): Promise<
 async function main() {
   installSignalHandlers();
   initializeLogging();
+  installFatalErrorHandlers();
 
   try {
     console.log("🔧 Job Skills Extraction");
@@ -613,7 +702,7 @@ async function main() {
 
     console.log("\n✨ Done!\n");
   } finally {
-    shutdownLogging();
+    await shutdownLogging();
   }
 }
 

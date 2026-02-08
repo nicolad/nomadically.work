@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   useGetJobsQuery,
   useDeleteJobMutation,
@@ -56,14 +56,9 @@ const getStatusLabel = (status: Job["status"]): string => {
 };
 
 export function JobsList() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
-  const [debouncedSearch, setDebouncedSearch] = useState(
-    searchParams.get("q") || "",
-  );
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useUser();
   const [deleteJobMutation] = useDeleteJobMutation();
 
@@ -95,30 +90,9 @@ export function JobsList() {
     }
   };
 
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Update URL when debounced search changes
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (debouncedSearch) {
-      params.set("q", debouncedSearch);
-    } else {
-      params.delete("q");
-    }
-    const newUrl = params.toString() ? `?${params.toString()}` : "/";
-    router.replace(newUrl, { scroll: false });
-  }, [debouncedSearch, router]);
-
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
     variables: {
-      search: debouncedSearch || undefined,
+      search: searchTerm || undefined,
       limit: 20,
       offset: 0,
       excludedCompanies:
@@ -130,16 +104,7 @@ export function JobsList() {
 
   const jobs = data?.jobs.jobs || [];
   const totalCount = data?.jobs.totalCount || 0;
-
-  // Check if we have more jobs to load
-  useEffect(() => {
-    setHasMore(jobs.length < totalCount);
-  }, [jobs.length, totalCount]);
-
-  // Reset hasMore when search changes
-  useEffect(() => {
-    setHasMore(true);
-  }, [debouncedSearch]);
+  const hasMore = jobs.length < totalCount;
 
   // Load more jobs
   const loadMore = useCallback(async () => {
@@ -167,28 +132,25 @@ export function JobsList() {
     }
   }, [hasMore, loading, jobs.length, fetchMore, excludedCompanies]);
 
-  // Infinite scroll observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 },
-    );
-
-    const currentRef = loadMoreRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
+  // Ref callback for infinite scroll
+  const loadMoreRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) observerRef.current.disconnect();
+      
+      if (node && hasMore && !loading) {
+        observerRef.current = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              loadMore();
+            }
+          },
+          { threshold: 0.1 }
+        );
+        observerRef.current.observe(node);
       }
-    };
-  }, [hasMore, loading, loadMore]);
+    },
+    [hasMore, loading, loadMore]
+  );
 
   if (error) {
     return (
@@ -343,7 +305,7 @@ export function JobsList() {
                     )}
                   </Flex>
                 )}
-
+Callback
                 <Flex justify="between" align="center" mt="4">
                   <Text size="1" color="gray">
                     {job.source_kind && <span>Source: {job.source_kind}</span>}
@@ -363,7 +325,7 @@ export function JobsList() {
       </Flex>
 
       {/* Infinite scroll trigger */}
-      <Box ref={loadMoreRef} py="6">
+      <Box ref={loadMoreRefCallback} py="6">
         {loading && (
           <Flex justify="center" align="center">
             <Spinner size="3" />

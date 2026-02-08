@@ -804,6 +804,543 @@ Query CDX for jobs.ashbyhq.com → Extract board names → Fetch jobs → Store
 
 ---
 
+## Job Ingestion Pipeline
+
+### Architecture Overview
+
+The job ingestion system uses a distributed architecture with Cloudflare Workers for scalability and Next.js API routes for AI-powered processing:
+
+```
+Job Discovery (Cron) → Insert Worker → Queue → Process Webhook → AI Classification → Database
+```
+
+**Components**:
+1. **Discovery Cron** (`workers/cron.ts`): Brave Search API discovers job boards
+2. **Insert Worker** (`workers/insert-jobs.ts`): Accepts jobs via API, inserts to Turso
+3. **Cloudflare Queue**: Decouples ingestion from processing
+4. **Process Webhook** (`api/jobs/process`): Receives jobs from queue for AI processing
+5. **Classification** (`mastra/actions.ts`): AI-powered job classification
+
+### 1. Job Discovery Cron Worker
+
+**File**: `workers/cron.ts`
+
+Runs daily at midnight UTC to discover new job boards using Brave Search API.
+
+**Configuration** (`wrangler.toml`):
+```toml
+[triggers]
+crons = ["0 0 * * *"]  # Daily at midnight UTC
+```
+
+**Discovery Queries**:
+- Greenhouse: `site:boards.greenhouse.io remote Europe EU -hybrid`
+- Lever: `site:jobs.lever.co remote Europe EU -hybrid`
+- Ashby: `site:jobs.ashbyhq.com remote Europe EU -hybrid`
+- Workable: `site:apply.workable.com remote Europe EU -hybrid`
+- OnHires: `site:onhires.com remote Europe EU -hybrid`
+
+**Discovery Logic**:
+```typescript
+// Extract company key from URL
+function extractJobSource(url: string): JobSource | null {
+  const parsed = new URL(url);
+  
+  // Example: boards.greenhouse.io/company-name/jobs/123
+  if (hostname === "boards.greenhouse.io") {
+    const company = path.match(/^\/([^\/]+)/)?.[1];
+    return {
+      kind: "greenhouse",
+      company_key: company,
+      canonical_url: `https://boards-api.greenhouse.io/v1/boards/${company}/jobs`,
+    };
+  }
+  // ... similar for lever, ashby, workable, onhires
+}
+
+// Filter for EU fully remote jobs
+function looksLikeEuFullyRemote(result: BraveWebResult): boolean {
+  const text = [result.title, result.description].join(" ").toLowerCase();
+  
+  const hasRemote = /\bremote\b|work from home/.test(text);
+  const hasEuScope = /\beurope\b|\beu\b|\bemea\b/.test(text);
+  const rejects = /\bhybrid\b|\bonsite\b/.test(text);
+  const usOnly = /remote\s*us|usa only/.test(text);
+  
+  return hasRemote && hasEuScope && !rejects && !usOnly;
+}
+```
+
+**Output**: Saves discovered job sources to `job_sources` table in Turso
+
+**Environment Variables**:
+```bash
+BRAVE_API_KEY          # Brave Search API key
+TURSO_DB_URL           # Database connection
+TURSO_DB_AUTH_TOKEN    # Database auth
+APP_URL                # Next.js app URL (for triggering scoring)
+CRON_SECRET            # Optional secret for app webhooks
+```
+
+### 2. Job Insert Worker
+
+**File**: `workers/insert-jobs.ts`
+
+Cloudflare Worker that receives job data via POST and inserts/upserts into Turso, then enqueues for processing.
+
+**API Endpoint**: `POST https://your-worker.workers.dev`
+
+**Request Schema**:
+```typescript
+{
+  "jobs": [
+    {
+      "externalId": "abc123",          // Required: ATS job ID
+      "sourceId": 456,                  // Optional: Source record ID
+      "sourceKind": "greenhouse",       // Required: ATS platform
+      "companyKey": "acme-corp",       // Required: Company identifier
+      "title": "Senior Engineer",       // Required
+      "location": "Remote - EU",        // Optional
+      "url": "https://...",            // Required: Application URL
+      "description": "...",             // Optional: Full job description
+      "postedAt": "2026-02-08T...",    // Optional: ISO 8601 timestamp
+      "score": 0.85,                    // Optional: Pre-computed score
+      "scoreReason": "...",             // Optional: Scoring explanation
+      "status": "new"                   // Optional: Default "new"
+    }
+  ]
+}
+```
+
+**Validation Rules**:
+- `title`, `companyKey`, `url`, `externalId`, `sourceKind` are required
+- Invalid jobs return 400 with detailed errors
+
+**Upsert Logic** (Conflict Resolution):
+```sql
+INSERT INTO jobs (...) VALUES (...)
+ON CONFLICT(source_kind, company_key, external_id) DO UPDATE SET
+  title = excluded.title,
+  description = COALESCE(excluded.description, jobs.description),
+  score = COALESCE(excluded.score, jobs.score),
+  -- Preserve existing status if already processed
+  status = CASE
+    WHEN jobs.status IS NOT NULL AND jobs.status != 'new' 
+      AND excluded.status = 'new'
+    THEN jobs.status
+    ELSE excluded.status
+  END,
+  updated_at = excluded.updated_at
+RETURNING id;
+```
+
+**Key Features**:
+- **Prevents Status Regression**: If job is already classified (`status != 'new'`), re-ingesting doesn't reset to 'new'
+- **Preserves AI Results**: Existing scores and classifications are kept if new data doesn't provide them
+- **Returns Job IDs**: Uses `RETURNING id` for immediate enqueuing
+
+**Queue Integration**:
+```typescript
+// After successful insert, enqueue for processing
+for (const result of successfulInserts) {
+  await env.JOBS_QUEUE.send({ jobId: result.jobId });
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Inserted 10/10 jobs; enqueued 10",
+  "data": {
+    "totalJobs": 10,
+    "successCount": 10,
+    "failCount": 0,
+    "enqueuedCount": 10,
+    "jobIds": [1, 2, 3, ...],
+    "failures": []
+  }
+}
+```
+
+**Queue Consumer** (defined in same file):
+```typescript
+async queue(batch: MessageBatch<QueueMessage>, env: Env) {
+  for (const message of batch.messages) {
+    try {
+      const { jobId } = message.body;
+      
+      // Forward to Next.js webhook for AI processing
+      await fetch(env.NEXT_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${env.WEBHOOK_SECRET}`,
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      
+      message.ack();  // Success
+    } catch (err) {
+      console.error("Failed to forward:", err);
+      message.retry();  // Cloudflare retries with exponential backoff
+    }
+  }
+}
+```
+
+**Wrangler Configuration** (`wrangler.insert-jobs.toml`):
+```toml
+name = "insert-jobs"
+main = "workers/insert-jobs.ts"
+
+[[queues.producers]]
+  queue = "jobs-queue"
+  binding = "JOBS_QUEUE"
+
+[[queues.consumers]]
+  queue = "jobs-queue"
+  max_batch_size = 1        # Process one job at a time
+  max_batch_timeout = 30    # Seconds
+  max_retries = 3           # Retry failed jobs
+  dead_letter_queue = "jobs-dlq"
+```
+
+**Environment Variables**:
+```bash
+TURSO_DB_URL           # Database connection
+TURSO_DB_AUTH_TOKEN    # Database auth
+API_SECRET             # Optional: Authentication for POST requests
+NEXT_WEBHOOK_URL       # Next.js processing endpoint
+WEBHOOK_SECRET         # Shared secret for Worker → Next.js
+```
+
+### 3. Process Webhook (Next.js)
+
+**File**: `src/app/api/jobs/process/route.ts`
+
+Receives jobs one-by-one from Cloudflare Queue consumer for AI processing.
+
+**Endpoint**: `POST /api/jobs/process`
+
+**Authentication**:
+```typescript
+const authHeader = request.headers.get("Authorization");
+const expectedAuth = `Bearer ${process.env.WEBHOOK_SECRET}`;
+
+if (authHeader !== expectedAuth) {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+```
+
+**Request Body**:
+```json
+{
+  "jobId": 123
+}
+```
+
+**Processing Flow**:
+```typescript
+export async function POST(request: NextRequest) {
+  const { jobId } = await request.json();
+  
+  // 1. Fetch job from Turso
+  const client = getTursoClient();
+  const result = await client.execute({
+    sql: "SELECT * FROM jobs WHERE id = ? LIMIT 1",
+    args: [jobId],
+  });
+  
+  const job = result.rows?.[0];
+  
+  // 2. Call AI classification (Mastra workflow)
+  // See mastra/actions.ts classifyJob()
+  
+  // 3. Update job with classification results
+  // See Job Classification Workflow section
+  
+  return NextResponse.json({ success: true, jobId });
+}
+```
+
+**Current Implementation**: Base webhook that can be extended with:
+- Mastra job classification (`classifyJob()`)
+- Skill extraction (`extractJobSkillsWorkflow`)
+- Company enrichment
+- Notification triggers
+
+### 4. Skill Extraction Script
+
+**File**: `scripts/ingest-jobs.ts`
+
+CLI tool for extracting skills from job descriptions using AI.
+
+**Usage**:
+```bash
+# Extract skills for all jobs with descriptions (limit 100)
+tsx scripts/ingest-jobs.ts --extract-skills
+
+# Extract for specific job IDs
+tsx scripts/ingest-jobs.ts --extract-skills --jobIds 1,2,3,100
+
+# Custom limit
+tsx scripts/ingest-jobs.ts --extract-skills --limit 50
+```
+
+**Implementation**:
+```typescript
+async function extractSkillsForJob(config: Config, jobId: number) {
+  // Calls Next.js API route
+  const response = await fetch(
+    `${config.nextBaseUrl}/api/jobs/extract-skills`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId }),
+    },
+  );
+  
+  const result = await response.json();
+  return {
+    success: result.success,
+    skillsExtracted: result.skillsExtracted || 0,
+  };
+}
+```
+
+**Database Query**:
+```sql
+SELECT id, title, company_key, status, description, created_at, updated_at
+FROM jobs
+WHERE description IS NOT NULL
+  AND description != ''
+ORDER BY created_at DESC
+LIMIT ?
+```
+
+**Output**:
+```
+🔍 Extracting skills for 50 jobs
+
+  Processing job 1... ✅ (8 skills)
+  Processing job 2... ✅ (12 skills)
+  ...
+
+📊 Extraction Summary:
+  ✅ Successful: 48
+  ❌ Failed: 2
+  🏷️  Total Skills Extracted: 420
+```
+
+**Skills Storage**: Results saved to `job_skill_tags` table with:
+- `tag`: Canonical skill name (from taxonomy)
+- `level`: required | preferred | nice
+- `confidence`: 0-1 score
+- `evidence`: Text snippet from description
+
+### 5. Complete Ingestion Flow Example
+
+**Scenario**: Greenhouse job board discovery → ingestion → classification
+
+#### Step 1: Discovery (Daily Cron)
+```
+[Cron Worker runs at midnight]
+  ↓
+Brave Search: "site:boards.greenhouse.io remote Europe"
+  ↓
+Extract company keys: ["acme-corp", "techco", "consultancy-x"]
+  ↓
+Save to job_sources table
+```
+
+#### Step 2: Fetch Jobs (Manual/Scheduled)
+```
+[Script or API] Fetch from Greenhouse API
+  ↓
+GET https://boards-api.greenhouse.io/v1/boards/acme-corp/jobs
+  ↓
+Parse JSON response → 15 jobs
+```
+
+#### Step 3: Insert (Cloudflare Worker)
+```
+POST https://insert-jobs.workers.dev
+{
+  "jobs": [
+    {
+      "externalId": "abc123",
+      "sourceKind": "greenhouse",
+      "companyKey": "acme-corp",
+      "title": "Senior Backend Engineer",
+      "location": "Remote - EU",
+      "url": "https://boards.greenhouse.io/acme-corp/jobs/abc123",
+      "description": "We're looking for...",
+      "status": "new"
+    },
+    ...
+  ]
+}
+  ↓
+Insert/Upsert to Turso (15 jobs)
+  ↓
+Enqueue 15 job IDs to Cloudflare Queue
+  ↓
+Response: { successCount: 15, enqueuedCount: 15, jobIds: [...] }
+```
+
+#### Step 4: Queue Processing
+```
+[Queue Consumer picks message]
+  ↓
+Message: { jobId: 1 }
+  ↓
+POST /api/jobs/process
+Authorization: Bearer <webhook_secret>
+{ "jobId": 1 }
+```
+
+#### Step 5: AI Classification
+```
+[Next.js Webhook]
+  ↓
+Fetch job from Turso (id=1)
+  ↓
+Call classifyJob() → Mastra workflow
+  ↓
+DeepSeek AI: { isRemoteEU: true, confidence: "high", reason: "..." }
+  ↓
+Update jobs table:
+  - status = "eu-remote"
+  - score = 0.9
+  - is_remote_eu = 1
+  - remote_eu_confidence = "high"
+  - remote_eu_reason = "Explicitly states remote EU eligibility"
+  ↓
+Store eval scores in mastra_scorers table
+  ↓
+Queue acknowledges message
+```
+
+#### Step 6: Skill Extraction (Optional)
+```
+tsx scripts/ingest-jobs.ts --extract-skills --jobIds 1
+  ↓
+POST /api/jobs/extract-skills { jobId: 1 }
+  ↓
+Mastra extractJobSkillsWorkflow
+  ↓
+Extract: ["TypeScript", "Node.js", "PostgreSQL", "Docker", ...]
+  ↓
+Insert to job_skill_tags table
+```
+
+### Deployment
+
+#### Cloudflare Workers
+```bash
+# Deploy cron worker
+wrangler deploy --config wrangler.toml
+
+# Deploy insert worker
+wrangler deploy --config wrangler.insert-jobs.toml
+
+# Test locally
+wrangler dev --config wrangler.insert-jobs.toml
+```
+
+#### Next.js API Routes
+Deployed automatically with Vercel:
+```bash
+# Deploy to production
+vercel --prod
+
+# Set environment variables
+vercel env add WEBHOOK_SECRET
+vercel env add TURSO_DB_URL
+vercel env add TURSO_DB_AUTH_TOKEN
+```
+
+### Monitoring
+
+#### Cloudflare Dashboard
+- **Workers > insert-jobs**: View invocation logs, errors, CPU time
+- **Queues > jobs-queue**: Monitor queue depth, throughput, retries
+- **Dead Letter Queue**: Inspect failed jobs
+
+#### Inngest Dashboard (if using Inngest workflows)
+- Real-time workflow execution
+- Step-by-step progress
+- Retry history
+- Error details
+
+#### Turso Console
+```sql
+-- Check ingestion stats
+SELECT 
+  source_kind,
+  COUNT(*) as total,
+  COUNT(CASE WHEN status = 'new' THEN 1 END) as pending,
+  COUNT(CASE WHEN status = 'eu-remote' THEN 1 END) as eu_remote,
+  COUNT(CASE WHEN status = 'non-eu' THEN 1 END) as non_eu
+FROM jobs
+GROUP BY source_kind;
+
+-- Recent ingestions
+SELECT id, title, company_key, status, created_at
+FROM jobs
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+### Error Handling
+
+#### Insert Worker
+- **Validation Errors**: Return 400 with specific field errors
+- **Database Errors**: Log and return 500, queue handles retry
+- **Partial Success**: Track success/fail count per batch
+
+#### Queue Consumer
+- **Network Errors**: Automatic retry with exponential backoff (max 3 times)
+- **Webhook Auth Failure**: Retry (fix WEBHOOK_SECRET in both systems)
+- **Processing Timeout**: Message returns to queue, retried
+- **Max Retries Exceeded**: Message sent to Dead Letter Queue for manual inspection
+
+#### Process Webhook
+- **Job Not Found**: Return 404, queue consumer should not retry
+- **AI API Failure**: Log error, return 500, allow retry
+- **Database Update Failure**: Rollback, return 500, retry
+
+### Rate Limits & Quotas
+
+#### Brave Search API
+- **Free Tier**: 1 request/second, 2000 requests/month
+- **Recommended**: Use `freshness=pm` (past month) to maximize results per query
+
+#### Cloudflare Workers
+- **Free Tier**: 100,000 requests/day
+- **CPU Time**: 10ms per request (Free), 50ms (Paid)
+- **Queue**: 10,000 messages/day (Free)
+
+#### Turso
+- **Free Tier**: 9 GB storage, 1 billion row reads/month
+- **Recommended**: Use connection pooling, batch writes
+
+### Best Practices
+
+1. **Idempotency**: Upsert on `(source_kind, company_key, external_id)` prevents duplicates
+2. **Status Preservation**: Never downgrade processed jobs to 'new'
+3. **Queue Batching**: Set `max_batch_size=1` for strict one-by-one processing
+4. **Webhook Security**: Always validate `WEBHOOK_SECRET` in Next.js routes
+5. **Error Monitoring**: Check Dead Letter Queue daily for failed jobs
+6. **Cost Optimization**: 
+   - Cache ATS API responses
+   - Use Brave Search sparingly (cron once daily)
+   - Batch skill extractions
+7. **Data Quality**: Validate job URLs, filter spam, normalize company keys
+
+---
+
 ## Evaluation Strategy
 
 ### Multi-Layered Scoring

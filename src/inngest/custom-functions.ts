@@ -9,7 +9,7 @@
  */
 
 import { inngest } from "../mastra/inngest";
-import { preferenceManager, PREFERENCE_FIELDS, PREFERENCE_SOURCES } from "@/lib/preferences";
+import { preferenceManager, PREFERENCE_FIELDS, PREFERENCE_SOURCES } from "@/memory";
 import { createClient } from "@libsql/client";
 
 // ============================================================================

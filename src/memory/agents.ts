@@ -1,5 +1,5 @@
 /**
- * Personalization Agent
+ * Personalization Agents
  *
  * Uses Mastra's memory and working memory features to track user preferences
  * and provide personalized job recommendations.
@@ -8,8 +8,7 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { z } from "zod";
-import { preferenceManager, PREFERENCE_FIELDS } from "@/lib/preferences";
-import { personalizationWorkspace } from "@/workspace";
+import { preferenceManager, PREFERENCE_FIELDS } from "./preferences";
 
 // Working memory schema for user context
 const userContextSchema = z.object({
@@ -84,7 +83,6 @@ RESPONSE STYLE:
     id: "deepseek/deepseek-reasoner",
   },
   memory,
-  workspace: personalizationWorkspace,
 });
 
 /**

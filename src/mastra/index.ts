@@ -7,10 +7,12 @@ import { observability } from "@/observability";
 import {
   jobClassifierAgent,
   sqlAgent,
-  personalizationAgent,
-  recommendationAgent,
   adminAssistantAgent,
 } from "@/agents";
+import {
+  personalizationAgent,
+  recommendationAgent,
+} from "@/memory";
 import {
   skillsVector,
   SKILLS_VECTOR_STORE_NAME,

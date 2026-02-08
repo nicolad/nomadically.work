@@ -100,6 +100,7 @@ When explaining a classification:
 - All changes are diffable and replayable`,
 
   model: deepseek("deepseek-chat"),
+  // @ts-expect-error - Workspace type mismatch due to @mastra/core version conflict (1.1.0 vs 1.2.0)
   workspace: opsWorkspace,
   tools: opsTools,
 });

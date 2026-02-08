@@ -37,11 +37,13 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 import * as util from "util";
+import { fileURLToPath } from "url";
 
 // ============================================================================
 // Logging Setup - Write to both console and file
 // ============================================================================
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_DIR = path.join(__dirname);
 const LOG_FILE = path.join(
   LOG_DIR,

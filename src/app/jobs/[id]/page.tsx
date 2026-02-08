@@ -436,59 +436,59 @@ function JobPageContent() {
                   [
                     (skill) => {
                       const levelOrder = { required: 0, preferred: 1, nice: 2 };
-                      return levelOrder[skill.level as keyof typeof levelOrder] ?? 3;
+                      return (
+                        levelOrder[skill.level as keyof typeof levelOrder] ?? 3
+                      );
                     },
                     (skill) => skill.confidence || 0,
                   ],
-                  ["asc", "desc"]
+                  ["asc", "desc"],
                 ).map((skill) => (
-                    <Box
-                      key={skill.tag}
+                  <Box
+                    key={skill.tag}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <Badge
+                      size="2"
+                      color={
+                        skill.level === "required"
+                          ? "red"
+                          : skill.level === "preferred"
+                            ? "blue"
+                            : "gray"
+                      }
+                      variant="soft"
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
+                        fontSize: "14px",
+                        padding: "6px 10px",
+                        cursor: skill.evidence ? "help" : "default",
                       }}
+                      title={
+                        skill.evidence
+                          ? `Evidence: ${skill.evidence}`
+                          : undefined
+                      }
                     >
-                      <Badge
-                        size="2"
-                        color={
-                          skill.level === "required"
-                            ? "red"
-                            : skill.level === "preferred"
-                              ? "blue"
-                              : "gray"
-                        }
-                        variant="soft"
-                        style={{
-                          fontSize: "14px",
-                          padding: "6px 10px",
-                          cursor: skill.evidence ? "help" : "default",
-                        }}
-                        title={
-                          skill.evidence
-                            ? `Evidence: ${skill.evidence}`
-                            : undefined
-                        }
-                      >
-                        {getSkillLabel(skill.tag)}
-                        {skill.level === "required" && " ⚠️"}
-                        {skill.confidence != null &&
-                          skill.confidence >= 0.7 && (
-                            <Text
-                              as="span"
-                              size="1"
-                              style={{
-                                marginLeft: "4px",
-                                opacity: 0.7,
-                              }}
-                            >
-                              {formatConfidence(skill.confidence)}
-                            </Text>
-                          )}
-                      </Badge>
-                    </Box>
-                  ))}
+                      {getSkillLabel(skill.tag)}
+                      {skill.confidence != null && skill.confidence >= 0.7 && (
+                        <Text
+                          as="span"
+                          size="1"
+                          style={{
+                            marginLeft: "4px",
+                            opacity: 0.7,
+                          }}
+                        >
+                          {formatConfidence(skill.confidence)}
+                        </Text>
+                      )}
+                    </Badge>
+                  </Box>
+                ))}
               </Flex>
               <Flex gap="4" style={{ fontSize: "12px", opacity: 0.7 }}>
                 <Flex align="center" gap="1">

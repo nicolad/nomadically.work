@@ -290,7 +290,6 @@ export function JobsList() {
                           variant="soft"
                         >
                           {getSkillLabel(skill.tag)}
-                          {skill.level === "required" && " ⚠️"}
                         </Badge>
                       ))}
                     {job.skills.length > 8 && (

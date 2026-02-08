@@ -179,4 +179,3 @@ export async function discoverAshbyBoards(
  * @see https://developers.ashbyhq.com/docs/public-job-posting-api
  */
 export { fetchAshbyBoardJobs } from "./ashby-client.ts";
-

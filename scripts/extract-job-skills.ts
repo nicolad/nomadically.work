@@ -27,7 +27,98 @@ import { db } from "../src/db";
 import { jobs, jobSkillTags } from "../src/db/schema";
 import { sql } from "drizzle-orm";
 import { mastra } from "../src/mastra";
-import { ensureSkillsVectorIndex } from "../src/lib/skills";
+import { LibSQLVector } from "@mastra/libsql";
+import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
+import { embedMany } from "ai";
+import {
+  CLOUDFLARE_ACCOUNT_ID,
+  CLOUDFLARE_API_TOKEN,
+  TURSO_DB_URL,
+  TURSO_DB_AUTH_TOKEN,
+} from "../src/config/env";
+
+// ============================================================================
+// Vector Store Configuration & Utilities (inlined from src/lib/skills/vector.ts)
+// ============================================================================
+
+const SKILLS_VECTOR_STORE_NAME = "skills";
+const SKILLS_VECTOR_INDEX = "skills_taxonomy";
+
+type EmbeddingVector = number[];
+
+// Lazy initialization to avoid build-time errors
+let _skillsVector: LibSQLVector | null = null;
+
+// Graceful shutdown flag
+let shouldStop = false;
+function installSignalHandlers() {
+  const handler = (signal: NodeJS.Signals) => {
+    if (shouldStop) return;
+    shouldStop = true;
+    console.warn(`\n⚠️  Received ${signal}. Finishing current job then stopping...`);
+  };
+
+  process.once("SIGINT", handler);
+  process.once("SIGTERM", handler);
+}
+
+const getSkillsVector = (): LibSQLVector => {
+  if (!_skillsVector) {
+    _skillsVector = new LibSQLVector({
+      id: "skills-vector",
+      url: TURSO_DB_URL,
+      authToken: TURSO_DB_AUTH_TOKEN,
+    });
+  }
+  return _skillsVector;
+};
+
+/**
+ * Embeds text using Cloudflare Workers AI:
+ *   cloudflare-workers-ai/@cf/baai/bge-small-en-v1.5
+ *
+ * Notes:
+ * - The underlying model outputs 384-dim vectors and has a 512 token input limit. (Chunk long inputs.)
+ */
+async function embedWithCloudflareBgeSmall(
+  values: string[],
+): Promise<EmbeddingVector[]> {
+  if (!Array.isArray(values) || values.some((v) => typeof v !== "string")) {
+    throw new TypeError("values must be an array of strings");
+  }
+
+  if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
+    throw new Error(
+      "Missing Cloudflare credentials. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in your .env file",
+    );
+  }
+
+  const model = new ModelRouterEmbeddingModel({
+    providerId: "cloudflare-workers-ai",
+    modelId: "@cf/baai/bge-small-en-v1.5",
+    url: `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1`,
+    apiKey: CLOUDFLARE_API_TOKEN,
+  });
+
+  const { embeddings } = await embedMany({
+    model,
+    values,
+  });
+
+  return embeddings;
+}
+
+async function ensureSkillsVectorIndex(): Promise<void> {
+  // dimension must match your embedding model output
+  // @cf/baai/bge-small-en-v1.5 outputs 384 dimensions
+  const vector = getSkillsVector();
+  await vector.createIndex({
+    indexName: SKILLS_VECTOR_INDEX,
+    dimension: 384,
+  });
+}
+
+// ============================================================================
 
 interface ExtractionResult {
   jobId: number;
@@ -88,8 +179,13 @@ async function extractSkillsForJob(job: {
     const processingTime = Date.now() - startTime;
 
     if (result.status !== "success" || !result.result?.ok) {
+      // Include richer context if available
+      const details =
+        (result as any)?.error ??
+        (result as any)?.result ??
+        `status=${result.status}`;
       throw new Error(
-        `Workflow execution failed with status: ${result.status}`,
+        `Workflow execution failed: ${typeof details === "string" ? details : JSON.stringify(details)}`,
       );
     }
 
@@ -144,7 +240,9 @@ async function getJobsToProcess(): Promise<
 
   return query;
 }
+installSignalHandlers();
 
+  
 /**
  * Main execution
  */
@@ -188,7 +286,9 @@ async function main() {
 
   const results: ExtractionResult[] = [];
 
-  // Process jobs sequentially (to avoid rate limits)
+  //if (shouldStop) break;
+
+     Process jobs sequentially (to avoid rate limits)
   for (let i = 0; i < jobsToProcess.length; i++) {
     const job = jobsToProcess[i];
     console.log(`\n[${i + 1}/${jobsToProcess.length}]`);
@@ -206,7 +306,7 @@ async function main() {
       } else {
         stats.failed++;
       }
-    }
+    } && !shouldStop
     stats.totalProcessingMs += result.processingTimeMs;
 
     // Add a small delay between jobs to avoid rate limits
@@ -223,7 +323,7 @@ async function main() {
   console.log(`✅ Succeeded:        ${stats.succeeded}`);
   console.log(`❌ Failed:           ${stats.failed}`);
   console.log(`⏭️  Skipped:          ${stats.skipped}`);
-  console.log(`📋 Total skills:     ${stats.totalSkills}`);
+  console.log(`📋 Total skills:     ${stats.totalSkills}Math.max(stats.processed, 1)
   console.log(
     `⏱️  Avg time/job:     ${(stats.totalProcessingMs / stats.processed).toFixed(0)}ms`,
   );
@@ -312,6 +412,10 @@ async function main() {
       .forEach((r) => {
         console.log(`  - Job ${r.jobId}: ${r.title}`);
       });
+  if (shouldStop) {
+    console.log("\n🛑 Stopped early by signal.\n");
+  }
+
   }
 
   console.log("\n✨ Done!\n");

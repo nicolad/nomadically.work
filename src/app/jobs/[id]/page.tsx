@@ -8,6 +8,7 @@ import {
   useDeleteJobMutation,
 } from "@/__generated__/hooks";
 import { ApolloProvider, useApollo } from "@/apollo/client";
+import { orderBy } from "lodash";
 import {
   Card,
   Badge,
@@ -430,18 +431,17 @@ function JobPageContent() {
             <Flex direction="column" gap="3">
               <Heading size="4">Skills & Technologies</Heading>
               <Flex gap="2" wrap="wrap">
-                {job.skills
-                  .sort((a, b) => {
-                    // Sort by level (required > preferred > nice) then by confidence
-                    const levelOrder = { required: 0, preferred: 1, nice: 2 };
-                    const levelA =
-                      levelOrder[a.level as keyof typeof levelOrder] ?? 3;
-                    const levelB =
-                      levelOrder[b.level as keyof typeof levelOrder] ?? 3;
-                    if (levelA !== levelB) return levelA - levelB;
-                    return (b.confidence || 0) - (a.confidence || 0);
-                  })
-                  .map((skill) => (
+                {orderBy(
+                  job.skills,
+                  [
+                    (skill) => {
+                      const levelOrder = { required: 0, preferred: 1, nice: 2 };
+                      return levelOrder[skill.level as keyof typeof levelOrder] ?? 3;
+                    },
+                    (skill) => skill.confidence || 0,
+                  ],
+                  ["asc", "desc"]
+                ).map((skill) => (
                     <Box
                       key={skill.tag}
                       style={{

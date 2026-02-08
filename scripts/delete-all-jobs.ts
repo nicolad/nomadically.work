@@ -2,9 +2,9 @@
 
 /**
  * Delete All Jobs - Removes all job records from the database
- * 
+ *
  * ⚠️  WARNING: This will permanently delete ALL jobs and their associated data!
- * 
+ *
  * Usage:
  *   pnpm tsx scripts/delete-all-jobs.ts
  */

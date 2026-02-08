@@ -3,7 +3,7 @@ import { MastraCompositeStore } from "@mastra/core/storage";
 import { MemoryLibSQL, ScoresLibSQL } from "@mastra/libsql";
 
 import { observability } from "@/observability";
-import { jobClassifierAgent } from "@/agents";
+import { jobClassifierAgent, sqlAgent } from "@/agents";
 import {
   skillsVector,
   SKILLS_VECTOR_STORE_NAME,
@@ -32,7 +32,7 @@ const storage = new MastraCompositeStore({
 });
 
 export const mastra = new Mastra({
-  agents: { jobClassifierAgent },
+  agents: { jobClassifierAgent, sqlAgent },
   storage,
   vectors: {
     [SKILLS_VECTOR_STORE_NAME]: skillsVector,

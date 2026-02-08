@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { Agent } from "@mastra/core/agent";
-import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { createWorkflow, createStep } from "@/mastra/workflows";
 import { createScorer } from "@mastra/core/evals";
 
 import {

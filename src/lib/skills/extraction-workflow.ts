@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { createWorkflow, createStep } from "@/mastra/workflows";
 import { Agent } from "@mastra/core/agent";
 import { createClient } from "@libsql/client";
 

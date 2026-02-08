@@ -1,9 +1,15 @@
 import { Mastra } from "@mastra/core";
 import { MastraCompositeStore } from "@mastra/core/storage";
 import { MemoryLibSQL, ScoresLibSQL } from "@mastra/libsql";
+import { serve } from "@mastra/inngest";
 
 import { observability } from "@/observability";
-import { jobClassifierAgent, sqlAgent } from "@/agents";
+import {
+  jobClassifierAgent,
+  sqlAgent,
+  personalizationAgent,
+  recommendationAgent,
+} from "@/agents";
 import {
   skillsVector,
   SKILLS_VECTOR_STORE_NAME,
@@ -15,6 +21,7 @@ import {
   ccxCdxLatestTool,
   ccxFetchHtmlFromWarcTool,
 } from "@/lib/common-crawl";
+import { inngest } from "./inngest";
 
 // Configure composite storage with libSQL for all domains
 const storage = new MastraCompositeStore({
@@ -32,7 +39,12 @@ const storage = new MastraCompositeStore({
 });
 
 export const mastra = new Mastra({
-  agents: { jobClassifierAgent, sqlAgent },
+  agents: {
+    jobClassifierAgent,
+    sqlAgent,
+    personalizationAgent,
+    recommendationAgent,
+  },
   storage,
   vectors: {
     [SKILLS_VECTOR_STORE_NAME]: skillsVector,
@@ -45,6 +57,18 @@ export const mastra = new Mastra({
     ccxGetRecentCrawlIds: ccxGetRecentCrawlIdsTool,
     ccxCdxLatest: ccxCdxLatestTool,
     ccxFetchHtmlFromWarc: ccxFetchHtmlFromWarcTool,
+  },
+  server: {
+    host: "0.0.0.0",
+    apiRoutes: [
+      {
+        path: "/api/inngest",
+        method: "ALL",
+        createHandler: async ({ mastra }) => {
+          return serve({ mastra, inngest });
+        },
+      },
+    ],
   },
   observability,
 });

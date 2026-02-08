@@ -354,3 +354,49 @@ export const atsBoards = sqliteTable(
 
 export type ATSBoard = typeof atsBoards.$inferSelect;
 export type NewATSBoard = typeof atsBoards.$inferInsert;
+
+// User Preferences (Evidence-based personalization)
+export const userPreferences = sqliteTable(
+  "user_preferences",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => userSettings.user_id, { onDelete: "cascade" }),
+
+    // Preference field (e.g., "preferred_countries", "excluded_company_types", "min_salary")
+    field: text("field").notNull(),
+
+    // Value storage
+    value_json: text("value_json"), // JSON for arrays/objects
+    value_text: text("value_text"), // Plain text value
+    value_number: real("value_number"), // Numeric value
+
+    // Evidence/confidence tracking
+    confidence: real("confidence").notNull().default(1.0), // 0..1
+    source: text("source", {
+      enum: ["EXPLICIT_SETTING", "INFERRED_ACTION", "FEEDBACK", "IMPLICIT"],
+    }).notNull(),
+
+    // Context for inference
+    context: text("context"), // JSON with additional context
+    observed_at: text("observed_at").notNull(),
+
+    // Tracking
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    userFieldIdx: {
+      name: "idx_user_preferences_user_field",
+      columns: [table.user_id, table.field],
+    },
+  }),
+);
+
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type NewUserPreference = typeof userPreferences.$inferInsert;

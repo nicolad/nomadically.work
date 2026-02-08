@@ -62,3 +62,11 @@ export const jobClassifierAgent = await createJobClassifierAgent();
 
 // Export SQL agent for database queries
 export { sqlAgent } from "./sql";
+
+// Export personalization agents
+export {
+  personalizationAgent,
+  recommendationAgent,
+  syncPreferencesToWorkingMemory,
+  capturePreferenceFromAction,
+} from "./personalization";

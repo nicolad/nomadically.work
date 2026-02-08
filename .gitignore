@@ -60,4 +60,4 @@ workspace/*
 !workspace/.gitkeep
 !workspace/skills/
 workspace/skills/*
-!workspace/skills/README.md
+!workspace/skills/*.md

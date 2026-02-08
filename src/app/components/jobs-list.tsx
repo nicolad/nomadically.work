@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useGetJobsQuery } from "@/__generated__/hooks";
 import { getSkillLabel } from "@/lib/skills/taxonomy";
+import { sortBy } from "lodash";
 import {
   Card,
   Flex,
@@ -111,14 +112,9 @@ export function JobsList() {
                   {/* Skills */}
                   {job.skills && job.skills.length > 0 && (
                     <Flex gap="1" wrap="wrap">
-                      {job.skills
-                        .sort((a, b) => {
-                          if (a.level === "required" && b.level !== "required")
-                            return -1;
-                          if (a.level !== "required" && b.level === "required")
-                            return 1;
-                          return 0;
-                        })
+                      {sortBy(job.skills, [
+                        (skill) => skill.level !== "required",
+                      ])
                         .slice(0, 6)
                         .map((skill) => (
                           <Badge

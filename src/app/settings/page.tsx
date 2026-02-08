@@ -29,6 +29,7 @@ import {
   useUpdateUserSettingsMutation,
 } from "@/__generated__/hooks";
 import { ApolloProvider, useApollo } from "@/apollo/client";
+import { sortBy } from "lodash";
 
 export const dynamic = "force-dynamic";
 
@@ -108,12 +109,12 @@ function SettingsPageContent() {
   // Check if there are unsaved changes
   const hasUnsavedChanges = () => {
     return (
-      JSON.stringify([...locationChips].sort()) !==
-        JSON.stringify([...initialLocations].sort()) ||
-      JSON.stringify([...skillChips].sort()) !==
-        JSON.stringify([...initialSkills].sort()) ||
-      JSON.stringify([...excludedCompaniesChips].sort()) !==
-        JSON.stringify([...initialExcludedCompanies].sort())
+      JSON.stringify(sortBy(locationChips)) !==
+        JSON.stringify(sortBy(initialLocations)) ||
+      JSON.stringify(sortBy(skillChips)) !==
+        JSON.stringify(sortBy(initialSkills)) ||
+      JSON.stringify(sortBy(excludedCompaniesChips)) !==
+        JSON.stringify(sortBy(initialExcludedCompanies))
     );
   };
 

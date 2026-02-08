@@ -9,7 +9,7 @@ import {
   useGetUserSettingsQuery,
 } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
-import { last, split } from "lodash";
+import { last, split, sortBy } from "lodash";
 import { useUser } from "@clerk/nextjs";
 import {
   Box,
@@ -266,15 +266,9 @@ export function JobsList() {
                 {/* Skills */}
                 {job.skills && job.skills.length > 0 && (
                   <Flex gap="1" wrap="wrap" mb="3">
-                    {[...job.skills]
-                      .sort((a, b) => {
-                        // Show required skills first
-                        if (a.level === "required" && b.level !== "required")
-                          return -1;
-                        if (a.level !== "required" && b.level === "required")
-                          return 1;
-                        return 0;
-                      })
+                    {sortBy(job.skills, [
+                      (skill) => skill.level !== "required",
+                    ])
                       .slice(0, 8)
                       .map((skill) => (
                         <Badge

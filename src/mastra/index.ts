@@ -1,6 +1,11 @@
 import { Mastra } from "@mastra/core";
 import { MastraCompositeStore } from "@mastra/core/storage";
-import { MemoryLibSQL, ScoresLibSQL } from "@mastra/libsql";
+import { 
+  MemoryLibSQL, 
+  ScoresLibSQL, 
+  WorkflowsLibSQL, 
+  ObservabilityLibSQL 
+} from "@mastra/libsql";
 import { serve } from "@mastra/inngest";
 
 import { observability } from "@/observability";
@@ -63,15 +68,55 @@ import {
   dailyDigestFunction,
 } from "@/inngest/custom-functions";
 
-// Configure composite storage with libSQL for all domains
+/**
+ * Storage Configuration
+ * 
+ * Using composite storage with LibSQL (Turso) for all domains.
+ * Turso provides edge-replicated SQLite with global low latency.
+ * 
+ * Benefits of LibSQL/Turso:
+ * - No separate database server required
+ * - Edge replication for global performance
+ * - SQLite compatibility with distributed features
+ * - Automatic schema migration on first interaction
+ * 
+ * Storage domains:
+ * - memory: Agent conversations, threads, and message history
+ * - scores: Evaluation scores from evals and scorers
+ * - workflows: Workflow execution state and traces
+ * - observability: Langfuse traces, spans, and generations
+ * 
+ * For local development, you can use file:./mastra.db instead of Turso.
+ * Use absolute paths when running mastra dev alongside Next.js:
+ * url: `file:${process.cwd()}/mastra.db`
+ */
 const storage = new MastraCompositeStore({
   id: "turso-storage",
   domains: {
+    // Memory domain: Agent conversations with automatic thread management
+    // Includes: messages, threads, resources, and working memory
     memory: new MemoryLibSQL({
       url: process.env.TURSO_DB_URL!,
       authToken: process.env.TURSO_DB_AUTH_TOKEN!,
     }),
+
+    // Scores domain: Evaluation results from evals and live scorers
+    // Includes: evaluation datasets, scores, and metrics
     scores: new ScoresLibSQL({
+      url: process.env.TURSO_DB_URL!,
+      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
+    }),
+
+    // Workflows domain: Workflow execution state and history
+    // Includes: workflow runs, step results, and execution traces
+    workflows: new WorkflowsLibSQL({
+      url: process.env.TURSO_DB_URL!,
+      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
+    }),
+
+    // Observability domain: Langfuse integration for tracing
+    // Includes: traces, spans, generations, and prompt versions
+    observability: new ObservabilityLibSQL({
       url: process.env.TURSO_DB_URL!,
       authToken: process.env.TURSO_DB_AUTH_TOKEN!,
     }),
@@ -87,7 +132,6 @@ export const mastra = new Mastra({
     adminAssistantAgent,
   },
   storage,
-  workspace,
   vectors: {
     [SKILLS_VECTOR_STORE_NAME]: skillsVector,
   },

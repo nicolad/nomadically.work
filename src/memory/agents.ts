@@ -28,11 +28,37 @@ const userContextSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Create memory instance with working memory for user context
+/**
+ * Memory configuration for personalization agents
+ * 
+ * Features:
+ * - lastMessages: 20 - Keep last 20 messages in context
+ * - generateTitle: Auto-generate thread titles from first message
+ * - workingMemory: Structured user preference context that persists across threads
+ * - scope: "resource" - Per-user memory (isolated by userId)
+ * 
+ * Thread and resource identifiers:
+ * - thread: conversation session ID (e.g., "conversation-abc-123")
+ * - resource: user ID that owns the thread (e.g., "user_123")
+ * 
+ * Both are required when calling agent.generate() or agent.stream():
+ * 
+ * const response = await personalizationAgent.generate("hello", {
+ *   memory: {
+ *     thread: threadId,
+ *     resource: userId,
+ *   },
+ * });
+ */
 const memory = new Memory({
   options: {
     lastMessages: 20,
-    generateTitle: true,
+    generateTitle: {
+      // Use smaller, faster model for title generation
+      model: "deepseek/deepseek-chat",
+      // Keep titles concise for UI display
+      instructions: "Generate a concise 3-5 word title summarizing the user's main preference or question",
+    },
     workingMemory: {
       enabled: true,
       scope: "resource", // Per-user context persists across threads

@@ -14,8 +14,11 @@ import {
 /**
  * Main workspace for agents with filesystem, sandbox, and skills support
  * 
- * Skills are automatically indexed with BM25 for semantic search.
- * Agents can discover and activate skills during conversations.
+ * BM25 KEYWORD SEARCH ONLY:
+ * - Skills are indexed with BM25 for keyword-based discovery
+ * - Vector embeddings NOT configured (no semantic/hybrid search)
+ * - Agents must use mode="keyword" when calling workspace search tools
+ * - Skills activated based on keyword matching against skill content
  */
 export const workspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -25,7 +28,7 @@ export const workspace = new Workspace({
     workingDirectory: "./src/workspace",
   }),
   skills: ["/skills"],
-  bm25: true, // Enable BM25 search for skill indexing
+  bm25: true, // BM25 keyword search for skill indexing and discovery
   tools: {
     // Global defaults
     enabled: true,
@@ -100,7 +103,10 @@ export const sqlWorkspace = new Workspace({
  * Full-featured workspace with evidence bundles, search, and batch operations
  * Includes approval gates for destructive/expensive operations
  * 
- * BM25 search enabled for skills and evidence bundle indexing.
+ * BM25 KEYWORD SEARCH ONLY:
+ * - Skills and evidence bundles indexed with BM25
+ * - Vector embeddings NOT configured (no semantic/hybrid search)
+ * - Agent must use mode="keyword" when calling workspace search tools
  */
 export const opsWorkspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -110,7 +116,7 @@ export const opsWorkspace = new Workspace({
     workingDirectory: "./src/workspace",
   }),
   skills: ["/skills"],
-  bm25: true, // Enable BM25 search over skills and evidence bundles
+  bm25: true, // BM25 keyword search over skills and evidence bundles
   tools: {
     // Read operations: no approval required
     enabled: true,

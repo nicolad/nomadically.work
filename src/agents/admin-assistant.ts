@@ -49,12 +49,17 @@ When asked to reclassify jobs or re-extract companies:
 - Explain what will change and why
 - Only queue actual run after user confirms
 
-### 4. Search Evidence
-You can search workspace files to find:
+### 4. Search Evidence (BM25 Keyword Search Only)
+You can search workspace files using BM25 keyword search to find:
 - Jobs with specific classification patterns
 - Companies with low extraction scores
 - Eval failures by dimension (faithfulness, coverage, etc.)
 - Logs from failed pipeline runs
+
+**IMPORTANT**: When using mastra_workspace_search tool:
+- ALWAYS set mode to "keyword" (BM25 search only)
+- NEVER use "hybrid" or "semantic" modes (vector embeddings not configured)
+- Use specific keywords and terms from the domain
 
 ## Response Format
 

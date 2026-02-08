@@ -1,0 +1,75 @@
+#import "./company-fragments.graphql"
+
+# Company-related GraphQL mutations
+
+# Create a new company
+mutation CreateCompany($input: CreateCompanyInput!) {
+  createCompany(input: $input) {
+    ...CompanyFields
+  }
+}
+
+# Update an existing company
+mutation UpdateCompany($id: Int!, $input: UpdateCompanyInput!) {
+  updateCompany(id: $id, input: $input) {
+    ...CompanyFields
+  }
+}
+
+# Delete a company
+mutation DeleteCompany($id: Int!) {
+  deleteCompany(id: $id) {
+    success
+    message
+  }
+}
+
+# Add facts (evidence) to a company
+mutation AddCompanyFacts($company_id: Int!, $facts: [CompanyFactInput!]!) {
+  add_company_facts(company_id: $company_id, facts: $facts) {
+    ...CompanyFactFields
+  }
+}
+
+# Upsert ATS boards for a company
+mutation UpsertCompanyATSBoards(
+  $company_id: Int!
+  $boards: [ATSBoardUpsertInput!]!
+) {
+  upsert_company_ats_boards(company_id: $company_id, boards: $boards) {
+    ...ATSBoardFields
+  }
+}
+
+# Ingest a company snapshot from crawl data
+mutation IngestCompanySnapshot(
+  $company_id: Int!
+  $source_url: String!
+  $crawl_id: String
+  $capture_timestamp: String
+  $fetched_at: String!
+  $http_status: Int
+  $mime: String
+  $content_hash: String
+  $text_sample: String
+  $jsonld: JSON
+  $extracted: JSON
+  $evidence: EvidenceInput!
+) {
+  ingest_company_snapshot(
+    company_id: $company_id
+    source_url: $source_url
+    crawl_id: $crawl_id
+    capture_timestamp: $capture_timestamp
+    fetched_at: $fetched_at
+    http_status: $http_status
+    mime: $mime
+    content_hash: $content_hash
+    text_sample: $text_sample
+    jsonld: $jsonld
+    extracted: $extracted
+    evidence: $evidence
+  ) {
+    ...CompanySnapshotFields
+  }
+}

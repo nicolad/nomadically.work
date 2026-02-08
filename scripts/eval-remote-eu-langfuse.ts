@@ -29,9 +29,9 @@
 
 import { Langfuse } from "langfuse";
 import { getPrompt, PROMPTS } from "../src/observability";
-import { remoteEUTestCases } from "../src/lib/evals/remote-eu/test-data";
-import { scoreRemoteEUClassification } from "../src/lib/evals/remote-eu/scorers";
-import type { RemoteEUClassification } from "../src/lib/evals/remote-eu/schema";
+import { remoteEUTestCases } from "../src/evals/remote-eu/test-data";
+import { scoreRemoteEUClassification } from "../src/evals/remote-eu/scorers";
+import type { RemoteEUClassification } from "../src/evals/remote-eu/schema";
 import { deepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";

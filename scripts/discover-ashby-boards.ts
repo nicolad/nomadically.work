@@ -6,9 +6,9 @@
  *   pnpm tsx scripts/discover-ashby-boards.ts
  */
 
-import { discoverAshbyBoards } from "../src/lib/common-crawl/index.js";
-import { db } from "../src/db/index.js";
-import { ashbyBoards } from "../src/db/schema.js";
+import { discoverAshbyBoards } from "../src/lib/common-crawl/index.ts";
+import { db } from "../src/db/index.ts";
+import { ashbyBoards } from "../src/db/schema.ts";
 import { sql } from "drizzle-orm";
 
 async function main() {

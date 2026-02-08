@@ -20,6 +20,7 @@
     "jobs:ingest": "tsx scripts/ingest-jobs.ts",
     "jobs:status": "tsx scripts/ingest-jobs.ts --check-status",
     "jobs:extract-skills": "tsx scripts/ingest-jobs.ts --extract-skills",
+    "ccx:scrape": "tsx scripts/scrape-from-ccx.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -51,6 +52,7 @@
     "graphql": "^16.12.0",
     "graphql-ws": "^6.0.7",
     "langfuse": "^3.38.6",
+    "linkedom": "^0.18.12",
     "lodash": "^4.17.23",
     "next": "^16.1.6",
     "react": "19.1.1",

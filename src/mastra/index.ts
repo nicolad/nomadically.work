@@ -3,12 +3,18 @@ import { MastraCompositeStore } from "@mastra/core/storage";
 import { MemoryLibSQL, ScoresLibSQL } from "@mastra/libsql";
 
 import { observability } from "@/observability";
-import { jobClassifierAgent } from "./agents";
+import { jobClassifierAgent } from "@/agents";
 import {
   skillsVector,
   SKILLS_VECTOR_STORE_NAME,
   extractJobSkillsWorkflow,
 } from "@/lib/skills";
+import {
+  discoverConsultanciesCommonCrawlWorkflow,
+  ccxGetRecentCrawlIdsTool,
+  ccxCdxLatestTool,
+  ccxFetchHtmlFromWarcTool,
+} from "@/lib/common-crawl";
 
 // Configure composite storage with libSQL for all domains
 const storage = new MastraCompositeStore({
@@ -33,6 +39,12 @@ export const mastra = new Mastra({
   },
   workflows: {
     extractJobSkillsWorkflow,
+    discoverConsultancies: discoverConsultanciesCommonCrawlWorkflow,
+  },
+  tools: {
+    ccxGetRecentCrawlIds: ccxGetRecentCrawlIdsTool,
+    ccxCdxLatest: ccxCdxLatestTool,
+    ccxFetchHtmlFromWarc: ccxFetchHtmlFromWarcTool,
   },
   observability,
 });

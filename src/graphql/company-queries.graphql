@@ -1,0 +1,79 @@
+#import "./company-fragments.graphql"
+
+# Company-related GraphQL queries
+
+# Get a single company by ID or key
+query GetCompany($id: Int, $key: String) {
+  company(id: $id, key: $key) {
+    ...CompanyFields
+  }
+}
+
+# Get list of companies with basic filtering
+query GetCompanies($search: String, $limit: Int, $offset: Int) {
+  companies(search: $search, limit: $limit, offset: $offset) {
+    companies {
+      ...CompanyFields
+    }
+    totalCount
+  }
+}
+
+# Search companies with advanced filtering
+query SearchCompanies(
+  $filter: CompanyFilterInput!
+  $order_by: CompanyOrderBy
+  $limit: Int
+  $offset: Int
+) {
+  companies(
+    filter: $filter
+    order_by: $order_by
+    limit: $limit
+    offset: $offset
+  ) {
+    companies {
+      ...CompanyFields
+    }
+    totalCount
+  }
+}
+
+# Get company facts (evidence/provenance)
+query GetCompanyFacts(
+  $company_id: Int!
+  $field: String
+  $limit: Int
+  $offset: Int
+) {
+  company_facts(
+    company_id: $company_id
+    field: $field
+    limit: $limit
+    offset: $offset
+  ) {
+    ...CompanyFactFields
+  }
+}
+
+# Get company ATS boards
+query GetCompanyATSBoards($company_id: Int!) {
+  company_ats_boards(company_id: $company_id) {
+    ...ATSBoardFields
+  }
+}
+
+# Audit trail for a company (with all evidence)
+query CompanyAudit($key: String!) {
+  company(key: $key) {
+    ...CompanyFields
+    facts(limit: 200) {
+      ...CompanyFactFields
+    }
+    facts_count
+    snapshots(limit: 10) {
+      ...CompanySnapshotFields
+    }
+    snapshots_count
+  }
+}

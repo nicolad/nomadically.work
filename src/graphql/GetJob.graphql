@@ -1,10 +1,16 @@
+#import "./CompanyFields.graphql"
+
 query GetJob($id: String!) {
   job(id: $id) {
     id
     external_id
     source_id
     source_kind
+    company_id
     company_key
+    company {
+      ...CompanyFields
+    }
     title
     location
     url

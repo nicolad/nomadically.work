@@ -59,3 +59,6 @@ async function createJobClassifierAgent() {
 
 // Export the agent as a promise that resolves to the configured agent
 export const jobClassifierAgent = await createJobClassifierAgent();
+
+// Export SQL agent for database queries
+export { sqlAgent } from "./sql";

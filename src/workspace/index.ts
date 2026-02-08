@@ -16,10 +16,10 @@ import {
  */
 export const workspace = new Workspace({
   filesystem: new LocalFilesystem({
-    basePath: "./workspace",
+    basePath: "./src/workspace",
   }),
   sandbox: new LocalSandbox({
-    workingDirectory: "./workspace",
+    workingDirectory: "./src/workspace",
   }),
   skills: ["/skills"],
   tools: {
@@ -57,10 +57,10 @@ export async function initWorkspace() {
  */
 export const personalizationWorkspace = new Workspace({
   filesystem: new LocalFilesystem({
-    basePath: "./workspace/personalization",
+    basePath: "./src/workspace/personalization",
   }),
   sandbox: new LocalSandbox({
-    workingDirectory: "./workspace/personalization",
+    workingDirectory: "./src/workspace/personalization",
   }),
   tools: {
     enabled: true,
@@ -77,7 +77,7 @@ export const personalizationWorkspace = new Workspace({
  */
 export const sqlWorkspace = new Workspace({
   filesystem: new LocalFilesystem({
-    basePath: "./workspace/sql",
+    basePath: "./src/workspace/sql",
   }),
   tools: {
     enabled: true,
@@ -98,10 +98,10 @@ export const sqlWorkspace = new Workspace({
  */
 export const opsWorkspace = new Workspace({
   filesystem: new LocalFilesystem({
-    basePath: "./workspace",
+    basePath: "./src/workspace",
   }),
   sandbox: new LocalSandbox({
-    workingDirectory: "./workspace",
+    workingDirectory: "./src/workspace",
   }),
   // TODO: Add search over evidence bundles and decision explanations
   // search configuration would go here when Mastra supports it

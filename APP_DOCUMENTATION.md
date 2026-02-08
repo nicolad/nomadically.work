@@ -1000,6 +1000,376 @@ query SearchConsultancies {
 
 ---
 
+## Production Workflow Deployment with Inngest
+
+### Overview
+
+Inngest is a developer platform for building and running background workflows with advanced features like retries, step memoization, real-time monitoring, and suspend/resume capabilities. Mastra workflows integrate seamlessly with Inngest, providing production-grade orchestration.
+
+### How Inngest Works with Mastra
+
+Inngest and Mastra integrate by aligning their workflow models:
+
+- **Inngest** organizes logic into functions composed of steps
+- **Mastra** workflows defined using `createWorkflow()` and `createStep()` map directly onto Inngest's paradigm
+- Each Mastra workflow becomes an Inngest function with a unique identifier
+- Each step within the workflow maps to an Inngest step
+
+The `serve()` function bridges the two systems by registering Mastra workflows as Inngest functions and setting up necessary event handlers for execution and monitoring.
+
+**Key Benefits**:
+- **Step Memoization**: Completed steps are skipped on retry/resume
+- **Real-time Monitoring**: Track workflow execution in Inngest dashboard
+- **Suspend/Resume**: Pause and continue workflows
+- **Advanced Flow Control**: Concurrency, rate limiting, throttling, debouncing, priority queuing
+- **Cron Scheduling**: Automatic workflow triggering on schedules
+
+### Setup
+
+Install required packages:
+
+```bash
+pnpm add @mastra/inngest@latest inngest @inngest/realtime
+```
+
+### Inngest Initialization
+
+Initialize Inngest with Mastra-compatible helpers:
+
+**Development** (`src/mastra/inngest/index.ts`):
+```typescript
+import { Inngest } from "inngest";
+import { realtimeMiddleware } from "@inngest/realtime/middleware";
+
+export const inngest = new Inngest({
+  id: "mastra",
+  baseUrl: "http://localhost:8288",
+  isDev: true,
+  middleware: [realtimeMiddleware()],
+});
+```
+
+**Production** (`src/mastra/inngest/index.ts`):
+```typescript
+import { Inngest } from "inngest";
+import { realtimeMiddleware } from "@inngest/realtime/middleware";
+
+export const inngest = new Inngest({
+  id: "mastra",
+  middleware: [realtimeMiddleware()],
+});
+```
+
+### Creating Inngest-Compatible Workflows
+
+Use the `init()` function to get Mastra-compatible workflow helpers:
+
+```typescript
+import { z } from "zod";
+import { inngest } from "../inngest";
+import { init } from "@mastra/inngest";
+
+const { createWorkflow, createStep } = init(inngest);
+
+// Define steps
+const incrementStep = createStep({
+  id: "increment",
+  inputSchema: z.object({ value: z.number() }),
+  outputSchema: z.object({ value: z.number() }),
+  execute: async ({ inputData }) => {
+    return { value: inputData.value + 1 };
+  },
+});
+
+// Create workflow
+const workflow = createWorkflow({
+  id: "increment-workflow",
+  inputSchema: z.object({ value: z.number() }),
+  outputSchema: z.object({ value: z.number() }),
+}).then(incrementStep);
+
+workflow.commit();
+
+export { workflow as incrementWorkflow };
+```
+
+### Configuring Mastra with Inngest
+
+Update your Mastra instance to serve Inngest workflows:
+
+```typescript
+import { Mastra } from "@mastra/core";
+import { serve } from "@mastra/inngest";
+import { incrementWorkflow } from "./workflows";
+import { inngest } from "./inngest";
+import { PinoLogger } from "@mastra/loggers";
+
+export const mastra = new Mastra({
+  workflows: { incrementWorkflow },
+  server: {
+    host: "0.0.0.0",
+    apiRoutes: [
+      {
+        path: "/api/inngest",
+        method: "ALL",
+        createHandler: async ({ mastra }) => {
+          return serve({ mastra, inngest });
+        },
+      },
+    ],
+  },
+  logger: new PinoLogger({ name: "Mastra", level: "info" }),
+});
+```
+
+### Running Workflows Locally
+
+1. **Start Mastra server**:
+   ```bash
+   npx mastra dev
+   ```
+   (Runs on port 4111)
+
+2. **Start Inngest Dev Server**:
+   ```bash
+   npx inngest-cli@latest dev -u http://localhost:4111/api/inngest
+   ```
+
+3. **Open Inngest Dashboard**: http://localhost:8288
+   - Verify your workflow is registered in the "Apps" section
+   - Go to "Functions" → select your workflow → click "Invoke"
+
+4. **Invoke workflow** with input:
+   ```json
+   {
+     "data": {
+       "inputData": {
+         "value": 5
+       }
+     }
+   }
+   ```
+
+5. **Monitor execution** in the "Runs" tab
+
+### Deploying to Production
+
+#### Prerequisites
+- Vercel account and CLI (`npm i -g vercel`)
+- Inngest account
+- Vercel token
+
+#### Steps
+
+1. **Set Vercel token**:
+   ```bash
+   export VERCEL_TOKEN=your_vercel_token
+   ```
+
+2. **Add VercelDeployer to Mastra**:
+   ```typescript
+   import { VercelDeployer } from "@mastra/deployer-vercel";
+
+   export const mastra = new Mastra({
+     deployer: new VercelDeployer({
+       teamSlug: "your_team_slug",
+       projectName: "your_project_name",
+       token: process.env.VERCEL_TOKEN,
+     }),
+   });
+   ```
+
+3. **Build Mastra instance**:
+   ```bash
+   npx mastra build
+   ```
+
+4. **Deploy to Vercel**:
+   ```bash
+   cd .mastra/output
+   vercel login
+   vercel --prod
+   ```
+
+5. **Sync with Inngest dashboard**:
+   - Click "Sync new app with Vercel"
+   - Follow instructions
+
+6. **Invoke workflow from dashboard**:
+   - Go to Functions → `workflow.increment-workflow`
+   - All actions → Invoke
+   - Provide input and monitor in Runs tab
+
+### Flow Control Features
+
+#### Concurrency
+Limit simultaneous workflow executions:
+
+```typescript
+const workflow = createWorkflow({
+  id: "user-processing-workflow",
+  inputSchema: z.object({ userId: z.string() }),
+  concurrency: {
+    limit: 10,
+    key: "event.data.userId", // Scope by user ID
+  },
+});
+```
+
+#### Rate Limiting
+Limit executions per time period:
+
+```typescript
+const workflow = createWorkflow({
+  id: "api-sync-workflow",
+  rateLimit: {
+    period: "1h",
+    limit: 1000, // Max 1000 per hour
+  },
+});
+```
+
+#### Throttling
+Minimum time between executions:
+
+```typescript
+const workflow = createWorkflow({
+  id: "email-notification-workflow",
+  throttle: {
+    period: "10s",
+    limit: 1,
+    key: "event.data.organizationId",
+  },
+});
+```
+
+#### Debouncing
+Delay execution until no new events:
+
+```typescript
+const workflow = createWorkflow({
+  id: "search-index-workflow",
+  debounce: {
+    period: "5s",
+    key: "event.data.documentId", // Wait 5s of no updates
+  },
+});
+```
+
+#### Priority Queuing
+Execute high-priority workflows first:
+
+```typescript
+const workflow = createWorkflow({
+  id: "order-processing-workflow",
+  priority: {
+    run: "event.data.priority ?? 50",
+  },
+});
+```
+
+### Cron Scheduling
+
+Automatically trigger workflows on a schedule:
+
+```typescript
+const workflow = createWorkflow({
+  id: "daily-report-workflow",
+  inputSchema: z.object({ reportType: z.string() }),
+  cron: "0 0 * * *", // Daily at midnight
+  inputData: {
+    reportType: "daily-summary",
+  },
+});
+```
+
+**Common cron patterns**:
+- `*/15 * * * *` - Every 15 minutes
+- `0 * * * *` - Every hour
+- `0 */6 * * *` - Every 6 hours
+- `0 9 * * 1-5` - Weekdays at 9 AM
+- `0 0 1 * *` - First day of month at midnight
+
+### Adding Custom Inngest Functions
+
+Serve custom Inngest functions alongside Mastra workflows:
+
+```typescript
+// src/inngest/custom-functions.ts
+import { inngest } from "../inngest";
+
+export const customEmailFunction = inngest.createFunction(
+  { id: "send-welcome-email" },
+  { event: "user/registered" },
+  async ({ event }) => {
+    console.log(`Sending welcome email to ${event.data.email}`);
+    return { status: "email_sent" };
+  },
+);
+
+// src/mastra/index.ts
+import { serve } from "@mastra/inngest";
+import { customEmailFunction } from "./inngest/custom-functions";
+
+export const mastra = new Mastra({
+  workflows: { incrementWorkflow },
+  server: {
+    apiRoutes: [
+      {
+        path: "/api/inngest",
+        method: "ALL",
+        createHandler: async ({ mastra }) => {
+          return serve({
+            mastra,
+            inngest,
+            functions: [customEmailFunction], // Add custom functions
+          });
+        },
+      },
+    ],
+  },
+});
+```
+
+### Framework Adapters
+
+Inngest works with any web framework using adapters:
+
+#### Next.js
+```typescript
+// app/api/inngest/route.ts
+import { createServe } from "@mastra/inngest";
+import { serve as nextAdapter } from "inngest/next";
+import { mastra, inngest } from "@/mastra";
+
+const handler = createServe(nextAdapter)({ mastra, inngest });
+
+export { handler as GET, handler as POST, handler as PUT };
+```
+
+#### Express
+```typescript
+import express from "express";
+import { createServe } from "@mastra/inngest";
+import { serve as expressAdapter } from "inngest/express";
+
+const app = express();
+app.use(express.json());
+
+const handler = createServe(expressAdapter)({ mastra, inngest });
+app.use("/api/inngest", handler);
+```
+
+#### Other Adapters
+- Fastify: `inngest/fastify`
+- Koa: `inngest/koa`
+- AWS Lambda: `inngest/lambda`
+- Cloudflare Workers: `inngest/cloudflare`
+
+See [Inngest serve documentation](https://www.inngest.com/docs/serve) for all adapters.
+
+---
+
 ## Environment Variables
 
 ### Required

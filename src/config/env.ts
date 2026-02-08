@@ -92,13 +92,16 @@ export function loadEnvConfig(): EnvConfig {
       deepseekApiKey: getOptionalEnv("DEEPSEEK_API_KEY"),
     },
 
-    d1: process.env.CLOUDFLARE_ACCOUNT_ID
-      ? {
-          accountId: getRequiredEnv("CLOUDFLARE_ACCOUNT_ID"),
-          databaseId: getRequiredEnv("CLOUDFLARE_D1_DATABASE_ID"),
-          apiToken: getRequiredEnv("CLOUDFLARE_API_TOKEN"),
-        }
-      : undefined,
+    d1:
+      process.env.CLOUDFLARE_ACCOUNT_ID &&
+      process.env.CLOUDFLARE_D1_DATABASE_ID &&
+      process.env.CLOUDFLARE_API_TOKEN
+        ? {
+            accountId: getRequiredEnv("CLOUDFLARE_ACCOUNT_ID"),
+            databaseId: getRequiredEnv("CLOUDFLARE_D1_DATABASE_ID"),
+            apiToken: getRequiredEnv("CLOUDFLARE_API_TOKEN"),
+          }
+        : undefined,
 
     turso: {
       url: getRequiredEnv("TURSO_DB_URL"),

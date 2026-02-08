@@ -114,6 +114,14 @@ const validateStep = createStep({
   }),
   outputSchema: jobSkillsOutputSchema,
   execute: async ({ inputData }) => {
+    // 🛡️ Defensive: log if no candidates were available
+    if (inputData.candidates.length === 0) {
+      console.warn(
+        `[Job ${inputData.jobId}] Validation: 0 candidates available; returning empty skills`,
+      );
+      return { skills: [] };
+    }
+
     const allowed = new Set(inputData.candidates.map((c) => c.tag));
     const seen = new Set<string>();
 
@@ -126,6 +134,10 @@ const validateStep = createStep({
         return true;
       })
       .slice(0, 30);
+
+    console.log(
+      `[Job ${inputData.jobId}] Validated ${cleaned.length} skills (from ${inputData.extracted.skills.length} extracted)`,
+    );
 
     return { skills: cleaned };
   },
@@ -149,12 +161,21 @@ const persistStep = createStep({
     });
 
     const extractedAt = new Date().toISOString();
+    const skillCount = inputData.skills.skills.length;
 
     // Replace existing skills for this job
     await db.execute({
       sql: `DELETE FROM job_skill_tags WHERE job_id = ?`,
       args: [inputData.jobId],
     });
+
+    // ✅ Handle 0 skills gracefully (just logs, no inserts)
+    if (skillCount === 0) {
+      console.log(
+        `[Job ${inputData.jobId}] Persist: 0 skills to save (cleaned previous entries)`,
+      );
+      return { ok: true, count: 0 };
+    }
 
     for (const s of inputData.skills.skills) {
       await db.execute({
@@ -174,7 +195,9 @@ const persistStep = createStep({
       });
     }
 
-    return { ok: true, count: inputData.skills.skills.length };
+    console.log(`[Job ${inputData.jobId}] Persisted ${skillCount} skills`);
+
+    return { ok: true, count: skillCount };
   },
 });
 
@@ -189,7 +212,7 @@ export const extractJobSkillsWorkflow = createWorkflow({
   // 1) Get candidate tags from vector store
   .then(candidatesStep)
   // 2) Map to agent input: build prompt with candidates
-  .map(async ({ inputData, getStepResult }) => {
+  .map(async ({ inputData, getStepResult, getInitData }) => {
     const stepResult = getStepResult(
       "skill-candidates",
     ) as CandidatesStepOutput | null;
@@ -200,9 +223,18 @@ export const extractJobSkillsWorkflow = createWorkflow({
 
     const { candidates } = stepResult;
 
-    const init = inputData as z.infer<typeof extractInputSchema>;
+    // ✅ Use getInitData() to access workflow input (jobId, title, description)
+    const init = getInitData<z.infer<typeof extractInputSchema>>();
     const title = init.title;
     const description = init.description ?? "";
+
+    // 🛡️ Defensive: log warning if no candidates, but continue
+    // (the validate step will naturally filter everything out anyway)
+    if (candidates.length === 0) {
+      console.warn(
+        `[Job ${init.jobId}] No candidate skills found via vector search; extraction will likely return empty`,
+      );
+    }
 
     const candidateTags = candidates.map((c) => c.tag).join(", ");
 
@@ -214,7 +246,7 @@ export const extractJobSkillsWorkflow = createWorkflow({
         description,
         ``,
         `CANDIDATE CANONICAL TAGS (you MUST choose from these ONLY):`,
-        candidateTags,
+        candidateTags || "(none found)",
         ``,
         `Return JSON with shape: { skills: [{ tag, level, confidence?, evidence }] }`,
       ].join("\n"),
@@ -223,7 +255,7 @@ export const extractJobSkillsWorkflow = createWorkflow({
   // 3) Extract structured skills
   .then(extractStructuredStep)
   // 4) Map to validation input
-  .map(async ({ getStepResult, inputData }) => {
+  .map(async ({ getStepResult, getInitData }) => {
     const extracted = getStepResult("skill-extractor") as any;
 
     const candidatesResult = getStepResult(
@@ -235,7 +267,8 @@ export const extractJobSkillsWorkflow = createWorkflow({
       );
     }
 
-    const init = inputData as z.infer<typeof extractInputSchema>;
+    // ✅ Use getInitData() to access jobId from workflow input
+    const init = getInitData<z.infer<typeof extractInputSchema>>();
 
     return {
       jobId: init.jobId,
@@ -246,12 +279,14 @@ export const extractJobSkillsWorkflow = createWorkflow({
   // 5) Validate against candidates
   .then(validateStep)
   // 6) Map to persist input
-  .map(async ({ getStepResult, inputData }) => {
-    const init = inputData as any;
+  .map(async ({ getStepResult, getInitData }) => {
     const validated = getStepResult("validate-skills");
 
+    // ✅ Use getInitData() to access jobId from workflow input
+    const init = getInitData<z.infer<typeof extractInputSchema>>();
+
     return {
-      jobId: init.jobId as number,
+      jobId: init.jobId,
       skills: validated,
       version: "skills-v1", // bump when you change prompts/taxonomy
     };

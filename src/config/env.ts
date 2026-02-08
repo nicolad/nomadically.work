@@ -144,6 +144,9 @@ export const DEEPSEEK_API_KEY = env.llm.deepseekApiKey;
 export const CLOUDFLARE_ACCOUNT_ID = env.d1?.accountId;
 export const CLOUDFLARE_API_TOKEN = env.d1?.apiToken;
 export const CLOUDFLARE_D1_DATABASE_ID = env.d1?.databaseId;
+export const CLOUDFLARE_WORKERS_AI_KEY = getOptionalEnv(
+  "CLOUDFLARE_WORKERS_AI_KEY",
+);
 
 // Turso database configuration
 export const TURSO_DB_URL = env.turso.url;

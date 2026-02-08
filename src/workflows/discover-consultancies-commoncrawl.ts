@@ -5,14 +5,14 @@ import {
   ccxCdxLatestTool,
   ccxFetchHtmlFromWarcTool,
   type CdxRecord,
-} from "../tools/ccx";
+} from "@/tools/ccx";
 import {
   normalizeDomain,
   keyUrlsForDomain,
   extractFactsFromHtml,
   buildGoldenRecord,
   type GoldenRecord,
-} from "../cc/extract";
+} from "./extract";
 
 const InputSchema = z.object({
   domains: z.array(z.string()).min(1),

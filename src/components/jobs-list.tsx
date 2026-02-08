@@ -26,6 +26,7 @@ import {
 } from "@radix-ui/themes";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
+import { getSkillLabel } from "@/lib/skills/taxonomy";
 
 type Job = GetJobsQuery["jobs"]["jobs"][number];
 type BadgeColor = "green" | "orange" | "blue" | "gray";
@@ -308,19 +309,36 @@ export function JobsList() {
                 {/* Skills */}
                 {job.skills && job.skills.length > 0 && (
                   <Flex gap="1" wrap="wrap" mb="3">
-                    {job.skills.slice(0, 5).map((skill) => (
-                      <Badge
-                        key={skill.tag}
-                        size="1"
-                        color={skill.level === "required" ? "red" : "gray"}
-                        variant="soft"
-                      >
-                        {skill.tag}
-                      </Badge>
-                    ))}
-                    {job.skills.length > 5 && (
+                    {job.skills
+                      .sort((a, b) => {
+                        // Show required skills first
+                        if (a.level === "required" && b.level !== "required")
+                          return -1;
+                        if (a.level !== "required" && b.level === "required")
+                          return 1;
+                        return 0;
+                      })
+                      .slice(0, 8)
+                      .map((skill) => (
+                        <Badge
+                          key={skill.tag}
+                          size="1"
+                          color={
+                            skill.level === "required"
+                              ? "red"
+                              : skill.level === "preferred"
+                                ? "blue"
+                                : "gray"
+                          }
+                          variant="soft"
+                        >
+                          {getSkillLabel(skill.tag)}
+                          {skill.level === "required" && " ⚠️"}
+                        </Badge>
+                      ))}
+                    {job.skills.length > 8 && (
                       <Badge size="1" variant="soft" color="gray">
-                        +{job.skills.length - 5} more
+                        +{job.skills.length - 8} more
                       </Badge>
                     )}
                   </Flex>

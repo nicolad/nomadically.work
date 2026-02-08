@@ -828,7 +828,7 @@ async function getRecentCrawlIds(limit: number = 6): Promise<string[]> {
     log("  Attempting to fetch live crawl index list from Common Crawl...");
     const list = await fetchClient.fetchJson<CollInfo[]>(
       "https://index.commoncrawl.org/collinfo.json",
-      { timeout: 15000, retries: 5 }, // Increased timeout and retries
+      { timeout: 30000, retries: 3 }, // Longer timeout, fewer retries to fail faster
     );
     const ids = list
       .map((x) => x.id)
@@ -844,20 +844,28 @@ async function getRecentCrawlIds(limit: number = 6): Promise<string[]> {
     );
     log("  Using fallback crawl IDs (may be slightly outdated)");
     log(
-      "  To check latest crawls manually: https://commoncrawl.org/get-started",
+      "  💡 To check latest crawls manually: https://commoncrawl.org/get-started",
     );
 
     // Provide helpful diagnostic info
     if (error?.cause?.code === "ECONNREFUSED") {
       log(
-        "  Note: Connection refused - check network connectivity or try again later",
+        "  📍 Connection refused - possible causes:",
       );
+      log("     • Firewall or proxy blocking the connection");
+      log("     • Common Crawl API temporarily down");
+      log("     • Network connectivity issue");
+      log("  💡 Tip: You can continue using fallback crawl IDs");
     } else if (error?.cause?.code === "ETIMEDOUT") {
       log(
-        "  Note: Connection timeout - Common Crawl may be slow or temporarily unavailable",
+        "  ⏱️  Connection timeout - Common Crawl may be slow or temporarily unavailable",
+      );
+    } else if (error?.cause?.code === "ENOTFOUND") {
+      log(
+        "  🌐 DNS resolution failed - check your internet connection",
       );
     } else if (error?.cause?.code) {
-      log(`  Note: Network error code: ${error.cause.code}`);
+      log(`  ℹ️  Network error code: ${error.cause.code}`);
     }
 
     return fallbackCrawlIds.slice(0, limit);

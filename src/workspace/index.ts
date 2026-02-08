@@ -13,6 +13,9 @@ import {
 
 /**
  * Main workspace for agents with filesystem, sandbox, and skills support
+ * 
+ * Skills are automatically indexed with BM25 for semantic search.
+ * Agents can discover and activate skills during conversations.
  */
 export const workspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -22,6 +25,7 @@ export const workspace = new Workspace({
     workingDirectory: "./src/workspace",
   }),
   skills: ["/skills"],
+  bm25: true, // Enable BM25 search for skill indexing
   tools: {
     // Global defaults
     enabled: true,
@@ -95,6 +99,8 @@ export const sqlWorkspace = new Workspace({
  * Ops workspace for admin assistant
  * Full-featured workspace with evidence bundles, search, and batch operations
  * Includes approval gates for destructive/expensive operations
+ * 
+ * BM25 search enabled for skills and evidence bundle indexing.
  */
 export const opsWorkspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -103,9 +109,8 @@ export const opsWorkspace = new Workspace({
   sandbox: new LocalSandbox({
     workingDirectory: "./src/workspace",
   }),
-  // TODO: Add search over evidence bundles and decision explanations
-  // search configuration would go here when Mastra supports it
   skills: ["/skills"],
+  bm25: true, // Enable BM25 search over skills and evidence bundles
   tools: {
     // Read operations: no approval required
     enabled: true,

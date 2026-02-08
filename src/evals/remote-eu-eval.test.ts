@@ -4,7 +4,7 @@
  *
  * Run with: pnpm test:eval
  * 
- * @see src/lib/evals/remote-eu/ - Centralized evaluation module
+ * @see src/evals/remote-eu/ - Centralized evaluation module
  */
 
 import { describe, it, expect } from "vitest";

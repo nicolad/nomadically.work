@@ -6,10 +6,10 @@
  * 1. **Live Evaluation (Mastra/Langfuse)**:
  *    - Use `remoteEUScorer` with agents
  *    - Automatically tracked in Langfuse
- *    - See: src/mastra/agents/index.ts
+ *    - See: src/agents/index.ts
  *
  * 2. **Regression Testing (Vitest)**:
- *    - See: src/lib/evals/remote-eu-eval.test.ts
+ *    - See: src/evals/remote-eu-eval.test.ts
  *    - Run with: pnpm test:eval
  *
  * Example live evaluation:

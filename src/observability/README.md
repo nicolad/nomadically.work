@@ -60,7 +60,7 @@ Langfuse Prompt Management adds **zero latency** to your application:
 
 The application uses a comprehensive evaluation workflow for remote EU job classification:
 
-1. **Define Test Cases** - Curated dataset of edge cases ([test-data.ts](../lib/evals/remote-eu/test-data.ts))
+1. **Define Test Cases** - Curated dataset of edge cases ([test-data.ts](../evals/remote-eu/test-data.ts))
 2. **Create Prompts** - Manage prompts in Langfuse UI with versioning
 3. **Run Evaluations** - Execute `eval-remote-eu-langfuse.ts` script to test classification accuracy
 4. **Analyze Results** - Review traces, scores, and failures in Langfuse dashboard

@@ -25,9 +25,10 @@ import { TrashIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { classifyJob } from "@/lib/mastra/actions";
-import type { JobClassificationResponse } from "@/lib/mastra/actions";
+import { classifyJob } from "@/mastra/actions";
+import type { JobClassificationResponse } from "@/mastra/actions";
 import { ADMIN_EMAIL } from "@/lib/constants";
+import { getSkillLabel, formatConfidence } from "@/lib/skills/taxonomy";
 
 interface AshbySecondaryLocation {
   location: string;
@@ -425,30 +426,92 @@ function JobPageContent() {
 
         {/* Skills Section */}
         {job.skills && job.skills.length > 0 && (
-          <Box mt="4">
-            <Text size="2" weight="bold" mb="2">
-              Skills & Technologies
-            </Text>
-            <Flex gap="2" wrap="wrap">
-              {job.skills.map((skill) => (
-                <Badge
-                  key={skill.tag}
-                  size="2"
-                  color={
-                    skill.level === "required"
-                      ? "red"
-                      : skill.level === "preferred"
-                        ? "blue"
-                        : "gray"
-                  }
-                  variant="soft"
-                >
-                  {skill.tag}
-                  {skill.level === "required" && " ⚠️"}
-                </Badge>
-              ))}
+          <Card mt="4">
+            <Flex direction="column" gap="3">
+              <Heading size="4">Skills & Technologies</Heading>
+              <Flex gap="2" wrap="wrap">
+                {job.skills
+                  .sort((a, b) => {
+                    // Sort by level (required > preferred > nice) then by confidence
+                    const levelOrder = { required: 0, preferred: 1, nice: 2 };
+                    const levelA =
+                      levelOrder[a.level as keyof typeof levelOrder] ?? 3;
+                    const levelB =
+                      levelOrder[b.level as keyof typeof levelOrder] ?? 3;
+                    if (levelA !== levelB) return levelA - levelB;
+                    return (b.confidence || 0) - (a.confidence || 0);
+                  })
+                  .map((skill) => (
+                    <Box
+                      key={skill.tag}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Badge
+                        size="2"
+                        color={
+                          skill.level === "required"
+                            ? "red"
+                            : skill.level === "preferred"
+                              ? "blue"
+                              : "gray"
+                        }
+                        variant="soft"
+                        style={{
+                          fontSize: "14px",
+                          padding: "6px 10px",
+                          cursor: skill.evidence ? "help" : "default",
+                        }}
+                        title={
+                          skill.evidence
+                            ? `Evidence: ${skill.evidence}`
+                            : undefined
+                        }
+                      >
+                        {getSkillLabel(skill.tag)}
+                        {skill.level === "required" && " ⚠️"}
+                        {skill.confidence != null &&
+                          skill.confidence >= 0.7 && (
+                            <Text
+                              as="span"
+                              size="1"
+                              style={{
+                                marginLeft: "4px",
+                                opacity: 0.7,
+                              }}
+                            >
+                              {formatConfidence(skill.confidence)}
+                            </Text>
+                          )}
+                      </Badge>
+                    </Box>
+                  ))}
+              </Flex>
+              <Flex gap="4" style={{ fontSize: "12px", opacity: 0.7 }}>
+                <Flex align="center" gap="1">
+                  <Badge size="1" color="red" variant="soft">
+                    Required
+                  </Badge>
+                  <Text size="1">Must have</Text>
+                </Flex>
+                <Flex align="center" gap="1">
+                  <Badge size="1" color="blue" variant="soft">
+                    Preferred
+                  </Badge>
+                  <Text size="1">Nice to have</Text>
+                </Flex>
+                <Flex align="center" gap="1">
+                  <Badge size="1" color="gray" variant="soft">
+                    Nice
+                  </Badge>
+                  <Text size="1">Bonus</Text>
+                </Flex>
+              </Flex>
             </Flex>
-          </Box>
+          </Card>
         )}
 
         {/* Action Buttons */}

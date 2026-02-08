@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useGetJobsQuery } from "@/__generated__/hooks";
+import { getSkillLabel } from "@/lib/skills/taxonomy";
 import {
   Card,
   Flex,
@@ -105,6 +106,42 @@ export function JobsList() {
                     <Text size="2" color="gray">
                       📍 {job.location}
                     </Text>
+                  )}
+
+                  {/* Skills */}
+                  {job.skills && job.skills.length > 0 && (
+                    <Flex gap="1" wrap="wrap">
+                      {job.skills
+                        .sort((a, b) => {
+                          if (a.level === "required" && b.level !== "required")
+                            return -1;
+                          if (a.level !== "required" && b.level === "required")
+                            return 1;
+                          return 0;
+                        })
+                        .slice(0, 6)
+                        .map((skill) => (
+                          <Badge
+                            key={skill.tag}
+                            size="1"
+                            color={
+                              skill.level === "required"
+                                ? "red"
+                                : skill.level === "preferred"
+                                  ? "blue"
+                                  : "gray"
+                            }
+                            variant="soft"
+                          >
+                            {getSkillLabel(skill.tag)}
+                          </Badge>
+                        ))}
+                      {job.skills.length > 6 && (
+                        <Badge size="1" variant="soft" color="gray">
+                          +{job.skills.length - 6}
+                        </Badge>
+                      )}
+                    </Flex>
                   )}
 
                   {job.score && (

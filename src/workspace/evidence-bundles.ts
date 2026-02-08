@@ -98,7 +98,7 @@ export type JobClassificationBundle = z.infer<
 // Bundle Storage
 // ============================================================================
 
-const WORKSPACE_BASE = "./workspace";
+const WORKSPACE_BASE = "./src/workspace";
 const EVIDENCE_BASE = join(WORKSPACE_BASE, "evidence");
 
 /**

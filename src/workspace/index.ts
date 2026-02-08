@@ -5,6 +5,11 @@ import {
   WORKSPACE_TOOLS,
 } from "@mastra/core/workspace";
 import { join } from "path";
+import {
+  inspectJobDecisionTool,
+  rerunJobClassifierTool,
+  diffSnapshotsTool,
+} from "./ops-skills";
 
 /**
  * Main workspace for agents with filesystem, sandbox, and skills support
@@ -85,3 +90,50 @@ export const sqlWorkspace = new Workspace({
     },
   },
 });
+
+/**
+ * Ops workspace for admin assistant
+ * Full-featured workspace with evidence bundles, search, and batch operations
+ * Includes approval gates for destructive/expensive operations
+ */
+export const opsWorkspace = new Workspace({
+  filesystem: new LocalFilesystem({
+    basePath: "./workspace",
+  }),
+  sandbox: new LocalSandbox({
+    workingDirectory: "./workspace",
+  }),
+  // TODO: Add search over evidence bundles and decision explanations
+  // search configuration would go here when Mastra supports it
+  skills: ["/skills"],
+  tools: {
+    // Read operations: no approval required
+    enabled: true,
+    requireApproval: false,
+
+    // Write operations: require read-before-write
+    [WORKSPACE_TOOLS.FILESYSTEM.WRITE_FILE]: {
+      requireApproval: false, // Evidence bundles are append-only
+      requireReadBeforeWrite: true,
+    },
+
+    // Delete: completely disabled for safety
+    [WORKSPACE_TOOLS.FILESYSTEM.DELETE]: {
+      enabled: false,
+    },
+
+    // Command execution: approval required
+    [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: {
+      requireApproval: true, // Batch reprocessing runs
+    },
+  },
+});
+
+/**
+ * Export ops skills as tools
+ */
+export const opsTools = {
+  inspectJobDecision: inspectJobDecisionTool,
+  rerunJobClassifier: rerunJobClassifierTool,
+  diffSnapshots: diffSnapshotsTool,
+};

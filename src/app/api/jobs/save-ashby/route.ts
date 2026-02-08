@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { jobs } from "@/db/schema";
+import { jobs, companies } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +33,26 @@ export async function POST(request: NextRequest) {
 
     const externalId = jobUrl || `https://jobs.ashbyhq.com/${company}/${id}`;
 
+    // Find or create the company
+    let companyRecord = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.key, company))
+      .limit(1);
+
+    let companyId: number;
+
+    if (companyRecord.length === 0) {
+      // Create new company record
+      const result = await db.insert(companies).values({
+        key: company,
+        name: company,
+      }).returning();
+      companyId = result[0].id;
+    } else {
+      companyId = companyRecord[0].id;
+    }
+
     // Update or insert the job with Ashby data
     const existingJob = await db
       .select()
@@ -60,16 +80,18 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Insert new job
-      await db.insert(jobs).values({
+      const result = await db.insert(jobs).values({
         external_id: externalId,
         source_kind: "ashby",
+        company_id: companyId,
         company_key: company,
         ...jobData,
-      });
+      }).returning();
 
       return NextResponse.json({
         success: true,
         action: "created",
+        jobId: result[0].id,
       });
     }
   } catch (error) {

@@ -93,6 +93,28 @@ async function insertJob(
   try {
     const now = new Date().toISOString();
 
+    // First, ensure the company exists
+    let companyId: number;
+    const companyLookup = await turso.execute({
+      sql: `SELECT id FROM companies WHERE key = ? LIMIT 1`,
+      args: [job.companyKey!],
+    });
+
+    if (companyLookup.rows.length > 0) {
+      companyId = Number(companyLookup.rows[0].id);
+    } else {
+      // Create new company
+      const companyResult = await turso.execute({
+        sql: `
+          INSERT INTO companies (key, name, created_at, updated_at)
+          VALUES (?, ?, ?, ?)
+          RETURNING id
+        `,
+        args: [job.companyKey!, job.companyKey!, now, now],
+      });
+      companyId = Number(companyResult.rows[0]?.id ?? companyResult.lastInsertRowid);
+    }
+
     // Default status is "new" (but see conflict behavior below to avoid resetting processed jobs)
     const incomingStatus = (job.status ?? "new").trim();
 
@@ -100,17 +122,18 @@ async function insertJob(
       job.externalId!, // 1
       job.sourceId ?? null, // 2
       job.sourceKind!, // 3
-      job.companyKey!, // 4
-      job.title!, // 5
-      job.location ?? null, // 6
-      job.url!, // 7
-      job.description ?? null, // 8
-      job.postedAt ?? now, // 9
-      job.score ?? null, // 10
-      job.scoreReason ?? null, // 11
-      incomingStatus, // 12
-      now, // 13 created_at
-      now, // 14 updated_at
+      companyId, // 4 - company_id
+      job.companyKey!, // 5 - company_key (kept for backward compatibility)
+      job.title!, // 6
+      job.location ?? null, // 7
+      job.url!, // 8
+      job.description ?? null, // 9
+      job.postedAt ?? now, // 10
+      job.score ?? null, // 11
+      job.scoreReason ?? null, // 12
+      incomingStatus, // 13
+      now, // 14 created_at
+      now, // 15 updated_at
     ];
 
     /**
@@ -127,6 +150,7 @@ async function insertJob(
           external_id,
           source_id,
           source_kind,
+          company_id,
           company_key,
           title,
           location,
@@ -138,9 +162,10 @@ async function insertJob(
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(source_kind, company_key, external_id) DO UPDATE SET
           source_id    = COALESCE(excluded.source_id, jobs.source_id),
+          company_id   = excluded.company_id,
           title        = excluded.title,
           location     = COALESCE(excluded.location, jobs.location),
           url          = excluded.url,

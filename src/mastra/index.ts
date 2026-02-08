@@ -9,6 +9,7 @@ import {
   sqlAgent,
   personalizationAgent,
   recommendationAgent,
+  adminAssistantAgent,
 } from "@/agents";
 import {
   skillsVector,
@@ -23,6 +24,11 @@ import {
 } from "@/lib/common-crawl";
 import { inngest } from "./inngest";
 import { workspace } from "@/workspace";
+import {
+  inspectJobDecisionTool,
+  rerunJobClassifierTool,
+  diffSnapshotsTool,
+} from "@/workspace/ops-skills";
 
 // Import scheduled workflows
 import {
@@ -76,6 +82,7 @@ export const mastra = new Mastra({
     sqlAgent,
     personalizationAgent,
     recommendationAgent,
+    adminAssistantAgent,
   },
   storage,
   workspace,
@@ -103,9 +110,15 @@ export const mastra = new Mastra({
     comprehensive: comprehensiveWorkflow,
   },
   tools: {
+    // Common Crawl tools
     ccxGetRecentCrawlIds: ccxGetRecentCrawlIdsTool,
     ccxCdxLatest: ccxCdxLatestTool,
     ccxFetchHtmlFromWarc: ccxFetchHtmlFromWarcTool,
+
+    // Ops tools for admin assistant
+    inspectJobDecision: inspectJobDecisionTool,
+    rerunJobClassifier: rerunJobClassifierTool,
+    diffSnapshots: diffSnapshotsTool,
   },
   server: {
     host: "0.0.0.0",

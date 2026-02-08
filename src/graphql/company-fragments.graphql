@@ -1,0 +1,116 @@
+# Company-related GraphQL fragments
+
+# Evidence/Provenance fragment
+fragment EvidenceFields on Evidence {
+  source_type
+  source_url
+  crawl_id
+  capture_timestamp
+  observed_at
+  method
+  extractor_version
+  http_status
+  mime
+  content_hash
+  warc {
+    filename
+    offset
+    length
+    digest
+  }
+}
+
+# ATS Board fragment
+fragment ATSBoardFields on ATSBoard {
+  id
+  company_id
+  url
+  vendor
+  board_type
+  confidence
+  is_active
+  first_seen_at
+  last_seen_at
+  evidence {
+    ...EvidenceFields
+  }
+  created_at
+  updated_at
+}
+
+# Company Fact fragment
+fragment CompanyFactFields on CompanyFact {
+  id
+  company_id
+  field
+  value_json
+  value_text
+  normalized_value
+  confidence
+  evidence {
+    ...EvidenceFields
+  }
+  created_at
+}
+
+# Company Snapshot fragment
+fragment CompanySnapshotFields on CompanySnapshot {
+  id
+  company_id
+  source_url
+  crawl_id
+  capture_timestamp
+  fetched_at
+  http_status
+  mime
+  content_hash
+  text_sample
+  jsonld
+  extracted
+  evidence {
+    ...EvidenceFields
+  }
+  created_at
+}
+
+# Company (Golden Record) fragment
+fragment CompanyFields on Company {
+  id
+  key
+  name
+  logo_url
+  website
+  description
+  industry
+  size
+  location
+  created_at
+  updated_at
+
+  # Golden record fields
+  canonical_domain
+  category
+  tags
+  services
+  service_taxonomy
+  industries
+  score
+  score_reasons
+
+  # Common Crawl metadata
+  last_seen_crawl_id
+  last_seen_capture_timestamp
+  last_seen_source_url
+
+  # Related data
+  ats_boards {
+    id
+    url
+    vendor
+    board_type
+    confidence
+    is_active
+    first_seen_at
+    last_seen_at
+  }
+}

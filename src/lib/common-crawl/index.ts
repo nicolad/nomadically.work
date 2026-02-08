@@ -1,9 +1,48 @@
 /**
- * Common Crawl integration for discovering Ashby job boards
+ * Common Crawl integration for discovering consultancies
  *
- * Strategy: Use CC CDX index to find jobs.ashbyhq.com/* URLs,
- * extract board names, then use Ashby's public API for actual job data.
+ * This module provides tools, workflows, and utilities for:
+ * - Querying Common Crawl CDX index
+ * - Fetching HTML from WARC archives
+ * - Extracting company facts from web pages
+ * - Scoring and filtering consultancy companies
+ * - Building golden records from crawl data
  */
+
+// ============================================================================
+// CCX Tools - Common Crawl data access
+// ============================================================================
+export {
+  ccxGetRecentCrawlIdsTool,
+  ccxCdxLatestTool,
+  ccxFetchHtmlFromWarcTool,
+} from "./ccx-tools.ts";
+export type { CollInfo, CdxRecord } from "./ccx-tools.ts";
+
+// ============================================================================
+// Consultancy Extraction - Fact extraction and scoring
+// ============================================================================
+export {
+  nowISO,
+  sha1Hex,
+  normalizeDomain,
+  parseSeedsText,
+  extractFactsFromHtml,
+  scoreFromFactsAndHtml,
+  buildGoldenRecord,
+  keyUrlsForDomain,
+} from "./consultancy-extract.ts";
+export type { Evidence, Fact, GoldenRecord } from "./consultancy-extract.ts";
+
+// ============================================================================
+// Consultancy Workflow - Discovery orchestration
+// ============================================================================
+export { discoverConsultanciesCommonCrawlWorkflow } from "./consultancy-workflow.ts";
+export type { DiscoverInput, DiscoverOutput } from "./consultancy-workflow.ts";
+
+// ============================================================================
+// Legacy Ashby Board Discovery (deprecated, use consultancy workflow instead)
+// ============================================================================
 
 /**
  * Common Crawl CDX API response item
@@ -139,25 +178,5 @@ export async function discoverAshbyBoards(
  * @param includeCompensation - Whether to include compensation data
  * @see https://developers.ashbyhq.com/docs/public-job-posting-api
  */
-export async function fetchAshbyBoardJobs(
-  boardName: string,
-  includeCompensation: boolean = true,
-) {
-  const url = new URL(
-    `https://api.ashbyhq.com/posting-api/job-board/${boardName}`,
-  );
+export { fetchAshbyBoardJobs } from "./ashby-client.ts";
 
-  if (includeCompensation) {
-    url.searchParams.set("includeCompensation", "true");
-  }
-
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    throw new Error(
-      `Ashby API error for board '${boardName}': ${response.status}`,
-    );
-  }
-
-  return response.json();
-}

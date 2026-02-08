@@ -14,7 +14,7 @@ import {
   Box,
   Skeleton,
 } from "@radix-ui/themes";
-import { fetchAshbyBoardJobs } from "@/lib/common-crawl";
+import { fetchAshbyBoardJobs } from "@/lib/common-crawl/ashby-client";
 
 interface AshbyJob {
   id: string;

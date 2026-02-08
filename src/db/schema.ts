@@ -1,12 +1,65 @@
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+export const companies = sqliteTable("companies", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(), // Unique identifier (slug/domain)
+  name: text("name").notNull(),
+  logo_url: text("logo_url"),
+  website: text("website"),
+  description: text("description"),
+  industry: text("industry"),
+  size: text("size"), // e.g., "1-10", "11-50", "51-200", etc.
+  location: text("location"),
+
+  // Golden record fields
+  canonical_domain: text("canonical_domain"),
+  category: text("category", {
+    enum: [
+      "CONSULTANCY",
+      "AGENCY",
+      "STAFFING",
+      "DIRECTORY",
+      "PRODUCT",
+      "OTHER",
+      "UNKNOWN",
+    ],
+  })
+    .notNull()
+    .default("UNKNOWN"),
+  tags: text("tags"), // JSON array
+  services: text("services"), // JSON array of human-readable service phrases
+  service_taxonomy: text("service_taxonomy"), // JSON array of normalized taxonomy IDs
+  industries: text("industries"), // JSON array for multi-industry
+
+  score: real("score").notNull().default(0.5), // 0..1
+  score_reasons: text("score_reasons"), // JSON array
+
+  // Common Crawl / last-seen metadata
+  last_seen_crawl_id: text("last_seen_crawl_id"),
+  last_seen_capture_timestamp: text("last_seen_capture_timestamp"),
+  last_seen_source_url: text("last_seen_source_url"),
+
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
+
 export const jobs = sqliteTable("jobs", {
   id: integer("id").primaryKey(),
   external_id: text("external_id").notNull(),
   source_id: text("source_id"),
   source_kind: text("source_kind").notNull(),
-  company_key: text("company_key").notNull(),
+  company_id: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  company_key: text("company_key").notNull(), // Kept for backward compatibility during migration
   title: text("title").notNull(),
   location: text("location"),
   url: text("url").notNull(),
@@ -118,3 +171,186 @@ export const skillAliases = sqliteTable("skill_aliases", {
 
 export type SkillAlias = typeof skillAliases.$inferSelect;
 export type NewSkillAlias = typeof skillAliases.$inferInsert;
+
+// Company Facts (MDM/Evidence-based)
+export const companyFacts = sqliteTable(
+  "company_facts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    company_id: integer("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    field: text("field").notNull(), // e.g., "name", "services", "ats_boards"
+    value_json: text("value_json"), // JSON for arrays/objects
+    value_text: text("value_text"), // convenience text
+    normalized_value: text("normalized_value"), // JSON normalized form
+    confidence: real("confidence").notNull(), // 0..1
+
+    // Evidence/Provenance
+    source_type: text("source_type", {
+      enum: ["COMMONCRAWL", "LIVE_FETCH", "MANUAL", "PARTNER"],
+    }).notNull(),
+    source_url: text("source_url").notNull(),
+    crawl_id: text("crawl_id"),
+    capture_timestamp: text("capture_timestamp"), // YYYYMMDDhhmmss
+    observed_at: text("observed_at").notNull(),
+    method: text("method", {
+      enum: ["JSONLD", "META", "DOM", "HEURISTIC", "LLM"],
+    }).notNull(),
+    extractor_version: text("extractor_version"),
+    http_status: integer("http_status"),
+    mime: text("mime"),
+    content_hash: text("content_hash"),
+
+    // WARC pointer
+    warc_filename: text("warc_filename"),
+    warc_offset: integer("warc_offset"),
+    warc_length: integer("warc_length"),
+    warc_digest: text("warc_digest"),
+
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    companyFieldIdx: {
+      name: "idx_company_facts_company_field",
+      columns: [table.company_id, table.field],
+    },
+  }),
+);
+
+export type CompanyFact = typeof companyFacts.$inferSelect;
+export type NewCompanyFact = typeof companyFacts.$inferInsert;
+
+// Company Snapshots (Crawl storage for debugging/reprocessing)
+export const companySnapshots = sqliteTable(
+  "company_snapshots",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    company_id: integer("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+
+    source_url: text("source_url").notNull(),
+    crawl_id: text("crawl_id"),
+    capture_timestamp: text("capture_timestamp"),
+    fetched_at: text("fetched_at").notNull(),
+
+    http_status: integer("http_status"),
+    mime: text("mime"),
+    content_hash: text("content_hash"),
+
+    text_sample: text("text_sample"), // First N chars
+    jsonld: text("jsonld"), // JSON parsed JSON-LD
+    extracted: text("extracted"), // JSON extractor output
+
+    // Evidence
+    source_type: text("source_type", {
+      enum: ["COMMONCRAWL", "LIVE_FETCH", "MANUAL", "PARTNER"],
+    }).notNull(),
+    method: text("method", {
+      enum: ["JSONLD", "META", "DOM", "HEURISTIC", "LLM"],
+    }).notNull(),
+    extractor_version: text("extractor_version"),
+
+    // WARC pointer
+    warc_filename: text("warc_filename"),
+    warc_offset: integer("warc_offset"),
+    warc_length: integer("warc_length"),
+    warc_digest: text("warc_digest"),
+
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    companyHashIdx: {
+      name: "idx_company_snapshots_company_hash",
+      columns: [table.company_id, table.content_hash],
+    },
+  }),
+);
+
+export type CompanySnapshot = typeof companySnapshots.$inferSelect;
+export type NewCompanySnapshot = typeof companySnapshots.$inferInsert;
+
+// ATS Boards
+export const atsBoards = sqliteTable(
+  "ats_boards",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    company_id: integer("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+
+    url: text("url").notNull(),
+    vendor: text("vendor", {
+      enum: [
+        "GREENHOUSE",
+        "LEVER",
+        "WORKABLE",
+        "TEAMTAILOR",
+        "ASHBY",
+        "SMARTRECRUITERS",
+        "JAZZHR",
+        "BREEZYHR",
+        "ICIMS",
+        "JOBVITE",
+        "SAP_SUCCESSFACTORS",
+        "ORACLE_TALEO",
+        "OTHER",
+      ],
+    }).notNull(),
+    board_type: text("board_type", {
+      enum: ["JOBS_PAGE", "BOARD_API", "BOARD_WIDGET", "UNKNOWN"],
+    }).notNull(),
+
+    confidence: real("confidence").notNull(), // 0..1
+    is_active: integer("is_active", { mode: "boolean" })
+      .notNull()
+      .default(true),
+
+    first_seen_at: text("first_seen_at").notNull(),
+    last_seen_at: text("last_seen_at").notNull(),
+
+    // Evidence
+    source_type: text("source_type", {
+      enum: ["COMMONCRAWL", "LIVE_FETCH", "MANUAL", "PARTNER"],
+    }).notNull(),
+    source_url: text("source_url").notNull(),
+    crawl_id: text("crawl_id"),
+    capture_timestamp: text("capture_timestamp"),
+    observed_at: text("observed_at").notNull(),
+    method: text("method", {
+      enum: ["JSONLD", "META", "DOM", "HEURISTIC", "LLM"],
+    }).notNull(),
+    extractor_version: text("extractor_version"),
+
+    // WARC pointer
+    warc_filename: text("warc_filename"),
+    warc_offset: integer("warc_offset"),
+    warc_length: integer("warc_length"),
+    warc_digest: text("warc_digest"),
+
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    companyUrlIdx: {
+      name: "idx_ats_boards_company_url",
+      columns: [table.company_id, table.url],
+    },
+    vendorIdx: {
+      name: "idx_ats_boards_vendor",
+      columns: [table.vendor],
+    },
+  }),
+);
+
+export type ATSBoard = typeof atsBoards.$inferSelect;
+export type NewATSBoard = typeof atsBoards.$inferInsert;

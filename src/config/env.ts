@@ -59,7 +59,7 @@ export interface EnvConfig {
  * Get required environment variable or throw error
  */
 function getRequiredEnv(key: string): string {
-  const value = process.env[key];
+  const value = process.env[key]?.trim();
   if (!value) {
     throw new Error(
       `Missing required environment variable: ${key}\n` +
@@ -73,7 +73,7 @@ function getRequiredEnv(key: string): string {
  * Get optional environment variable
  */
 function getOptionalEnv(key: string): string | undefined {
-  return process.env[key];
+  return process.env[key]?.trim();
 }
 
 /**

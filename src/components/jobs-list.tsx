@@ -266,7 +266,7 @@ export function JobsList() {
                 {/* Skills */}
                 {job.skills && job.skills.length > 0 && (
                   <Flex gap="1" wrap="wrap" mb="3">
-                    {job.skills
+                    {[...job.skills]
                       .sort((a, b) => {
                         // Show required skills first
                         if (a.level === "required" && b.level !== "required")

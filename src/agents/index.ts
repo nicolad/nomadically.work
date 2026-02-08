@@ -52,7 +52,9 @@ async function createJobClassifierAgent() {
     name: "Job Classifier Agent",
     instructions: text,
     model: deepseek("deepseek-chat"),
-    defaultGenerateOptionsLegacy: tracingOptions ? { tracingOptions } : undefined,
+    defaultGenerateOptionsLegacy: tracingOptions
+      ? { tracingOptions }
+      : undefined,
     scorers,
   });
 }
@@ -70,3 +72,6 @@ export {
   syncPreferencesToWorkingMemory,
   capturePreferenceFromAction,
 } from "./personalization";
+
+// Export admin assistant for ops control plane
+export { adminAssistantAgent } from "./admin-assistant";

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { turso, type Client } from "@/db";
+import { getTurso, type Client } from "@/db";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { z } from "zod";
 
@@ -282,11 +282,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = BulkImportRequestSchema.parse(body);
 
+    // Get Turso client instance (not the proxy)
+    const tursoClient = getTurso();
+
     // Process each company
     const results: ImportResult[] = [];
 
     for (const company of validatedData.companies) {
-      const result = await importCompany(turso, company);
+      const result = await importCompany(tursoClient, company);
       results.push(result);
     }
 

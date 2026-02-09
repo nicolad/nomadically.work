@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
-import { Theme, Flex, Container } from "@radix-ui/themes";
+import { Theme, Flex, Container, Button } from "@radix-ui/themes";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -37,6 +37,12 @@ export default function RootLayout({
                     />
                   </Link>
                   <Flex gap="4" align="center">
+                    <Link href="/jobs">
+                      <Button variant="soft">Jobs</Button>
+                    </Link>
+                    <Link href="/companies">
+                      <Button variant="soft">Companies</Button>
+                    </Link>
                     <ClerkHeader />
                     <Link
                       href="https://github.com/nicolad/nomadically.work"

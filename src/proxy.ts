@@ -1,6 +1,11 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export default clerkMiddleware();
+// Better Auth middleware is configured in your auth setup
+// This file handles routing configuration for the application.
+
+export function proxy(request: NextRequest) {
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

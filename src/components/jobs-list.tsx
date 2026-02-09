@@ -10,7 +10,7 @@ import {
 } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
 import { last, split, sortBy } from "lodash";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/auth/hooks";
 import {
   Box,
   Container,
@@ -60,11 +60,11 @@ export function JobsList() {
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const { user } = useUser();
+  const { user } = useAuth();
   const [deleteJobMutation] = useDeleteJobMutation();
 
   // Check if current user is admin
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Fetch user settings to get excluded companies
   const { data: userSettingsData } = useGetUserSettingsQuery({
@@ -137,7 +137,7 @@ export function JobsList() {
   const loadMoreRefCallback = useCallback(
     (node: HTMLDivElement | null) => {
       if (observerRef.current) observerRef.current.disconnect();
-      
+
       if (node && hasMore && !loading) {
         observerRef.current = new IntersectionObserver(
           (entries) => {
@@ -145,12 +145,12 @@ export function JobsList() {
               loadMore();
             }
           },
-          { threshold: 0.1 }
+          { threshold: 0.1 },
         );
         observerRef.current.observe(node);
       }
     },
-    [hasMore, loading, loadMore]
+    [hasMore, loading, loadMore],
   );
 
   if (error) {
@@ -219,7 +219,6 @@ export function JobsList() {
                     )}
                   </Flex>
                 </Flex>
-
                 <Flex gap="2" mb="2" wrap="wrap" align="center">
                   {job.company_key && (
                     <Text
@@ -240,13 +239,11 @@ export function JobsList() {
                   )}
                   {job.location && <Text color="gray">• {job.location}</Text>}
                 </Flex>
-
                 {job.source_kind && (
                   <Text size="2" color="gray" mb="2">
                     {job.source_kind}
                   </Text>
                 )}
-
                 {job.description && (
                   <Text
                     size="2"
@@ -262,13 +259,10 @@ export function JobsList() {
                     {job.description}
                   </Text>
                 )}
-
                 {/* Skills */}
                 {job.skills && job.skills.length > 0 && (
                   <Flex gap="1" wrap="wrap" mb="3">
-                    {sortBy(job.skills, [
-                      (skill) => skill.level !== "required",
-                    ])
+                    {sortBy(job.skills, [(skill) => skill.level !== "required"])
                       .slice(0, 8)
                       .map((skill) => (
                         <Badge
@@ -293,7 +287,7 @@ export function JobsList() {
                     )}
                   </Flex>
                 )}
-Callback
+                Callback
                 <Flex justify="between" align="center" mt="4">
                   <Text size="1" color="gray">
                     {job.source_kind && <span>Source: {job.source_kind}</span>}

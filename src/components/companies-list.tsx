@@ -143,10 +143,20 @@ export function CompaniesList() {
       </Box>
 
       <Flex direction="column" gap="4">
-        {companies.map((company) => (
+        {companies.map((company) => {
+          // Ensure proper URL formatting
+          let companyUrl = company.website;
+          if (companyUrl && !companyUrl.startsWith('http://') && !companyUrl.startsWith('https://')) {
+            companyUrl = `https://${companyUrl}`;
+          }
+          if (!companyUrl && company.key) {
+            companyUrl = `https://${company.key}`;
+          }
+          
+          return (
           <Card key={company.id} size="3" asChild>
             <Link
-              href={company.website || `https://${company.key}`}
+              href={companyUrl || '#'}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -269,7 +279,8 @@ export function CompaniesList() {
             </Flex>
             </Link>
           </Card>
-        ))}
+          );
+        })}
       </Flex>
 
       {/* Infinite scroll trigger */}

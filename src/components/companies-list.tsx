@@ -2,8 +2,12 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useGetCompaniesQuery } from "@/__generated__/hooks";
+import {
+  useGetCompaniesQuery,
+  useDeleteCompanyMutation,
+} from "@/__generated__/hooks";
 import type { GetCompaniesQuery } from "@/__generated__/graphql";
+import { useUser } from "@clerk/nextjs";
 import {
   Box,
   Container,
@@ -16,13 +20,37 @@ import {
   TextField,
   Spinner,
   Avatar,
+  IconButton,
 } from "@radix-ui/themes";
+import { TrashIcon } from "@radix-ui/react-icons";
+import { ADMIN_EMAIL } from "@/lib/constants";
 
 type Company = GetCompaniesQuery["companies"]["companies"][number];
 
 export function CompaniesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const { user } = useUser();
+  const [deleteCompanyMutation] = useDeleteCompanyMutation();
+
+  // Check if current user is admin
+  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+
+  // Handle delete company
+  const handleDeleteCompany = async (companyId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      await deleteCompanyMutation({
+        variables: { id: companyId },
+        refetchQueries: ["GetCompanies"],
+        awaitRefetchQueries: true,
+      });
+    } catch (error) {
+      console.error("Error deleting company:", error);
+    }
+  };
 
   const { loading, error, data, refetch, fetchMore } = useGetCompaniesQuery({
     variables: {
@@ -142,11 +170,24 @@ export function CompaniesList() {
                   {/* Company Name and Website */}
                   <Flex justify="between" align="start">
                     <Heading size="5">{company.name}</Heading>
-                    {company.website && (
-                      <Button size="2" variant="soft">
-                        Visit Website
-                      </Button>
-                    )}
+                    <Flex gap="2" align="center">
+                      {company.website && (
+                        <Button size="2" variant="soft">
+                          Visit Website
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <IconButton
+                          size="2"
+                          color="red"
+                          variant="soft"
+                          onClick={(e) => handleDeleteCompany(company.id, e)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <TrashIcon />
+                        </IconButton>
+                      )}
+                    </Flex>
                   </Flex>
 
                 {/* Company Key */}

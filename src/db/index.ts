@@ -13,8 +13,8 @@ if (!process.env.TURSO_DB_URL) {
  * @throws Error if TURSO_DB_URL or TURSO_DB_AUTH_TOKEN are not set
  */
 export function getTursoClient(): Client {
-  const url = process.env.TURSO_DB_URL;
-  const token = process.env.TURSO_DB_AUTH_TOKEN;
+  const url = process.env.TURSO_DB_URL?.trim();
+  const token = process.env.TURSO_DB_AUTH_TOKEN?.trim();
 
   if (!url) {
     throw new Error("Missing TURSO_DB_URL environment variable");

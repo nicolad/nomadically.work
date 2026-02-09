@@ -7,7 +7,7 @@ import {
   useDeleteCompanyMutation,
 } from "@/__generated__/hooks";
 import type { GetCompaniesQuery } from "@/__generated__/graphql";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/auth/hooks";
 import {
   Box,
   Container,
@@ -30,14 +30,17 @@ type Company = GetCompaniesQuery["companies"]["companies"][number];
 export function CompaniesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const { user } = useUser();
+  const { user } = useAuth();
   const [deleteCompanyMutation] = useDeleteCompanyMutation();
 
   // Check if current user is admin
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Handle delete company
-  const handleDeleteCompany = async (companyId: number, e: React.MouseEvent) => {
+  const handleDeleteCompany = async (
+    companyId: number,
+    e: React.MouseEvent,
+  ) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -105,12 +108,12 @@ export function CompaniesList() {
               loadMore();
             }
           },
-          { threshold: 0.1 }
+          { threshold: 0.1 },
         );
         observerRef.current.observe(node);
       }
     },
-    [hasMore, loading, loadMore]
+    [hasMore, loading, loadMore],
   );
 
   if (error) {
@@ -146,7 +149,11 @@ export function CompaniesList() {
         {companies.map((company) => {
           // Ensure proper URL formatting
           let companyUrl = company.website;
-          if (companyUrl && !companyUrl.startsWith('http://') && !companyUrl.startsWith('https://')) {
+          if (
+            companyUrl &&
+            !companyUrl.startsWith("http://") &&
+            !companyUrl.startsWith("https://")
+          ) {
             companyUrl = `https://${companyUrl}`;
           }
           if (!companyUrl && company.canonical_domain) {
@@ -154,137 +161,142 @@ export function CompaniesList() {
           }
           if (!companyUrl && company.key) {
             // Only use key as URL if it looks like a domain (contains a dot)
-            if (company.key.includes('.')) {
+            if (company.key.includes(".")) {
               companyUrl = `https://${company.key}`;
             }
           }
-          
-          return (
-          <Card key={company.id} size="3" asChild>
-            <Link
-              href={companyUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-                cursor: "pointer",
-              }}
-            >
-              <Flex gap="4" align="start">
-                {/* Company Logo */}
-                {company.logo_url && (
-                  <Avatar
-                    src={company.logo_url}
-                    fallback={company.name?.charAt(0) || "C"}
-                    size="5"
-                    radius="small"
-                  />
-                )}
 
-                <Flex direction="column" gap="2" style={{ flex: 1 }}>
-                  {/* Company Name and Website */}
-                  <Flex justify="between" align="start">
-                    <Heading size="5">{company.name}</Heading>
-                    <Flex gap="2" align="center">
-                      {company.website && (
-                        <Button size="2" variant="soft">
-                          Visit Website
-                        </Button>
+          return (
+            <Card key={company.id} size="3" asChild>
+              <Link
+                href={companyUrl || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  textDecoration: "none",
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                <Flex gap="4" align="start">
+                  {/* Company Logo */}
+                  {company.logo_url && (
+                    <Avatar
+                      src={company.logo_url}
+                      fallback={company.name?.charAt(0) || "C"}
+                      size="5"
+                      radius="small"
+                    />
+                  )}
+
+                  <Flex direction="column" gap="2" style={{ flex: 1 }}>
+                    {/* Company Name and Website */}
+                    <Flex justify="between" align="start">
+                      <Heading size="5">{company.name}</Heading>
+                      <Flex gap="2" align="center">
+                        {company.website && (
+                          <Button size="2" variant="soft">
+                            Visit Website
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <IconButton
+                            size="2"
+                            color="red"
+                            variant="soft"
+                            onClick={(e) => handleDeleteCompany(company.id, e)}
+                            style={{ cursor: "pointer" }}
+                          >
+                            <TrashIcon />
+                          </IconButton>
+                        )}
+                      </Flex>
+                    </Flex>
+
+                    {/* Company Key */}
+                    {company.key && (
+                      <Text size="2" color="gray" weight="medium">
+                        {company.key}
+                      </Text>
+                    )}
+
+                    {/* Industry, Size, Location */}
+                    <Flex gap="2" wrap="wrap">
+                      {company.industry && (
+                        <Badge color="blue" variant="soft">
+                          {company.industry}
+                        </Badge>
                       )}
-                      {isAdmin && (
-                        <IconButton
-                          size="2"
-                          color="red"
-                          variant="soft"
-                          onClick={(e) => handleDeleteCompany(company.id, e)}
-                          style={{ cursor: "pointer" }}
-                        >
-                          <TrashIcon />
-                        </IconButton>
+                      {company.size && (
+                        <Badge color="green" variant="soft">
+                          {company.size}
+                        </Badge>
+                      )}
+                      {company.location && (
+                        <Badge color="orange" variant="soft">
+                          {company.location}
+                        </Badge>
                       )}
                     </Flex>
-                  </Flex>
 
-                {/* Company Key */}
-                {company.key && (
-                  <Text size="2" color="gray" weight="medium">
-                    {company.key}
-                  </Text>
-                )}
+                    {/* Description */}
+                    {company.description && (
+                      <Text
+                        size="2"
+                        color="gray"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {company.description}
+                      </Text>
+                    )}
 
-                {/* Industry, Size, Location */}
-                <Flex gap="2" wrap="wrap">
-                  {company.industry && (
-                    <Badge color="blue" variant="soft">
-                      {company.industry}
-                    </Badge>
-                  )}
-                  {company.size && (
-                    <Badge color="green" variant="soft">
-                      {company.size}
-                    </Badge>
-                  )}
-                  {company.location && (
-                    <Badge color="orange" variant="soft">
-                      {company.location}
-                    </Badge>
-                  )}
-                </Flex>
+                    {/* Tags */}
+                    {company.tags && company.tags.length > 0 && (
+                      <Flex gap="1" wrap="wrap">
+                        {company.tags.slice(0, 5).map((tag, index) => (
+                          <Badge
+                            key={index}
+                            size="1"
+                            variant="soft"
+                            color="gray"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                        {company.tags.length > 5 && (
+                          <Badge size="1" variant="soft" color="gray">
+                            +{company.tags.length - 5} more
+                          </Badge>
+                        )}
+                      </Flex>
+                    )}
 
-                {/* Description */}
-                {company.description && (
-                  <Text
-                    size="2"
-                    color="gray"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {company.description}
-                  </Text>
-                )}
-
-                {/* Tags */}
-                {company.tags && company.tags.length > 0 && (
-                  <Flex gap="1" wrap="wrap">
-                    {company.tags.slice(0, 5).map((tag, index) => (
-                      <Badge key={index} size="1" variant="soft" color="gray">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {company.tags.length > 5 && (
-                      <Badge size="1" variant="soft" color="gray">
-                        +{company.tags.length - 5} more
-                      </Badge>
+                    {/* ATS Boards */}
+                    {company.ats_boards && company.ats_boards.length > 0 && (
+                      <Flex gap="2" wrap="wrap" mt="2">
+                        <Text size="2" color="gray">
+                          Job Boards:
+                        </Text>
+                        {company.ats_boards.map((board) => (
+                          <Badge
+                            key={board.id}
+                            size="1"
+                            color={board.is_active ? "green" : "gray"}
+                          >
+                            {board.vendor}
+                          </Badge>
+                        ))}
+                      </Flex>
                     )}
                   </Flex>
-                )}
-
-                {/* ATS Boards */}
-                {company.ats_boards && company.ats_boards.length > 0 && (
-                  <Flex gap="2" wrap="wrap" mt="2">
-                    <Text size="2" color="gray">
-                      Job Boards:
-                    </Text>
-                    {company.ats_boards.map((board) => (
-                      <Badge
-                        key={board.id}
-                        size="1"
-                        color={board.is_active ? "green" : "gray"}
-                      >
-                        {board.vendor}
-                      </Badge>
-                    ))}
-                  </Flex>
-                )}
-              </Flex>
-            </Flex>
-            </Link>
-          </Card>
+                </Flex>
+              </Link>
+            </Card>
           );
         })}
       </Flex>

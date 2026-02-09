@@ -1,4 +1,4 @@
-- Built a Next.js 16 + React 19 job discovery app with Radix UI theming, Clerk auth, and a branded layout for EU-focused remote jobs.
+- Built a Next.js 16 + React 19 job discovery app with Radix UI theming, Better Auth, and a branded layout for EU-focused remote jobs.
 - Implemented a GraphQL API (Apollo Server + schema/resolvers) with typed client hooks and polling-based data refresh.
 - Delivered a searchable, infinite-scroll jobs list with server-side pagination, inline filtering, and admin-only delete actions.
 - Designed a Turso/SQLite data model in Drizzle for jobs, companies, skill tags, ATS boards, user settings, and evidence-based company snapshots.

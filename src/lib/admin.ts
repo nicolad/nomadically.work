@@ -1,4 +1,4 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 /**
@@ -11,17 +11,13 @@ export async function checkIsAdmin(): Promise<{
   userEmail: string | null;
 }> {
   try {
-    const { userId } = await auth();
+    const { userId, user } = await auth();
 
-    if (!userId) {
+    if (!userId || !user) {
       return { isAdmin: false, userId: null, userEmail: null };
     }
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const userEmail = user.emailAddresses.find(
-      (email) => email.id === user.primaryEmailAddressId
-    )?.emailAddress;
+    const userEmail = user.email || null;
 
     return {
       isAdmin: userEmail === ADMIN_EMAIL,

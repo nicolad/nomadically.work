@@ -149,8 +149,14 @@ export function CompaniesList() {
           if (companyUrl && !companyUrl.startsWith('http://') && !companyUrl.startsWith('https://')) {
             companyUrl = `https://${companyUrl}`;
           }
+          if (!companyUrl && company.canonical_domain) {
+            companyUrl = `https://${company.canonical_domain}`;
+          }
           if (!companyUrl && company.key) {
-            companyUrl = `https://${company.key}`;
+            // Only use key as URL if it looks like a domain (contains a dot)
+            if (company.key.includes('.')) {
+              companyUrl = `https://${company.key}`;
+            }
           }
           
           return (

@@ -1,11 +1,11 @@
 /**
  * Better Auth instance
  *
- * This file exports the auth instance for the CLI and other parts of the application.
- * The CLI looks for a named export called "auth" in this file.
- *
- * Reference: https://www.better-auth.com/docs/integrations/next-js
+ * Re-exported from root auth.config.ts for use with Next.js
+ * The CLI generates migrations using auth.config.ts
  */
 
-export { betterAuth as auth } from "@/auth/instance";
-export type { Session, User } from "@/auth";
+export { auth, default } from "../../auth.config";
+
+
+

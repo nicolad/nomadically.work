@@ -140,20 +140,20 @@ export const env = envConfig;
 export const LANGFUSE_SECRET_KEY = env.langfuse.secretKey;
 export const LANGFUSE_PUBLIC_KEY = env.langfuse.publicKey;
 export const LANGFUSE_BASE_URL = env.langfuse.baseUrl;
-export const OPENAI_API_KEY = env.llm.openaiApiKey;
-export const DEEPSEEK_API_KEY = env.llm.deepseekApiKey;
+export const OPENAI_API_KEY = env.llm.openaiApiKey?.trim();
+export const DEEPSEEK_API_KEY = env.llm.deepseekApiKey?.trim();
 
 // Cloudflare configuration
-export const CLOUDFLARE_ACCOUNT_ID = env.d1?.accountId;
-export const CLOUDFLARE_API_TOKEN = env.d1?.apiToken;
-export const CLOUDFLARE_D1_DATABASE_ID = env.d1?.databaseId;
+export const CLOUDFLARE_ACCOUNT_ID = env.d1?.accountId?.trim();
+export const CLOUDFLARE_API_TOKEN = env.d1?.apiToken?.trim();
+export const CLOUDFLARE_D1_DATABASE_ID = env.d1?.databaseId?.trim();
 export const CLOUDFLARE_WORKERS_AI_KEY = getOptionalEnv(
   "CLOUDFLARE_WORKERS_AI_KEY",
 );
 
 // Turso database configuration
-export const TURSO_DB_URL = env.turso.url;
-export const TURSO_DB_AUTH_TOKEN = env.turso.authToken;
+export const TURSO_DB_URL = env.turso.url?.trim();
+export const TURSO_DB_AUTH_TOKEN = env.turso.authToken?.trim();
 
 /**
  * Ensure environment is loaded (call this at the start of scripts)

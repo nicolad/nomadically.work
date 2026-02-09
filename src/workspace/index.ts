@@ -5,6 +5,7 @@ import {
   WORKSPACE_TOOLS,
 } from "@mastra/core/workspace";
 import { join } from "path";
+import { embedText } from "@/agents/cloudflare-workers-ai";
 import {
   inspectJobDecisionTool,
   rerunJobClassifierTool,
@@ -13,12 +14,14 @@ import {
 
 /**
  * Main workspace for agents with filesystem, sandbox, and skills support
- * 
- * BM25 KEYWORD SEARCH ONLY:
- * - Skills are indexed with BM25 for keyword-based discovery
- * - Vector embeddings NOT configured (no semantic/hybrid search)
- * - Agents must use mode="keyword" when calling workspace search tools
- * - Skills activated based on keyword matching against skill content
+ *
+ * HYBRID SEARCH (BM25 + Vector):
+ * - BM25 for keyword-based discovery (exact matches, terms)
+ * - Vector embeddings for semantic similarity (meaning, context)
+ * - Cloudflare Workers AI for cost-effective embeddings ($0.02/1M vs OpenAI $0.13/1M)
+ * - Agents can use mode="keyword", "semantic", or "hybrid" when searching
+ * - Skills activated based on keyword + semantic matching
+ * - Vector store configured at Mastra level
  */
 export const workspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -28,7 +31,12 @@ export const workspace = new Workspace({
     workingDirectory: "./src/workspace",
   }),
   skills: ["/skills"],
-  bm25: true, // BM25 keyword search for skill indexing and discovery
+  bm25: true, // BM25 keyword search
+  embedder: async (text: string) => {
+    // Using Cloudflare Workers AI (@cf/baai/bge-small-en-v1.5)
+    // 384-dimensional embeddings, $0.02/1M tokens
+    return embedText(text);
+  },
   tools: {
     // Global defaults
     enabled: true,
@@ -102,11 +110,6 @@ export const sqlWorkspace = new Workspace({
  * Ops workspace for admin assistant
  * Full-featured workspace with evidence bundles, search, and batch operations
  * Includes approval gates for destructive/expensive operations
- * 
- * BM25 KEYWORD SEARCH ONLY:
- * - Skills and evidence bundles indexed with BM25
- * - Vector embeddings NOT configured (no semantic/hybrid search)
- * - Agent must use mode="keyword" when calling workspace search tools
  */
 export const opsWorkspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -116,7 +119,7 @@ export const opsWorkspace = new Workspace({
     workingDirectory: "./src/workspace",
   }),
   skills: ["/skills"],
-  bm25: true, // BM25 keyword search over skills and evidence bundles
+  bm25: true, // BM25 keyword search
   tools: {
     // Read operations: no approval required
     enabled: true,

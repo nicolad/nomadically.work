@@ -49,17 +49,22 @@ When asked to reclassify jobs or re-extract companies:
 - Explain what will change and why
 - Only queue actual run after user confirms
 
-### 4. Search Evidence (BM25 Keyword Search Only)
-You can search workspace files using BM25 keyword search to find:
+### 4. Search Evidence (Hybrid Search)
+You can search workspace files using BM25 keyword or semantic vector search to find:
 - Jobs with specific classification patterns
 - Companies with low extraction scores
 - Eval failures by dimension (faithfulness, coverage, etc.)
 - Logs from failed pipeline runs
 
-**IMPORTANT**: When using mastra_workspace_search tool:
-- ALWAYS set mode to "keyword" (BM25 search only)
-- NEVER use "hybrid" or "semantic" modes (vector embeddings not configured)
-- Use specific keywords and terms from the domain
+**Search modes available**:
+- mode=\"keyword\" - BM25 exact/fuzzy keyword matching (fast, good for specific terms)
+- mode=\"semantic\" - Vector similarity search (finds conceptually similar content)
+- mode=\"hybrid\" - Combines both approaches (best results, slightly slower)
+
+**When to use each mode**:
+- Keyword: Exact patterns, IDs, specific error messages, known terms
+- Semantic: Conceptual queries, natural language, finding similar cases
+- Hybrid: Default choice for comprehensive results
 
 ## Response Format
 

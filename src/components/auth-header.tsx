@@ -32,6 +32,9 @@ export function AuthHeader() {
 
   return (
     <Flex gap="4" align="center">
+      <span style={{ color: "#888888", fontSize: "14px" }}>
+        {user.name || user.email}
+      </span>
       <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
         <GearIcon width={32} height={32} style={{ color: "#888888" }} />
       </Link>

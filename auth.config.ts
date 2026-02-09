@@ -9,7 +9,8 @@ config({ path: ".env.local" });
 
 export const auth = betterAuth({
   database: new Pool({
-    connectionString: process.env.PG_KEY || "postgresql://localhost/better_auth",
+    connectionString:
+      process.env.PG_KEY || "postgresql://localhost/better_auth",
   }),
   emailAndPassword: { enabled: true },
   plugins: [admin(), nextCookies()],

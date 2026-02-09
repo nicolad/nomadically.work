@@ -116,34 +116,38 @@ export function CompaniesList() {
 
       <Flex direction="column" gap="4">
         {companies.map((company) => (
-          <Card key={company.id} size="3">
-            <Flex gap="4" align="start">
-              {/* Company Logo */}
-              {company.logo_url && (
-                <Avatar
-                  src={company.logo_url}
-                  fallback={company.name?.charAt(0) || "C"}
-                  size="5"
-                  radius="small"
-                />
-              )}
+          <Card key={company.id} size="3" asChild>
+            <Link
+              href={company.website || `https://${company.key}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                cursor: "pointer",
+              }}
+            >
+              <Flex gap="4" align="start">
+                {/* Company Logo */}
+                {company.logo_url && (
+                  <Avatar
+                    src={company.logo_url}
+                    fallback={company.name?.charAt(0) || "C"}
+                    size="5"
+                    radius="small"
+                  />
+                )}
 
-              <Flex direction="column" gap="2" style={{ flex: 1 }}>
-                {/* Company Name and Website */}
-                <Flex justify="between" align="start">
-                  <Heading size="5">{company.name}</Heading>
-                  {company.website && (
-                    <Link
-                      href={company.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                <Flex direction="column" gap="2" style={{ flex: 1 }}>
+                  {/* Company Name and Website */}
+                  <Flex justify="between" align="start">
+                    <Heading size="5">{company.name}</Heading>
+                    {company.website && (
                       <Button size="2" variant="soft">
                         Visit Website
                       </Button>
-                    </Link>
-                  )}
-                </Flex>
+                    )}
+                  </Flex>
 
                 {/* Company Key */}
                 {company.key && (
@@ -222,6 +226,7 @@ export function CompaniesList() {
                 )}
               </Flex>
             </Flex>
+            </Link>
           </Card>
         ))}
       </Flex>

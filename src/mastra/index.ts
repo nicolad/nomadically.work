@@ -36,6 +36,7 @@ import {
   rerunJobClassifierTool,
   diffSnapshotsTool,
 } from "@/workspace/ops-skills";
+import { mastraAuth } from "./auth";
 
 // Import scheduled workflows
 import {
@@ -168,6 +169,7 @@ export const mastra = new Mastra({
   },
   server: {
     host: "0.0.0.0",
+    auth: mastraAuth,
     apiRoutes: [
       {
         path: "/api/inngest",

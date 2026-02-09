@@ -3,10 +3,12 @@
 import { Button, Flex } from "@radix-ui/themes";
 import { GearIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
-import { useAuth, useSignOut } from "@/auth/hooks";
+import { useSession } from "@/lib/auth-client";
+import { useSignOut } from "@/auth/hooks";
 
 export function AuthHeader() {
-  const { user, loading } = useAuth();
+  const { data: session, isPending: loading } = useSession();
+  const user = session?.user;
   const { signOut } = useSignOut();
 
   if (loading) {

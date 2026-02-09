@@ -32,6 +32,7 @@ export default function SignInPage() {
         {
           onSuccess: () => {
             router.push("/");
+            router.refresh();
           },
           onError: (err) => {
             setError(err.error?.message || "Sign in failed");

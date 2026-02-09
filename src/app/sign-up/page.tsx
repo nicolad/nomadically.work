@@ -45,6 +45,7 @@ export default function SignUpPage() {
         {
           onSuccess: () => {
             router.push("/");
+            router.refresh();
           },
           onError: (err) => {
             setError(err.error?.message || "Sign up failed");

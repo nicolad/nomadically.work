@@ -30,7 +30,37 @@ export function getTursoClient(): Client {
   });
 }
 
-const turso = getTursoClient();
+// Lazy-load turso client to defer error until first use
+let tursoInstance: Client | null = null;
 
-export const db = drizzle(turso, { schema });
-export { turso, type Client };
+export function getTurso(): Client {
+  if (!tursoInstance) {
+    tursoInstance = getTursoClient();
+  }
+  return tursoInstance;
+}
+
+// Only create drizzle instance if we're in a server environment
+let dbInstance: ReturnType<typeof drizzle> | null = null;
+
+export function getDb() {
+  if (!dbInstance) {
+    dbInstance = drizzle(getTurso(), { schema });
+  }
+  return dbInstance;
+}
+
+// Lazy getters for backward compatibility - avoid eager initialization during build
+export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(target, prop) {
+    return getDb()[prop as keyof ReturnType<typeof drizzle>];
+  },
+});
+
+export const turso = new Proxy({} as Client, {
+  get(target, prop) {
+    return getTurso()[prop as keyof Client];
+  },
+});
+
+export type { Client };

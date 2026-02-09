@@ -6,6 +6,3 @@
  */
 
 export { auth, default } from "../../auth.config";
-
-
-

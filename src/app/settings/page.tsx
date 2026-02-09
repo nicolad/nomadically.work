@@ -23,7 +23,7 @@ import {
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/auth/hooks";
 import {
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
@@ -50,7 +50,7 @@ interface ToastState {
 
 function SettingsPageContent() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { user, loading } = useAuth();
 
   const [locationChips, setLocationChips] = useState<string[]>([]);
   const [skillChips, setSkillChips] = useState<string[]>(["React"]);
@@ -81,7 +81,11 @@ function SettingsPageContent() {
   const skillInputRef = useRef<HTMLInputElement>(null);
   const excludedCompaniesInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, loading, refetch } = useGetUserSettingsQuery({
+  const {
+    data,
+    loading: settingsLoading,
+    refetch,
+  } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
     skip: !user?.id,
   });
@@ -278,7 +282,7 @@ function SettingsPageContent() {
     router.push("/");
   };
 
-  if (!isLoaded || loading) {
+  if (loading || settingsLoading) {
     return (
       <Container size="3" px="8" py="6">
         <Text>Loading...</Text>

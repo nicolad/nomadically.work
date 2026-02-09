@@ -3,9 +3,9 @@ import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { NextRequest } from "next/server";
 import { schema } from "@/apollo/schema";
 import { GraphQLContext } from "@/apollo/context";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const apolloServer = new ApolloServer<GraphQLContext>({ schema });
 
@@ -14,17 +14,13 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
   {
     context: async (req) => {
       try {
-        const { userId } = await auth();
-        
+        const { userId, user } = await auth();
+
         if (!userId) {
           return { userId: null, userEmail: null };
         }
 
-        const client = await clerkClient();
-        const user = await client.users.getUser(userId);
-        const userEmail = user.emailAddresses.find(
-          (email) => email.id === user.primaryEmailAddressId
-        )?.emailAddress;
+        const userEmail = user?.email || null;
 
         return { userId, userEmail: userEmail || null };
       } catch (error) {

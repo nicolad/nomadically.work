@@ -25,7 +25,7 @@ import {
 import { TrashIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/auth/hooks";
 import { classifyJob } from "@/mastra/actions";
 import type { JobClassificationResponse } from "@/mastra/actions";
 import { ADMIN_EMAIL } from "@/lib/constants";
@@ -98,7 +98,7 @@ function JobPageContent() {
   const id = params.id as string;
   const company = searchParams.get("company");
   const source = searchParams.get("source");
-  const { user } = useUser();
+  const { user } = useAuth();
 
   const [classifying, setClassifying] = useState(false);
   const [classification, setClassification] =
@@ -123,7 +123,7 @@ function JobPageContent() {
   const [updateSettings] = useUpdateUserSettingsMutation();
   const [deleteJobMutation] = useDeleteJobMutation();
 
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   const handleDeleteJob = async () => {
     if (!data?.job?.id) return;

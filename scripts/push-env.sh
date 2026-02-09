@@ -15,8 +15,10 @@ echo ""
 
 # Required environment variables
 declare -a env_vars=(
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-  "CLERK_SECRET_KEY"
+  "NEXT_PUBLIC_APP_URL"
+  "BETTER_AUTH_SECRET"
+  "BETTER_AUTH_URL"
+  "AUTH_SECRET"
   "TURSO_DB_URL"
   "TURSO_DB_AUTH_TOKEN"
   "DEEPSEEK_API_KEY"

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { getTurso, type Client } from "@/db";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { z } from "zod";
@@ -92,7 +92,7 @@ function jsonResponse(data: unknown, init?: ResponseInit) {
  * Authenticate the request
  * Supports two methods:
  * 1. API key via X-API-Key header (for external apps)
- * 2. Clerk authentication with admin email (for web browser access)
+ * 2. Better Auth authentication with admin email (for web browser access)
  *
  * @returns NextResponse if authentication fails, otherwise returns undefined
  */
@@ -128,7 +128,7 @@ async function authenticateRequest(
     return; // API key is valid
   }
 
-  // Method 2: Check Clerk auth (for web browser access)
+  // Method 2: Check Better Auth (for web browser access)
   const { userId, sessionClaims } = await auth();
 
   if (!userId) {
@@ -136,7 +136,7 @@ async function authenticateRequest(
       {
         success: false,
         error:
-          "Unauthorized: Provide X-API-Key header or sign in with Clerk account",
+          "Unauthorized: Provide X-API-Key header or sign in with Better Auth",
       },
       { status: 401 },
     );
@@ -370,5 +370,5 @@ export async function POST(request: NextRequest) {
  * Setup:
  * 1. Set API_COMPANIES_BULK_IMPORT_KEY in your environment
  * 2. Include X-API-Key header with your API key in requests
- * 3. Alternatively, if no X-API-Key is provided, Clerk auth will be used (for web access)
+ * 3. Alternatively, if no X-API-Key is provided, Better Auth will be used (for web access)
  */

@@ -108,7 +108,7 @@ export type NewAshbyBoard = typeof ashbyBoards.$inferInsert;
 
 export const userSettings = sqliteTable("user_settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  user_id: text("user_id").notNull().unique(), // Clerk user ID
+  user_id: text("user_id").notNull().unique(), // Better Auth user ID
   email_notifications: integer("email_notifications", { mode: "boolean" })
     .notNull()
     .default(sql`1`),

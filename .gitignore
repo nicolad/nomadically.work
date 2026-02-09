@@ -49,8 +49,7 @@ next-env.d.ts
 .wrangler/
 .env*.local
 
-# clerk configuration (can include secrets)
-/.clerk/
+# better-auth configuration (can include secrets)
 
 # script logs
 scripts/*.log

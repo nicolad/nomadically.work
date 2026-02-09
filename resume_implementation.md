@@ -1,0 +1,10 @@
+- Built a Next.js 16 + React 19 job discovery app with Radix UI theming, Clerk auth, and a branded layout for EU-focused remote jobs.
+- Implemented a GraphQL API (Apollo Server + schema/resolvers) with typed client hooks and polling-based data refresh.
+- Delivered a searchable, infinite-scroll jobs list with server-side pagination, inline filtering, and admin-only delete actions.
+- Designed a Turso/SQLite data model in Drizzle for jobs, companies, skill tags, ATS boards, user settings, and evidence-based company snapshots.
+- Built Cloudflare Workers for job ingestion (validation + upsert + queueing) and remote-EU classification using LLM-backed JSON outputs with retry logic.
+- Added a daily discovery cron that uses Brave Search queries to find new ATS boards and normalize vendor-specific endpoints.
+- Implemented Mastra workspaces with safety-gated tools and hybrid search (BM25 + vector embeddings) backed by Cloudflare Workers AI.
+- Created ops-focused AI agents (admin assistant + SQL agent) for evidence inspection, reruns, and read-only analytics queries.
+- Developed Common Crawl extraction workflows that parse JSON-LD/meta/DOM signals, generate evidence-backed facts, and build golden records.
+- Added event-driven Inngest functions for user lifecycle events, preference inference, feedback capture, and notification hooks.

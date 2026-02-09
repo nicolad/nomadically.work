@@ -23,8 +23,6 @@ import { z } from "zod";
 import { parseHTML } from "linkedom";
 import { createHash } from "node:crypto";
 import { gunzipSync, brotliDecompressSync, inflateSync } from "node:zlib";
-import { createTool } from "@mastra/core/tools";
-import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { db } from "../src/db/index.ts";
 import { companies, companySnapshots, companyFacts } from "../src/db/schema.ts";
 import { eq, sql } from "drizzle-orm";
@@ -181,6 +179,7 @@ class FetchClient {
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
+      let releasedEarly = false;
 
       const combinedSignal = signal
         ? this.combineSignals([signal, controller.signal])
@@ -197,6 +196,9 @@ class FetchClient {
           (response.status >= 500 || response.status === 429) &&
           attempt < retries
         ) {
+          clearTimeout(timeoutId);
+          this.releaseSlot(host);
+          releasedEarly = true;
           await this.backoff(attempt);
           continue;
         }
@@ -205,12 +207,15 @@ class FetchClient {
       } catch (error) {
         lastError = error as Error;
         if (attempt < retries) {
+          clearTimeout(timeoutId);
+          this.releaseSlot(host);
+          releasedEarly = true;
           await this.backoff(attempt);
           continue;
         }
       } finally {
         clearTimeout(timeoutId);
-        this.releaseSlot(host);
+        if (!releasedEarly) this.releaseSlot(host);
       }
     }
 
@@ -849,9 +854,7 @@ async function getRecentCrawlIds(limit: number = 6): Promise<string[]> {
 
     // Provide helpful diagnostic info
     if (error?.cause?.code === "ECONNREFUSED") {
-      log(
-        "  📍 Connection refused - possible causes:",
-      );
+      log("  📍 Connection refused - possible causes:");
       log("     • Firewall or proxy blocking the connection");
       log("     • Common Crawl API temporarily down");
       log("     • Network connectivity issue");
@@ -861,9 +864,7 @@ async function getRecentCrawlIds(limit: number = 6): Promise<string[]> {
         "  ⏱️  Connection timeout - Common Crawl may be slow or temporarily unavailable",
       );
     } else if (error?.cause?.code === "ENOTFOUND") {
-      log(
-        "  🌐 DNS resolution failed - check your internet connection",
-      );
+      log("  🌐 DNS resolution failed - check your internet connection");
     } else if (error?.cause?.code) {
       log(`  ℹ️  Network error code: ${error.cause.code}`);
     }

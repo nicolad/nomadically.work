@@ -207,6 +207,149 @@ function CollapsibleList({
   );
 }
 
+function formatScore(score?: number | null): string {
+  if (typeof score !== "number" || !Number.isFinite(score)) return "—";
+  return score.toFixed(2);
+}
+
+type KeyFactsCardProps = {
+  canonicalDomain?: string | null;
+  score?: number | null;
+  careerPagesCount?: number | null;
+};
+
+function KeyFactsCard({
+  canonicalDomain,
+  score,
+  careerPagesCount,
+}: KeyFactsCardProps) {
+  const domainHref = useMemo(
+    () => coerceExternalUrl(canonicalDomain),
+    [canonicalDomain]
+  );
+  const domainLabel = useMemo(
+    () => prettyUrl(canonicalDomain),
+    [canonicalDomain]
+  );
+
+  const rows: Array<{
+    label: string;
+    value: React.ReactNode;
+  }> = [
+    {
+      label: "Domain",
+      value: canonicalDomain ? (
+        domainHref ? (
+          <RadixLink
+            href={domainHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="gray"
+            title={domainHref}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {domainLabel}
+            <ExternalLinkIcon />
+          </RadixLink>
+        ) : (
+          <Text
+            size="2"
+            style={{
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={domainLabel}
+          >
+            {domainLabel}
+          </Text>
+        )
+      ) : (
+        <Text size="2">—</Text>
+      ),
+    },
+    {
+      label: "Score",
+      value: (
+        <Text size="2" style={{ fontVariantNumeric: "tabular-nums" }}>
+          {formatScore(score)}
+        </Text>
+      ),
+    },
+    {
+      label: "Career pages",
+      value: (
+        <Text size="2" style={{ fontVariantNumeric: "tabular-nums" }}>
+          {typeof careerPagesCount === "number" && Number.isFinite(careerPagesCount)
+            ? careerPagesCount
+            : 0}
+        </Text>
+      ),
+    },
+  ];
+
+  return (
+    <Card>
+      {/* tighter padding to reduce "empty space" */}
+      <Box p="3">
+        <Text
+          size="1"
+          color="gray"
+          style={{
+            fontWeight: 600,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
+          Key facts
+        </Text>
+
+        <Box mt="3">
+          {rows.map((row, idx) => (
+            <Box key={row.label}>
+              <Flex
+                direction={{ initial: "column", sm: "row" }}
+                align={{ initial: "start", sm: "center" }}
+                justify="between"
+                gap="1"
+                style={{ minWidth: 0, padding: "6px 0" }}
+              >
+                <Text size="1" color="gray">
+                  {row.label}
+                </Text>
+
+                {/* right-aligned value, ellipsis-safe */}
+                <Box
+                  style={{
+                    minWidth: 0,
+                    maxWidth: "100%",
+                    textAlign: "right",
+                  }}
+                >
+                  {row.value}
+                </Box>
+              </Flex>
+
+              {idx < rows.length - 1 ? (
+                <Separator size="4" my="1" />
+              ) : null}
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    </Card>
+  );
+}
+
 export function CompanyDetail({ companyKey }: Props) {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -449,6 +592,12 @@ export function CompanyDetail({ companyKey }: Props) {
           {/* Right: smaller/medium cards */}
           <Box style={{ flex: 1, minWidth: 0 }}>
             <Flex direction="column" gap="4">
+              <KeyFactsCard
+                canonicalDomain={company.canonical_domain}
+                score={company.score}
+                careerPagesCount={company.ats_boards?.length ?? 0}
+              />
+
               {company.industries?.length ? (
                 <SectionCard title="Industries">
                   <CollapsibleChips

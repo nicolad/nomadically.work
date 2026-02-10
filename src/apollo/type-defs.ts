@@ -54,6 +54,43 @@ export const typeDefs = gql`
     UNKNOWN
   }
 
+  enum PromptType {
+    TEXT
+    CHAT
+  }
+
+  type ChatMessage {
+    role: String!
+    content: String!
+  }
+
+  type PromptConfig {
+    temperature: Float
+    max_tokens: Int
+    top_p: Float
+    model: String
+  }
+
+  type Prompt {
+    name: String!
+    version: Int
+    type: PromptType!
+    prompt: String
+    chatMessages: [ChatMessage!]
+    config: PromptConfig
+    labels: [String!]
+    tags: [String!]
+    createdAt: String
+    updatedAt: String
+  }
+
+  type RegisteredPrompt {
+    name: String!
+    fallbackText: String!
+    description: String!
+    category: String!
+  }
+
   # Evidence / Provenance
   type WarcPointer {
     filename: String!
@@ -360,6 +397,10 @@ export const typeDefs = gql`
 
     textToSql(question: String!): TextToSqlResult!
     executeSql(sql: String!): TextToSqlResult!
+
+    # Prompt Management
+    prompt(name: String!, version: Int): Prompt
+    prompts: [RegisteredPrompt!]!
   }
 
   type Mutation {

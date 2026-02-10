@@ -68,6 +68,12 @@ export enum AtsVendor {
   Workable = 'WORKABLE'
 }
 
+export type ChatMessage = {
+  __typename?: 'ChatMessage';
+  content: Scalars['String']['output'];
+  role: Scalars['String']['output'];
+};
+
 export type CompaniesResponse = {
   __typename?: 'CompaniesResponse';
   companies: Array<Company>;
@@ -370,6 +376,33 @@ export type MutationUpsert_Company_Ats_BoardsArgs = {
   company_id: Scalars['Int']['input'];
 };
 
+export type Prompt = {
+  __typename?: 'Prompt';
+  chatMessages?: Maybe<Array<ChatMessage>>;
+  config?: Maybe<PromptConfig>;
+  createdAt?: Maybe<Scalars['String']['output']>;
+  labels?: Maybe<Array<Scalars['String']['output']>>;
+  name: Scalars['String']['output'];
+  prompt?: Maybe<Scalars['String']['output']>;
+  tags?: Maybe<Array<Scalars['String']['output']>>;
+  type: PromptType;
+  updatedAt?: Maybe<Scalars['String']['output']>;
+  version?: Maybe<Scalars['Int']['output']>;
+};
+
+export type PromptConfig = {
+  __typename?: 'PromptConfig';
+  max_tokens?: Maybe<Scalars['Int']['output']>;
+  model?: Maybe<Scalars['String']['output']>;
+  temperature?: Maybe<Scalars['Float']['output']>;
+  top_p?: Maybe<Scalars['Float']['output']>;
+};
+
+export enum PromptType {
+  Chat = 'CHAT',
+  Text = 'TEXT'
+}
+
 export type Query = {
   __typename?: 'Query';
   companies: CompaniesResponse;
@@ -380,6 +413,8 @@ export type Query = {
   executeSql: TextToSqlResult;
   job?: Maybe<Job>;
   jobs: JobsResponse;
+  prompt?: Maybe<Prompt>;
+  prompts: Array<RegisteredPrompt>;
   textToSql: TextToSqlResult;
   userSettings?: Maybe<UserSettings>;
 };
@@ -439,6 +474,12 @@ export type QueryJobsArgs = {
 };
 
 
+export type QueryPromptArgs = {
+  name: Scalars['String']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryTextToSqlArgs = {
   question: Scalars['String']['input'];
 };
@@ -446,6 +487,14 @@ export type QueryTextToSqlArgs = {
 
 export type QueryUserSettingsArgs = {
   userId: Scalars['String']['input'];
+};
+
+export type RegisteredPrompt = {
+  __typename?: 'RegisteredPrompt';
+  category: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  fallbackText: Scalars['String']['output'];
+  name: Scalars['String']['output'];
 };
 
 export enum SourceType {

@@ -1,9 +1,16 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, atsBoards } from "@/db/schema";
+import { companies, atsBoards, companySnapshots } from "@/db/schema";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
 import { extractCompanyData } from "@/browser-rendering/company-extractor";
+import type {
+  EnhanceCompanyArgs,
+  EnhanceCompanyResponse,
+  CompanyUpdateData,
+  VendorMap,
+  BoardTypeMap,
+} from "./types";
 
 /**
  * Enhanced company data mutation resolver
@@ -11,9 +18,9 @@ import { extractCompanyData } from "@/browser-rendering/company-extractor";
  */
 export async function enhanceCompany(
   _parent: any,
-  args: { id?: number; key?: string },
+  args: EnhanceCompanyArgs,
   context: GraphQLContext,
-) {
+): Promise<EnhanceCompanyResponse> {
   try {
     if (!context.userId) {
       throw new Error("Unauthorized");
@@ -66,7 +73,7 @@ export async function enhanceCompany(
     );
 
     // Update company with extracted data
-    const updateData: any = {
+    const updateData: CompanyUpdateData = {
       updated_at: new Date().toISOString(),
     };
 
@@ -129,7 +136,7 @@ export async function enhanceCompany(
     if (extractedData.ats_boards && extractedData.ats_boards.length > 0) {
       for (const board of extractedData.ats_boards) {
         // Map vendor to enum values
-        const vendorMap: Record<string, string> = {
+        const vendorMap: VendorMap = {
           GREENHOUSE: "GREENHOUSE",
           LEVER: "LEVER",
           WORKABLE: "WORKABLE",
@@ -147,7 +154,7 @@ export async function enhanceCompany(
         const mappedVendor = vendorMap[vendor] || "OTHER";
 
         // Map board_type to enum values
-        const boardTypeMap: Record<string, string> = {
+        const boardTypeMap: BoardTypeMap = {
           ATS: "BOARD_API",
           CAREERS_PAGE: "JOBS_PAGE",
           JOBS_BOARD: "JOBS_PAGE",
@@ -202,6 +209,30 @@ export async function enhanceCompany(
         }
       }
     }
+
+    // Save extraction snapshot for audit trail
+    const snapshotData = {
+      company_id: company.id,
+      source_url: company.website,
+      fetched_at: new Date().toISOString(),
+      http_status: extractedData.evidence.http_status || null,
+      mime: extractedData.evidence.mime || null,
+      content_hash: extractedData.evidence.content_hash || null,
+      text_sample: extractedData.company.description?.substring(0, 500) || null,
+      jsonld: null,
+      extracted: JSON.stringify(extractedData), // Full extraction results
+      source_type: "LIVE_FETCH",
+      method: "LLM",
+      extractor_version: "deepseek-1.0",
+      crawl_id: extractedData.evidence.crawl_id || null,
+      capture_timestamp: extractedData.evidence.capture_timestamp || null,
+      warc_filename: extractedData.evidence.warc?.filename || null,
+      warc_offset: extractedData.evidence.warc?.offset || null,
+      warc_length: extractedData.evidence.warc?.length || null,
+      warc_digest: extractedData.evidence.warc?.digest || null,
+    };
+
+    await db.insert(companySnapshots).values(snapshotData);
 
     return {
       success: true,

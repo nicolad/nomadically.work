@@ -1,14 +1,12 @@
 import Cloudflare from "cloudflare";
 import type { ExtractionResult } from "./types";
-import { extractCompanyDataFallback } from "./extractor-fallback";
 
 /**
- * Extract company data using DeepSeek via Cloudflare Workers AI
- * Falls back to direct DeepSeek API if Browser Rendering is not available
+ * Extract company data using DeepSeek via Cloudflare Browser Rendering
  * 
  * Requirements:
  * - CLOUDFLARE_BROWSER_RENDERING_KEY (required)
- * - CLOUDFLARE_ACCOUNT_ID
+ * - CLOUDFLARE_ACCOUNT_ID (required)
  * - DEEPSEEK_API_KEY (required)
  * 
  * Setup guide: See docs/CREATE_CLOUDFLARE_TOKEN.md
@@ -129,7 +127,10 @@ Extract from: ${targetUrl}
           authorization: `Bearer ${deepseekKey}`,
         },
       ],
-      gotoOptions: { waitUntil: "networkidle0" },
+      gotoOptions: { 
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      },
     });
 
     // Cloudflare Browser Rendering JSON endpoint returns the extracted data directly
@@ -152,21 +153,7 @@ Extract from: ${targetUrl}
       console.error("   Response:", JSON.stringify(error.response, null, 2));
     }
     
-    // Fall back to direct DeepSeek API if Browser Rendering is not available or unsupported
-    if (error.status === 401 || error.status === 403 || error.status === 422) {
-      console.warn(
-        "⚠️  Cloudflare Browser Rendering not available (missing permissions, not enabled, or unsupported format)."
-      );
-      console.warn("   Falling back to direct DeepSeek API...");
-      console.warn(
-        "   To use Browser Rendering, see: docs/CREATE_CLOUDFLARE_TOKEN.md"
-      );
-
-      // Use fallback extractor
-      return await extractCompanyDataFallback(targetUrl);
-    }
-
-    // Re-throw other errors
+    // Throw error - no fallback
     throw error;
   }
 }

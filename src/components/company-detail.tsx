@@ -1,30 +1,35 @@
 "use client";
 
+import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
-import { useGetCompanyQuery, useEnhanceCompanyMutation } from "@/__generated__/hooks";
+import {
+  useGetCompanyQuery,
+  useEnhanceCompanyMutation,
+} from "@/__generated__/hooks";
 import { useAuth } from "@/auth/hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import {
-  Container,
-  Heading,
-  Text,
-  Flex,
   Avatar,
   Badge,
-  Card,
   Box,
-  Grid,
+  Button,
+  Callout,
+  Card,
+  Container,
+  Flex,
+  Heading,
   Link as RadixLink,
   Separator,
   Strong,
-  Callout,
-  Button,
+  Text,
 } from "@radix-ui/themes";
 import {
   ExternalLinkIcon,
-  InfoCircledIcon,
   GlobeIcon,
+  InfoCircledIcon,
   MagicWandIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from "@radix-ui/react-icons";
 
 type Props = {
@@ -35,24 +40,171 @@ function coerceExternalUrl(raw?: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
-
-  // Accept http(s) as-is, otherwise prefix with https://
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed.replace(/^\/+/, "")}`;
 }
 
 function prettyUrl(raw?: string | null): string {
   if (!raw) return "";
-  return raw
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/\/+$/g, "");
+  return raw.trim().replace(/^https?:\/\//i, "").replace(/\/+$/g, "");
 }
 
 function initialsFromName(name?: string | null): string {
   const safe = (name ?? "").trim();
   if (!safe) return "CO";
-  return safe.slice(0, 2).toUpperCase();
+  const parts = safe.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
+function SectionCard({
+  title,
+  children,
+  right,
+}: {
+  title: string;
+  children: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <Box p="4">
+        <Flex align="center" justify="between" gap="3">
+          <Text
+            size="2"
+            color="gray"
+            style={{ fontWeight: 600, letterSpacing: 0.2 }}
+          >
+            {title}
+          </Text>
+          {right}
+        </Flex>
+        <Box mt="3">{children}</Box>
+      </Box>
+    </Card>
+  );
+}
+
+function Chip({ children, title }: { children: React.ReactNode; title?: string }) {
+  return (
+    <Badge
+      color="gray"
+      variant="surface"
+      title={title}
+      style={{
+        maxWidth: "100%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </Badge>
+  );
+}
+
+function CollapsibleChips({
+  items,
+  visibleCount = 8,
+}: {
+  items: string[];
+  visibleCount?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const normalized = useMemo(
+    () => items.map((x) => x.trim()).filter(Boolean),
+    [items]
+  );
+
+  const canCollapse = normalized.length > visibleCount;
+  const shown = expanded ? normalized : normalized.slice(0, visibleCount);
+
+  return (
+    <Box>
+      <Flex gap="2" wrap="wrap">
+        {shown.map((item) => (
+          <Chip key={item} title={item}>
+            {item}
+          </Chip>
+        ))}
+      </Flex>
+
+      {canCollapse && (
+        <Box mt="3">
+          <Button
+            type="button"
+            size="2"
+            variant="ghost"
+            color="gray"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? (
+              <>
+                <ChevronUpIcon /> Show less
+              </>
+            ) : (
+              <>
+                <ChevronDownIcon /> Show more ({normalized.length - visibleCount})
+              </>
+            )}
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function CollapsibleList({
+  items,
+  visibleCount = 7,
+}: {
+  items: string[];
+  visibleCount?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const normalized = useMemo(
+    () => items.map((x) => x.trim()).filter(Boolean),
+    [items]
+  );
+
+  const canCollapse = normalized.length > visibleCount;
+  const shown = expanded ? normalized : normalized.slice(0, visibleCount);
+
+  return (
+    <Box>
+      <Flex direction="column" gap="2">
+        {shown.map((item) => (
+          <Text key={item} size="2" color="gray">
+            • {item}
+          </Text>
+        ))}
+      </Flex>
+
+      {canCollapse && (
+        <Box mt="3">
+          <Button
+            type="button"
+            size="2"
+            variant="ghost"
+            color="gray"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? (
+              <>
+                <ChevronUpIcon /> Show less
+              </>
+            ) : (
+              <>
+                <ChevronDownIcon /> Show more ({normalized.length - visibleCount})
+              </>
+            )}
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
 }
 
 export function CompanyDetail({ companyKey }: Props) {
@@ -64,7 +216,6 @@ export function CompanyDetail({ companyKey }: Props) {
 
   const { loading, error, data, refetch } = useGetCompanyQuery({
     variables: { key: companyKey },
-    // If you use Apollo, this helps ensure you see fresh data after refetch
     fetchPolicy: "cache-and-network",
   });
 
@@ -82,8 +233,19 @@ export function CompanyDetail({ companyKey }: Props) {
 
   const company = data?.company ?? null;
 
-  const websiteHref = useMemo(() => coerceExternalUrl(company?.website), [company?.website]);
-  const websiteLabel = useMemo(() => prettyUrl(company?.website), [company?.website]);
+  const websiteHref = useMemo(
+    () => coerceExternalUrl(company?.website),
+    [company?.website]
+  );
+  const websiteLabel = useMemo(
+    () => prettyUrl(company?.website),
+    [company?.website]
+  );
+
+  const scoreText = useMemo(() => {
+    const v = company?.score;
+    return typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "—";
+  }, [company?.score]);
 
   const handleEnhance = useCallback(async () => {
     if (!company) return;
@@ -93,28 +255,24 @@ export function CompanyDetail({ companyKey }: Props) {
 
     try {
       await enhanceCompany({
-        variables: {
-          id: company.id,
-          key: company.key,
-        },
+        variables: { id: company.id, key: company.key },
       });
     } catch (e) {
-      // onError handles it; keep this as a last-resort guard
       console.error("Enhancement error:", e);
     }
   }, [company, enhanceCompany]);
 
   if (loading) {
     return (
-      <Container size="4" p={{ initial: "4", md: "8" }}>
-        <Text>Loading company details…</Text>
+      <Container size="3" p={{ initial: "4", md: "6" }}>
+        <Text color="gray">Loading company details…</Text>
       </Container>
     );
   }
 
   if (error) {
     return (
-      <Container size="4" p={{ initial: "4", md: "8" }}>
+      <Container size="3" p={{ initial: "4", md: "6" }}>
         <Callout.Root color="red">
           <Callout.Icon>
             <InfoCircledIcon />
@@ -129,7 +287,7 @@ export function CompanyDetail({ companyKey }: Props) {
 
   if (!company) {
     return (
-      <Container size="4" p={{ initial: "4", md: "8" }}>
+      <Container size="3" p={{ initial: "4", md: "6" }}>
         <Callout.Root>
           <Callout.Icon>
             <InfoCircledIcon />
@@ -140,14 +298,9 @@ export function CompanyDetail({ companyKey }: Props) {
     );
   }
 
-  const scoreText =
-    typeof company.score === "number" && Number.isFinite(company.score)
-      ? company.score.toFixed(2)
-      : "—";
-
   return (
-    <Container size="4" p={{ initial: "4", md: "8" }}>
-      <Flex direction="column" gap="6">
+    <Container size="3" p={{ initial: "4", md: "6" }}>
+      <Flex direction="column" gap="5">
         {/* Alerts */}
         {enhanceError && (
           <Callout.Root color="red">
@@ -176,179 +329,181 @@ export function CompanyDetail({ companyKey }: Props) {
           align={{ initial: "start", sm: "center" }}
           justify="between"
         >
-          <Flex direction="row" gap="4" align="start" style={{ flex: 1, minWidth: 0 }}>
+          <Flex gap="4" align="start" style={{ flex: 1, minWidth: 0 }}>
             <Avatar
               size="8"
               src={company.logo_url || undefined}
               fallback={initialsFromName(company.name)}
-              radius="medium"
+              radius="large"
             />
 
-            <Flex direction="column" gap="2" style={{ flex: 1, minWidth: 0 }}>
+            <Box style={{ flex: 1, minWidth: 0 }}>
               <Heading size="8" style={{ lineHeight: 1.1 }}>
                 {company.name}
               </Heading>
 
-              {websiteHref && (
-                <Flex align="center" gap="2" style={{ minWidth: 0 }}>
-                  <GlobeIcon />
-                  <RadixLink
-                    href={websiteHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    color="blue"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      minWidth: 0,
-                      maxWidth: "100%",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={websiteHref}
-                  >
-                    {websiteLabel || websiteHref}
-                    <ExternalLinkIcon />
-                  </RadixLink>
-                </Flex>
-              )}
+              <Flex align="center" gap="3" mt="2" wrap="wrap">
+                {websiteHref && (
+                  <Flex align="center" gap="2" style={{ minWidth: 0 }}>
+                    <GlobeIcon />
+                    <RadixLink
+                      href={websiteHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="gray"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        minWidth: 0,
+                        maxWidth: "100%",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={websiteHref}
+                    >
+                      {websiteLabel || websiteHref}
+                      <ExternalLinkIcon />
+                    </RadixLink>
+                  </Flex>
+                )}
 
-              <Flex gap="2" wrap="wrap">
-                {company.category && (
-                  <Badge color="blue" variant="soft">
-                    {company.category}
-                  </Badge>
-                )}
-                {company.size && (
-                  <Badge color="gray" variant="soft">
-                    {company.size}
-                  </Badge>
-                )}
-                {company.location && (
-                  <Badge color="green" variant="soft">
-                    {company.location}
-                  </Badge>
-                )}
+                <Text size="2" color="gray">
+                  •
+                </Text>
+
+                <Text size="2" color="gray">
+                  Score <Strong>{scoreText}</Strong>
+                </Text>
+
+                <Text size="2" color="gray">
+                  •
+                </Text>
+
+                <Text size="2" color="gray">
+                  ATS <Strong>{company.ats_boards?.length ?? 0}</Strong>
+                </Text>
+
+                <Text size="2" color="gray">
+                  •
+                </Text>
+
+                <Text size="2" color="gray">
+                  Tags <Strong>{company.tags?.length ?? 0}</Strong>
+                </Text>
               </Flex>
-            </Flex>
+
+              <Flex gap="2" wrap="wrap" mt="3">
+                {company.category ? <Chip>{company.category}</Chip> : null}
+                {company.size ? <Chip>{company.size}</Chip> : null}
+                {company.location ? <Chip>{company.location}</Chip> : null}
+              </Flex>
+            </Box>
           </Flex>
 
-          {/* Admin action */}
           {isAdmin && (
-            <Flex justify="end">
-              <Button
-                onClick={handleEnhance}
-                disabled={isEnhancing}
-                variant="soft"
-                color="purple"
-              >
-                <MagicWandIcon />
-                {isEnhancing ? "Enhancing…" : "Enhance Company"}
-              </Button>
-            </Flex>
+            <Button
+              onClick={handleEnhance}
+              disabled={isEnhancing}
+              color="orange"
+              variant="solid"
+            >
+              <MagicWandIcon />
+              {isEnhancing ? "Enhancing…" : "Enhance"}
+            </Button>
           )}
         </Flex>
 
-        {/* About */}
-        {company.description && (
-          <Card>
-            <Box p="4">
-              <Heading size="5" mb="3">
-                About
-              </Heading>
-              <Text as="p" size="3" color="gray" style={{ whiteSpace: "pre-wrap" }}>
-                {company.description}
-              </Text>
-            </Box>
-          </Card>
-        )}
+        {/* Balanced 2/3 + 1/3 layout (no giant empty left column) */}
+        <Flex
+          direction={{ initial: "column", md: "row" }}
+          gap="4"
+          align="start"
+        >
+          {/* Left: put the taller content here to match sidebar height */}
+          <Box style={{ flex: 2, minWidth: 0 }}>
+            <Flex direction="column" gap="4">
+              {company.description ? (
+                <SectionCard title="About">
+                  <Text
+                    as="p"
+                    size="3"
+                    color="gray"
+                    style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+                  >
+                    {company.description}
+                  </Text>
+                </SectionCard>
+              ) : null}
 
-        {/* Industry & Services */}
-        <Grid columns={{ initial: "1", md: "2" }} gap="4">
-          {company.industries?.length ? (
-            <Card>
-              <Box p="4">
-                <Heading size="4" mb="3">
-                  Industries
-                </Heading>
-                <Flex gap="2" wrap="wrap">
-                  {company.industries.map((industry) => (
-                    <Badge key={industry} color="purple" variant="soft">
-                      {industry}
-                    </Badge>
-                  ))}
-                </Flex>
-              </Box>
-            </Card>
-          ) : null}
+              {/* Move Services left to reduce "empty space under About" */}
+              {company.services?.length ? (
+                <SectionCard title="Services">
+                  <CollapsibleList items={company.services} visibleCount={7} />
+                </SectionCard>
+              ) : null}
+            </Flex>
+          </Box>
 
-          {company.services?.length ? (
-            <Card>
-              <Box p="4">
-                <Heading size="4" mb="3">
-                  Services
-                </Heading>
-                <Flex gap="2" wrap="wrap">
-                  {company.services.map((service) => (
-                    <Badge key={service} color="orange" variant="soft">
-                      {service}
-                    </Badge>
-                  ))}
-                </Flex>
-              </Box>
-            </Card>
-          ) : null}
-        </Grid>
+          {/* Right: smaller/medium cards */}
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Flex direction="column" gap="4">
+              {company.industries?.length ? (
+                <SectionCard title="Industries">
+                  <CollapsibleChips
+                    items={company.industries}
+                    visibleCount={8}
+                  />
+                </SectionCard>
+              ) : null}
 
-        {/* Tags */}
-        {company.tags?.length ? (
-          <Card>
-            <Box p="4">
-              <Heading size="4" mb="3">
-                Tags
-              </Heading>
-              <Flex gap="2" wrap="wrap">
-                {company.tags.map((tag) => (
-                  <Badge key={tag} color="gray" variant="outline">
-                    {tag}
-                  </Badge>
-                ))}
-              </Flex>
-            </Box>
-          </Card>
-        ) : null}
+              {/* Keep Tags on the right: medium-height balances Industries */}
+              {company.tags?.length ? (
+                <SectionCard title="Tags">
+                  <CollapsibleChips items={company.tags} visibleCount={10} />
+                </SectionCard>
+              ) : null}
+            </Flex>
+          </Box>
+        </Flex>
 
-        {/* ATS Boards */}
+        {/* Full-width sections (prevents awkward column gaps) */}
         {company.ats_boards?.length ? (
-          <Card>
-            <Box p="4">
-              <Heading size="4" mb="3">
-                Career Pages ({company.ats_boards.length})
-              </Heading>
+          <SectionCard title={`Career pages (${company.ats_boards.length})`}>
+            <Flex direction="column">
+              {company.ats_boards.map((board, idx) => {
+                const confidence =
+                  typeof board.confidence === "number" &&
+                  Number.isFinite(board.confidence)
+                    ? Math.round(board.confidence * 100)
+                    : null;
 
-              <Flex direction="column" gap="3">
-                {company.ats_boards.map((board, idx) => {
-                  const confidence =
-                    typeof board.confidence === "number" && Number.isFinite(board.confidence)
-                      ? Math.round(board.confidence * 100)
-                      : null;
+                const boardHref = coerceExternalUrl(board.url) ?? board.url;
 
-                  const boardHref = coerceExternalUrl(board.url) ?? board.url;
-
-                  return (
-                    <Box key={board.id}>
-                      <Flex align="center" gap="2" wrap="wrap">
-                        <Badge color={board.is_active ? "green" : "gray"} variant="soft">
-                          {board.vendor}
-                        </Badge>
-                        <Badge color="blue" variant="outline">
-                          {board.board_type}
-                        </Badge>
-                        {confidence !== null && (
+                return (
+                  <Box key={board.id}>
+                    <Flex
+                      align="center"
+                      justify="between"
+                      gap="3"
+                      wrap="wrap"
+                    >
+                      <Flex gap="2" wrap="wrap" align="center">
+                        <Chip>{board.vendor}</Chip>
+                        <Chip>{board.board_type}</Chip>
+                        {confidence !== null ? (
                           <Badge color="gray" variant="outline">
                             {confidence}% confidence
+                          </Badge>
+                        ) : null}
+                        {board.is_active ? (
+                          <Badge color="green" variant="soft">
+                            active
+                          </Badge>
+                        ) : (
+                          <Badge color="gray" variant="soft">
+                            inactive
                           </Badge>
                         )}
                       </Flex>
@@ -357,8 +512,7 @@ export function CompanyDetail({ companyKey }: Props) {
                         href={boardHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        size="2"
-                        color="blue"
+                        color="gray"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
@@ -370,88 +524,34 @@ export function CompanyDetail({ companyKey }: Props) {
                         }}
                         title={boardHref}
                       >
-                        {board.url}
+                        {prettyUrl(boardHref)}
                         <ExternalLinkIcon />
                       </RadixLink>
+                    </Flex>
 
-                      {idx < company.ats_boards.length - 1 && (
-                        <Separator size="4" my="3" />
-                      )}
-                    </Box>
-                  );
-                })}
-              </Flex>
-            </Box>
-          </Card>
+                    {idx < company.ats_boards.length - 1 ? (
+                      <Separator size="4" my="3" />
+                    ) : null}
+                  </Box>
+                );
+              })}
+            </Flex>
+          </SectionCard>
         ) : null}
 
-        {/* Metadata */}
-        <Card>
-          <Box p="4">
-            <Heading size="4" mb="3">
-              Metadata
-            </Heading>
-
-            <Grid columns={{ initial: "1", sm: "2" }} gap="3">
-              <Box>
-                <Text size="2" color="gray">
-                  Score
-                </Text>
-                <Text size="3">
-                  <Strong>{scoreText}</Strong>
-                </Text>
-              </Box>
-
-              {company.canonical_domain ? (
-                <Box>
-                  <Text size="2" color="gray">
-                    Domain
-                  </Text>
-                  <Text size="3">
-                    <Strong>{company.canonical_domain}</Strong>
-                  </Text>
-                </Box>
-              ) : null}
-
-              <Box>
-                <Text size="2" color="gray">
-                  ATS Boards
-                </Text>
-                <Text size="3">
-                  <Strong>{company.ats_boards?.length ?? 0}</Strong>
-                </Text>
-              </Box>
-
-              <Box>
-                <Text size="2" color="gray">
-                  Tags
-                </Text>
-                <Text size="3">
-                  <Strong>{company.tags?.length ?? 0}</Strong>
-                </Text>
-              </Box>
-            </Grid>
-          </Box>
-        </Card>
-
-        {/* Score Reasons */}
         {company.score_reasons?.length ? (
-          <Card>
-            <Box p="4">
-              <Heading size="4" mb="3">
-                Score Breakdown
-              </Heading>
-              <Flex direction="column" gap="2">
-                {company.score_reasons.map((reason, idx) => (
-                  <Text key={`${idx}-${reason}`} size="2" color="gray">
-                    • {reason}
-                  </Text>
-                ))}
-              </Flex>
-            </Box>
-          </Card>
+          <SectionCard title="Score breakdown">
+            <Flex direction="column" gap="2">
+              {company.score_reasons.map((reason: string, idx: number) => (
+                <Text key={`${idx}-${reason}`} size="2" color="gray">
+                  • {reason}
+                </Text>
+              ))}
+            </Flex>
+          </SectionCard>
         ) : null}
       </Flex>
     </Container>
   );
 }
+

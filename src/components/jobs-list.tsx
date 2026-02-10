@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -107,7 +107,7 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
   });
 
   // Refetch when search filter changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (refetch) {
       refetch({
         search: searchFilter || undefined,

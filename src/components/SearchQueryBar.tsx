@@ -80,7 +80,7 @@ export function SearchQueryBar({
       </Flex>
 
       {mode === "search" ? (
-        <RegularSearchBar
+        <JobsSearchBar
           value={searchValue}
           onChange={handleSearchChange}
           onSubmit={handleSearchSubmit}

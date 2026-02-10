@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ApolloProvider, useApollo } from "@/apollo/client";
-import { Container } from "@radix-ui/themes";
-import { UnifiedQueryBar } from "./UnifiedQueryBar";
+import { Container, Box } from "@radix-ui/themes";
+import { SearchQueryBar } from "./SearchQueryBar";
 import { JobsList } from "./jobs-list";
 
 export function UnifiedJobsProvider() {
@@ -13,12 +13,16 @@ export function UnifiedJobsProvider() {
   return (
     <ApolloProvider client={apolloClient}>
       <Container size="4" py="6">
-        <UnifiedQueryBar
+        <SearchQueryBar
           onSearchQueryChange={(q) => setSearchFilter(q)}
           onSearchSubmit={(q) => setSearchFilter(q)}
+          onDrilldownToSearch={(q) => setSearchFilter(q)}
           sqlEndpoint="/api/text-to-sql"
-          jobsPanel={<JobsList searchFilter={searchFilter} />}
         />
+        
+        <Box mt="4">
+          <JobsList searchFilter={searchFilter} />
+        </Box>
       </Container>
     </ApolloProvider>
   );

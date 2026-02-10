@@ -21,7 +21,6 @@ import {
   Code,
   Table,
   Spinner,
-  Tabs,
 } from "@radix-ui/themes";
 import { Cross2Icon, CopyIcon, PlayIcon } from "@radix-ui/react-icons";
 import {
@@ -67,9 +66,6 @@ export function SqlQueryModal({
 
   const [question, setQuestion] = React.useState(defaultQuestion);
   const [rawSql, setRawSql] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState<"question" | "sql">(
-    "question",
-  );
   const [result, setResult] = React.useState<SqlResult | null>(null);
   const [copied, setCopied] = React.useState(false);
 
@@ -127,20 +123,18 @@ export function SqlQueryModal({
   }, [result?.sql]);
 
   const run = React.useCallback(async () => {
-    if (activeTab === "question") {
-      const q = question.trim();
-      if (!q) return;
+    // Prioritize raw SQL if present, otherwise use natural language question
+    const sql = rawSql.trim();
+    const q = question.trim();
 
-      setCopied(false);
-      await executeQuery({ variables: { question: q } });
-    } else {
-      const sql = rawSql.trim();
-      if (!sql) return;
-
+    if (sql) {
       setCopied(false);
       await executeSql({ variables: { sql } });
+    } else if (q) {
+      setCopied(false);
+      await executeQuery({ variables: { question: q } });
     }
-  }, [question, rawSql, activeTab, executeQuery, executeSql]);
+  }, [question, rawSql, executeQuery, executeSql]);
 
   // Run query with explicit question
   const runWithQuestion = React.useCallback(
@@ -173,24 +167,12 @@ export function SqlQueryModal({
     didAutoRunRef.current = false;
     setQuestion(defaultQuestion);
     setRawSql("");
-    setActiveTab("question");
     setCopied(false);
 
     requestAnimationFrame(() => {
       setTimeout(() => questionRef.current?.focus(), 0);
     });
   }, [open, defaultQuestion]);
-
-  // Focus when switching tabs
-  React.useEffect(() => {
-    requestAnimationFrame(() => {
-      if (activeTab === "question") {
-        questionRef.current?.focus();
-      } else {
-        sqlInputRef.current?.focus();
-      }
-    });
-  }, [activeTab]);
 
   // Auto-run once per open (if requested)
   React.useEffect(() => {
@@ -262,68 +244,54 @@ export function SqlQueryModal({
           </Flex>
         </Flex>
 
-        <Tabs.Root
-          value={activeTab}
-          onValueChange={(val) => setActiveTab(val as "question" | "sql")}
-          mt="4"
-        >
-          <Tabs.List>
-            <Tabs.Trigger value="question">Natural Language</Tabs.Trigger>
-            <Tabs.Trigger value="sql">Raw SQL</Tabs.Trigger>
-          </Tabs.List>
-
-          <Tabs.Content value="question" mt="4" key="question-tab">
+        <Box mt="4">
+          <Box mb="3">
+            <Text size="2" weight="medium" mb="2" as="div">
+              Natural Language Question
+            </Text>
             <TextArea
-              key="question-input"
               ref={questionRef}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="e.g. Top 10 companies hiring React in the last 14 days"
-              rows={4}
+              rows={3}
               style={{ width: "100%" }}
             />
-          </Tabs.Content>
+          </Box>
 
-          <Tabs.Content value="sql" mt="4" key="sql-tab">
+          <Box>
+            <Text size="2" weight="medium" mb="2" as="div">
+              Raw SQL Query
+            </Text>
             <TextArea
-              key="sql-input"
               ref={sqlInputRef}
               value={rawSql}
               onChange={(e) => setRawSql(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="SELECT * FROM jobs LIMIT 10;"
-              rows={4}
+              rows={3}
               style={{ width: "100%" }}
             />
-          </Tabs.Content>
-        </Tabs.Root>
+          </Box>
+        </Box>
 
         <Flex mt="3" gap="2" justify="between" wrap="wrap">
           <Flex gap="2" align="center">
             <Button
               onClick={() => void run()}
               disabled={
-                (activeTab === "question" && (loading || !question.trim())) ||
-                (activeTab === "sql" && (sqlLoading || !rawSql.trim()))
+                loading || sqlLoading || (!question.trim() && !rawSql.trim())
               }
             >
-              {(activeTab === "question" && loading) ||
-              (activeTab === "sql" && sqlLoading) ? (
-                <Spinner />
-              ) : (
-                <PlayIcon />
-              )}
+              {loading || sqlLoading ? <Spinner /> : <PlayIcon />}
               Run
             </Button>
 
             <Button
               variant="soft"
               onClick={clear}
-              disabled={
-                (activeTab === "question" && loading) ||
-                (activeTab === "sql" && sqlLoading)
-              }
+              disabled={loading || sqlLoading}
             >
               Clear
             </Button>
@@ -351,20 +319,18 @@ export function SqlQueryModal({
         <Box mt="4">
           {(error || sqlError) && (
             <Callout.Root color="red" role="alert">
-              <Callout.Text>
-                {activeTab === "question" ? error?.message : sqlError?.message}
-              </Callout.Text>
+              <Callout.Text>{error?.message || sqlError?.message}</Callout.Text>
             </Callout.Root>
           )}
 
-          {activeTab === "question" && !error && loading && (
+          {!error && loading && (
             <Flex gap="2" align="center">
               <Spinner />
               <Text>Generating and executing SQL…</Text>
             </Flex>
           )}
 
-          {activeTab === "sql" && !sqlError && sqlLoading && (
+          {!sqlError && sqlLoading && (
             <Flex gap="2" align="center">
               <Spinner />
               <Text>Executing SQL…</Text>

@@ -632,11 +632,6 @@ export type WarcPointerInput = {
   offset: Scalars['Int']['input'];
 };
 
-export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, fallbackText: string, description: string, category: string }> };
-
 export type DeleteJobMutationVariables = Exact<{
   id: Scalars['Int']['input'];
 }>;
@@ -817,6 +812,25 @@ export type CompanyAuditQueryVariables = Exact<{
 
 export type CompanyAuditQuery = { __typename?: 'Query', company?: { __typename?: 'Company', facts_count: number, snapshots_count: number, id: number, key: string, name: string, logo_url?: string | null, website?: string | null, description?: string | null, industry?: string | null, size?: string | null, location?: string | null, created_at: string, updated_at: string, canonical_domain?: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id?: string | null, last_seen_capture_timestamp?: string | null, last_seen_source_url?: string | null, facts: Array<{ __typename?: 'CompanyFact', id: number, company_id: number, field: string, value_json?: any | null, value_text?: string | null, normalized_value?: any | null, confidence: number, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id?: string | null, capture_timestamp?: string | null, observed_at: string, method: ExtractMethod, extractor_version?: string | null, http_status?: number | null, mime?: string | null, content_hash?: string | null, warc?: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest?: string | null } | null } }>, snapshots: Array<{ __typename?: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id?: string | null, capture_timestamp?: string | null, fetched_at: string, http_status?: number | null, mime?: string | null, content_hash?: string | null, text_sample?: string | null, jsonld?: any | null, extracted?: any | null, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id?: string | null, capture_timestamp?: string | null, observed_at: string, method: ExtractMethod, extractor_version?: string | null, http_status?: number | null, mime?: string | null, content_hash?: string | null, warc?: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest?: string | null } | null } }>, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null };
 
+export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, fallbackText: string, description: string, category: string, usageCount?: number | null, lastUsedBy?: string | null }> };
+
+export type GetMyPromptUsageQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetMyPromptUsageQuery = { __typename?: 'Query', myPromptUsage: Array<{ __typename?: 'PromptUsage', promptName: string, userEmail: string, version?: number | null, label?: string | null, usedAt: string, traceId?: string | null }> };
+
+export type CreatePromptMutationVariables = Exact<{
+  input: CreatePromptInput;
+}>;
+
+
+export type CreatePromptMutation = { __typename?: 'Mutation', createPrompt: { __typename?: 'Prompt', name: string, version?: number | null, type: PromptType, labels?: Array<string> | null, tags?: Array<string> | null, createdBy?: string | null } };
+
 export const EvidenceFieldsFragmentDoc = gql`
     fragment EvidenceFields on Evidence {
   source_type
@@ -926,51 +940,6 @@ export const CompanyFieldsFragmentDoc = gql`
   }
 }
     `;
-export const GetPromptsDocument = gql`
-    query GetPrompts {
-  prompts {
-    name
-    fallbackText
-    description
-    category
-  }
-}
-    `;
-
-/**
- * __useGetPromptsQuery__
- *
- * To run a query within a React component, call `useGetPromptsQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetPromptsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetPromptsQuery({
- *   variables: {
- *   },
- * });
- */
-export function useGetPromptsQuery(baseOptions?: Apollo.QueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
-      }
-export function useGetPromptsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
-        }
-// @ts-ignore
-export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>): Apollo.UseSuspenseQueryResult<GetPromptsQuery, GetPromptsQueryVariables>;
-export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>): Apollo.UseSuspenseQueryResult<GetPromptsQuery | undefined, GetPromptsQueryVariables>;
-export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
-        }
-export type GetPromptsQueryHookResult = ReturnType<typeof useGetPromptsQuery>;
-export type GetPromptsLazyQueryHookResult = ReturnType<typeof useGetPromptsLazyQuery>;
-export type GetPromptsSuspenseQueryHookResult = ReturnType<typeof useGetPromptsSuspenseQuery>;
-export type GetPromptsQueryResult = Apollo.QueryResult<GetPromptsQuery, GetPromptsQueryVariables>;
 export const DeleteJobDocument = gql`
     mutation DeleteJob($id: Int!) {
   deleteJob(id: $id) {
@@ -1892,3 +1861,136 @@ export type CompanyAuditQueryHookResult = ReturnType<typeof useCompanyAuditQuery
 export type CompanyAuditLazyQueryHookResult = ReturnType<typeof useCompanyAuditLazyQuery>;
 export type CompanyAuditSuspenseQueryHookResult = ReturnType<typeof useCompanyAuditSuspenseQuery>;
 export type CompanyAuditQueryResult = Apollo.QueryResult<CompanyAuditQuery, CompanyAuditQueryVariables>;
+export const GetPromptsDocument = gql`
+    query GetPrompts {
+  prompts {
+    name
+    fallbackText
+    description
+    category
+    usageCount
+    lastUsedBy
+  }
+}
+    `;
+
+/**
+ * __useGetPromptsQuery__
+ *
+ * To run a query within a React component, call `useGetPromptsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPromptsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPromptsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetPromptsQuery(baseOptions?: Apollo.QueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
+      }
+export function useGetPromptsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
+        }
+// @ts-ignore
+export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>): Apollo.UseSuspenseQueryResult<GetPromptsQuery, GetPromptsQueryVariables>;
+export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>): Apollo.UseSuspenseQueryResult<GetPromptsQuery | undefined, GetPromptsQueryVariables>;
+export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
+        }
+export type GetPromptsQueryHookResult = ReturnType<typeof useGetPromptsQuery>;
+export type GetPromptsLazyQueryHookResult = ReturnType<typeof useGetPromptsLazyQuery>;
+export type GetPromptsSuspenseQueryHookResult = ReturnType<typeof useGetPromptsSuspenseQuery>;
+export type GetPromptsQueryResult = Apollo.QueryResult<GetPromptsQuery, GetPromptsQueryVariables>;
+export const GetMyPromptUsageDocument = gql`
+    query GetMyPromptUsage($limit: Int) {
+  myPromptUsage(limit: $limit) {
+    promptName
+    userEmail
+    version
+    label
+    usedAt
+    traceId
+  }
+}
+    `;
+
+/**
+ * __useGetMyPromptUsageQuery__
+ *
+ * To run a query within a React component, call `useGetMyPromptUsageQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMyPromptUsageQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMyPromptUsageQuery({
+ *   variables: {
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetMyPromptUsageQuery(baseOptions?: Apollo.QueryHookOptions<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>(GetMyPromptUsageDocument, options);
+      }
+export function useGetMyPromptUsageLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>(GetMyPromptUsageDocument, options);
+        }
+// @ts-ignore
+export function useGetMyPromptUsageSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>;
+export function useGetMyPromptUsageSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyPromptUsageQuery | undefined, GetMyPromptUsageQueryVariables>;
+export function useGetMyPromptUsageSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>(GetMyPromptUsageDocument, options);
+        }
+export type GetMyPromptUsageQueryHookResult = ReturnType<typeof useGetMyPromptUsageQuery>;
+export type GetMyPromptUsageLazyQueryHookResult = ReturnType<typeof useGetMyPromptUsageLazyQuery>;
+export type GetMyPromptUsageSuspenseQueryHookResult = ReturnType<typeof useGetMyPromptUsageSuspenseQuery>;
+export type GetMyPromptUsageQueryResult = Apollo.QueryResult<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>;
+export const CreatePromptDocument = gql`
+    mutation CreatePrompt($input: CreatePromptInput!) {
+  createPrompt(input: $input) {
+    name
+    version
+    type
+    labels
+    tags
+    createdBy
+  }
+}
+    `;
+export type CreatePromptMutationFn = Apollo.MutationFunction<CreatePromptMutation, CreatePromptMutationVariables>;
+
+/**
+ * __useCreatePromptMutation__
+ *
+ * To run a mutation, you first call `useCreatePromptMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePromptMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPromptMutation, { data, loading, error }] = useCreatePromptMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreatePromptMutation(baseOptions?: Apollo.MutationHookOptions<CreatePromptMutation, CreatePromptMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreatePromptMutation, CreatePromptMutationVariables>(CreatePromptDocument, options);
+      }
+export type CreatePromptMutationHookResult = ReturnType<typeof useCreatePromptMutation>;
+export type CreatePromptMutationResult = Apollo.MutationResult<CreatePromptMutation>;
+export type CreatePromptMutationOptions = Apollo.BaseMutationOptions<CreatePromptMutation, CreatePromptMutationVariables>;

@@ -29,47 +29,12 @@ import {
   PlusIcon,
   CheckIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation, gql } from "@apollo/client";
 import { useAuth } from "@/auth/hooks";
-
-const GET_PROMPTS = gql`
-  query GetPrompts {
-    prompts {
-      name
-      fallbackText
-      description
-      category
-      usageCount
-      lastUsedBy
-    }
-  }
-`;
-
-const GET_MY_PROMPT_USAGE = gql`
-  query GetMyPromptUsage($limit: Int) {
-    myPromptUsage(limit: $limit) {
-      promptName
-      userEmail
-      version
-      label
-      usedAt
-      traceId
-    }
-  }
-`;
-
-const CREATE_PROMPT = gql`
-  mutation CreatePrompt($input: CreatePromptInput!) {
-    createPrompt(input: $input) {
-      name
-      version
-      type
-      labels
-      tags
-      createdBy
-    }
-  }
-`;
+import {
+  useGetPromptsQuery,
+  useGetMyPromptUsageQuery,
+  useCreatePromptMutation,
+} from "@/__generated__/hooks";
 
 type PromptInfo = {
   name: string;
@@ -253,8 +218,8 @@ function CreatePromptForm({ onSuccess }: { onSuccess?: () => void }) {
   const [tags, setTags] = useState("");
   const [addToProduction, setAddToProduction] = useState(true);
 
-  const [createPrompt, { loading, error }] = useMutation(CREATE_PROMPT, {
-    refetchQueries: [{ query: GET_PROMPTS }],
+  const [createPrompt, { loading, error }] = useCreatePromptMutation({
+    refetchQueries: ["GetPrompts"],
     onCompleted: () => {
       // Reset form
       setName("");
@@ -508,7 +473,7 @@ function CreatePromptForm({ onSuccess }: { onSuccess?: () => void }) {
 
 function PromptUsageHistory() {
   const { user } = useAuth();
-  const { loading, error, data } = useQuery(GET_MY_PROMPT_USAGE, {
+  const { loading, error, data } = useGetMyPromptUsageQuery({
     variables: { limit: 50 },
     skip: !user,
   });
@@ -622,7 +587,7 @@ export default function PromptsPage() {
     process.env.NEXT_PUBLIC_SKIP_LANGFUSE_PROMPTS === "true"
   );
 
-  const { loading, error, data } = useQuery(GET_PROMPTS);
+  const { loading, error, data } = useGetPromptsQuery();
   const REGISTERED_PROMPTS = data?.prompts || [];
 
   return (

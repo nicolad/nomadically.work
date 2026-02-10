@@ -1,0 +1,32 @@
+query GetPrompts {
+  prompts {
+    name
+    fallbackText
+    description
+    category
+    usageCount
+    lastUsedBy
+  }
+}
+
+query GetMyPromptUsage($limit: Int) {
+  myPromptUsage(limit: $limit) {
+    promptName
+    userEmail
+    version
+    label
+    usedAt
+    traceId
+  }
+}
+
+mutation CreatePrompt($input: CreatePromptInput!) {
+  createPrompt(input: $input) {
+    name
+    version
+    type
+    labels
+    tags
+    createdBy
+  }
+}

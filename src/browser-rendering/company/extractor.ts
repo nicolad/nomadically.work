@@ -138,9 +138,16 @@ Extract from: ${targetUrl}
       gotoOptions: { waitUntil: "networkidle0" },
     });
 
+    console.log("📦 Cloudflare response structure:");
+    console.log("   Type:", typeof cfResp);
+    console.log("   Keys:", Object.keys(cfResp || {}));
+    console.log("   Full response:", JSON.stringify(cfResp, null, 2));
+
     const extracted = (cfResp as any)?.result as ExtractionResult | undefined;
 
     if (!extracted) {
+      console.error("❌ Failed to extract data from response");
+      console.error("   cfResp:", JSON.stringify(cfResp, null, 2));
       throw new Error("Failed to extract company data from webpage");
     }
 

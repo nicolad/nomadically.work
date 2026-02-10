@@ -119,35 +119,18 @@ export const promptResolvers = {
 
         const apiResponse = await response.json();
         
-        // Langfuse API returns: { data: [...], meta: {...}, pagination: {...} }
-        // Map to GraphQL schema matching exact Langfuse shape
-        const registeredPrompts = (apiResponse.data || []).map((prompt: {
-          name: string;
-          tags: string[];
-          lastUpdatedAt: string;
-          versions: number[];
-          labels: string[];
-          type: 'text' | 'chat';
-          lastConfig: Record<string, any>;
-        }) => {
-          // Get usage count for this prompt from our in-memory log
+        // Map Langfuse API response to GraphQL schema
+        const registeredPrompts = (apiResponse.data || []).map((prompt: any) => {
           const usageCount = promptUsageLog.filter(
             u => u.promptName === prompt.name
           ).length;
 
-          // Get last user who used this prompt
           const lastUsage = promptUsageLog
             .filter(u => u.promptName === prompt.name)
             .sort((a, b) => new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime())[0];
 
           return {
-            name: prompt.name,
-            type: prompt.type,
-            tags: prompt.tags,
-            labels: prompt.labels,
-            versions: prompt.versions,
-            lastUpdatedAt: prompt.lastUpdatedAt,
-            lastConfig: prompt.lastConfig,
+            ...prompt,
             usageCount,
             lastUsedBy: lastUsage?.userEmail || null,
           };

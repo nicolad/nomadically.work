@@ -28,7 +28,6 @@ import {
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
 } from "@/__generated__/hooks";
-import { ApolloProvider, useApollo } from "@/apollo/client";
 import { sortBy } from "lodash";
 
 export const dynamic = "force-dynamic";
@@ -644,11 +643,5 @@ function SettingsPageContent() {
 }
 
 export default function SettingsPage() {
-  const apolloClient = useApollo(null);
-
-  return (
-    <ApolloProvider client={apolloClient}>
-      <SettingsPageContent />
-    </ApolloProvider>
-  );
+  return <SettingsPageContent />;
 }

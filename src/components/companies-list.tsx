@@ -147,29 +147,10 @@ export function CompaniesList() {
 
       <Flex direction="column" gap="4">
         {companies.map((company) => {
-          // Ensure proper URL formatting
-          let companyUrl = company.website;
-          if (
-            companyUrl &&
-            !companyUrl.startsWith("http://") &&
-            !companyUrl.startsWith("https://")
-          ) {
-            companyUrl = `https://${companyUrl}`;
-          }
-          if (!companyUrl && company.canonical_domain) {
-            companyUrl = `https://${company.canonical_domain}`;
-          }
-          if (!companyUrl && company.key) {
-            // Only use key as URL if it looks like a domain (contains a dot)
-            if (company.key.includes(".")) {
-              companyUrl = `https://${company.key}`;
-            }
-          }
-
           return (
             <Card key={company.id} size="3" asChild>
               <Link
-                href={companyUrl || "#"}
+                href={`/companies/${company.key}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{

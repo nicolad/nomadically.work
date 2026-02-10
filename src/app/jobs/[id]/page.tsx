@@ -7,7 +7,6 @@ import {
   useUpdateUserSettingsMutation,
   useDeleteJobMutation,
 } from "@/__generated__/hooks";
-import { ApolloProvider, useApollo } from "@/apollo/client";
 import { orderBy } from "lodash";
 import {
   Card,
@@ -903,11 +902,5 @@ function JobPageContent() {
 }
 
 export default function JobPage() {
-  const apolloClient = useApollo(null);
-
-  return (
-    <ApolloProvider client={apolloClient}>
-      <JobPageContent />
-    </ApolloProvider>
-  );
+  return <JobPageContent />;
 }

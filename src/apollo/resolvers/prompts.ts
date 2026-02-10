@@ -5,7 +5,6 @@ import {
   LANGFUSE_PUBLIC_KEY,
   LANGFUSE_BASE_URL,
 } from "@/config/env";
-import { PROMPTS } from "@/observability/prompts";
 import { GraphQLContext } from "@/apollo/context";
 
 const langfuse = new Langfuse({
@@ -90,7 +89,66 @@ export const promptResolvers = {
     },
 
     prompts: async (_: any, __: any, context: GraphQLContext) => {
-   
+      try {
+        // Fetch all prompts using Langfuse public API
+        const response = await fetch(
+          `${LANGFUSE_BASE_URL}/api/public/v2/prompts`,
+          {
+            headers: {
+              Authorization: `Basic ${Buffer.from(
+                `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`
+              ).toString("base64")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Langfuse API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        // Transform API response to match our GraphQL schema
+        const registeredPrompts = data.data.map((prompt: any) => {
+          // Get usage count for this prompt from our in-memory log
+          const usageCount = promptUsageLog.filter(
+            u => u.promptName === prompt.name
+          ).length;
+
+          // Get last user who used this prompt
+          const lastUsage = promptUsageLog
+            .filter(u => u.promptName === prompt.name)
+            .sort((a, b) => new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime())[0];
+
+          // Derive category from tags if available
+          const category = prompt.tags.find((tag: string) => 
+            tag.startsWith('category:')
+          )?.replace('category:', '') || "general";
+
+          return {
+            name: prompt.name,
+            fallbackText: `Prompt "${prompt.name}" (${prompt.versions.length} version${prompt.versions.length === 1 ? '' : 's'})`,
+            description: `${prompt.type} prompt with labels: ${prompt.labels.join(', ') || 'none'}`,
+            category,
+            usageCount,
+            lastUsedBy: lastUsage?.userEmail || null,
+          };
+        });
+
+        return registeredPrompts;
+      } catch (error) {
+        console.error("Error fetching prompts from Langfuse:", error);
+        
+        // Fallback to local PROMPTS if API call fails
+        return PROMPTS.map(prompt => ({
+          name: prompt.name,
+          fallbackText: prompt.fallbackText,
+          description: prompt.description,
+          category: prompt.category,
+          usageCount: promptUsageLog.filter(u => u.promptName === prompt.name).length,
+          lastUsedBy: null,
+        }));
+      }
     },
 
     myPromptUsage: async (

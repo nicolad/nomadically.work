@@ -693,17 +693,6 @@ export default function PromptsPage() {
                   {REGISTERED_PROMPTS.map((prompt: PromptInfo) => (
                     <PromptCard key={prompt.name} prompt={prompt} />
                   ))}
-
-                  {REGISTERED_PROMPTS.length === 0 && (
-                    <Card>
-                      <Box p="6" style={{ textAlign: "center" }}>
-                        <Text size="3" color="gray">
-                          No prompts registered yet. Add prompts to PROMPTS constant in{" "}
-                          <Code>src/observability/prompts.ts</Code>
-                        </Text>
-                      </Box>
-                    </Card>
-                  )}
                 </Flex>
               )}
             </Tabs.Content>

@@ -359,6 +359,7 @@ export const typeDefs = gql`
     userSettings(userId: String!): UserSettings
 
     textToSql(question: String!): TextToSqlResult!
+    executeSql(sql: String!): TextToSqlResult!
   }
 
   type Mutation {

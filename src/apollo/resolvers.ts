@@ -2,6 +2,7 @@ import { companyResolvers } from "./resolvers/company";
 import { jobResolvers } from "./resolvers/job";
 import { userSettingsResolvers } from "./resolvers/user-settings";
 import { textToSqlResolvers } from "./resolvers/text-to-sql";
+import { executeSqlResolvers } from "./resolvers/execute-sql";
 import { merge } from "lodash";
 
 export const resolvers = merge(
@@ -10,4 +11,5 @@ export const resolvers = merge(
   jobResolvers,
   userSettingsResolvers,
   textToSqlResolvers,
+  executeSqlResolvers,
 );

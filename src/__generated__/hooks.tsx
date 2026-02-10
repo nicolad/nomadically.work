@@ -378,6 +378,7 @@ export type Query = {
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
+  executeSql: TextToSqlResult;
   job?: Maybe<Job>;
   jobs: JobsResponse;
   textToSql: TextToSqlResult;
@@ -416,6 +417,11 @@ export type QueryCompany_SnapshotsArgs = {
   company_id: Scalars['Int']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryExecuteSqlArgs = {
+  sql: Scalars['String']['input'];
 };
 
 
@@ -526,6 +532,13 @@ export type DeleteJobMutationVariables = Exact<{
 
 
 export type DeleteJobMutation = { __typename?: 'Mutation', deleteJob: { __typename?: 'DeleteJobResponse', success: boolean, message?: string | null } };
+
+export type ExecuteSqlQueryVariables = Exact<{
+  sql: Scalars['String']['input'];
+}>;
+
+
+export type ExecuteSqlQuery = { __typename?: 'Query', executeSql: { __typename?: 'TextToSqlResult', sql: string, explanation?: string | null, columns: Array<string>, rows: Array<Array<any | null> | null>, drilldownSearchQuery?: string | null } };
 
 export type GetJobQueryVariables = Exact<{
   id: Scalars['String']['input'];
@@ -836,6 +849,53 @@ export function useDeleteJobMutation(baseOptions?: Apollo.MutationHookOptions<De
 export type DeleteJobMutationHookResult = ReturnType<typeof useDeleteJobMutation>;
 export type DeleteJobMutationResult = Apollo.MutationResult<DeleteJobMutation>;
 export type DeleteJobMutationOptions = Apollo.BaseMutationOptions<DeleteJobMutation, DeleteJobMutationVariables>;
+export const ExecuteSqlDocument = gql`
+    query ExecuteSql($sql: String!) {
+  executeSql(sql: $sql) {
+    sql
+    explanation
+    columns
+    rows
+    drilldownSearchQuery
+  }
+}
+    `;
+
+/**
+ * __useExecuteSqlQuery__
+ *
+ * To run a query within a React component, call `useExecuteSqlQuery` and pass it any options that fit your needs.
+ * When your component renders, `useExecuteSqlQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useExecuteSqlQuery({
+ *   variables: {
+ *      sql: // value for 'sql'
+ *   },
+ * });
+ */
+export function useExecuteSqlQuery(baseOptions: Apollo.QueryHookOptions<ExecuteSqlQuery, ExecuteSqlQueryVariables> & ({ variables: ExecuteSqlQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ExecuteSqlQuery, ExecuteSqlQueryVariables>(ExecuteSqlDocument, options);
+      }
+export function useExecuteSqlLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ExecuteSqlQuery, ExecuteSqlQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ExecuteSqlQuery, ExecuteSqlQueryVariables>(ExecuteSqlDocument, options);
+        }
+// @ts-ignore
+export function useExecuteSqlSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ExecuteSqlQuery, ExecuteSqlQueryVariables>): Apollo.UseSuspenseQueryResult<ExecuteSqlQuery, ExecuteSqlQueryVariables>;
+export function useExecuteSqlSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ExecuteSqlQuery, ExecuteSqlQueryVariables>): Apollo.UseSuspenseQueryResult<ExecuteSqlQuery | undefined, ExecuteSqlQueryVariables>;
+export function useExecuteSqlSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ExecuteSqlQuery, ExecuteSqlQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ExecuteSqlQuery, ExecuteSqlQueryVariables>(ExecuteSqlDocument, options);
+        }
+export type ExecuteSqlQueryHookResult = ReturnType<typeof useExecuteSqlQuery>;
+export type ExecuteSqlLazyQueryHookResult = ReturnType<typeof useExecuteSqlLazyQuery>;
+export type ExecuteSqlSuspenseQueryHookResult = ReturnType<typeof useExecuteSqlSuspenseQuery>;
+export type ExecuteSqlQueryResult = Apollo.QueryResult<ExecuteSqlQuery, ExecuteSqlQueryVariables>;
 export const GetJobDocument = gql`
     query GetJob($id: String!) {
   job(id: $id) {

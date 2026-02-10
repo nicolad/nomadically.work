@@ -15,6 +15,7 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  */
 type Documents = {
     "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}": typeof types.DeleteJobDocument,
+    "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}": typeof types.ExecuteSqlDocument,
     "query GetJob($id: String!) {\n  job(id: $id) {\n    id\n    external_id\n    source_id\n    source_kind\n    company_id\n    company_key\n    company {\n      ...CompanyFields\n    }\n    title\n    location\n    url\n    description\n    posted_at\n    score\n    score_reason\n    status\n    is_remote_eu\n    remote_eu_confidence\n    remote_eu_reason\n    skills {\n      tag\n      level\n      confidence\n      evidence\n    }\n    created_at\n    updated_at\n  }\n}": typeof types.GetJobDocument,
     "query GetJobs($sourceType: String, $status: String, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!]) {\n  jobs(\n    sourceType: $sourceType\n    status: $status\n    search: $search\n    limit: $limit\n    offset: $offset\n    excludedCompanies: $excludedCompanies\n  ) {\n    jobs {\n      id\n      external_id\n      source_id\n      source_kind\n      company_id\n      company_key\n      company {\n        ...CompanyFields\n      }\n      title\n      location\n      url\n      description\n      posted_at\n      score\n      score_reason\n      status\n      skills {\n        tag\n        level\n      }\n      created_at\n      updated_at\n    }\n    totalCount\n  }\n}": typeof types.GetJobsDocument,
     "query GetUserSettings($userId: String!) {\n  userSettings(userId: $userId) {\n    id\n    user_id\n    preferred_locations\n    preferred_skills\n    excluded_companies\n  }\n}": typeof types.GetUserSettingsDocument,
@@ -26,6 +27,7 @@ type Documents = {
 };
 const documents: Documents = {
     "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}": types.DeleteJobDocument,
+    "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}": types.ExecuteSqlDocument,
     "query GetJob($id: String!) {\n  job(id: $id) {\n    id\n    external_id\n    source_id\n    source_kind\n    company_id\n    company_key\n    company {\n      ...CompanyFields\n    }\n    title\n    location\n    url\n    description\n    posted_at\n    score\n    score_reason\n    status\n    is_remote_eu\n    remote_eu_confidence\n    remote_eu_reason\n    skills {\n      tag\n      level\n      confidence\n      evidence\n    }\n    created_at\n    updated_at\n  }\n}": types.GetJobDocument,
     "query GetJobs($sourceType: String, $status: String, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!]) {\n  jobs(\n    sourceType: $sourceType\n    status: $status\n    search: $search\n    limit: $limit\n    offset: $offset\n    excludedCompanies: $excludedCompanies\n  ) {\n    jobs {\n      id\n      external_id\n      source_id\n      source_kind\n      company_id\n      company_key\n      company {\n        ...CompanyFields\n      }\n      title\n      location\n      url\n      description\n      posted_at\n      score\n      score_reason\n      status\n      skills {\n        tag\n        level\n      }\n      created_at\n      updated_at\n    }\n    totalCount\n  }\n}": types.GetJobsDocument,
     "query GetUserSettings($userId: String!) {\n  userSettings(userId: $userId) {\n    id\n    user_id\n    preferred_locations\n    preferred_skills\n    excluded_companies\n  }\n}": types.GetUserSettingsDocument,
@@ -54,6 +56,10 @@ export function gql(source: string): unknown;
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function gql(source: "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}"): (typeof documents)["mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}"): (typeof documents)["query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

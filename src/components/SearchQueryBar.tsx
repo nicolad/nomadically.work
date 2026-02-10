@@ -43,7 +43,6 @@ export function SearchQueryBar({
 }: Props) {
   const [mode, setMode] = React.useState<QueryMode>(initialMode);
   const [jobsValue, setJobsValue] = React.useState(initialQuery);
-  const [sqlValue, setSqlValue] = React.useState("");
 
   const handleJobsChange = React.useCallback(
     (q: string) => {
@@ -59,10 +58,6 @@ export function SearchQueryBar({
     },
     [onSearchSubmit],
   );
-
-  const handleSqlSubmit = React.useCallback((q: string) => {
-    // SQL modal opens internally in SqlSearchBar
-  }, []);
 
   return (
     <Box>
@@ -109,9 +104,6 @@ export function SearchQueryBar({
           />
         ) : (
           <SqlSearchBar
-            value={sqlValue}
-            onChange={setSqlValue}
-            onSubmit={handleSqlSubmit}
             onDrilldownToSearch={(q) => {
               setMode("jobs");
               setJobsValue(q);

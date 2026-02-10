@@ -1,16 +1,18 @@
 import Cloudflare from "cloudflare";
 import type { ExtractionResult } from "./types";
+import { extractCompanyDataFallback } from "./extractor-fallback";
 
 /**
  * Extract company data using DeepSeek via Cloudflare Workers AI
+ * Falls back to direct DeepSeek API if Browser Rendering is not available
  * 
  * Requirements:
- * - CLOUDFLARE_API_TOKEN with Browser Rendering permissions
- * - CLOUDFLARE_ACCOUNT_ID
- * - DEEPSEEK_API_KEY
+ * - CLOUDFLARE_API_TOKEN with Browser Rendering permissions (preferred)
+ * - CLOUDFLARE_ACCOUNT_ID (preferred)
+ * - DEEPSEEK_API_KEY (required)
  * 
- * Setup guide: See docs/CLOUDFLARE_SETUP.md
- * Verify setup: npx tsx scripts/verify-cloudflare-setup.ts
+ * Setup guide: See docs/CLOUDFLARE_SETUP.md or docs/CREATE_CLOUDFLARE_TOKEN.md
+ * Test setup: node test-cloudflare.mjs
  */
 export async function extractCompanyData(
   targetUrl: string
@@ -240,24 +242,21 @@ Extract from: ${targetUrl}
 
     return extracted;
   } catch (error: any) {
-    // Provide more helpful error messages
-    if (error.status === 401) {
-      throw new Error(
-        "Cloudflare authentication failed. Please verify:\n" +
-        "1. CLOUDFLARE_API_TOKEN is valid\n" +
-        "2. API token has 'Browser Rendering' permissions\n" +
-        "3. Browser Rendering is enabled for your Cloudflare account\n" +
-        "4. Account ID is correct"
+    // Fall back to direct DeepSeek API if Browser Rendering is not available
+    if (error.status === 401 || error.status === 403) {
+      console.warn(
+        "⚠️  Cloudflare Browser Rendering not available (missing permissions or not enabled)."
       );
-    }
-    
-    if (error.status === 403) {
-      throw new Error(
-        "Cloudflare access denied. Browser Rendering may not be enabled for your account or plan."
+      console.warn("   Falling back to direct DeepSeek API...");
+      console.warn(
+        "   To use Browser Rendering, see: docs/CREATE_CLOUDFLARE_TOKEN.md"
       );
+
+      // Use fallback extractor
+      return await extractCompanyDataFallback(targetUrl);
     }
 
-    // Re-throw with original error for other cases
+    // Re-throw other errors
     throw error;
   }
 }

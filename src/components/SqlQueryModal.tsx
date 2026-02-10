@@ -23,7 +23,12 @@ import {
   Table,
   Spinner,
 } from "@radix-ui/themes";
-import { Cross2Icon, CopyIcon, StopIcon, PlayIcon } from "@radix-ui/react-icons";
+import {
+  Cross2Icon,
+  CopyIcon,
+  StopIcon,
+  PlayIcon,
+} from "@radix-ui/react-icons";
 
 export type SqlResult = {
   sql: string;
@@ -57,6 +62,8 @@ async function runTextToSql(
   question: string,
   signal?: AbortSignal,
 ): Promise<SqlResult> {
+  console.log("[runTextToSql] Calling endpoint:", endpoint, "with question:", question);
+
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -64,12 +71,16 @@ async function runTextToSql(
     signal,
   });
 
+  console.log("[runTextToSql] Response status:", res.status);
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `Text-to-SQL request failed (${res.status})`);
   }
 
-  return (await res.json()) as SqlResult;
+  const result = (await res.json()) as SqlResult;
+  console.log("[runTextToSql] Parsed result:", result);
+  return result;
 }
 
 export function SqlQueryModal({
@@ -139,14 +150,58 @@ export function SqlQueryModal({
     }
   }, [question, sqlEndpoint]);
 
+  // Run query with explicit question
+  const runWithQuestion = React.useCallback(
+    async (q: string) => {
+      if (!q.trim()) {
+        console.log("[SqlQueryModal] Question is empty, not running");
+        return;
+      }
+
+      console.log("[SqlQueryModal] runWithQuestion called with:", q);
+      console.log("[SqlQueryModal] sqlEndpoint:", sqlEndpoint);
+
+      setError(null);
+      setCopied(false);
+      setLoading(true);
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        console.log("[SqlQueryModal] Fetching from endpoint...");
+        const r = await runTextToSql(sqlEndpoint, q, controller.signal);
+        console.log("[SqlQueryModal] Result:", r);
+        setResult(r);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          console.log("[SqlQueryModal] Request aborted");
+          return;
+        }
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        console.error("[SqlQueryModal] Error:", errorMsg);
+        setResult(null);
+        setError(errorMsg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [sqlEndpoint],
+  );
+
   // When opening: seed state + focus + reset auto-run latch
   React.useEffect(() => {
     if (!open) {
-      didAutoRunRef.current = false;
+      console.log("[SqlQueryModal] Closing modal");
       stop();
       return;
     }
 
+    console.log("[SqlQueryModal] Opening modal with defaultQuestion:", defaultQuestion);
+    console.log("[SqlQueryModal] autoRunOnOpen:", autoRunOnOpen);
+
+    didAutoRunRef.current = false;
     setQuestion(defaultQuestion);
     setError(null);
     setCopied(false);
@@ -157,14 +212,26 @@ export function SqlQueryModal({
   // Auto-run once per open (if requested)
   React.useEffect(() => {
     if (!open) return;
-    if (!autoRunOnOpen) return;
-    if (didAutoRunRef.current) return;
+    if (!autoRunOnOpen) {
+      console.log("[SqlQueryModal] autoRunOnOpen is false, skipping auto-run");
+      return;
+    }
+    if (didAutoRunRef.current) {
+      console.log("[SqlQueryModal] Already ran, skipping");
+      return;
+    }
 
+    console.log("[SqlQueryModal] Auto-running with defaultQuestion:", defaultQuestion);
     didAutoRunRef.current = true;
 
     // Only run if there's something to run
-    if (defaultQuestion.trim()) void run();
-  }, [open, autoRunOnOpen, defaultQuestion, run]);
+    if (defaultQuestion.trim()) {
+      console.log("[SqlQueryModal] Calling runWithQuestion");
+      void runWithQuestion(defaultQuestion);
+    } else {
+      console.log("[SqlQueryModal] defaultQuestion is empty, not running");
+    }
+  }, [open, autoRunOnOpen, defaultQuestion, runWithQuestion]);
 
   // Ctrl/Cmd+Enter to run inside the modal
   const onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
@@ -193,8 +260,8 @@ export function SqlQueryModal({
           <Box>
             <Dialog.Title>Ask SQL</Dialog.Title>
             <Dialog.Description>
-              Write a question in natural language. Press <Code>Ctrl</Code>+<Code>Enter</Code> (or{" "}
-              <Code>⌘</Code>+<Code>Enter</Code>) to run.
+              Write a question in natural language. Press <Code>Ctrl</Code>+
+              <Code>Enter</Code> (or <Code>⌘</Code>+<Code>Enter</Code>) to run.
             </Dialog.Description>
           </Box>
 
@@ -224,17 +291,29 @@ export function SqlQueryModal({
 
         <Flex mt="3" gap="2" justify="between" wrap="wrap">
           <Flex gap="2" align="center">
-            <Button onClick={() => void run()} disabled={loading || !question.trim()}>
+            <Button
+              onClick={() => void run()}
+              disabled={loading || !question.trim()}
+            >
               {loading ? <Spinner /> : <PlayIcon />}
               Run
             </Button>
 
-            <Button variant="soft" color="red" onClick={stop} disabled={!loading}>
+            <Button
+              variant="soft"
+              color="red"
+              onClick={stop}
+              disabled={!loading}
+            >
               <StopIcon />
               Stop
             </Button>
 
-            <Button variant="soft" onClick={clear} disabled={loading && !question}>
+            <Button
+              variant="soft"
+              onClick={clear}
+              disabled={loading && !question}
+            >
               Clear
             </Button>
           </Flex>
@@ -274,7 +353,9 @@ export function SqlQueryModal({
 
           {!loading && !error && !result && (
             <Callout.Root>
-              <Callout.Text>Run a question to see generated SQL + results here.</Callout.Text>
+              <Callout.Text>
+                Run a question to see generated SQL + results here.
+              </Callout.Text>
             </Callout.Root>
           )}
 
@@ -308,7 +389,9 @@ export function SqlQueryModal({
                   <Table.Header>
                     <Table.Row>
                       {result.columns.map((c) => (
-                        <Table.ColumnHeaderCell key={c}>{c}</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell key={c}>
+                          {c}
+                        </Table.ColumnHeaderCell>
                       ))}
                     </Table.Row>
                   </Table.Header>
@@ -317,7 +400,11 @@ export function SqlQueryModal({
                       <Table.Row key={idx}>
                         {row.map((cell, j) => (
                           <Table.Cell key={j}>
-                            {cell === null ? <Text color="gray">NULL</Text> : String(cell)}
+                            {cell === null ? (
+                              <Text color="gray">NULL</Text>
+                            ) : (
+                              String(cell)
+                            )}
                           </Table.Cell>
                         ))}
                       </Table.Row>

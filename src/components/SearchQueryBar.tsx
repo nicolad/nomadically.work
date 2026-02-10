@@ -51,6 +51,7 @@ export function SearchQueryBar({
 
   const handleJobsSubmit = React.useCallback(
     (q: string) => {
+      setJobsValue(q);
       onSearchSubmit?.(q);
     },
     [onSearchSubmit],

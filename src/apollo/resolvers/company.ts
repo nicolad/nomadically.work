@@ -453,6 +453,13 @@ export const companyResolvers = {
 
         const insertData: any = { ...args.input };
 
+        // Validate category enum
+        if (args.input.category) {
+          const validCategories = ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN"];
+          const category = args.input.category.toUpperCase();
+          insertData.category = validCategories.includes(category) ? category : "OTHER";
+        }
+
         // Stringify JSON fields
         if (args.input.tags) {
           insertData.tags = JSON.stringify(args.input.tags);
@@ -516,6 +523,13 @@ export const companyResolvers = {
         }
 
         const updateData: any = { ...args.input };
+
+        // Validate category enum
+        if (args.input.category) {
+          const validCategories = ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN"];
+          const category = args.input.category.toUpperCase();
+          updateData.category = validCategories.includes(category) ? category : "OTHER";
+        }
 
         // Stringify JSON fields
         if (args.input.tags) {

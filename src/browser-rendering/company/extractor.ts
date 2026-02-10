@@ -251,10 +251,10 @@ Extract from: ${targetUrl}
 
     return extracted;
   } catch (error: any) {
-    // Fall back to direct DeepSeek API if Browser Rendering is not available
-    if (error.status === 401 || error.status === 403) {
+    // Fall back to direct DeepSeek API if Browser Rendering is not available or unsupported
+    if (error.status === 401 || error.status === 403 || error.status === 422) {
       console.warn(
-        "⚠️  Cloudflare Browser Rendering not available (missing permissions or not enabled)."
+        "⚠️  Cloudflare Browser Rendering not available (missing permissions, not enabled, or unsupported format)."
       );
       console.warn("   Falling back to direct DeepSeek API...");
       console.warn(

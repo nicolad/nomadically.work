@@ -316,6 +316,14 @@ export const typeDefs = gql`
     CREATED_AT_DESC
   }
 
+  type TextToSqlResult {
+    sql: String!
+    explanation: String
+    columns: [String!]!
+    rows: [[JSON]]!
+    drilldownSearchQuery: String
+  }
+
   type Query {
     jobs(
       sourceType: String
@@ -349,6 +357,8 @@ export const typeDefs = gql`
     company_ats_boards(company_id: Int!): [ATSBoard!]!
 
     userSettings(userId: String!): UserSettings
+
+    textToSql(question: String!): TextToSqlResult!
   }
 
   type Mutation {

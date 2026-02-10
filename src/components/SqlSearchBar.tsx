@@ -82,28 +82,27 @@ export function SqlSearchBar({
           <LightningBoltIcon />
         </TextField.Slot>
 
-        <TextField.Slot style={{ flex: 1 }}>
-          <input
-            ref={inputRef}
-            value={sqlValue}
-            placeholder={placeholder}
-            onChange={(e) => setSqlValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-label="SQL query input"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              fontSize: "inherit",
-              color: "inherit",
-              fontFamily: "inherit",
-            }}
-          />
-        </TextField.Slot>
+        <input
+          ref={inputRef}
+          value={sqlValue}
+          placeholder={placeholder}
+          onChange={(e) => setSqlValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-label="SQL query input"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          style={{
+            width: "100%",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            fontSize: "inherit",
+            color: "inherit",
+            fontFamily: "inherit",
+            padding: "0",
+          }}
+        />
 
         <TextField.Slot side="right">
           <Flex gap="2" align="center">

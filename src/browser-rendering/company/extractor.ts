@@ -34,169 +34,49 @@ export async function extractCompanyData(
 
   const client = new Cloudflare({ apiToken: browserRenderingKey });
 
-  const response_format = {
-    type: "json_schema",
-    json_schema: {
-      name: "company_extraction",
-      strict: true,
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          company: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              id: { type: ["string", "null"] },
-              key: { type: ["string", "null"] },
-
-            name: { type: "string" },
-            logo_url: { type: ["string", "null"] },
-            website: { type: ["string", "null"] },
-
-            careers_url: { type: ["string", "null"] },
-            linkedin_url: { type: ["string", "null"] },
-
-            description: { type: ["string", "null"] },
-            industry: { type: ["string", "null"] },
-            size: { type: ["string", "null"] },
-            location: { type: ["string", "null"] },
-            created_at: { type: ["string", "null"] },
-            updated_at: { type: ["string", "null"] },
-
-            canonical_domain: { type: ["string", "null"] },
-            category: {
-              type: ["string", "null"],
-              enum: ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN", null]
-            },
-            tags: { type: ["array", "null"], items: { type: "string" } },
-            services: { type: ["array", "null"], items: { type: "string" } },
-            service_taxonomy: {
-              type: ["array", "null"],
-              items: { type: "string" },
-            },
-            industries: { type: ["array", "null"], items: { type: "string" } },
-            score: { type: ["number", "null"] },
-            score_reasons: {
-              type: ["array", "null"],
-              items: { type: "string" },
-            },
-
-            last_seen_crawl_id: { type: ["string", "null"] },
-            last_seen_capture_timestamp: { type: ["string", "null"] },
-            last_seen_source_url: { type: ["string", "null"] },
-
-            ats_boards: {
-              type: ["array", "null"],
-              items: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  id: { type: ["string", "null"] },
-                  url: { type: "string" },
-                  vendor: { type: ["string", "null"] },
-                  board_type: { type: ["string", "null"] },
-                  confidence: { type: ["number", "null"] },
-                  is_active: { type: ["boolean", "null"] },
-                  first_seen_at: { type: ["string", "null"] },
-                  last_seen_at: { type: ["string", "null"] },
-                },
-                required: ["url"],
-              },
-            },
-          },
-          required: ["name"],
-        },
-
-        ats_boards: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              id: { type: ["string", "null"] },
-              company_id: { type: ["string", "null"] },
-              url: { type: "string" },
-              vendor: { type: ["string", "null"] },
-              board_type: { type: ["string", "null"] },
-              confidence: { type: ["number", "null"] },
-              is_active: { type: ["boolean", "null"] },
-              first_seen_at: { type: ["string", "null"] },
-              last_seen_at: { type: ["string", "null"] },
-              evidence: {
-                type: ["object", "null"],
-                additionalProperties: false,
-                properties: {
-                  source_type: { type: "string" },
-                  source_url: { type: ["string", "null"] },
-                  crawl_id: { type: ["string", "null"] },
-                  capture_timestamp: { type: ["string", "null"] },
-                  observed_at: { type: ["string", "null"] },
-                  method: { type: ["string", "null"] },
-                  extractor_version: { type: ["string", "null"] },
-                  http_status: { type: ["number", "null"] },
-                  mime: { type: ["string", "null"] },
-                  content_hash: { type: ["string", "null"] },
-                  warc: {
-                    type: ["object", "null"],
-                    additionalProperties: false,
-                    properties: {
-                      filename: { type: ["string", "null"] },
-                      offset: { type: ["number", "null"] },
-                      length: { type: ["number", "null"] },
-                      digest: { type: ["string", "null"] },
-                    },
-                  },
-                },
-                required: ["source_type"],
-              },
-              created_at: { type: ["string", "null"] },
-              updated_at: { type: ["string", "null"] },
-            },
-            required: ["url"],
-          },
-        },
-
-        evidence: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            source_type: { type: "string" },
-            source_url: { type: ["string", "null"] },
-            crawl_id: { type: ["string", "null"] },
-            capture_timestamp: { type: ["string", "null"] },
-            observed_at: { type: ["string", "null"] },
-            method: { type: ["string", "null"] },
-            extractor_version: { type: ["string", "null"] },
-            http_status: { type: ["number", "null"] },
-            mime: { type: ["string", "null"] },
-            content_hash: { type: ["string", "null"] },
-            warc: {
-              type: ["object", "null"],
-              additionalProperties: false,
-              properties: {
-                filename: { type: ["string", "null"] },
-                offset: { type: ["number", "null"] },
-                length: { type: ["number", "null"] },
-                digest: { type: ["string", "null"] },
-              },
-            },
-          },
-          required: ["source_type"],
-        },
-
-        notes: { type: ["array", "null"], items: { type: "string" } },
-      },
-      required: ["company", "ats_boards", "evidence"],
-    },
-    },
-  } as const;
-
   const prompt = `
 You are extracting a "Company golden record" from a webpage for downstream GraphQL storage.
 
+CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no explanatory text. Just the raw JSON object.
+
+Expected structure:
+{
+  "company": {
+    "name": "...",
+    "logo_url": "...",
+    "website": "...",
+    "careers_url": "...",
+    "linkedin_url": "...",
+    "description": "...",
+    "industry": "...",
+    "size": "...",
+    "location": "...",
+    "canonical_domain": "...",
+    "category": "CONSULTANCY|AGENCY|STAFFING|DIRECTORY|PRODUCT|OTHER|UNKNOWN",
+    "tags": [...],
+    "services": [...],
+    "industries": [...]
+  },
+  "ats_boards": [
+    {
+      "url": "...",
+      "vendor": "...",
+      "board_type": "...",
+      "confidence": 0.9,
+      "is_active": true
+    }
+  ],
+  "evidence": {
+    "source_type": "url",
+    "source_url": "...",
+    "http_status": 200,
+    "mime": "text/html"
+  },
+  "notes": [...]
+}
+
 Hard rules:
-- Output MUST match the provided JSON Schema exactly.
+- Output MUST be valid JSON matching the structure above.
 - Do not invent values. If unknown, set null (or [] where schema allows).
 - Prefer official signals on-page (header/footer, about/careers links, meta tags, JSON-LD, OpenGraph).
 
@@ -247,7 +127,8 @@ Extract from: ${targetUrl}
       account_id: accountId,
       url: targetUrl,
       prompt,
-      response_format,
+      // Note: response_format with json_schema is not supported by Cloudflare Browser Rendering
+      // with custom AI models. We rely on the prompt to instruct JSON output.
       custom_ai: [
         {
           model: "deepseek/deepseek-chat",

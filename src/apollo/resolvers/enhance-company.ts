@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { companies, atsBoards } from "@/db/schema";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
-import { extractCompanyData } from "@/lib/company-extractor";
+import { extractCompanyData } from "@/browser-rendering/company-extractor";
 
 /**
  * Enhanced company data mutation resolver

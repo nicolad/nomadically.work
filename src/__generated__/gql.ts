@@ -14,6 +14,7 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
+    "\n  query GetPrompts {\n    prompts {\n      name\n      fallbackText\n      description\n      category\n    }\n  }\n": typeof types.GetPromptsDocument,
     "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}": typeof types.DeleteJobDocument,
     "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}": typeof types.ExecuteSqlDocument,
     "query GetJob($id: String!) {\n  job(id: $id) {\n    id\n    external_id\n    source_id\n    source_kind\n    company_id\n    company_key\n    company {\n      ...CompanyFields\n    }\n    title\n    location\n    url\n    description\n    posted_at\n    score\n    score_reason\n    status\n    is_remote_eu\n    remote_eu_confidence\n    remote_eu_reason\n    skills {\n      tag\n      level\n      confidence\n      evidence\n    }\n    created_at\n    updated_at\n  }\n}": typeof types.GetJobDocument,
@@ -26,6 +27,7 @@ type Documents = {
     "query GetCompany($id: Int, $key: String) {\n  company(id: $id, key: $key) {\n    ...CompanyFields\n  }\n}\n\nquery GetCompanies($text: String, $limit: Int, $offset: Int) {\n  companies(filter: {text: $text}, limit: $limit, offset: $offset) {\n    companies {\n      ...CompanyFields\n    }\n    totalCount\n  }\n}\n\nquery SearchCompanies($filter: CompanyFilterInput!, $order_by: CompanyOrderBy, $limit: Int, $offset: Int) {\n  companies(filter: $filter, order_by: $order_by, limit: $limit, offset: $offset) {\n    companies {\n      ...CompanyFields\n    }\n    totalCount\n  }\n}\n\nquery GetCompanyFacts($company_id: Int!, $field: String, $limit: Int, $offset: Int) {\n  company_facts(\n    company_id: $company_id\n    field: $field\n    limit: $limit\n    offset: $offset\n  ) {\n    ...CompanyFactFields\n  }\n}\n\nquery GetCompanyATSBoards($company_id: Int!) {\n  company_ats_boards(company_id: $company_id) {\n    ...ATSBoardFields\n  }\n}\n\nquery CompanyAudit($key: String!) {\n  company(key: $key) {\n    ...CompanyFields\n    facts(limit: 200) {\n      ...CompanyFactFields\n    }\n    facts_count\n    snapshots(limit: 10) {\n      ...CompanySnapshotFields\n    }\n    snapshots_count\n  }\n}": typeof types.GetCompanyDocument,
 };
 const documents: Documents = {
+    "\n  query GetPrompts {\n    prompts {\n      name\n      fallbackText\n      description\n      category\n    }\n  }\n": types.GetPromptsDocument,
     "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}": types.DeleteJobDocument,
     "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}": types.ExecuteSqlDocument,
     "query GetJob($id: String!) {\n  job(id: $id) {\n    id\n    external_id\n    source_id\n    source_kind\n    company_id\n    company_key\n    company {\n      ...CompanyFields\n    }\n    title\n    location\n    url\n    description\n    posted_at\n    score\n    score_reason\n    status\n    is_remote_eu\n    remote_eu_confidence\n    remote_eu_reason\n    skills {\n      tag\n      level\n      confidence\n      evidence\n    }\n    created_at\n    updated_at\n  }\n}": types.GetJobDocument,
@@ -52,6 +54,10 @@ const documents: Documents = {
  */
 export function gql(source: string): unknown;
 
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "\n  query GetPrompts {\n    prompts {\n      name\n      fallbackText\n      description\n      category\n    }\n  }\n"): (typeof documents)["\n  query GetPrompts {\n    prompts {\n      name\n      fallbackText\n      description\n      category\n    }\n  }\n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

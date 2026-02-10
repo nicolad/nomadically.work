@@ -75,6 +75,11 @@ export type ChatMessage = {
   role: Scalars['String']['output'];
 };
 
+export type ChatMessageInput = {
+  content: Scalars['String']['input'];
+  role: Scalars['String']['input'];
+};
+
 export type CompaniesResponse = {
   __typename?: 'CompaniesResponse';
   companies: Array<Company>;
@@ -207,6 +212,16 @@ export type CreateCompanyInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type CreatePromptInput = {
+  chatMessages?: InputMaybe<Array<ChatMessageInput>>;
+  config?: InputMaybe<PromptConfigInput>;
+  labels?: InputMaybe<Array<Scalars['String']['input']>>;
+  name: Scalars['String']['input'];
+  prompt?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  type: PromptType;
+};
+
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message?: Maybe<Scalars['String']['output']>;
@@ -307,11 +322,13 @@ export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
   createCompany: Company;
+  createPrompt: Prompt;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
   enhanceCompany: EnhanceCompanyResponse;
   ingest_company_snapshot: CompanySnapshot;
   updateCompany: Company;
+  updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
@@ -325,6 +342,11 @@ export type MutationAdd_Company_FactsArgs = {
 
 export type MutationCreateCompanyArgs = {
   input: CreateCompanyInput;
+};
+
+
+export type MutationCreatePromptArgs = {
+  input: CreatePromptInput;
 };
 
 
@@ -366,6 +388,13 @@ export type MutationUpdateCompanyArgs = {
 };
 
 
+export type MutationUpdatePromptLabelArgs = {
+  label: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  version: Scalars['Int']['input'];
+};
+
+
 export type MutationUpdateUserSettingsArgs = {
   settings: UserSettingsInput;
   userId: Scalars['String']['input'];
@@ -382,6 +411,8 @@ export type Prompt = {
   chatMessages?: Maybe<Array<ChatMessage>>;
   config?: Maybe<PromptConfig>;
   createdAt?: Maybe<Scalars['String']['output']>;
+  createdBy?: Maybe<Scalars['String']['output']>;
+  isUserSpecific: Scalars['Boolean']['output'];
   labels?: Maybe<Array<Scalars['String']['output']>>;
   name: Scalars['String']['output'];
   prompt?: Maybe<Scalars['String']['output']>;
@@ -399,10 +430,27 @@ export type PromptConfig = {
   top_p?: Maybe<Scalars['Float']['output']>;
 };
 
+export type PromptConfigInput = {
+  max_tokens?: InputMaybe<Scalars['Int']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
+  temperature?: InputMaybe<Scalars['Float']['input']>;
+  top_p?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export enum PromptType {
   Chat = 'CHAT',
   Text = 'TEXT'
 }
+
+export type PromptUsage = {
+  __typename?: 'PromptUsage';
+  label?: Maybe<Scalars['String']['output']>;
+  promptName: Scalars['String']['output'];
+  traceId?: Maybe<Scalars['String']['output']>;
+  usedAt: Scalars['String']['output'];
+  userEmail: Scalars['String']['output'];
+  version?: Maybe<Scalars['Int']['output']>;
+};
 
 export type Query = {
   __typename?: 'Query';
@@ -414,6 +462,7 @@ export type Query = {
   executeSql: TextToSqlResult;
   job?: Maybe<Job>;
   jobs: JobsResponse;
+  myPromptUsage: Array<PromptUsage>;
   prompt?: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   textToSql: TextToSqlResult;
@@ -475,7 +524,13 @@ export type QueryJobsArgs = {
 };
 
 
+export type QueryMyPromptUsageArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryPromptArgs = {
+  label?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -495,7 +550,9 @@ export type RegisteredPrompt = {
   category: Scalars['String']['output'];
   description: Scalars['String']['output'];
   fallbackText: Scalars['String']['output'];
+  lastUsedBy?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
+  usageCount?: Maybe<Scalars['Int']['output']>;
 };
 
 export enum SourceType {
@@ -574,6 +631,11 @@ export type WarcPointerInput = {
   length: Scalars['Int']['input'];
   offset: Scalars['Int']['input'];
 };
+
+export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, fallbackText: string, description: string, category: string }> };
 
 export type DeleteJobMutationVariables = Exact<{
   id: Scalars['Int']['input'];
@@ -864,6 +926,51 @@ export const CompanyFieldsFragmentDoc = gql`
   }
 }
     `;
+export const GetPromptsDocument = gql`
+    query GetPrompts {
+  prompts {
+    name
+    fallbackText
+    description
+    category
+  }
+}
+    `;
+
+/**
+ * __useGetPromptsQuery__
+ *
+ * To run a query within a React component, call `useGetPromptsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPromptsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPromptsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetPromptsQuery(baseOptions?: Apollo.QueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
+      }
+export function useGetPromptsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
+        }
+// @ts-ignore
+export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>): Apollo.UseSuspenseQueryResult<GetPromptsQuery, GetPromptsQueryVariables>;
+export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>): Apollo.UseSuspenseQueryResult<GetPromptsQuery | undefined, GetPromptsQueryVariables>;
+export function useGetPromptsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPromptsQuery, GetPromptsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetPromptsQuery, GetPromptsQueryVariables>(GetPromptsDocument, options);
+        }
+export type GetPromptsQueryHookResult = ReturnType<typeof useGetPromptsQuery>;
+export type GetPromptsLazyQueryHookResult = ReturnType<typeof useGetPromptsLazyQuery>;
+export type GetPromptsSuspenseQueryHookResult = ReturnType<typeof useGetPromptsSuspenseQuery>;
+export type GetPromptsQueryResult = Apollo.QueryResult<GetPromptsQuery, GetPromptsQueryVariables>;
 export const DeleteJobDocument = gql`
     mutation DeleteJob($id: Int!) {
   deleteJob(id: $id) {

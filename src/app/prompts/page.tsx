@@ -24,6 +24,7 @@ import {
   ExternalLinkIcon,
 } from "@radix-ui/react-icons";
 import { useQuery, gql } from "@apollo/client";
+import { useAuth } from "@/auth/hooks";
 
 const GET_PROMPTS = gql`
   query GetPrompts {
@@ -32,6 +33,21 @@ const GET_PROMPTS = gql`
       fallbackText
       description
       category
+      usageCount
+      lastUsedBy
+    }
+  }
+`;
+
+const GET_MY_PROMPT_USAGE = gql`
+  query GetMyPromptUsage($limit: Int) {
+    myPromptUsage(limit: $limit) {
+      promptName
+      userEmail
+      version
+      label
+      usedAt
+      traceId
     }
   }
 `;
@@ -41,6 +57,8 @@ type PromptInfo = {
   fallbackText: string;
   description: string;
   category: string;
+  usageCount?: number;
+  lastUsedBy?: string | null;
 };
 
 function PromptCard({ prompt }: { prompt: PromptInfo }) {
@@ -60,6 +78,11 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
                 <Badge color="blue" variant="soft">
                   {prompt.category}
                 </Badge>
+                {prompt.usageCount !== undefined && prompt.usageCount > 0 && (
+                  <Badge color="green" variant="soft">
+                    {prompt.usageCount} uses
+                  </Badge>
+                )}
               </Flex>
               <Text size="2" color="gray">
                 {prompt.description}
@@ -197,7 +220,118 @@ function LangfuseSetupGuide() {
   );
 }
 
+function PromptUsageHistory() {
+  const { user } = useAuth();
+  const { loading, error, data } = useQuery(GET_MY_PROMPT_USAGE, {
+    variables: { limit: 50 },
+    skip: !user,
+  });
+
+  if (!user) {
+    return (
+      <Card>
+        <Box p="6" style={{ textAlign: "center" }}>
+          <Text size="3" color="gray">
+            Sign in to view your prompt usage history
+          </Text>
+        </Box>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <Box p="6" style={{ textAlign: "center" }}>
+          <Text size="3" color="gray">
+            Loading usage history...
+          </Text>
+        </Box>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Callout.Root color="red">
+        <Callout.Icon>
+          <InfoCircledIcon />
+        </Callout.Icon>
+        <Callout.Text>
+          <Strong>Error loading usage history:</Strong> {error.message}
+        </Callout.Text>
+      </Callout.Root>
+    );
+  }
+
+  const usageData = data?.myPromptUsage || [];
+
+  if (usageData.length === 0) {
+    return (
+      <Card>
+        <Box p="6" style={{ textAlign: "center" }}>
+          <Text size="3" color="gray">
+            No prompt usage history yet. Start using prompts to see them here.
+          </Text>
+        </Box>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <Box p="5">
+        <Flex direction="column" gap="4">
+          <Flex align="center" justify="between">
+            <Text size="4" weight="bold">
+              Your Prompt Usage
+            </Text>
+            <Badge color="blue" variant="soft">
+              {usageData.length} {usageData.length === 1 ? 'use' : 'uses'}
+            </Badge>
+          </Flex>
+
+          <Separator size="4" />
+
+          <Flex direction="column" gap="2">
+            {usageData.map((usage: any, idx: number) => (
+              <Box key={idx}>
+                <Flex justify="between" align="center" gap="3" wrap="wrap">
+                  <Flex direction="column" gap="1">
+                    <Flex align="center" gap="2">
+                      <Code size="2" variant="ghost">
+                        {usage.promptName}
+                      </Code>
+                      {usage.version && (
+                        <Badge size="1" color="gray" variant="surface">
+                          v{usage.version}
+                        </Badge>
+                      )}
+                      {usage.label && (
+                        <Badge size="1" color="blue" variant="soft">
+                          {usage.label}
+                        </Badge>
+                      )}
+                    </Flex>
+                    <Text size="1" color="gray">
+                      {new Date(usage.usedAt).toLocaleString()}
+                    </Text>
+                  </Flex>
+                </Flex>
+                {idx < usageData.length - 1 && (
+                  <Separator size="4" my="2" />
+                )}
+              </Box>
+            ))}
+          </Flex>
+        </Flex>
+      </Box>
+    </Card>
+  );
+}
+
 export default function PromptsPage() {
+  const { user } = useAuth();
   const [skipLangfuse, setSkipLangfuse] = useState(
     process.env.NEXT_PUBLIC_SKIP_LANGFUSE_PROMPTS === "true"
   );
@@ -209,7 +343,19 @@ export default function PromptsPage() {
     <Container size="4" p={{ initial: "4", md: "8" }}>
       <Flex direction="column" gap="6">
         <Flex direction="column" gap="2">
-          <Heading size="8">Prompt Management</Heading>
+          <Flex align="center" justify="between">
+            <Heading size="8">Prompt Management</Heading>
+            {user && (
+              <Flex align="center" gap="2">
+                <Text size="2" color="gray">
+                  Signed in as
+                </Text>
+                <Badge color="blue" variant="soft">
+                  {user.email}
+                </Badge>
+              </Flex>
+            )}
+          </Flex>
           <Text size="3" color="gray">
             Centralized prompt storage, versioning, and deployment via Langfuse
           </Text>
@@ -241,6 +387,7 @@ export default function PromptsPage() {
         <Tabs.Root defaultValue="prompts">
           <Tabs.List>
             <Tabs.Trigger value="prompts">Registered Prompts</Tabs.Trigger>
+            <Tabs.Trigger value="usage">My Usage</Tabs.Trigger>
             <Tabs.Trigger value="setup">Setup Guide</Tabs.Trigger>
           </Tabs.List>
 
@@ -272,6 +419,10 @@ export default function PromptsPage() {
                   )}
                 </Flex>
               )}
+            </Tabs.Content>
+
+            <Tabs.Content value="usage">
+              <PromptUsageHistory />
             </Tabs.Content>
 
             <Tabs.Content value="setup">

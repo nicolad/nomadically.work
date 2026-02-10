@@ -82,6 +82,8 @@ export const typeDefs = gql`
     tags: [String!]
     createdAt: String
     updatedAt: String
+    createdBy: String
+    isUserSpecific: Boolean!
   }
 
   type RegisteredPrompt {
@@ -89,6 +91,17 @@ export const typeDefs = gql`
     fallbackText: String!
     description: String!
     category: String!
+    usageCount: Int
+    lastUsedBy: String
+  }
+
+  type PromptUsage {
+    promptName: String!
+    userEmail: String!
+    version: Int
+    label: String
+    usedAt: String!
+    traceId: String
   }
 
   # Evidence / Provenance
@@ -399,8 +412,31 @@ export const typeDefs = gql`
     executeSql(sql: String!): TextToSqlResult!
 
     # Prompt Management
-    prompt(name: String!, version: Int): Prompt
+    prompt(name: String!, version: Int, label: String): Prompt
     prompts: [RegisteredPrompt!]!
+    myPromptUsage(limit: Int): [PromptUsage!]!
+  }
+
+  input CreatePromptInput {
+    name: String!
+    type: PromptType!
+    prompt: String
+    chatMessages: [ChatMessageInput!]
+    config: PromptConfigInput
+    labels: [String!]
+    tags: [String!]
+  }
+
+  input ChatMessageInput {
+    role: String!
+    content: String!
+  }
+
+  input PromptConfigInput {
+    temperature: Float
+    max_tokens: Int
+    top_p: Float
+    model: String
   }
 
   type Mutation {
@@ -438,6 +474,10 @@ export const typeDefs = gql`
       extracted: JSON
       evidence: EvidenceInput!
     ): CompanySnapshot!
+
+    # Prompt Management
+    createPrompt(input: CreatePromptInput!): Prompt!
+    updatePromptLabel(name: String!, version: Int!, label: String!): Prompt!
   }
 
   type DeleteJobResponse {

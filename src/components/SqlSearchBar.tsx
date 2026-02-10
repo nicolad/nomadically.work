@@ -15,7 +15,6 @@ import { SqlQueryModal } from "./SqlQueryModal";
 
 type Props = {
   onDrilldownToSearch?: (query: string) => void;
-  sqlEndpoint?: string;
   placeholder?: string;
 };
 
@@ -26,7 +25,6 @@ function safeIsComposing(e: React.KeyboardEvent) {
 
 export function SqlSearchBar({
   onDrilldownToSearch,
-  sqlEndpoint = "/api/text-to-sql",
   placeholder = "Ask the data…",
 }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -146,7 +144,6 @@ export function SqlSearchBar({
             focusInput();
           }
         }}
-        sqlEndpoint={sqlEndpoint}
         defaultQuestion={sqlValue}
         autoRunOnOpen={sqlAutoRun}
         onDrilldownToSearch={(q) => {

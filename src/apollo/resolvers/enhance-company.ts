@@ -97,7 +97,10 @@ export async function enhanceCompany(
       updateData.canonical_domain = extractedData.company.canonical_domain;
     }
     if (extractedData.company.category) {
-      updateData.category = extractedData.company.category;
+      // Validate category is a valid enum value
+      const validCategories = ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN"];
+      const category = extractedData.company.category.toUpperCase();
+      updateData.category = validCategories.includes(category) ? category : "OTHER";
     }
     if (extractedData.company.tags && extractedData.company.tags.length > 0) {
       updateData.tags = JSON.stringify(extractedData.company.tags);

@@ -19,8 +19,6 @@ type Props = {
   onSearchQueryChange?: (q: string) => void;
   onSearchSubmit?: (q: string) => void;
 
-  sqlEndpoint?: string;
-
   initialMode?: QueryMode;
   initialQuery?: string;
 
@@ -36,7 +34,6 @@ export function SearchQueryBar({
   onSearchQueryChange,
   onSearchSubmit,
   onDrilldownToSearch,
-  sqlEndpoint = "/api/text-to-sql",
   initialMode = "jobs",
   initialQuery = "",
   searchDebounceMs = 120,
@@ -110,7 +107,6 @@ export function SearchQueryBar({
               onDrilldownToSearch?.(q);
               onSearchSubmit?.(q);
             }}
-            sqlEndpoint={sqlEndpoint}
             placeholder="Ask the data…"
           />
         )}

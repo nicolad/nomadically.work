@@ -14,9 +14,7 @@ export function UnifiedJobsProvider() {
         onSearchQueryChange={(q) => setSearchFilter(q)}
         onSearchSubmit={(q) => setSearchFilter(q)}
         onDrilldownToSearch={(q) => setSearchFilter(q)}
-        sqlEndpoint="/api/text-to-sql"
       />
-      
       <Box mt="4">
         <JobsList searchFilter={searchFilter} />
       </Box>

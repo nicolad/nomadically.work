@@ -30,6 +30,7 @@ import {
   Cross2Icon,
   CopyIcon,
 } from "@radix-ui/react-icons";
+import { useTextToSqlLazyQuery } from "@/__generated__/hooks";
 
 export type QueryMode = "search" | "sql";
 
@@ -48,9 +49,6 @@ type Props = {
   /** Called when user "runs" a search (Enter in search mode). */
   onSearchSubmit?: (q: string) => void;
 
-  /** Where your Text-to-SQL endpoint lives. Defaults to "/api/text-to-sql". */
-  sqlEndpoint?: string;
-
   /** Initial mode of the toggle. Default: "search". */
   initialMode?: QueryMode;
 
@@ -67,41 +65,31 @@ type Props = {
   persistSqlResult?: boolean;
 };
 
-function parseCommand(raw: string): { forcedMode?: QueryMode; normalizedQuery: string } {
+function parseCommand(raw: string): {
+  forcedMode?: QueryMode;
+  normalizedQuery: string;
+} {
   const q = raw.trim();
   if (!q) return { normalizedQuery: "" };
 
   // SQL force
-  if (q.startsWith("/sql ")) return { forcedMode: "sql", normalizedQuery: q.slice(5).trim() };
-  if (q.startsWith("?")) return { forcedMode: "sql", normalizedQuery: q.slice(1).trim() };
+  if (q.startsWith("/sql "))
+    return { forcedMode: "sql", normalizedQuery: q.slice(5).trim() };
+  if (q.startsWith("?"))
+    return { forcedMode: "sql", normalizedQuery: q.slice(1).trim() };
 
   // Search force
-  if (q.startsWith("/find ")) return { forcedMode: "search", normalizedQuery: q.slice(6).trim() };
-  if (q.startsWith("!")) return { forcedMode: "search", normalizedQuery: q.slice(1).trim() };
+  if (q.startsWith("/find "))
+    return { forcedMode: "search", normalizedQuery: q.slice(6).trim() };
+  if (q.startsWith("!"))
+    return { forcedMode: "search", normalizedQuery: q.slice(1).trim() };
 
   return { normalizedQuery: q };
-}
-
-async function runTextToSql(endpoint: string, question: string, signal?: AbortSignal): Promise<SqlResult> {
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ question }),
-    signal,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Text-to-SQL request failed (${res.status})`);
-  }
-
-  return (await res.json()) as SqlResult;
 }
 
 export function UnifiedQueryBar({
   onSearchQueryChange,
   onSearchSubmit,
-  sqlEndpoint = "/api/text-to-sql",
   initialMode = "search",
   jobsPanel,
   initialQuery = "",
@@ -109,17 +97,31 @@ export function UnifiedQueryBar({
   persistSqlResult = false,
 }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const abortRef = React.useRef<AbortController | null>(null);
   const debounceRef = React.useRef<number | null>(null);
 
   const [mode, setMode] = React.useState<QueryMode>(initialMode);
   const [value, setValue] = React.useState(initialQuery);
   const [activeTab, setActiveTab] = React.useState<"jobs" | "data">("jobs");
 
-  const [loading, setLoading] = React.useState(false);
   const [sqlResult, setSqlResult] = React.useState<SqlResult | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+
+  const [executeQuery, { loading, error, data }] = useTextToSqlLazyQuery();
+
+  // Update result when data changes
+  React.useEffect(() => {
+    if (data?.textToSql) {
+      setSqlResult({
+        sql: data.textToSql.sql,
+        explanation: data.textToSql.explanation ?? undefined,
+        columns: data.textToSql.columns,
+        rows: data.textToSql.rows.map((row) =>
+          (row ?? []).map((cell) => cell as string | number | boolean | null),
+        ),
+        drilldownSearchQuery: data.textToSql.drilldownSearchQuery ?? undefined,
+      });
+    }
+  }, [data]);
 
   const parsed = React.useMemo(() => parseCommand(value), [value]);
   const effectiveMode: QueryMode = parsed.forcedMode ?? mode;
@@ -146,14 +148,8 @@ export function UnifiedQueryBar({
     };
   }, [effectiveMode, normalizedQuery, onSearchQueryChange, searchDebounceMs]);
 
-  // Cleanup abort controller on unmount
-  React.useEffect(() => {
-    return () => abortRef.current?.abort();
-  }, []);
-
   const clear = React.useCallback(() => {
     setValue("");
-    setError(null);
     setCopied(false);
     if (!persistSqlResult) setSqlResult(null);
     // Keep focus for fast iteration
@@ -182,7 +178,6 @@ export function UnifiedQueryBar({
           : "search"
         : effectiveMode;
 
-      setError(null);
       setCopied(false);
 
       if (chosenMode === "search") {
@@ -194,27 +189,15 @@ export function UnifiedQueryBar({
 
       // SQL mode
       setActiveTab("data");
-      setLoading(true);
-
-      // Abort any in-flight SQL request
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        const result = await runTextToSql(sqlEndpoint, q, controller.signal);
-        setSqlResult(result);
-      } catch (e) {
-        // Ignore abort errors
-        if (e instanceof DOMException && e.name === "AbortError") return;
-
-        setSqlResult(null);
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoading(false);
-      }
+      await executeQuery({ variables: { question: q } });
     },
-    [effectiveMode, normalizedQuery, onSearchSubmit, persistSqlResult, sqlEndpoint],
+    [
+      effectiveMode,
+      normalizedQuery,
+      onSearchSubmit,
+      persistSqlResult,
+      executeQuery,
+    ],
   );
 
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
@@ -238,7 +221,12 @@ export function UnifiedQueryBar({
     void run({ invertMode: e.shiftKey });
   };
 
-  const runIcon = effectiveMode === "search" ? <MagnifyingGlassIcon /> : <LightningBoltIcon />;
+  const runIcon =
+    effectiveMode === "search" ? (
+      <MagnifyingGlassIcon />
+    ) : (
+      <LightningBoltIcon />
+    );
   const runTooltip =
     effectiveMode === "search"
       ? "Enter: Search • Shift+Enter: SQL"
@@ -285,7 +273,9 @@ export function UnifiedQueryBar({
             ref={inputRef}
             value={value}
             placeholder={placeholder}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setValue(e.target.value)
+            }
             onKeyDown={onKeyDown}
             aria-label="Unified search / text-to-sql input"
             style={{
@@ -340,7 +330,9 @@ export function UnifiedQueryBar({
               <IconButton
                 variant="ghost"
                 radius="full"
-                aria-label={effectiveMode === "search" ? "Run search" : "Run SQL"}
+                aria-label={
+                  effectiveMode === "search" ? "Run search" : "Run SQL"
+                }
                 onClick={() => void run()}
                 disabled={loading && effectiveMode === "sql"}
               >
@@ -352,7 +344,10 @@ export function UnifiedQueryBar({
       </TextField.Root>
 
       <Box mt="3">
-        <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as "jobs" | "data")}>
+        <Tabs.Root
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "jobs" | "data")}
+        >
           <Tabs.List>
             <Tabs.Trigger value="jobs">Jobs</Tabs.Trigger>
             <Tabs.Trigger value="data">Data</Tabs.Trigger>
@@ -363,8 +358,9 @@ export function UnifiedQueryBar({
               {jobsPanel ?? (
                 <Callout.Root>
                   <Callout.Text>
-                    Render your job cards here. While in <b>Search</b> mode, typing calls{" "}
-                    <code>onSearchQueryChange</code> for debounced filtering.
+                    Render your job cards here. While in <b>Search</b> mode,
+                    typing calls <code>onSearchQueryChange</code> for debounced
+                    filtering.
                   </Callout.Text>
                 </Callout.Root>
               )}
@@ -382,14 +378,15 @@ export function UnifiedQueryBar({
 
               {error && (
                 <Callout.Root color="red" role="alert">
-                  <Callout.Text>{error}</Callout.Text>
+                  <Callout.Text>{error.message}</Callout.Text>
                 </Callout.Root>
               )}
 
               {!loading && !error && !sqlResult && (
                 <Callout.Root>
                   <Callout.Text>
-                    Switch to <b>SQL</b> mode and press Enter to run a Text-to-SQL query.
+                    Switch to <b>SQL</b> mode and press Enter to run a
+                    Text-to-SQL query.
                   </Callout.Text>
                 </Callout.Root>
               )}
@@ -400,7 +397,11 @@ export function UnifiedQueryBar({
                     <Text weight="bold">SQL</Text>
 
                     <Flex gap="2" align="center">
-                      <Button variant="soft" onClick={copySql} disabled={!sqlResult.sql}>
+                      <Button
+                        variant="soft"
+                        onClick={copySql}
+                        disabled={!sqlResult.sql}
+                      >
                         {copied ? "Copied" : "Copy SQL"}
                         <CopyIcon />
                       </Button>
@@ -412,7 +413,9 @@ export function UnifiedQueryBar({
                             setMode("search");
                             setActiveTab("jobs");
                             setValue(sqlResult.drilldownSearchQuery ?? "");
-                            requestAnimationFrame(() => inputRef.current?.focus());
+                            requestAnimationFrame(() =>
+                              inputRef.current?.focus(),
+                            );
                           }}
                         >
                           Show matching jobs
@@ -448,7 +451,9 @@ export function UnifiedQueryBar({
                       <Table.Header>
                         <Table.Row>
                           {sqlResult.columns.map((c) => (
-                            <Table.ColumnHeaderCell key={c}>{c}</Table.ColumnHeaderCell>
+                            <Table.ColumnHeaderCell key={c}>
+                              {c}
+                            </Table.ColumnHeaderCell>
                           ))}
                         </Table.Row>
                       </Table.Header>
@@ -458,7 +463,11 @@ export function UnifiedQueryBar({
                           <Table.Row key={idx}>
                             {row.map((cell, j) => (
                               <Table.Cell key={j}>
-                                {cell === null ? <Text color="gray">NULL</Text> : String(cell)}
+                                {cell === null ? (
+                                  <Text color="gray">NULL</Text>
+                                ) : (
+                                  String(cell)
+                                )}
                               </Table.Cell>
                             ))}
                           </Table.Row>
@@ -475,9 +484,10 @@ export function UnifiedQueryBar({
 
       <Box mt="2">
         <Text size="2" color="gray">
-          Shortcuts: <code>Enter</code> runs the active mode · <code>Shift+Enter</code> runs the other ·{" "}
-          <code>/sql …</code> or <code>?</code> forces SQL · <code>/find …</code> or <code>!</code> forces Search ·{" "}
-          <code>Esc</code> clears
+          Shortcuts: <code>Enter</code> runs the active mode ·{" "}
+          <code>Shift+Enter</code> runs the other · <code>/sql …</code> or{" "}
+          <code>?</code> forces SQL · <code>/find …</code> or <code>!</code>{" "}
+          forces Search · <code>Esc</code> clears
         </Text>
       </Box>
     </Box>

@@ -380,6 +380,7 @@ export type Query = {
   company_snapshots: Array<CompanySnapshot>;
   job?: Maybe<Job>;
   jobs: JobsResponse;
+  textToSql: TextToSqlResult;
   userSettings?: Maybe<UserSettings>;
 };
 
@@ -433,6 +434,11 @@ export type QueryJobsArgs = {
 };
 
 
+export type QueryTextToSqlArgs = {
+  question: Scalars['String']['input'];
+};
+
+
 export type QueryUserSettingsArgs = {
   userId: Scalars['String']['input'];
 };
@@ -443,6 +449,15 @@ export enum SourceType {
   Manual = 'MANUAL',
   Partner = 'PARTNER'
 }
+
+export type TextToSqlResult = {
+  __typename?: 'TextToSqlResult';
+  columns: Array<Scalars['String']['output']>;
+  drilldownSearchQuery?: Maybe<Scalars['String']['output']>;
+  explanation?: Maybe<Scalars['String']['output']>;
+  rows: Array<Maybe<Array<Maybe<Scalars['JSON']['output']>>>>;
+  sql: Scalars['String']['output'];
+};
 
 export type UpdateCompanyInput = {
   canonical_domain?: InputMaybe<Scalars['String']['input']>;
@@ -537,6 +552,13 @@ export type GetUserSettingsQueryVariables = Exact<{
 
 
 export type GetUserSettingsQuery = { __typename?: 'Query', userSettings?: { __typename?: 'UserSettings', id: number, user_id: string, preferred_locations?: Array<string> | null, preferred_skills?: Array<string> | null, excluded_companies?: Array<string> | null } | null };
+
+export type TextToSqlQueryVariables = Exact<{
+  question: Scalars['String']['input'];
+}>;
+
+
+export type TextToSqlQuery = { __typename?: 'Query', textToSql: { __typename?: 'TextToSqlResult', sql: string, explanation?: string | null, columns: Array<string>, rows: Array<Array<any | null> | null>, drilldownSearchQuery?: string | null } };
 
 export type UpdateUserSettingsMutationVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -1011,6 +1033,53 @@ export type GetUserSettingsQueryHookResult = ReturnType<typeof useGetUserSetting
 export type GetUserSettingsLazyQueryHookResult = ReturnType<typeof useGetUserSettingsLazyQuery>;
 export type GetUserSettingsSuspenseQueryHookResult = ReturnType<typeof useGetUserSettingsSuspenseQuery>;
 export type GetUserSettingsQueryResult = Apollo.QueryResult<GetUserSettingsQuery, GetUserSettingsQueryVariables>;
+export const TextToSqlDocument = gql`
+    query TextToSql($question: String!) {
+  textToSql(question: $question) {
+    sql
+    explanation
+    columns
+    rows
+    drilldownSearchQuery
+  }
+}
+    `;
+
+/**
+ * __useTextToSqlQuery__
+ *
+ * To run a query within a React component, call `useTextToSqlQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTextToSqlQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTextToSqlQuery({
+ *   variables: {
+ *      question: // value for 'question'
+ *   },
+ * });
+ */
+export function useTextToSqlQuery(baseOptions: Apollo.QueryHookOptions<TextToSqlQuery, TextToSqlQueryVariables> & ({ variables: TextToSqlQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TextToSqlQuery, TextToSqlQueryVariables>(TextToSqlDocument, options);
+      }
+export function useTextToSqlLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TextToSqlQuery, TextToSqlQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TextToSqlQuery, TextToSqlQueryVariables>(TextToSqlDocument, options);
+        }
+// @ts-ignore
+export function useTextToSqlSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<TextToSqlQuery, TextToSqlQueryVariables>): Apollo.UseSuspenseQueryResult<TextToSqlQuery, TextToSqlQueryVariables>;
+export function useTextToSqlSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TextToSqlQuery, TextToSqlQueryVariables>): Apollo.UseSuspenseQueryResult<TextToSqlQuery | undefined, TextToSqlQueryVariables>;
+export function useTextToSqlSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TextToSqlQuery, TextToSqlQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<TextToSqlQuery, TextToSqlQueryVariables>(TextToSqlDocument, options);
+        }
+export type TextToSqlQueryHookResult = ReturnType<typeof useTextToSqlQuery>;
+export type TextToSqlLazyQueryHookResult = ReturnType<typeof useTextToSqlLazyQuery>;
+export type TextToSqlSuspenseQueryHookResult = ReturnType<typeof useTextToSqlSuspenseQuery>;
+export type TextToSqlQueryResult = Apollo.QueryResult<TextToSqlQuery, TextToSqlQueryVariables>;
 export const UpdateUserSettingsDocument = gql`
     mutation UpdateUserSettings($userId: String!, $settings: UserSettingsInput!) {
   updateUserSettings(userId: $userId, settings: $settings) {

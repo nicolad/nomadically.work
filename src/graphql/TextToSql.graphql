@@ -1,0 +1,9 @@
+query TextToSql($question: String!) {
+  textToSql(question: $question) {
+    sql
+    explanation
+    columns
+    rows
+    drilldownSearchQuery
+  }
+}

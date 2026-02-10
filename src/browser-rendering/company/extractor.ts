@@ -63,7 +63,10 @@ export async function extractCompanyData(
             updated_at: { type: ["string", "null"] },
 
             canonical_domain: { type: ["string", "null"] },
-            category: { type: ["string", "null"] },
+            category: {
+              type: ["string", "null"],
+              enum: ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN", null]
+            },
             tags: { type: ["array", "null"], items: { type: "string" } },
             services: { type: ["array", "null"], items: { type: "string" } },
             service_taxonomy: {
@@ -199,6 +202,14 @@ Field mapping guidance:
 - canonical_domain: derive from the input URL host (strip "www.").
 - website: canonical URL if present, otherwise the input URL.
 - logo_url: choose a clear brand logo; use an absolute URL.
+- category: MUST be one of: CONSULTANCY, AGENCY, STAFFING, DIRECTORY, PRODUCT, OTHER, UNKNOWN.
+  - CONSULTANCY: companies providing consulting/advisory services
+  - AGENCY: marketing, design, or creative agencies
+  - STAFFING: recruitment/staffing agencies
+  - DIRECTORY: job boards or company directories
+  - PRODUCT: product companies building software/hardware
+  - OTHER: doesn't fit other categories
+  - UNKNOWN: insufficient information to classify
 - careers_url:
   - Find the best official careers/jobs link.
   - Prefer internal "/careers", "/jobs", "/join-us", "/work-with-us" or a dedicated careers subdomain.

@@ -46,6 +46,7 @@ export async function extractCompanyDataFallback(
           role: "system",
           content: `You are extracting company information from a webpage. Extract the following and return as JSON:
 - company: {name, logo_url, website, careers_url, linkedin_url, description, industry, size, location, category, tags[], services[], industries[]}
+  - category MUST be one of: CONSULTANCY, AGENCY, STAFFING, DIRECTORY, PRODUCT, OTHER, UNKNOWN
 - ats_boards: [{url, vendor, board_type, confidence, is_active}]
 - evidence: {source_type: "url", source_url, http_status, mime}
 - notes: string[]

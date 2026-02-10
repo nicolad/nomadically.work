@@ -2,7 +2,6 @@
    File: components/SqlQueryModal.tsx
    Text-to-SQL in a Radix Themes Dialog (modal)
    - Ctrl/Cmd+Enter to run
-   - Abortable fetch (Stop)
    - Copy SQL
    - Optional drilldown back to search
    ========================================================= */
@@ -23,12 +22,8 @@ import {
   Table,
   Spinner,
 } from "@radix-ui/themes";
-import {
-  Cross2Icon,
-  CopyIcon,
-  StopIcon,
-  PlayIcon,
-} from "@radix-ui/react-icons";
+import { Cross2Icon, CopyIcon, PlayIcon } from "@radix-ui/react-icons";
+import { useTextToSqlLazyQuery } from "@/__generated__/hooks";
 
 export type SqlResult = {
   sql: string;
@@ -41,8 +36,6 @@ export type SqlResult = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-
-  sqlEndpoint?: string;
 
   /** Seed the modal with the current query from your search bar */
   defaultQuestion?: string;
@@ -57,65 +50,40 @@ type Props = {
   onDrilldownToSearch?: (searchQuery: string) => void;
 };
 
-async function runTextToSql(
-  endpoint: string,
-  question: string,
-  signal?: AbortSignal,
-): Promise<SqlResult> {
-  console.log(
-    "[runTextToSql] Calling endpoint:",
-    endpoint,
-    "with question:",
-    question,
-  );
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ question }),
-    signal,
-  });
-
-  console.log("[runTextToSql] Response status:", res.status);
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Text-to-SQL request failed (${res.status})`);
-  }
-
-  const result = (await res.json()) as SqlResult;
-  console.log("[runTextToSql] Parsed result:", result);
-  return result;
-}
-
 export function SqlQueryModal({
   open,
   onOpenChange,
-  sqlEndpoint = "/api/text-to-sql",
   defaultQuestion = "",
   autoRunOnOpen = false,
   onDrilldownToSearch,
 }: Props) {
   const questionRef = React.useRef<HTMLTextAreaElement | null>(null);
-  const abortRef = React.useRef<AbortController | null>(null);
   const didAutoRunRef = React.useRef(false);
 
   const [question, setQuestion] = React.useState(defaultQuestion);
-  const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<SqlResult | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
 
-  const stop = React.useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setLoading(false);
-  }, []);
+  const [executeQuery, { loading, error, data }] = useTextToSqlLazyQuery();
+
+  // Update result when data changes
+  React.useEffect(() => {
+    if (data?.textToSql) {
+      setResult({
+        sql: data.textToSql.sql,
+        explanation: data.textToSql.explanation ?? undefined,
+        columns: data.textToSql.columns,
+        rows: data.textToSql.rows.map((row) =>
+          (row ?? []).map((cell) => cell as string | number | boolean | null),
+        ),
+        drilldownSearchQuery: data.textToSql.drilldownSearchQuery ?? undefined,
+      });
+    }
+  }, [data]);
 
   const clear = React.useCallback(() => {
     setQuestion("");
     setResult(null);
-    setError(null);
     setCopied(false);
     requestAnimationFrame(() => questionRef.current?.focus());
   }, []);
@@ -135,25 +103,9 @@ export function SqlQueryModal({
     const q = question.trim();
     if (!q) return;
 
-    setError(null);
     setCopied(false);
-    setLoading(true);
-
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const r = await runTextToSql(sqlEndpoint, q, controller.signal);
-      setResult(r);
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      setResult(null);
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [question, sqlEndpoint]);
+    await executeQuery({ variables: { question: q } });
+  }, [question, executeQuery]);
 
   // Run query with explicit question
   const runWithQuestion = React.useCallback(
@@ -164,42 +116,16 @@ export function SqlQueryModal({
       }
 
       console.log("[SqlQueryModal] runWithQuestion called with:", q);
-      console.log("[SqlQueryModal] sqlEndpoint:", sqlEndpoint);
-
-      setError(null);
       setCopied(false);
-      setLoading(true);
-
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        console.log("[SqlQueryModal] Fetching from endpoint...");
-        const r = await runTextToSql(sqlEndpoint, q, controller.signal);
-        console.log("[SqlQueryModal] Result:", r);
-        setResult(r);
-      } catch (e) {
-        if (e instanceof DOMException && e.name === "AbortError") {
-          console.log("[SqlQueryModal] Request aborted");
-          return;
-        }
-        const errorMsg = e instanceof Error ? e.message : String(e);
-        console.error("[SqlQueryModal] Error:", errorMsg);
-        setResult(null);
-        setError(errorMsg);
-      } finally {
-        setLoading(false);
-      }
+      await executeQuery({ variables: { question: q } });
     },
-    [sqlEndpoint],
+    [executeQuery],
   );
 
   // When opening: seed state + focus + reset auto-run latch
   React.useEffect(() => {
     if (!open) {
       console.log("[SqlQueryModal] Closing modal");
-      stop();
       return;
     }
 
@@ -211,11 +137,10 @@ export function SqlQueryModal({
 
     didAutoRunRef.current = false;
     setQuestion(defaultQuestion);
-    setError(null);
     setCopied(false);
 
     requestAnimationFrame(() => questionRef.current?.focus());
-  }, [open, defaultQuestion, stop]);
+  }, [open, defaultQuestion]);
 
   // Auto-run once per open (if requested)
   React.useEffect(() => {
@@ -261,8 +186,6 @@ export function SqlQueryModal({
     <Dialog.Root
       open={open}
       onOpenChange={(next) => {
-        // When closing, abort any inflight request
-        if (!next) stop();
         onOpenChange(next);
       }}
     >
@@ -312,16 +235,6 @@ export function SqlQueryModal({
 
             <Button
               variant="soft"
-              color="red"
-              onClick={stop}
-              disabled={!loading}
-            >
-              <StopIcon />
-              Stop
-            </Button>
-
-            <Button
-              variant="soft"
               onClick={clear}
               disabled={loading && !question}
             >
@@ -351,7 +264,7 @@ export function SqlQueryModal({
         <Box mt="4">
           {error && (
             <Callout.Root color="red" role="alert">
-              <Callout.Text>{error}</Callout.Text>
+              <Callout.Text>{error.message}</Callout.Text>
             </Callout.Root>
           )}
 

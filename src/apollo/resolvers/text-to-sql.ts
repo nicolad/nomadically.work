@@ -31,12 +31,12 @@ export const textToSqlResolvers = {
         const explanationMatch = response.match(
           /### Explanation\n([\s\S]*?)(?=\n###|\n\n|$)/,
         );
-        const explanation = explanationMatch
-          ? explanationMatch[1].trim()
-          : "";
+        const explanation = explanationMatch ? explanationMatch[1].trim() : "";
 
         // Extract results table (simplified - assumes markdown table format)
-        const resultsMatch = response.match(/### Results\n([\s\S]*?)(?=\n###|$)/);
+        const resultsMatch = response.match(
+          /### Results\n([\s\S]*?)(?=\n###|$)/,
+        );
         const resultsText = resultsMatch ? resultsMatch[1].trim() : "";
 
         // Parse markdown table into structured data

@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { companies, atsBoards, companySnapshots } from "@/db/schema";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
-import { extractCompanyData } from "@/browser-rendering/company-extractor";
+import { extractCompanyData } from "@/browser-rendering/company/extractor";
 import type {
   EnhanceCompanyArgs,
   EnhanceCompanyResponse,

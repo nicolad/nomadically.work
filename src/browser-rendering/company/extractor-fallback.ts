@@ -44,14 +44,36 @@ export async function extractCompanyDataFallback(
       messages: [
         {
           role: "system",
-          content: `You are extracting company information from a webpage. Extract the following and return as JSON:
-- company: {name, logo_url, website, careers_url, linkedin_url, description, industry, size, location, category, tags[], services[], industries[]}
-  - category MUST be one of: CONSULTANCY, AGENCY, STAFFING, DIRECTORY, PRODUCT, OTHER, UNKNOWN
-- ats_boards: [{url, vendor, board_type, confidence, is_active}]
-- evidence: {source_type: "url", source_url, http_status, mime}
-- notes: string[]
+          content: `You are extracting company information from a webpage. You MUST return valid JSON in this exact structure:
 
-Return ONLY valid JSON, no markdown.`,
+{
+  "company": {
+    "name": "Company Name",
+    "logo_url": "https://...",
+    "website": "https://...",
+    "careers_url": "https://...",
+    "linkedin_url": "https://...",
+    "description": "...",
+    "industry": "...",
+    "size": "...",
+    "location": "...",
+    "canonical_domain": "...",
+    "category": "CONSULTANCY|AGENCY|STAFFING|DIRECTORY|PRODUCT|OTHER|UNKNOWN",
+    "tags": [],
+    "services": [],
+    "industries": []
+  },
+  "ats_boards": [],
+  "evidence": {
+    "source_type": "url",
+    "source_url": "...",
+    "http_status": null,
+    "mime": null
+  },
+  "notes": []
+}
+
+IMPORTANT: category MUST be exactly one of: CONSULTANCY, AGENCY, STAFFING, DIRECTORY, PRODUCT, OTHER, UNKNOWN`,
         },
         {
           role: "user",

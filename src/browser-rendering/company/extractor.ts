@@ -20,12 +20,6 @@ export async function extractCompanyData(
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
-  // Debug: Log which credentials are available (without exposing the actual values)
-  console.log("🔑 Cloudflare credentials check:");
-  console.log("   CLOUDFLARE_BROWSER_RENDERING_KEY:", browserRenderingKey ? `✓ (${browserRenderingKey.substring(0, 10)}...)` : "✗ not set");
-  console.log("   CLOUDFLARE_ACCOUNT_ID:", accountId ? `✓ (${accountId})` : "✗ not set");
-  console.log("   DEEPSEEK_API_KEY:", deepseekKey ? `✓ (${deepseekKey.substring(0, 10)}...)` : "✗ not set");
-
   if (!browserRenderingKey) {
     throw new Error("Missing CLOUDFLARE_BROWSER_RENDERING_KEY environment variable");
   }
@@ -138,22 +132,16 @@ Extract from: ${targetUrl}
       gotoOptions: { waitUntil: "networkidle0" },
     });
 
-    console.log("📦 Cloudflare response structure:");
-    console.log("   Type:", typeof cfResp);
-    console.log("   Keys:", Object.keys(cfResp || {}));
-    console.log("   Full response:", JSON.stringify(cfResp, null, 2));
-
     // Cloudflare Browser Rendering JSON endpoint returns the extracted data directly
     // Not wrapped in a .result property like Workers AI
     const extracted = cfResp as unknown as ExtractionResult;
 
     if (!extracted || !extracted.company) {
-      console.error("❌ Failed to extract data from response");
-      console.error("   cfResp:", JSON.stringify(cfResp, null, 2));
+      console.error("❌ Failed to extract company data - invalid response structure");
       throw new Error("Failed to extract company data from webpage - invalid response structure");
     }
 
-    console.log("✅ Successfully extracted company data:", extracted.company.name);
+    console.log(`✅ Successfully extracted company data: ${extracted.company.name}`);
     return extracted;
   } catch (error: any) {
     // Log the actual error for debugging

@@ -18,7 +18,6 @@ export async function extractCompanyData(
 ): Promise<ExtractionResult> {
   // Use dedicated Browser Rendering key if available, otherwise fall back to API token
   const browserRenderingKey = process.env.CLOUDFLARE_BROWSER_RENDERING_KEY;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
@@ -256,7 +255,7 @@ Extract from: ${targetUrl}
       response_format,
       custom_ai: [
         {
-          model: "deepseek/deepseek-reasoner",
+          model: "deepseek/deepseek-chat",
           authorization: `Bearer ${deepseekKey}`,
         },
       ],

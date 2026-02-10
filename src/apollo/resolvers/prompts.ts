@@ -143,13 +143,27 @@ export const promptResolvers = {
           promptData.config = input.config;
         }
 
-        const created = await langfuse.createPrompt(promptData);
+        // Use the Langfuse client to create prompt
+        const response = await fetch(`${LANGFUSE_BASE_URL}/api/public/v2/prompts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Auth-Token": `Basic ${Buffer.from(`${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`).toString("base64")}`,
+          },
+          body: JSON.stringify(promptData),
+        });
 
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to create prompt: ${response.status} ${errorText}`);
+        }
+
+        const created = await response.json();
         const isChat = created.type === "chat";
 
         return {
           name: created.name,
-          version: created.version,
+          version: created.version || 1,
           type: created.type === "chat" ? "CHAT" : "TEXT",
           prompt: isChat ? null : created.prompt,
           chatMessages: isChat ? created.prompt : null,

@@ -16,14 +16,20 @@ import {
   Code,
   Callout,
   Strong,
+  TextField,
+  TextArea,
+  Select,
+  Switch,
 } from "@radix-ui/themes";
 import {
   MagicWandIcon,
   CodeIcon,
   InfoCircledIcon,
   ExternalLinkIcon,
+  PlusIcon,
+  CheckIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, gql } from "@apollo/client";
+import { useQuery, useMutation, gql } from "@apollo/client";
 import { useAuth } from "@/auth/hooks";
 
 const GET_PROMPTS = gql`
@@ -48,6 +54,19 @@ const GET_MY_PROMPT_USAGE = gql`
       label
       usedAt
       traceId
+    }
+  }
+`;
+
+const CREATE_PROMPT = gql`
+  mutation CreatePrompt($input: CreatePromptInput!) {
+    createPrompt(input: $input) {
+      name
+      version
+      type
+      labels
+      tags
+      createdBy
     }
   }
 `;
@@ -220,6 +239,272 @@ function LangfuseSetupGuide() {
   );
 }
 
+function CreatePromptForm({ onSuccess }: { onSuccess?: () => void }) {
+  const { user } = useAuth();
+  const [promptType, setPromptType] = useState<"text" | "chat">("text");
+  const [name, setName] = useState("");
+  const [textPrompt, setTextPrompt] = useState("");
+  const [chatMessages, setChatMessages] = useState<Array<{ role: string; content: string }>>([
+    { role: "system", content: "" },
+    { role: "user", content: "" },
+  ]);
+  const [labels, setLabels] = useState("production");
+  const [tags, setTags] = useState("");
+  const [addToProduction, setAddToProduction] = useState(true);
+
+  const [createPrompt, { loading, error }] = useMutation(CREATE_PROMPT, {
+    refetchQueries: [{ query: GET_PROMPTS }],
+    onCompleted: () => {
+      // Reset form
+      setName("");
+      setTextPrompt("");
+      setChatMessages([
+        { role: "system", content: "" },
+        { role: "user", content: "" },
+      ]);
+      setLabels("production");
+      setTags("");
+      onSuccess?.();
+    },
+  });
+
+  if (!user) {
+    return (
+      <Card>
+        <Box p="6" style={{ textAlign: "center" }}>
+          <Text size="3" color="gray">
+            Sign in to create prompts
+          </Text>
+        </Box>
+      </Card>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const input: any = {
+      name,
+      type: promptType.toUpperCase(),
+      labels: addToProduction ? ["production"] : labels.split(",").map(l => l.trim()).filter(Boolean),
+      tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+    };
+
+    if (promptType === "text") {
+      input.prompt = textPrompt;
+    } else {
+      input.chatMessages = chatMessages.filter(m => m.content.trim());
+    }
+
+    try {
+      await createPrompt({ variables: { input } });
+    } catch (err) {
+      console.error("Error creating prompt:", err);
+    }
+  };
+
+  const addChatMessage = () => {
+    setChatMessages([...chatMessages, { role: "user", content: "" }]);
+  };
+
+  const updateChatMessage = (index: number, field: "role" | "content", value: string) => {
+    const updated = [...chatMessages];
+    updated[index][field] = value;
+    setChatMessages(updated);
+  };
+
+  const removeChatMessage = (index: number) => {
+    setChatMessages(chatMessages.filter((_, i) => i !== index));
+  };
+
+  return (
+    <Card>
+      <Box p="5">
+        <form onSubmit={handleSubmit}>
+          <Flex direction="column" gap="4">
+            <Flex align="center" gap="3">
+              <PlusIcon width="20" height="20" />
+              <Text size="4" weight="bold">
+                Create New Prompt
+              </Text>
+            </Flex>
+
+            {error && (
+              <Callout.Root color="red">
+                <Callout.Icon>
+                  <InfoCircledIcon />
+                </Callout.Icon>
+                <Callout.Text>
+                  <Strong>Error:</Strong> {error.message}
+                </Callout.Text>
+              </Callout.Root>
+            )}
+
+            <Separator size="4" />
+
+            {/* Prompt Name */}
+            <Flex direction="column" gap="2">
+              <Text size="2" weight="bold">
+                Prompt Name *
+              </Text>
+              <TextField.Root
+                placeholder="e.g., movie-critic"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <Text size="1" color="gray">
+                Unique identifier for this prompt
+              </Text>
+            </Flex>
+
+            {/* Prompt Type */}
+            <Flex direction="column" gap="2">
+              <Text size="2" weight="bold">
+                Type *
+              </Text>
+              <Select.Root value={promptType} onValueChange={(value: any) => setPromptType(value)}>
+                <Select.Trigger />
+                <Select.Content>
+                  <Select.Item value="text">Text Prompt</Select.Item>
+                  <Select.Item value="chat">Chat Prompt</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+
+            {/* Text Prompt */}
+            {promptType === "text" && (
+              <Flex direction="column" gap="2">
+                <Text size="2" weight="bold">
+                  Prompt Text *
+                </Text>
+                <TextArea
+                  placeholder="As a {{criticlevel}} critic, do you like {{movie}}?"
+                  value={textPrompt}
+                  onChange={(e) => setTextPrompt(e.target.value)}
+                  rows={6}
+                  required
+                />
+                <Text size="1" color="gray">
+                  Use {`{{variable}}`} for dynamic placeholders
+                </Text>
+              </Flex>
+            )}
+
+            {/* Chat Messages */}
+            {promptType === "chat" && (
+              <Flex direction="column" gap="3">
+                <Flex align="center" justify="between">
+                  <Text size="2" weight="bold">
+                    Chat Messages *
+                  </Text>
+                  <Button type="button" variant="soft" size="1" onClick={addChatMessage}>
+                    <PlusIcon /> Add Message
+                  </Button>
+                </Flex>
+
+                {chatMessages.map((msg, idx) => (
+                  <Card key={idx}>
+                    <Box p="3">
+                      <Flex direction="column" gap="2">
+                        <Flex gap="2" align="center">
+                          <Select.Root
+                            value={msg.role}
+                            onValueChange={(value) => updateChatMessage(idx, "role", value)}
+                          >
+                            <Select.Trigger style={{ width: "120px" }} />
+                            <Select.Content>
+                              <Select.Item value="system">System</Select.Item>
+                              <Select.Item value="user">User</Select.Item>
+                              <Select.Item value="assistant">Assistant</Select.Item>
+                            </Select.Content>
+                          </Select.Root>
+                          {chatMessages.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              color="red"
+                              size="1"
+                              onClick={() => removeChatMessage(idx)}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </Flex>
+                        <TextArea
+                          placeholder={`${msg.role} message content...`}
+                          value={msg.content}
+                          onChange={(e) => updateChatMessage(idx, "content", e.target.value)}
+                          rows={3}
+                        />
+                      </Flex>
+                    </Box>
+                  </Card>
+                ))}
+                <Text size="1" color="gray">
+                  Use {`{{variable}}`} in message content for dynamic placeholders
+                </Text>
+              </Flex>
+            )}
+
+            {/* Labels */}
+            <Flex direction="column" gap="2">
+              <Flex align="center" gap="2">
+                <Text size="2" weight="bold">
+                  Deploy to Production
+                </Text>
+                <Switch
+                  checked={addToProduction}
+                  onCheckedChange={setAddToProduction}
+                />
+              </Flex>
+              {!addToProduction && (
+                <>
+                  <TextField.Root
+                    placeholder="production, staging, development"
+                    value={labels}
+                    onChange={(e) => setLabels(e.target.value)}
+                  />
+                  <Text size="1" color="gray">
+                    Comma-separated labels (e.g., production, staging)
+                  </Text>
+                </>
+              )}
+            </Flex>
+
+            {/* Tags */}
+            <Flex direction="column" gap="2">
+              <Text size="2" weight="bold">
+                Tags (optional)
+              </Text>
+              <TextField.Root
+                placeholder="feature-x, experiment-a"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+              <Text size="1" color="gray">
+                Comma-separated tags for organization
+              </Text>
+            </Flex>
+
+            <Separator size="4" />
+
+            <Button type="submit" size="3" disabled={loading || !name || (promptType === "text" ? !textPrompt : chatMessages.every(m => !m.content.trim()))}>
+              {loading ? (
+                "Creating..."
+              ) : (
+                <>
+                  <CheckIcon /> Create Prompt
+                </>
+              )}
+            </Button>
+          </Flex>
+        </form>
+      </Box>
+    </Card>
+  );
+}
+
 function PromptUsageHistory() {
   const { user } = useAuth();
   const { loading, error, data } = useQuery(GET_MY_PROMPT_USAGE, {
@@ -387,6 +672,7 @@ export default function PromptsPage() {
         <Tabs.Root defaultValue="prompts">
           <Tabs.List>
             <Tabs.Trigger value="prompts">Registered Prompts</Tabs.Trigger>
+            <Tabs.Trigger value="create">Create Prompt</Tabs.Trigger>
             <Tabs.Trigger value="usage">My Usage</Tabs.Trigger>
             <Tabs.Trigger value="setup">Setup Guide</Tabs.Trigger>
           </Tabs.List>
@@ -419,6 +705,13 @@ export default function PromptsPage() {
                   )}
                 </Flex>
               )}
+            </Tabs.Content>
+
+            <Tabs.Content value="create">
+              <CreatePromptForm onSuccess={() => {
+                // Could add a toast notification here
+                console.log("Prompt created successfully!");
+              }} />
             </Tabs.Content>
 
             <Tabs.Content value="usage">

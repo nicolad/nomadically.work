@@ -84,35 +84,36 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <Card>
+    <Card style={{ borderLeft: "3px solid var(--blue-9)" }}>
       <Box p="5">
         <Flex direction="column" gap="4">
           {/* Header */}
-          <Flex justify="between" align="start">
-            <Flex direction="column" gap="2">
-              <Flex align="center" gap="3">
-                <Code size="3" variant="soft">
+          <Flex justify="between" align="start" wrap="wrap" gap="3">
+            <Flex direction="column" gap="2" style={{ flex: 1, minWidth: "250px" }}>
+              <Flex align="center" gap="3" wrap="wrap">
+                <Code size="3" variant="soft" highContrast>
                   {prompt.name}
                 </Code>
-                <Badge color="blue" variant="soft">
+                <Badge color="blue" variant="soft" size="2">
                   {prompt.category}
                 </Badge>
                 {prompt.usageCount !== undefined && prompt.usageCount > 0 && (
-                  <Badge color="green" variant="soft">
-                    {prompt.usageCount} uses
+                  <Badge color="green" variant="soft" size="2">
+                    {prompt.usageCount} {prompt.usageCount === 1 ? 'use' : 'uses'}
                   </Badge>
                 )}
               </Flex>
-              <Text size="2" color="gray">
+              <Text size="2" color="gray" style={{ lineHeight: 1.6 }}>
                 {prompt.description}
               </Text>
             </Flex>
 
-            <Flex gap="2">
+            <Flex gap="2" align="center">
               <Button
-                variant="soft"
+                variant="surface"
                 size="2"
                 onClick={() => setIsExpanded(!isExpanded)}
+                style={{ cursor: "pointer" }}
               >
                 <CodeIcon />
                 {isExpanded ? "Hide" : "View"} Prompt
@@ -125,29 +126,29 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
             <>
               <Separator size="4" />
               <Box>
-                <Text size="1" weight="bold" style={{ textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                <Text size="2" weight="bold" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px", display: "block" }}>
                   Fallback Text
                 </Text>
                 <Box mt="2" style={{ 
-                  backgroundColor: "var(--gray-2)", 
+                  backgroundColor: "var(--gray-3)", 
                   borderRadius: "8px",
-                  padding: "12px",
-                  maxHeight: "400px",
+                  border: "1px solid var(--gray-6)",
+                  padding: "16px",
+                  maxHeight: "500px",
                   overflow: "auto",
                 }}>
-                  <Text size="2" style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+                  <Text size="2" style={{ whiteSpace: "pre-wrap", fontFamily: "var(--code-font-family)", lineHeight: 1.6 }}>
                     {prompt.fallbackText}
                   </Text>
                 </Box>
               </Box>
 
-              <Callout.Root color="blue" size="1">
+              <Callout.Root color="blue" size="2">
                 <Callout.Icon>
                   <InfoCircledIcon />
                 </Callout.Icon>
                 <Callout.Text>
-                  To manage this prompt in Langfuse:{" "}
-                  <Strong>Create a prompt named "{prompt.name}"</Strong> with label "production"
+                  <Strong>Langfuse Setup:</Strong> Create a prompt named <Code>"{prompt.name}"</Code> with label <Code>"production"</Code> in your Langfuse dashboard to override this fallback.
                 </Callout.Text>
               </Callout.Root>
             </>

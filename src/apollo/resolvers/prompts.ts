@@ -90,19 +90,7 @@ export const promptResolvers = {
     },
 
     prompts: async (_: any, __: any, context: GraphQLContext) => {
-      // Return registered prompts from our application
-      const registered = [
-        {
-          name: PROMPTS.JOB_CLASSIFIER.name,
-          fallbackText: PROMPTS.JOB_CLASSIFIER.fallbackText,
-          description: "Classifies job postings as Remote EU eligible",
-          category: "Job Processing",
-          usageCount: promptUsageLog.filter(u => u.promptName === PROMPTS.JOB_CLASSIFIER.name).length,
-          lastUsedBy: context.userEmail || null,
-        },
-      ];
-
-      return registered;
+   
     },
 
     myPromptUsage: async (

@@ -143,14 +143,17 @@ Extract from: ${targetUrl}
     console.log("   Keys:", Object.keys(cfResp || {}));
     console.log("   Full response:", JSON.stringify(cfResp, null, 2));
 
-    const extracted = (cfResp as any)?.result as ExtractionResult | undefined;
+    // Cloudflare Browser Rendering JSON endpoint returns the extracted data directly
+    // Not wrapped in a .result property like Workers AI
+    const extracted = cfResp as unknown as ExtractionResult;
 
-    if (!extracted) {
+    if (!extracted || !extracted.company) {
       console.error("❌ Failed to extract data from response");
       console.error("   cfResp:", JSON.stringify(cfResp, null, 2));
-      throw new Error("Failed to extract company data from webpage");
+      throw new Error("Failed to extract company data from webpage - invalid response structure");
     }
 
+    console.log("✅ Successfully extracted company data:", extracted.company.name);
     return extracted;
   } catch (error: any) {
     // Log the actual error for debugging

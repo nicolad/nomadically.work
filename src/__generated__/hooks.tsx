@@ -213,6 +213,14 @@ export type DeleteJobResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceCompanyResponse = {
+  __typename?: 'EnhanceCompanyResponse';
+  companyId?: Maybe<Scalars['Int']['output']>;
+  companyKey?: Maybe<Scalars['String']['output']>;
+  message?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type Evidence = {
   __typename?: 'Evidence';
   capture_timestamp?: Maybe<Scalars['String']['output']>;
@@ -295,6 +303,7 @@ export type Mutation = {
   createCompany: Company;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
+  enhanceCompany: EnhanceCompanyResponse;
   ingest_company_snapshot: CompanySnapshot;
   updateCompany: Company;
   updateUserSettings: UserSettings;
@@ -320,6 +329,12 @@ export type MutationDeleteCompanyArgs = {
 
 export type MutationDeleteJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationEnhanceCompanyArgs = {
+  id?: InputMaybe<Scalars['Int']['input']>;
+  key?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -562,6 +577,14 @@ export type DeleteCompanyMutationVariables = Exact<{
 
 
 export type DeleteCompanyMutation = { __typename?: 'Mutation', deleteCompany: { __typename?: 'DeleteCompanyResponse', success: boolean, message?: string | null } };
+
+export type EnhanceCompanyMutationVariables = Exact<{
+  id?: InputMaybe<Scalars['Int']['input']>;
+  key?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type EnhanceCompanyMutation = { __typename?: 'Mutation', enhanceCompany: { __typename?: 'EnhanceCompanyResponse', success: boolean, message?: string | null, companyId?: number | null, companyKey?: string | null } };
 
 export type AddCompanyFactsMutationVariables = Exact<{
   company_id: Scalars['Int']['input'];
@@ -1134,6 +1157,43 @@ export function useDeleteCompanyMutation(baseOptions?: Apollo.MutationHookOption
 export type DeleteCompanyMutationHookResult = ReturnType<typeof useDeleteCompanyMutation>;
 export type DeleteCompanyMutationResult = Apollo.MutationResult<DeleteCompanyMutation>;
 export type DeleteCompanyMutationOptions = Apollo.BaseMutationOptions<DeleteCompanyMutation, DeleteCompanyMutationVariables>;
+export const EnhanceCompanyDocument = gql`
+    mutation EnhanceCompany($id: Int, $key: String) {
+  enhanceCompany(id: $id, key: $key) {
+    success
+    message
+    companyId
+    companyKey
+  }
+}
+    `;
+export type EnhanceCompanyMutationFn = Apollo.MutationFunction<EnhanceCompanyMutation, EnhanceCompanyMutationVariables>;
+
+/**
+ * __useEnhanceCompanyMutation__
+ *
+ * To run a mutation, you first call `useEnhanceCompanyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useEnhanceCompanyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [enhanceCompanyMutation, { data, loading, error }] = useEnhanceCompanyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      key: // value for 'key'
+ *   },
+ * });
+ */
+export function useEnhanceCompanyMutation(baseOptions?: Apollo.MutationHookOptions<EnhanceCompanyMutation, EnhanceCompanyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<EnhanceCompanyMutation, EnhanceCompanyMutationVariables>(EnhanceCompanyDocument, options);
+      }
+export type EnhanceCompanyMutationHookResult = ReturnType<typeof useEnhanceCompanyMutation>;
+export type EnhanceCompanyMutationResult = Apollo.MutationResult<EnhanceCompanyMutation>;
+export type EnhanceCompanyMutationOptions = Apollo.BaseMutationOptions<EnhanceCompanyMutation, EnhanceCompanyMutationVariables>;
 export const AddCompanyFactsDocument = gql`
     mutation AddCompanyFacts($company_id: Int!, $facts: [CompanyFactInput!]!) {
   add_company_facts(company_id: $company_id, facts: $facts) {

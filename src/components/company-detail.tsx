@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useGetCompanyQuery } from "@/__generated__/hooks";
+import { useGetCompanyQuery, useEnhanceCompanyMutation } from "@/__generated__/hooks";
 import { useAuth } from "@/auth/hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import {
@@ -37,42 +37,38 @@ type Props = {
 export function CompanyDetail({ companyKey }: Props) {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhanceError, setEnhanceError] = useState<string | null>(null);
 
   const { loading, error, data, refetch } = useGetCompanyQuery({
     variables: { key: companyKey },
   });
 
+  const [enhanceCompanyMutation, { loading: isEnhancing }] = useEnhanceCompanyMutation({
+    onCompleted: () => {
+      setEnhanceError(null);
+      // Refetch company data after enhancement
+      refetch();
+    },
+    onError: (err) => {
+      setEnhanceError(err.message || "Enhancement failed");
+    },
+  });
+
   const handleEnhance = async () => {
     if (!data?.company) return;
 
-    setIsEnhancing(true);
     setEnhanceError(null);
 
     try {
-      const response = await fetch("/api/companies/enhance", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      await enhanceCompanyMutation({
+        variables: {
+          id: data.company.id,
+          key: data.company.key,
         },
-        body: JSON.stringify({
-          companyId: data.company.id,
-          companyKey: data.company.key,
-        }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to enhance company");
-      }
-
-      // Refetch company data after enhancement
-      await refetch();
     } catch (err) {
-      setEnhanceError(err instanceof Error ? err.message : "Enhancement failed");
-    } finally {
-      setIsEnhancing(false);
+      // Error is handled by onError callback
+      console.error("Enhancement error:", err);
     }
   };
 

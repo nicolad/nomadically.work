@@ -361,6 +361,7 @@ export const typeDefs = gql`
     createCompany(input: CreateCompanyInput!): Company!
     updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
     deleteCompany(id: Int!): DeleteCompanyResponse!
+    enhanceCompany(id: Int, key: String): EnhanceCompanyResponse!
 
     add_company_facts(
       company_id: Int!
@@ -395,5 +396,12 @@ export const typeDefs = gql`
   type DeleteCompanyResponse {
     success: Boolean!
     message: String
+  }
+
+  type EnhanceCompanyResponse {
+    success: Boolean!
+    message: String
+    companyId: Int
+    companyKey: String
   }
 `;

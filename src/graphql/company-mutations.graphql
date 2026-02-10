@@ -24,6 +24,16 @@ mutation DeleteCompany($id: Int!) {
   }
 }
 
+# Enhance a company (re-scrape, enrich with AI, update data)
+mutation EnhanceCompany($id: Int, $key: String) {
+  enhanceCompany(id: $id, key: $key) {
+    success
+    message
+    companyId
+    companyKey
+  }
+}
+
 # Add facts (evidence) to a company
 mutation AddCompanyFacts($company_id: Int!, $facts: [CompanyFactInput!]!) {
   add_company_facts(company_id: $company_id, facts: $facts) {

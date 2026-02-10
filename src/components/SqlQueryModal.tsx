@@ -62,7 +62,12 @@ async function runTextToSql(
   question: string,
   signal?: AbortSignal,
 ): Promise<SqlResult> {
-  console.log("[runTextToSql] Calling endpoint:", endpoint, "with question:", question);
+  console.log(
+    "[runTextToSql] Calling endpoint:",
+    endpoint,
+    "with question:",
+    question,
+  );
 
   const res = await fetch(endpoint, {
     method: "POST",
@@ -198,7 +203,10 @@ export function SqlQueryModal({
       return;
     }
 
-    console.log("[SqlQueryModal] Opening modal with defaultQuestion:", defaultQuestion);
+    console.log(
+      "[SqlQueryModal] Opening modal with defaultQuestion:",
+      defaultQuestion,
+    );
     console.log("[SqlQueryModal] autoRunOnOpen:", autoRunOnOpen);
 
     didAutoRunRef.current = false;
@@ -221,7 +229,10 @@ export function SqlQueryModal({
       return;
     }
 
-    console.log("[SqlQueryModal] Auto-running with defaultQuestion:", defaultQuestion);
+    console.log(
+      "[SqlQueryModal] Auto-running with defaultQuestion:",
+      defaultQuestion,
+    );
     didAutoRunRef.current = true;
 
     // Only run if there's something to run

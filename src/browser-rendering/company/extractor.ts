@@ -34,16 +34,19 @@ export async function extractCompanyData(
 
   const response_format = {
     type: "json_schema",
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        company: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            id: { type: ["string", "null"] },
-            key: { type: ["string", "null"] },
+    json_schema: {
+      name: "company_extraction",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          company: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              id: { type: ["string", "null"] },
+              key: { type: ["string", "null"] },
 
             name: { type: "string" },
             logo_url: { type: ["string", "null"] },
@@ -180,6 +183,7 @@ export async function extractCompanyData(
         notes: { type: ["array", "null"], items: { type: "string" } },
       },
       required: ["company", "ats_boards", "evidence"],
+    },
     },
   } as const;
 

@@ -56,9 +56,9 @@ export const jobs = sqliteTable("jobs", {
   external_id: text("external_id").notNull(),
   source_id: text("source_id"),
   source_kind: text("source_kind").notNull(),
-  company_id: integer("company_id")
-    .notNull()
-    .references(() => companies.id, { onDelete: "cascade" }),
+  company_id: integer("company_id").references(() => companies.id, {
+    onDelete: "cascade",
+  }),
   company_key: text("company_key").notNull(), // Kept for backward compatibility during migration
   title: text("title").notNull(),
   location: text("location"),

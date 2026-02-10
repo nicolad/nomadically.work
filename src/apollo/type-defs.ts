@@ -170,7 +170,7 @@ export const typeDefs = gql`
     external_id: String!
     source_id: String
     source_kind: String!
-    company_id: Int!
+    company_id: Int
     company_key: String!
     company: Company
     title: String!

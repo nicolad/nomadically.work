@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { JobsProvider } from "@/components/jobs-provider";
+import { UnifiedJobsProvider } from "@/components/unified-jobs-provider";
 import { Container, Text } from "@radix-ui/themes";
 import styles from "./page.module.css";
 
@@ -13,7 +13,7 @@ const Page = () => {
       }
     >
       <div className={styles.content}>
-        <JobsProvider />
+        <UnifiedJobsProvider />
       </div>
     </Suspense>
   );

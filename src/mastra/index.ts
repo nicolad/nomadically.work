@@ -1,23 +1,16 @@
 import { Mastra } from "@mastra/core";
 import { MastraCompositeStore } from "@mastra/core/storage";
-import { 
-  MemoryLibSQL, 
-  ScoresLibSQL, 
-  WorkflowsLibSQL, 
-  ObservabilityLibSQL 
+import {
+  MemoryLibSQL,
+  ScoresLibSQL,
+  WorkflowsLibSQL,
+  ObservabilityLibSQL,
 } from "@mastra/libsql";
 import { serve } from "@mastra/inngest";
 
 import { observability } from "@/observability";
-import {
-  jobClassifierAgent,
-  sqlAgent,
-  adminAssistantAgent,
-} from "@/agents";
-import {
-  personalizationAgent,
-  recommendationAgent,
-} from "@/memory";
+import { jobClassifierAgent, sqlAgent, adminAssistantAgent, postgresAgent, sqlGenerationAgent } from "@/agents";
+import { personalizationAgent, recommendationAgent } from "@/memory";
 import {
   skillsVector,
   SKILLS_VECTOR_STORE_NAME,
@@ -57,6 +50,13 @@ import {
   comprehensiveWorkflow,
 } from "@/workflows/flow-control";
 
+// Import database tools and workflow
+import { databaseIntrospectionTool } from "@/tools/database/database-introspection-tool";
+import { databaseSeedingTool } from "@/tools/database/database-seeding-tool";
+import { sqlGenerationTool } from "@/tools/database/sql-generation-tool";
+import { sqlExecutionTool } from "@/tools/database/sql-execution-tool";
+import { databaseQueryWorkflow } from "@/workflows/database-query";
+
 // Import custom Inngest functions
 import {
   userRegistrationFunction,
@@ -71,22 +71,22 @@ import {
 
 /**
  * Storage Configuration
- * 
+ *
  * Using composite storage with LibSQL (Turso) for all domains.
  * Turso provides edge-replicated SQLite with global low latency.
- * 
+ *
  * Benefits of LibSQL/Turso:
  * - No separate database server required
  * - Edge replication for global performance
  * - SQLite compatibility with distributed features
  * - Automatic schema migration on first interaction
- * 
+ *
  * Storage domains:
  * - memory: Agent conversations, threads, and message history
  * - scores: Evaluation scores from evals and scorers
  * - workflows: Workflow execution state and traces
  * - observability: Langfuse traces, spans, and generations
- * 
+ *
  * For local development, you can use file:./mastra.db instead of Turso.
  * Use absolute paths when running mastra dev alongside Next.js:
  * url: `file:${process.cwd()}/mastra.db`
@@ -131,6 +131,8 @@ export const mastra = new Mastra({
     personalizationAgent,
     recommendationAgent,
     adminAssistantAgent,
+    postgresAgent,
+    sqlGenerationAgent,
   },
   storage,
   vectors: {
@@ -155,6 +157,9 @@ export const mastra = new Mastra({
     searchIndex: searchIndexWorkflow,
     orderProcessing: orderProcessingWorkflow,
     comprehensive: comprehensiveWorkflow,
+
+    // Database workflows
+    databaseQuery: databaseQueryWorkflow,
   },
   tools: {
     // Common Crawl tools
@@ -166,6 +171,12 @@ export const mastra = new Mastra({
     inspectJobDecision: inspectJobDecisionTool,
     rerunJobClassifier: rerunJobClassifierTool,
     diffSnapshots: diffSnapshotsTool,
+
+    // Database tools
+    databaseIntrospection: databaseIntrospectionTool,
+    databaseSeeding: databaseSeedingTool,
+    sqlGeneration: sqlGenerationTool,
+    sqlExecution: sqlExecutionTool,
   },
   server: {
     host: "0.0.0.0",

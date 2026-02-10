@@ -252,7 +252,7 @@ export enum ExtractMethod {
 export type Job = {
   __typename?: 'Job';
   company?: Maybe<Company>;
-  company_id: Scalars['Int']['output'];
+  company_id?: Maybe<Scalars['Int']['output']>;
   company_key: Scalars['String']['output'];
   created_at: Scalars['String']['output'];
   description?: Maybe<Scalars['String']['output']>;
@@ -501,7 +501,7 @@ export type GetJobQueryVariables = Exact<{
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_id: number, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, is_remote_eu?: boolean | null, remote_eu_confidence?: string | null, remote_eu_reason?: string | null, created_at: string, updated_at: string, company?: (
+export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_id?: number | null, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, is_remote_eu?: boolean | null, remote_eu_confidence?: string | null, remote_eu_reason?: string | null, created_at: string, updated_at: string, company?: (
       { __typename?: 'Company' }
       & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
     ) | null, skills?: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence?: number | null, evidence?: string | null }> | null } | null };
@@ -516,7 +516,7 @@ export type GetJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_id: number, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string, company?: (
+export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_id?: number | null, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string, company?: (
         { __typename?: 'Company' }
         & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
       ) | null, skills?: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null }> } };

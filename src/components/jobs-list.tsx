@@ -33,6 +33,10 @@ type BadgeColor = "green" | "orange" | "blue" | "gray";
 
 type JobStatus = "eu-remote" | "non-eu-remote" | "eu-onsite" | "non-eu" | "all";
 
+interface JobsListProps {
+  searchFilter?: string;
+}
+
 const getStatusBadgeColor = (status: Job["status"]): BadgeColor => {
   switch (status) {
     case "eu-remote":
@@ -55,10 +59,9 @@ const getStatusLabel = (status: Job["status"]): string => {
   }
 };
 
-export function JobsList() {
+export function JobsList({ searchFilter = "" }: JobsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteJobMutation] = useDeleteJobMutation();
@@ -93,7 +96,7 @@ export function JobsList() {
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
     variables: {
-      search: searchTerm || undefined,
+      search: searchFilter || undefined,
       limit: 20,
       offset: 0,
       excludedCompanies:
@@ -165,22 +168,13 @@ export function JobsList() {
   }
 
   return (
-    <Container size="4" px="8">
-      <Flex justify="between" align="center" mb="6">
-        <Heading size="8">Remote Jobs</Heading>
+    <Box>
+      <Flex justify="between" align="center" mb="4">
+        <Heading size="6">Jobs</Heading>
         <Text size="2" color="gray">
           {jobs.length} of {totalCount} jobs
         </Text>
       </Flex>
-
-      <Box mb="4">
-        <TextField.Root
-          placeholder="Search jobs by title, company, location, or description..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          size="3"
-        />
-      </Box>
 
       <Flex direction="column" gap="4">
         {jobs.map((job) => {
@@ -328,6 +322,6 @@ export function JobsList() {
           </Flex>
         )}
       </Box>
-    </Container>
+    </Box>
   );
 }

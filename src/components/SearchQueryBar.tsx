@@ -73,11 +73,25 @@ export function SearchQueryBar({
         }}
       >
         <Box style={{ display: "flex", gap: "1rem" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+            }}
+          >
             <RadioGroup.Item value="jobs" />
             <Text size="2">Jobs Search</Text>
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+            }}
+          >
             <RadioGroup.Item value="sql" />
             <Text size="2">SQL Query</Text>
           </label>

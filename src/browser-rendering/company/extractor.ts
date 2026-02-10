@@ -3,17 +3,27 @@ import type { ExtractionResult } from "./types";
 
 /**
  * Extract company data using DeepSeek via Cloudflare Workers AI
+ * 
+ * Requirements:
+ * - CLOUDFLARE_API_TOKEN with Browser Rendering permissions
+ * - CLOUDFLARE_ACCOUNT_ID
+ * - DEEPSEEK_API_KEY
+ * 
+ * Setup guide: See docs/CLOUDFLARE_SETUP.md
+ * Verify setup: npx tsx scripts/verify-cloudflare-setup.ts
  */
 export async function extractCompanyData(
   targetUrl: string
 ): Promise<ExtractionResult> {
-  const client = new Cloudflare({ apiToken: process.env.CLOUDFLARE_API_TOKEN });
-
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
-  if (!accountId) throw new Error("Missing CLOUDFLARE_ACCOUNT_ID");
-  if (!deepseekKey) throw new Error("Missing DEEPSEEK_API_KEY");
+  if (!apiToken) throw new Error("Missing CLOUDFLARE_API_TOKEN environment variable");
+  if (!accountId) throw new Error("Missing CLOUDFLARE_ACCOUNT_ID environment variable");
+  if (!deepseekKey) throw new Error("Missing DEEPSEEK_API_KEY environment variable");
+
+  const client = new Cloudflare({ apiToken });
 
   const response_format = {
     type: "json_schema",
@@ -207,25 +217,47 @@ Put any uncertainties/caveats in notes[].
 Extract from: ${targetUrl}
   `.trim();
 
-  const cfResp = await client.browserRendering.json.create({
-    account_id: accountId,
-    url: targetUrl,
-    prompt,
-    response_format,
-    custom_ai: [
-      {
-        model: "deepseek/deepseek-chat",
-        authorization: `Bearer ${deepseekKey}`,
-      },
-    ],
-    gotoOptions: { waitUntil: "networkidle0" },
-  });
+  try {
+    const cfResp = await client.browserRendering.json.create({
+      account_id: accountId,
+      url: targetUrl,
+      prompt,
+      response_format,
+      custom_ai: [
+        {
+          model: "deepseek/deepseek-chat",
+          authorization: `Bearer ${deepseekKey}`,
+        },
+      ],
+      gotoOptions: { waitUntil: "networkidle0" },
+    });
 
-  const extracted = (cfResp as any)?.result as ExtractionResult | undefined;
+    const extracted = (cfResp as any)?.result as ExtractionResult | undefined;
 
-  if (!extracted) {
-    throw new Error("Failed to extract company data from webpage");
+    if (!extracted) {
+      throw new Error("Failed to extract company data from webpage");
+    }
+
+    return extracted;
+  } catch (error: any) {
+    // Provide more helpful error messages
+    if (error.status === 401) {
+      throw new Error(
+        "Cloudflare authentication failed. Please verify:\n" +
+        "1. CLOUDFLARE_API_TOKEN is valid\n" +
+        "2. API token has 'Browser Rendering' permissions\n" +
+        "3. Browser Rendering is enabled for your Cloudflare account\n" +
+        "4. Account ID is correct"
+      );
+    }
+    
+    if (error.status === 403) {
+      throw new Error(
+        "Cloudflare access denied. Browser Rendering may not be enabled for your account or plan."
+      );
+    }
+
+    // Re-throw with original error for other cases
+    throw error;
   }
-
-  return extracted;
 }

@@ -1,4 +1,5 @@
 import { Langfuse } from "langfuse";
+import { LangfuseClient } from "@langfuse/client";
 import {
   LANGFUSE_SECRET_KEY,
   LANGFUSE_PUBLIC_KEY,
@@ -8,6 +9,12 @@ import { PROMPTS } from "@/observability/prompts";
 import { GraphQLContext } from "@/apollo/context";
 
 const langfuse = new Langfuse({
+  secretKey: LANGFUSE_SECRET_KEY,
+  publicKey: LANGFUSE_PUBLIC_KEY,
+  baseUrl: LANGFUSE_BASE_URL,
+});
+
+const langfuseClient = new LangfuseClient({
   secretKey: LANGFUSE_SECRET_KEY,
   publicKey: LANGFUSE_PUBLIC_KEY,
   baseUrl: LANGFUSE_BASE_URL,
@@ -143,22 +150,11 @@ export const promptResolvers = {
           promptData.config = input.config;
         }
 
-        // Use the Langfuse client to create prompt
-        const response = await fetch(`${LANGFUSE_BASE_URL}/api/public/v2/prompts`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Auth-Token": `Basic ${Buffer.from(`${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`).toString("base64")}`,
-          },
-          body: JSON.stringify(promptData),
-        });
+        // Use the Langfuse client SDK to create prompt
+        await langfuseClient.prompt.create(promptData);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to create prompt: ${response.status} ${errorText}`);
-        }
-
-        const created = await response.json();
+        // Fetch the created prompt to get full details with version
+        const created = await langfuse.getPrompt(input.name);
         const isChat = created.type === "chat";
 
         return {

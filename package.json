@@ -42,6 +42,7 @@
     "@graphql-tools/schema": "^10.0.31",
     "@graphql-typed-document-node/core": "^3.2.0",
     "@inngest/realtime": "^0.4.5",
+    "@langfuse/client": "^4.6.0",
     "@libsql/client": "^0.17.0",
     "@mastra/auth-better-auth": "^1.0.0",
     "@mastra/core": "latest",

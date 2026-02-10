@@ -32,6 +32,9 @@ importers:
       '@inngest/realtime':
         specifier: ^0.4.5
         version: 0.4.5(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(express@5.2.1)(hono@4.11.7)(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.3)
+      '@langfuse/client':
+        specifier: ^4.6.0
+        version: 4.6.0(@opentelemetry/api@1.9.0)
       '@libsql/client':
         specifier: ^0.17.0
         version: 0.17.0
@@ -2067,6 +2070,22 @@ packages:
 
   '@js-sdsl/ordered-map@4.4.2':
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
+
+  '@langfuse/client@4.6.0':
+    resolution: {integrity: sha512-dVMkSwHelORpW16i1kzHwKL/Pw711Rq8dMFOZ32NOaYzi2ta9M/V/v457+z55rC8Q6O61GvQJe4hLfLv1GTr1w==}
+    peerDependencies:
+      '@opentelemetry/api': ^1.9.0
+
+  '@langfuse/core@4.6.0':
+    resolution: {integrity: sha512-guy2ipXl8F3GixSvUdfVujkAoWR+4NoS4W/XpalAS6BxBtiVe3aJbIe+wYdIY9BNB9FX02ocfyChoEb9mZItvA==}
+    peerDependencies:
+      '@opentelemetry/api': ^1.9.0
+
+  '@langfuse/tracing@4.6.0':
+    resolution: {integrity: sha512-ReXLD3RMBKLj2HKOkaRWNCiUTHmG6j5HhcCgsOsBR85kBzzSL11QqoOej3iD9eFr6nA8M5Mhz3JUPdl9NiZYNQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.9.0
 
   '@libsql/client@0.15.15':
     resolution: {integrity: sha512-twC0hQxPNHPKfeOv3sNT6u2pturQjLcI+CnpTM0SjRpocEGgfiZ7DWKXLNnsothjyJmDqEsBQJ5ztq9Wlu470w==}
@@ -8637,6 +8656,22 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.5
 
   '@js-sdsl/ordered-map@4.4.2': {}
+
+  '@langfuse/client@4.6.0(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@langfuse/core': 4.6.0(@opentelemetry/api@1.9.0)
+      '@langfuse/tracing': 4.6.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/api': 1.9.0
+      mustache: 4.2.0
+
+  '@langfuse/core@4.6.0(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+
+  '@langfuse/tracing@4.6.0(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@langfuse/core': 4.6.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/api': 1.9.0
 
   '@libsql/client@0.15.15':
     dependencies:

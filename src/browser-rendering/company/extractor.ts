@@ -7,7 +7,7 @@ import { extractCompanyDataFallback } from "./extractor-fallback";
  * Falls back to direct DeepSeek API if Browser Rendering is not available
  * 
  * Requirements:
- * - CLOUDFLARE_BROWSER_RENDERING_KEY (preferred) or CLOUDFLARE_API_TOKEN
+ * - CLOUDFLARE_BROWSER_RENDERING_KEY (required)
  * - CLOUDFLARE_ACCOUNT_ID
  * - DEEPSEEK_API_KEY (required)
  * 
@@ -16,28 +16,23 @@ import { extractCompanyDataFallback } from "./extractor-fallback";
 export async function extractCompanyData(
   targetUrl: string
 ): Promise<ExtractionResult> {
-  // Use dedicated Browser Rendering key if available, otherwise fall back to API token
   const browserRenderingKey = process.env.CLOUDFLARE_BROWSER_RENDERING_KEY;
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
-  const cloudflareToken = browserRenderingKey || apiToken;
-
   // Debug: Log which credentials are available (without exposing the actual values)
   console.log("🔑 Cloudflare credentials check:");
   console.log("   CLOUDFLARE_BROWSER_RENDERING_KEY:", browserRenderingKey ? `✓ (${browserRenderingKey.substring(0, 10)}...)` : "✗ not set");
-  console.log("   CLOUDFLARE_API_TOKEN:", apiToken ? `✓ (${apiToken.substring(0, 10)}...)` : "✗ not set");
   console.log("   CLOUDFLARE_ACCOUNT_ID:", accountId ? `✓ (${accountId})` : "✗ not set");
   console.log("   DEEPSEEK_API_KEY:", deepseekKey ? `✓ (${deepseekKey.substring(0, 10)}...)` : "✗ not set");
-  console.log("   Using token:", browserRenderingKey ? "BROWSER_RENDERING_KEY" : "API_TOKEN");
 
-  if (!cloudflareToken) {
-    throw new Error("Missing CLOUDFLARE_BROWSER_RENDERING_KEY or CLOUDFLARE_API_TOKEN environment variable");
+  if (!browserRenderingKey) {
+    throw new Error("Missing CLOUDFLARE_BROWSER_RENDERING_KEY environment variable");
   }
   if (!accountId) throw new Error("Missing CLOUDFLARE_ACCOUNT_ID environment variable");
   if (!deepseekKey) throw new Error("Missing DEEPSEEK_API_KEY environment variable");
 
-  const client = new Cloudflare({ apiToken: cloudflareToken });
+  const client = new Cloudflare({ apiToken: browserRenderingKey });
 
   const response_format = {
     type: "json_schema",

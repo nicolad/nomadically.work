@@ -106,6 +106,19 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
     notifyOnNetworkStatusChange: true,
   });
 
+  // Refetch when search filter changes
+  React.useEffect(() => {
+    if (refetch) {
+      refetch({
+        search: searchFilter || undefined,
+        limit: 20,
+        offset: 0,
+        excludedCompanies:
+          excludedCompanies.length > 0 ? excludedCompanies : undefined,
+      });
+    }
+  }, [searchFilter, excludedCompanies, refetch]);
+
   const jobs = data?.jobs.jobs || [];
   const totalCount = data?.jobs.totalCount || 0;
   const hasMore = jobs.length < totalCount;

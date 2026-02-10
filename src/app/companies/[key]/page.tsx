@@ -3,10 +3,12 @@ import { CompanyDetailProvider } from "@/components/company-detail-provider";
 import { Container, Spinner, Flex } from "@radix-ui/themes";
 
 type Props = {
-  params: { key: string };
+  params: Promise<{ key: string }>;
 };
 
-export default function CompanyPage({ params }: Props) {
+export default async function CompanyPage({ params }: Props) {
+  const { key } = await params;
+  
   return (
     <Suspense
       fallback={
@@ -17,7 +19,7 @@ export default function CompanyPage({ params }: Props) {
         </Container>
       }
     >
-      <CompanyDetailProvider companyKey={params.key} />
+      <CompanyDetailProvider companyKey={key} />
     </Suspense>
   );
 }

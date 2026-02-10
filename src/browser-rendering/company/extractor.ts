@@ -7,25 +7,30 @@ import { extractCompanyDataFallback } from "./extractor-fallback";
  * Falls back to direct DeepSeek API if Browser Rendering is not available
  * 
  * Requirements:
- * - CLOUDFLARE_API_TOKEN with Browser Rendering permissions (preferred)
- * - CLOUDFLARE_ACCOUNT_ID (preferred)
+ * - CLOUDFLARE_BROWSER_RENDERING_KEY (preferred) or CLOUDFLARE_API_TOKEN
+ * - CLOUDFLARE_ACCOUNT_ID
  * - DEEPSEEK_API_KEY (required)
  * 
- * Setup guide: See docs/CLOUDFLARE_SETUP.md or docs/CREATE_CLOUDFLARE_TOKEN.md
- * Test setup: node test-cloudflare.mjs
+ * Setup guide: See docs/CREATE_CLOUDFLARE_TOKEN.md
  */
 export async function extractCompanyData(
   targetUrl: string
 ): Promise<ExtractionResult> {
+  // Use dedicated Browser Rendering key if available, otherwise fall back to API token
+  const browserRenderingKey = process.env.CLOUDFLARE_BROWSER_RENDERING_KEY;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
 
-  if (!apiToken) throw new Error("Missing CLOUDFLARE_API_TOKEN environment variable");
+  const cloudflareToken = browserRenderingKey || apiToken;
+
+  if (!cloudflareToken) {
+    throw new Error("Missing CLOUDFLARE_BROWSER_RENDERING_KEY or CLOUDFLARE_API_TOKEN environment variable");
+  }
   if (!accountId) throw new Error("Missing CLOUDFLARE_ACCOUNT_ID environment variable");
   if (!deepseekKey) throw new Error("Missing DEEPSEEK_API_KEY environment variable");
 
-  const client = new Cloudflare({ apiToken });
+  const client = new Cloudflare({ apiToken: cloudflareToken });
 
   const response_format = {
     type: "json_schema",

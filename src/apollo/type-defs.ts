@@ -88,9 +88,12 @@ export const typeDefs = gql`
 
   type RegisteredPrompt {
     name: String!
-    fallbackText: String!
-    description: String!
-    category: String!
+    type: String!
+    tags: [String!]!
+    labels: [String!]!
+    versions: [Int!]!
+    lastUpdatedAt: String!
+    lastConfig: JSON
     usageCount: Int
     lastUsedBy: String
   }

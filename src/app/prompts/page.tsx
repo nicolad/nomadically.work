@@ -34,19 +34,23 @@ import {
   useGetPromptsQuery,
   useGetMyPromptUsageQuery,
   useCreatePromptMutation,
+  GetPromptsQuery,
 } from "@/__generated__/hooks";
 
-type PromptInfo = {
-  name: string;
-  fallbackText: string;
-  description: string;
-  category: string;
-  usageCount?: number;
-  lastUsedBy?: string | null;
-};
+type PromptInfo = GetPromptsQuery['prompts'][0];
 
 function PromptCard({ prompt }: { prompt: PromptInfo }) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Extract user-friendly name (remove email prefix if present)
+  const displayName = prompt.name.includes('__') 
+    ? prompt.name.split('__')[1] 
+    : prompt.name;
+
+  // Derive category from tags if available
+  const category = prompt.tags.find((tag: string) => 
+    tag.startsWith('category:')
+  )?.replace('category:', '') || "general";
 
   return (
     <Card style={{ borderLeft: "3px solid var(--blue-9)" }}>
@@ -57,11 +61,19 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
             <Flex direction="column" gap="2" style={{ flex: 1, minWidth: "250px" }}>
               <Flex align="center" gap="3" wrap="wrap">
                 <Code size="3" variant="soft" highContrast>
-                  {prompt.name}
+                  {displayName}
                 </Code>
                 <Badge color="blue" variant="soft" size="2">
-                  {prompt.category}
+                  {category}
                 </Badge>
+                <Badge color="purple" variant="soft" size="2">
+                  {prompt.type}
+                </Badge>
+                {prompt.versions && prompt.versions.length > 0 && (
+                  <Badge color="gray" variant="soft" size="2">
+                    v{Math.max(...prompt.versions)}
+                  </Badge>
+                )}
                 {prompt.usageCount !== undefined && prompt.usageCount > 0 && (
                   <Badge color="green" variant="soft" size="2">
                     {prompt.usageCount} {prompt.usageCount === 1 ? 'use' : 'uses'}
@@ -69,7 +81,7 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
                 )}
               </Flex>
               <Text size="2" color="gray" style={{ lineHeight: 1.6 }}>
-                {prompt.description}
+                {prompt.labels.length > 0 ? `Labels: ${prompt.labels.join(', ')}` : 'No labels'}
               </Text>
             </Flex>
 
@@ -81,7 +93,7 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
                 style={{ cursor: "pointer" }}
               >
                 <CodeIcon />
-                {isExpanded ? "Hide" : "View"} Prompt
+                {isExpanded ? "Hide" : "View"} Details
               </Button>
             </Flex>
           </Flex>
@@ -90,30 +102,57 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
           {isExpanded && (
             <>
               <Separator size="4" />
-              <Box>
-                <Text size="2" weight="bold" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px", display: "block" }}>
-                  Fallback Text
-                </Text>
-                <Box mt="2" style={{ 
-                  backgroundColor: "var(--gray-3)", 
-                  borderRadius: "8px",
-                  border: "1px solid var(--gray-6)",
-                  padding: "16px",
-                  maxHeight: "500px",
-                  overflow: "auto",
-                }}>
-                  <Text size="2" style={{ whiteSpace: "pre-wrap", fontFamily: "var(--code-font-family)", lineHeight: 1.6 }}>
-                    {prompt.fallbackText}
+              <Flex direction="column" gap="3">
+                <Box>
+                  <Text size="2" weight="bold" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px", display: "block" }}>
+                    Metadata
                   </Text>
+                  <Flex direction="column" gap="2">
+                    <Text size="2" color="gray">
+                      <Strong>Full Name:</Strong> {prompt.name}
+                    </Text>
+                    <Text size="2" color="gray">
+                      <Strong>Type:</Strong> {prompt.type}
+                    </Text>
+                    <Text size="2" color="gray">
+                      <Strong>Versions:</Strong> {prompt.versions.join(', ')}
+                    </Text>
+                    <Text size="2" color="gray">
+                      <Strong>Labels:</Strong> {prompt.labels.join(', ') || 'none'}
+                    </Text>
+                    <Text size="2" color="gray">
+                      <Strong>Last Updated:</Strong> {new Date(prompt.lastUpdatedAt).toLocaleString()}
+                    </Text>
+                    {prompt.lastUsedBy && (
+                      <Text size="2" color="gray">
+                        <Strong>Last Used By:</Strong> {prompt.lastUsedBy}
+                      </Text>
+                    )}
+                  </Flex>
                 </Box>
-              </Box>
+
+                {prompt.tags.length > 0 && (
+                  <Box>
+                    <Text size="2" weight="bold" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px", display: "block" }}>
+                      Tags
+                    </Text>
+                    <Flex gap="2" wrap="wrap">
+                      {prompt.tags.map((tag, idx) => (
+                        <Badge key={idx} color="gray" variant="surface" size="1">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </Flex>
+                  </Box>
+                )}
+              </Flex>
 
               <Callout.Root color="blue" size="2">
                 <Callout.Icon>
                   <InfoCircledIcon />
                 </Callout.Icon>
                 <Callout.Text>
-                  <Strong>Langfuse Setup:</Strong> Create a prompt named <Code>"{prompt.name}"</Code> with label <Code>"production"</Code> in your Langfuse dashboard to override this fallback.
+                  <Strong>Langfuse Prompt:</Strong> Manage this prompt in your Langfuse dashboard to update versions and labels.
                 </Callout.Text>
               </Callout.Root>
             </>

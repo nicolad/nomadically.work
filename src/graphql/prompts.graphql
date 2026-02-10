@@ -1,9 +1,12 @@
 query GetPrompts {
   prompts {
     name
-    fallbackText
-    description
-    category
+    type
+    tags
+    labels
+    versions
+    lastUpdatedAt
+    lastConfig
     usageCount
     lastUsedBy
   }

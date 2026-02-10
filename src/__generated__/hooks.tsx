@@ -547,12 +547,15 @@ export type QueryUserSettingsArgs = {
 
 export type RegisteredPrompt = {
   __typename?: 'RegisteredPrompt';
-  category: Scalars['String']['output'];
-  description: Scalars['String']['output'];
-  fallbackText: Scalars['String']['output'];
+  labels: Array<Scalars['String']['output']>;
+  lastConfig?: Maybe<Scalars['JSON']['output']>;
+  lastUpdatedAt: Scalars['String']['output'];
   lastUsedBy?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
   usageCount?: Maybe<Scalars['Int']['output']>;
+  versions: Array<Scalars['Int']['output']>;
 };
 
 export enum SourceType {
@@ -815,7 +818,7 @@ export type CompanyAuditQuery = { __typename?: 'Query', company?: { __typename?:
 export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, fallbackText: string, description: string, category: string, usageCount?: number | null, lastUsedBy?: string | null }> };
+export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, type: string, tags: Array<string>, labels: Array<string>, versions: Array<number>, lastUpdatedAt: string, lastConfig?: any | null, usageCount?: number | null, lastUsedBy?: string | null }> };
 
 export type GetMyPromptUsageQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -1865,9 +1868,12 @@ export const GetPromptsDocument = gql`
     query GetPrompts {
   prompts {
     name
-    fallbackText
-    description
-    category
+    type
+    tags
+    labels
+    versions
+    lastUpdatedAt
+    lastConfig
     usageCount
     lastUsedBy
   }

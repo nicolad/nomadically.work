@@ -99,6 +99,7 @@ export const promptResolvers = {
       try {
         // Fetch prompts filtered by user email tag
         const userTag = context.userEmail ? `user:${context.userEmail}` : null;
+        // https://api.reference.langfuse.com/#tag/prompts/GET/api/public/v2/prompts
         const url = new URL(`${LANGFUSE_BASE_URL}/api/public/v2/prompts`);
         if (userTag) {
           url.searchParams.set('tag', userTag);
@@ -116,10 +117,19 @@ export const promptResolvers = {
           throw new Error(`Langfuse API error: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const apiResponse = await response.json();
         
-        // Transform API response to match our GraphQL schema
-        const registeredPrompts = data.data.map((prompt: any) => {
+        // Langfuse API returns: { data: [...], meta: {...}, pagination: {...} }
+        // Map to GraphQL schema matching exact Langfuse shape
+        const registeredPrompts = (apiResponse.data || []).map((prompt: {
+          name: string;
+          tags: string[];
+          lastUpdatedAt: string;
+          versions: number[];
+          labels: string[];
+          type: 'text' | 'chat';
+          lastConfig: Record<string, any>;
+        }) => {
           // Get usage count for this prompt from our in-memory log
           const usageCount = promptUsageLog.filter(
             u => u.promptName === prompt.name
@@ -130,16 +140,14 @@ export const promptResolvers = {
             .filter(u => u.promptName === prompt.name)
             .sort((a, b) => new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime())[0];
 
-          // Derive category from tags if available
-          const category = prompt.tags.find((tag: string) => 
-            tag.startsWith('category:')
-          )?.replace('category:', '') || "general";
-
           return {
             name: prompt.name,
-            fallbackText: `Prompt "${prompt.name}" (${prompt.versions.length} version${prompt.versions.length === 1 ? '' : 's'})`,
-            description: `${prompt.type} prompt with labels: ${prompt.labels.join(', ') || 'none'}`,
-            category,
+            type: prompt.type,
+            tags: prompt.tags,
+            labels: prompt.labels,
+            versions: prompt.versions,
+            lastUpdatedAt: prompt.lastUpdatedAt,
+            lastConfig: prompt.lastConfig,
             usageCount,
             lastUsedBy: lastUsage?.userEmail || null,
           };
@@ -149,15 +157,8 @@ export const promptResolvers = {
       } catch (error) {
         console.error("Error fetching prompts from Langfuse:", error);
         
-        // Fallback to local PROMPTS if API call fails
-        return PROMPTS.map(prompt => ({
-          name: prompt.name,
-          fallbackText: prompt.fallbackText,
-          description: prompt.description,
-          category: prompt.category,
-          usageCount: promptUsageLog.filter(u => u.promptName === prompt.name).length,
-          lastUsedBy: null,
-        }));
+        // Return empty array on error instead of throwing
+        return [];
       }
     },
 

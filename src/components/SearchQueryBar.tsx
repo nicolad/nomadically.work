@@ -1,28 +1,17 @@
 /* =========================================================
    File: components/SearchQueryBar.tsx
-   Search bar with a mode toggle; SQL opens modal (separate component)
-   - Enter runs active mode
-   - Shift+Enter runs the other mode
-   - /sql, ? forces SQL modal
-   - /find, ! forces Search
-   - Debounced search typing (Search mode only)
+   Unified search bar with mode toggle between jobs search and SQL
+   - JobsSearchBar: Full-text search with debouncing
+   - SqlSearchBar: SQL query interface with modal
+   - Toggle between modes with segmented control
    ========================================================= */
 
 "use client";
 
 import * as React from "react";
-import {
-  Box,
-  Flex,
-  Text,
-  TextField,
-  SegmentedControl,
-  IconButton,
-  Tooltip,
-  Badge,
-} from "@radix-ui/themes";
-import { MagnifyingGlassIcon, LightningBoltIcon, Cross2Icon } from "@radix-ui/react-icons";
-import { SqlQueryModal } from "./SqlQueryModal";
+import { Box, Flex, Text, SegmentedControl } from "@radix-ui/themes";
+import { JobsSearchBar } from "./JobsSearchBar";
+import { SqlSearchBar } from "./SqlSearchBar";
 
 export type QueryMode = "search" | "sql";
 
@@ -39,28 +28,9 @@ type Props = {
 
   /**
    * When SQL result returns a drilldownSearchQuery, we call this and also update the bar.
-   * If you want to centralize state elsewhere, you can ignore this and only use onSearchSubmit.
    */
   onDrilldownToSearch?: (q: string) => void;
 };
-
-function parseCommand(raw: string): { forcedMode?: QueryMode; normalizedQuery: string } {
-  const q = raw.trim();
-  if (!q) return { normalizedQuery: "" };
-
-  if (q.startsWith("/sql ")) return { forcedMode: "sql", normalizedQuery: q.slice(5).trim() };
-  if (q.startsWith("?")) return { forcedMode: "sql", normalizedQuery: q.slice(1).trim() };
-
-  if (q.startsWith("/find ")) return { forcedMode: "search", normalizedQuery: q.slice(6).trim() };
-  if (q.startsWith("!")) return { forcedMode: "search", normalizedQuery: q.slice(1).trim() };
-
-  return { normalizedQuery: q };
-}
-
-function safeIsComposing(e: React.KeyboardEvent) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return Boolean((e.nativeEvent as any)?.isComposing);
-}
 
 export function SearchQueryBar({
   onSearchQueryChange,
@@ -71,226 +41,75 @@ export function SearchQueryBar({
   initialQuery = "",
   searchDebounceMs = 120,
 }: Props) {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const debounceRef = React.useRef<number | null>(null);
-
   const [mode, setMode] = React.useState<QueryMode>(initialMode);
-  const [value, setValue] = React.useState(initialQuery);
+  const [searchValue, setSearchValue] = React.useState(initialQuery);
+  const [sqlValue, setSqlValue] = React.useState("");
 
-  const [sqlOpen, setSqlOpen] = React.useState(false);
-  const [sqlSeedQuestion, setSqlSeedQuestion] = React.useState("");
-  const [sqlAutoRun, setSqlAutoRun] = React.useState(false);
+  const handleSearchChange = React.useCallback(
+    (q: string) => {
+      setSearchValue(q);
+      onSearchQueryChange?.(q);
+    },
+    [onSearchQueryChange],
+  );
 
-  const parsed = React.useMemo(() => parseCommand(value), [value]);
-  const effectiveMode: QueryMode = parsed.forcedMode ?? mode;
-  const normalizedQuery = parsed.normalizedQuery;
+  const handleSearchSubmit = React.useCallback(
+    (q: string) => {
+      onSearchSubmit?.(q);
+    },
+    [onSearchSubmit],
+  );
 
-  const placeholder =
-    effectiveMode === "search"
-      ? "Search jobs… (tip: /sql or ? forces SQL)"
-      : "Ask the data… (tip: /find or ! forces Search)";
-
-  // Debounced typing only when in Search mode (effective)
-  React.useEffect(() => {
-    if (!onSearchQueryChange) return;
-    if (effectiveMode !== "search") return;
-
-    if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => {
-      onSearchQueryChange(normalizedQuery);
-    }, searchDebounceMs);
-
-    return () => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    };
-  }, [effectiveMode, normalizedQuery, onSearchQueryChange, searchDebounceMs]);
-
-  const focusInput = React.useCallback(() => {
-    requestAnimationFrame(() => inputRef.current?.focus());
+  const handleSqlSubmit = React.useCallback((q: string) => {
+    // SQL modal opens internally in SqlSearchBar
   }, []);
-
-  const clear = React.useCallback(() => {
-    setValue("");
-    focusInput();
-  }, [focusInput]);
-
-  const openSqlModal = React.useCallback(
-    (question: string, autoRunOnOpen: boolean) => {
-      setSqlSeedQuestion(question);
-      setSqlAutoRun(autoRunOnOpen);
-      setSqlOpen(true);
-    },
-    [],
-  );
-
-  const run = React.useCallback(
-    (opts?: { invertMode?: boolean; fromClick?: boolean }) => {
-      const q = normalizedQuery.trim();
-      if (!q) return;
-
-      const chosenMode: QueryMode = opts?.invertMode
-        ? effectiveMode === "search"
-          ? "sql"
-          : "search"
-        : effectiveMode;
-
-      if (chosenMode === "search") {
-        onSearchSubmit?.(q);
-        return;
-      }
-
-      // SQL -> modal
-      openSqlModal(q, true);
-    },
-    [effectiveMode, normalizedQuery, onSearchSubmit, openSqlModal],
-  );
-
-  const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    if (safeIsComposing(e)) return;
-
-    if (e.key === "Escape") {
-      if (value) {
-        e.preventDefault();
-        clear();
-      }
-      return;
-    }
-
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    run({ invertMode: e.shiftKey });
-  };
-
-  const runIcon = effectiveMode === "search" ? <MagnifyingGlassIcon /> : <LightningBoltIcon />;
-  const runTooltip =
-    effectiveMode === "search"
-      ? "Enter: Search • Shift+Enter: SQL"
-      : "Enter: SQL • Shift+Enter: Search";
-
-  const forcedHint =
-    parsed.forcedMode && parsed.forcedMode !== mode
-      ? parsed.forcedMode === "sql"
-        ? "Forced: SQL"
-        : "Forced: Search"
-      : null;
 
   return (
     <Box>
-      <TextField.Root
-        size="3"
-        radius="full"
-        variant="surface"
-        style={{ boxShadow: "0 0 0 1px var(--gray-a5) inset" }}
-      >
-        <TextField.Slot side="left">
-          <SegmentedControl.Root
-            size="1"
-            radius="full"
-            value={mode}
-            onValueChange={(v) => {
-              if (v === "search" || v === "sql") setMode(v);
-              focusInput();
-            }}
-            aria-label="Query mode"
-          >
-            <SegmentedControl.Item value="search">Search</SegmentedControl.Item>
-            <SegmentedControl.Item value="sql">SQL</SegmentedControl.Item>
-          </SegmentedControl.Root>
-        </TextField.Slot>
+      <Flex gap="2" align="center" mb="3">
+        <SegmentedControl.Root
+          value={mode}
+          onValueChange={(v) => {
+            if (v === "search" || v === "sql") setMode(v);
+          }}
+          aria-label="Query mode"
+        >
+          <SegmentedControl.Item value="search">Search</SegmentedControl.Item>
+          <SegmentedControl.Item value="sql">SQL</SegmentedControl.Item>
+        </SegmentedControl.Root>
+      </Flex>
 
-        <TextField.Slot style={{ flex: 1 }}>
-          <input
-            ref={inputRef}
-            value={value}
-            placeholder={placeholder}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
-            onKeyDown={onKeyDown}
-            aria-label="Search input"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              fontSize: "inherit",
-              color: "inherit",
-              fontFamily: "inherit",
-            }}
-          />
-        </TextField.Slot>
-
-        <TextField.Slot side="right">
-          <Flex gap="2" align="center">
-            {forcedHint && (
-              <Badge variant="soft" radius="full">
-                {forcedHint}
-              </Badge>
-            )}
-
-            <Tooltip content={runTooltip}>
-              <Badge
-                variant="soft"
-                radius="full"
-                style={{ userSelect: "none", paddingLeft: 10, paddingRight: 10 }}
-              >
-                Enter runs
-              </Badge>
-            </Tooltip>
-
-            {value.length > 0 && (
-              <Tooltip content="Clear (Esc)">
-                <IconButton variant="ghost" radius="full" aria-label="Clear input" onClick={clear}>
-                  <Cross2Icon />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            <Tooltip content={runTooltip}>
-              <IconButton
-                variant="ghost"
-                radius="full"
-                aria-label={effectiveMode === "search" ? "Run search" : "Open SQL modal"}
-                onClick={() => run({ fromClick: true })}
-                disabled={!normalizedQuery.trim()}
-              >
-                {runIcon}
-              </IconButton>
-            </Tooltip>
-          </Flex>
-        </TextField.Slot>
-      </TextField.Root>
+      {mode === "search" ? (
+        <RegularSearchBar
+          value={searchValue}
+          onChange={handleSearchChange}
+          onSubmit={handleSearchSubmit}
+          debounceMs={searchDebounceMs}
+          placeholder="Search jobs…"
+        />
+      ) : (
+        <SqlSearchBar
+          value={sqlValue}
+          onChange={setSqlValue}
+          onSubmit={handleSqlSubmit}
+          onDrilldownToSearch={(q) => {
+            setMode("search");
+            setSearchValue(q);
+            onDrilldownToSearch?.(q);
+            onSearchSubmit?.(q);
+          }}
+          sqlEndpoint={sqlEndpoint}
+          placeholder="Ask the data…"
+        />
+      )}
 
       <Box mt="2">
         <Text size="2" color="gray">
-          Shortcuts: <code>Enter</code> runs active mode · <code>Shift+Enter</code> runs the other ·{" "}
-          <code>/sql …</code> or <code>?</code> forces SQL · <code>/find …</code> or <code>!</code> forces Search ·{" "}
-          <code>Esc</code> clears
+          {mode === "search"
+            ? "Press Enter to search · Esc to clear"
+            : "Press Enter to query · Esc to clear"}
         </Text>
       </Box>
-
-      <SqlQueryModal
-        open={sqlOpen}
-        onOpenChange={(o) => {
-          setSqlOpen(o);
-          if (!o) {
-            setSqlAutoRun(false);
-            // keep focus on bar when closing
-            focusInput();
-          }
-        }}
-        sqlEndpoint={sqlEndpoint}
-        defaultQuestion={sqlSeedQuestion}
-        autoRunOnOpen={sqlAutoRun}
-        onDrilldownToSearch={(q) => {
-          setMode("search");
-          setValue(q);
-          onDrilldownToSearch?.(q);
-          onSearchSubmit?.(q);
-          focusInput();
-        }}
-      />
     </Box>
   );
 }

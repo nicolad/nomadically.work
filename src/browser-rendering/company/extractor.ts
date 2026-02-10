@@ -24,6 +24,14 @@ export async function extractCompanyData(
 
   const cloudflareToken = browserRenderingKey || apiToken;
 
+  // Debug: Log which credentials are available (without exposing the actual values)
+  console.log("🔑 Cloudflare credentials check:");
+  console.log("   CLOUDFLARE_BROWSER_RENDERING_KEY:", browserRenderingKey ? `✓ (${browserRenderingKey.substring(0, 10)}...)` : "✗ not set");
+  console.log("   CLOUDFLARE_API_TOKEN:", apiToken ? `✓ (${apiToken.substring(0, 10)}...)` : "✗ not set");
+  console.log("   CLOUDFLARE_ACCOUNT_ID:", accountId ? `✓ (${accountId})` : "✗ not set");
+  console.log("   DEEPSEEK_API_KEY:", deepseekKey ? `✓ (${deepseekKey.substring(0, 10)}...)` : "✗ not set");
+  console.log("   Using token:", browserRenderingKey ? "BROWSER_RENDERING_KEY" : "API_TOKEN");
+
   if (!cloudflareToken) {
     throw new Error("Missing CLOUDFLARE_BROWSER_RENDERING_KEY or CLOUDFLARE_API_TOKEN environment variable");
   }
@@ -211,10 +219,11 @@ Field mapping guidance:
   - OTHER: doesn't fit other categories
   - UNKNOWN: insufficient information to classify
 - careers_url:
-  - Find the best official careers/jobs link.
-  - Prefer internal "/careers", "/jobs", "/join-us", "/work-with-us" or a dedicated careers subdomain.
-  - Prefer internal company-hosted careers pages over external ATS links when both exist.
-  - Use an absolute URL.
+  - Find the best official careers/jobs link by scanning navigation menus, headers, footers, and body content.
+  - Look for links labeled "Careers", "Jobs", "Join Us", "Work With Us", "We're Hiring", or similar.
+  - Prefer internal paths like "/careers", "/careers/", "/jobs", "/join-us" or dedicated careers subdomains (e.g., "careers.company.com").
+  - Prefer internal company-hosted careers pages over external ATS boards when both exist.
+  - Must use an absolute URL (e.g., "https://orases.com/careers/" not "/careers").
 - linkedin_url:
   - Find the company LinkedIn page (prefer "https://www.linkedin.com/company/...").
   - Use an absolute URL.
@@ -247,7 +256,7 @@ Extract from: ${targetUrl}
       response_format,
       custom_ai: [
         {
-          model: "deepseek/deepseek-chat",
+          model: "deepseek/deepseek-reasoner",
           authorization: `Bearer ${deepseekKey}`,
         },
       ],
@@ -262,6 +271,14 @@ Extract from: ${targetUrl}
 
     return extracted;
   } catch (error: any) {
+    // Log the actual error for debugging
+    console.error("❌ Cloudflare Browser Rendering error:");
+    console.error("   Status:", error.status);
+    console.error("   Message:", error.message);
+    if (error.response) {
+      console.error("   Response:", JSON.stringify(error.response, null, 2));
+    }
+    
     // Fall back to direct DeepSeek API if Browser Rendering is not available or unsupported
     if (error.status === 401 || error.status === 403 || error.status === 422) {
       console.warn(

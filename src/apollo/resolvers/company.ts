@@ -12,6 +12,12 @@ import { enhanceCompany } from "./enhance-company";
 
 export const companyResolvers = {
   Company: {
+    // Validate and sanitize category enum
+    category(parent: any) {
+      const validCategories = ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN"];
+      const category = parent.category?.toUpperCase() || "UNKNOWN";
+      return validCategories.includes(category) ? category : "OTHER";
+    },
     // Parse JSON fields
     tags(parent: any) {
       return parent.tags ? JSON.parse(parent.tags) : [];

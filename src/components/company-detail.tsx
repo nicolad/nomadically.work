@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useGetCompanyQuery } from "@/__generated__/hooks";
+import { useAuth } from "@/auth/hooks";
+import { ADMIN_EMAIL } from "@/lib/constants";
 import {
   Container,
   Heading,
@@ -16,11 +19,14 @@ import {
   Em,
   Strong,
   Callout,
+  Button,
+  IconButton,
 } from "@radix-ui/themes";
 import {
   ExternalLinkIcon,
   InfoCircledIcon,
   GlobeIcon,
+  MagicWandIcon,
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 
@@ -29,9 +35,46 @@ type Props = {
 };
 
 export function CompanyDetail({ companyKey }: Props) {
-  const { loading, error, data } = useGetCompanyQuery({
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhanceError, setEnhanceError] = useState<string | null>(null);
+
+  const { loading, error, data, refetch } = useGetCompanyQuery({
     variables: { key: companyKey },
   });
+
+  const handleEnhance = async () => {
+    if (!data?.company) return;
+
+    setIsEnhancing(true);
+    setEnhanceError(null);
+
+    try {
+      const response = await fetch("/api/companies/enhance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companyId: data.company.id,
+          companyKey: data.company.key,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to enhance company");
+      }
+
+      // Refetch company data after enhancement
+      await refetch();
+    } catch (err) {
+      setEnhanceError(err instanceof Error ? err.message : "Enhancement failed");
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -74,6 +117,33 @@ export function CompanyDetail({ companyKey }: Props) {
   return (
     <Container size="4" p={{ initial: "4", md: "8" }}>
       <Flex direction="column" gap="6">
+        {/* Admin Enhance Button */}
+        {isAdmin && (
+          <Flex justify="end">
+            <Button
+              onClick={handleEnhance}
+              disabled={isEnhancing}
+              variant="soft"
+              color="purple"
+            >
+              <MagicWandIcon />
+              {isEnhancing ? "Enhancing..." : "Enhance Company"}
+            </Button>
+          </Flex>
+        )}
+
+        {/* Enhancement Error */}
+        {enhanceError && (
+          <Callout.Root color="red">
+            <Callout.Icon>
+              <InfoCircledIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              <Strong>Enhancement Error:</Strong> {enhanceError}
+            </Callout.Text>
+          </Callout.Root>
+        )}
+
         {/* Header Section */}
         <Flex direction="row" gap="4" align="start">
           {company.logo_url && (

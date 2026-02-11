@@ -371,292 +371,299 @@ export function ChatsProvider() {
 
             {/* Chat Interface */}
             <Flex gap="4" style={{ height: "calc(100vh - 340px)" }}>
-            {/* Chat List Sidebar */}
-            <Box
-              style={{
-                width: "300px",
-                borderRight: "1px solid var(--gray-6)",
-                overflowY: "auto",
-              }}
-            >
-              <Flex direction="column" gap="2">
-                {chats.length === 0 ? (
-                  <Box p="4">
-                    <Text color="gray" size="2">
-                      No queries yet. Create a new chat to start querying the
-                      database.
-                    </Text>
-                  </Box>
-                ) : (
-                  chats.map((chat) => (
-                    <Card
-                      key={chat.id}
-                      style={{
-                        cursor: "pointer",
-                        backgroundColor:
-                          selectedChatId === chat.id
-                            ? "var(--accent-3)"
-                            : undefined,
-                      }}
-                      onClick={() => setSelectedChatId(chat.id)}
-                    >
-                      <Box p="3">
-                        <Text weight="bold" size="2">
-                          {chat.title}
-                        </Text>
-                        <Text color="gray" size="1">
-                          {chat.messages.length} messages
-                        </Text>
-                      </Box>
-                    </Card>
-                  ))
-                )}
-              </Flex>
-            </Box>
-
-            {/* Chat Messages Area */}
-            <Flex direction="column" gap="4" style={{ flex: 1, minHeight: 0 }}>
-              {selectedChat ? (
-                <>
-                  {/* Messages */}
-                  <Box
-                    style={{
-                      flex: 1,
-                      overflowY: "auto",
-                      padding: "1rem",
-                    }}
-                  >
-                    <Flex direction="column" gap="4">
-                      {selectedChat.messages.length === 0 ? (
-                        <Box p="8" style={{ textAlign: "center" }}>
-                          <Flex direction="column" gap="3" align="center">
-                            <LightningBoltIcon width="32" height="32" />
-                            <Text color="gray" size="3" weight="bold">
-                              Start querying the database
-                            </Text>
-                            <Box>
-                              <Text color="gray" size="2" as="div">
-                                Examples:
-                              </Text>
-                              <Text color="gray" size="2" as="div">
-                                • "Top 10 companies hiring React developers"
-                              </Text>
-                              <Text color="gray" size="2" as="div">
-                                • "SELECT * FROM jobs WHERE remote = true LIMIT
-                                10"
-                              </Text>
-                              <Text color="gray" size="2" as="div">
-                                • "/sql Show me all jobs posted in the last 7
-                                days"
-                              </Text>
-                            </Box>
-                          </Flex>
+              {/* Chat List Sidebar */}
+              <Box
+                style={{
+                  width: "300px",
+                  borderRight: "1px solid var(--gray-6)",
+                  overflowY: "auto",
+                }}
+              >
+                <Flex direction="column" gap="2">
+                  {chats.length === 0 ? (
+                    <Box p="4">
+                      <Text color="gray" size="2">
+                        No queries yet. Create a new chat to start querying the
+                        database.
+                      </Text>
+                    </Box>
+                  ) : (
+                    chats.map((chat) => (
+                      <Card
+                        key={chat.id}
+                        style={{
+                          cursor: "pointer",
+                          backgroundColor:
+                            selectedChatId === chat.id
+                              ? "var(--accent-3)"
+                              : undefined,
+                        }}
+                        onClick={() => setSelectedChatId(chat.id)}
+                      >
+                        <Box p="3">
+                          <Text weight="bold" size="2">
+                            {chat.title}
+                          </Text>
+                          <Text color="gray" size="1">
+                            {chat.messages.length} messages
+                          </Text>
                         </Box>
-                      ) : (
-                        selectedChat.messages.map((message) => (
-                          <Card
-                            key={message.id}
-                            style={{
-                              alignSelf:
-                                message.role === "user"
-                                  ? "flex-end"
-                                  : "flex-start",
-                              maxWidth: message.sqlResult ? "90%" : "70%",
-                              backgroundColor:
-                                message.role === "user"
-                                  ? "var(--blue-9)"
-                                  : "var(--gray-3)",
-                            }}
-                          >
-                            <Box p="3">
-                              <Flex direction="column" gap="2">
-                                <Flex align="center" gap="2">
-                                  <Badge
-                                    color={
-                                      message.role === "user" ? "blue" : "gray"
-                                    }
-                                    size="1"
-                                  >
-                                    {message.role === "user" ? (
-                                      <PersonIcon />
-                                    ) : message.sqlResult ? (
-                                      <LightningBoltIcon />
-                                    ) : (
-                                      <ChatBubbleIcon />
-                                    )}
-                                  </Badge>
-                                  <Text size="1" color="gray">
-                                    {message.timestamp.toLocaleTimeString()}
-                                  </Text>
-                                </Flex>
-                                <Text>{message.content}</Text>
+                      </Card>
+                    ))
+                  )}
+                </Flex>
+              </Box>
 
-                                {message.isLoading && (
-                                  <Flex gap="2" align="center">
-                                    <Spinner size="2" />
-                                  </Flex>
-                                )}
-
-                                {message.sqlResult && !message.isLoading && (
-                                  <Box mt="3">
-                                    <Flex
-                                      direction="column"
-                                      gap="3"
-                                      style={{ width: "100%" }}
+              {/* Chat Messages Area */}
+              <Flex
+                direction="column"
+                gap="4"
+                style={{ flex: 1, minHeight: 0 }}
+              >
+                {selectedChat ? (
+                  <>
+                    {/* Messages */}
+                    <Box
+                      style={{
+                        flex: 1,
+                        overflowY: "auto",
+                        padding: "1rem",
+                      }}
+                    >
+                      <Flex direction="column" gap="4">
+                        {selectedChat.messages.length === 0 ? (
+                          <Box p="8" style={{ textAlign: "center" }}>
+                            <Flex direction="column" gap="3" align="center">
+                              <LightningBoltIcon width="32" height="32" />
+                              <Text color="gray" size="3" weight="bold">
+                                Start querying the database
+                              </Text>
+                              <Box>
+                                <Text color="gray" size="2" as="div">
+                                  Examples:
+                                </Text>
+                                <Text color="gray" size="2" as="div">
+                                  • "Top 10 companies hiring React developers"
+                                </Text>
+                                <Text color="gray" size="2" as="div">
+                                  • "SELECT * FROM jobs WHERE remote = true
+                                  LIMIT 10"
+                                </Text>
+                                <Text color="gray" size="2" as="div">
+                                  • "/sql Show me all jobs posted in the last 7
+                                  days"
+                                </Text>
+                              </Box>
+                            </Flex>
+                          </Box>
+                        ) : (
+                          selectedChat.messages.map((message) => (
+                            <Card
+                              key={message.id}
+                              style={{
+                                alignSelf:
+                                  message.role === "user"
+                                    ? "flex-end"
+                                    : "flex-start",
+                                maxWidth: message.sqlResult ? "90%" : "70%",
+                                backgroundColor:
+                                  message.role === "user"
+                                    ? "var(--blue-9)"
+                                    : "var(--gray-3)",
+                              }}
+                            >
+                              <Box p="3">
+                                <Flex direction="column" gap="2">
+                                  <Flex align="center" gap="2">
+                                    <Badge
+                                      color={
+                                        message.role === "user"
+                                          ? "blue"
+                                          : "gray"
+                                      }
+                                      size="1"
                                     >
-                                      <Box>
-                                        <Text
-                                          weight="bold"
-                                          size="2"
-                                          mb="2"
-                                          as="div"
-                                        >
-                                          Generated SQL
-                                        </Text>
-                                        <Code
-                                          variant="ghost"
-                                          style={{
-                                            display: "block",
-                                            whiteSpace: "pre-wrap",
-                                            overflowX: "auto",
-                                            padding: 8,
-                                            borderRadius: 8,
-                                            boxShadow:
-                                              "0 0 0 1px var(--gray-a5) inset",
-                                            fontSize: "12px",
-                                          }}
-                                        >
-                                          {message.sqlResult.sql}
-                                        </Code>
-                                      </Box>
-
-                                      {message.sqlResult.explanation && (
-                                        <Box>
-                                          <Text size="2" color="gray">
-                                            {message.sqlResult.explanation}
-                                          </Text>
-                                        </Box>
+                                      {message.role === "user" ? (
+                                        <PersonIcon />
+                                      ) : message.sqlResult ? (
+                                        <LightningBoltIcon />
+                                      ) : (
+                                        <ChatBubbleIcon />
                                       )}
+                                    </Badge>
+                                    <Text size="1" color="gray">
+                                      {message.timestamp.toLocaleTimeString()}
+                                    </Text>
+                                  </Flex>
+                                  <Text>{message.content}</Text>
 
-                                      {message.sqlResult.rows.length > 0 && (
-                                        <Box
-                                          style={{
-                                            overflowX: "auto",
-                                            maxHeight: "400px",
-                                            overflowY: "auto",
-                                          }}
-                                        >
-                                          <Table.Root
-                                            variant="surface"
-                                            size="1"
+                                  {message.isLoading && (
+                                    <Flex gap="2" align="center">
+                                      <Spinner size="2" />
+                                    </Flex>
+                                  )}
+
+                                  {message.sqlResult && !message.isLoading && (
+                                    <Box mt="3">
+                                      <Flex
+                                        direction="column"
+                                        gap="3"
+                                        style={{ width: "100%" }}
+                                      >
+                                        <Box>
+                                          <Text
+                                            weight="bold"
+                                            size="2"
+                                            mb="2"
+                                            as="div"
                                           >
-                                            <Table.Header>
-                                              <Table.Row>
-                                                {message.sqlResult.columns.map(
-                                                  (c) => (
-                                                    <Table.ColumnHeaderCell
-                                                      key={c}
-                                                    >
-                                                      {c}
-                                                    </Table.ColumnHeaderCell>
+                                            Generated SQL
+                                          </Text>
+                                          <Code
+                                            variant="ghost"
+                                            style={{
+                                              display: "block",
+                                              whiteSpace: "pre-wrap",
+                                              overflowX: "auto",
+                                              padding: 8,
+                                              borderRadius: 8,
+                                              boxShadow:
+                                                "0 0 0 1px var(--gray-a5) inset",
+                                              fontSize: "12px",
+                                            }}
+                                          >
+                                            {message.sqlResult.sql}
+                                          </Code>
+                                        </Box>
+
+                                        {message.sqlResult.explanation && (
+                                          <Box>
+                                            <Text size="2" color="gray">
+                                              {message.sqlResult.explanation}
+                                            </Text>
+                                          </Box>
+                                        )}
+
+                                        {message.sqlResult.rows.length > 0 && (
+                                          <Box
+                                            style={{
+                                              overflowX: "auto",
+                                              maxHeight: "400px",
+                                              overflowY: "auto",
+                                            }}
+                                          >
+                                            <Table.Root
+                                              variant="surface"
+                                              size="1"
+                                            >
+                                              <Table.Header>
+                                                <Table.Row>
+                                                  {message.sqlResult.columns.map(
+                                                    (c) => (
+                                                      <Table.ColumnHeaderCell
+                                                        key={c}
+                                                      >
+                                                        {c}
+                                                      </Table.ColumnHeaderCell>
+                                                    ),
+                                                  )}
+                                                </Table.Row>
+                                              </Table.Header>
+                                              <Table.Body>
+                                                {message.sqlResult.rows.map(
+                                                  (row, idx) => (
+                                                    <Table.Row key={idx}>
+                                                      {row.map((cell, j) => (
+                                                        <Table.Cell key={j}>
+                                                          {cell === null ? (
+                                                            <Text color="gray">
+                                                              NULL
+                                                            </Text>
+                                                          ) : (
+                                                            String(cell)
+                                                          )}
+                                                        </Table.Cell>
+                                                      ))}
+                                                    </Table.Row>
                                                   ),
                                                 )}
-                                              </Table.Row>
-                                            </Table.Header>
-                                            <Table.Body>
-                                              {message.sqlResult.rows.map(
-                                                (row, idx) => (
-                                                  <Table.Row key={idx}>
-                                                    {row.map((cell, j) => (
-                                                      <Table.Cell key={j}>
-                                                        {cell === null ? (
-                                                          <Text color="gray">
-                                                            NULL
-                                                          </Text>
-                                                        ) : (
-                                                          String(cell)
-                                                        )}
-                                                      </Table.Cell>
-                                                    ))}
-                                                  </Table.Row>
-                                                ),
-                                              )}
-                                            </Table.Body>
-                                          </Table.Root>
-                                        </Box>
-                                      )}
+                                              </Table.Body>
+                                            </Table.Root>
+                                          </Box>
+                                        )}
 
-                                      {message.sqlResult.rows.length === 0 && (
-                                        <Callout.Root>
-                                          <Callout.Text>
-                                            No results found
-                                          </Callout.Text>
-                                        </Callout.Root>
-                                      )}
-                                    </Flex>
-                                  </Box>
-                                )}
-                              </Flex>
-                            </Box>
-                          </Card>
-                        ))
-                      )}
-                    </Flex>
-                  </Box>
-
-                  <Separator size="4" />
-
-                  {/* Message Input */}
-                  <Box p="4">
-                    <Flex direction="column" gap="2">
-                      <Callout.Root size="1" color="blue">
-                        <Callout.Text>
-                          💡 Tip: Start your message with <Code>/sql</Code>,{" "}
-                          <Code>sql:</Code>, or write a <Code>SELECT</Code>{" "}
-                          query to query the database
-                        </Callout.Text>
-                      </Callout.Root>
-                      <Flex gap="2">
-                        <TextArea
-                          placeholder="Ask a question or write a SQL query (e.g., 'SELECT * FROM jobs LIMIT 10')"
-                          value={messageInput}
-                          onChange={(e) => setMessageInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              void sendMessage();
-                            }
-                          }}
-                          style={{ flex: 1 }}
-                          rows={3}
-                          disabled={isLoading}
-                        />
-                        <Button
-                          onClick={() => void sendMessage()}
-                          size="3"
-                          disabled={isLoading || !messageInput.trim()}
-                        >
-                          {isLoading ? <Spinner /> : "Send"}
-                        </Button>
+                                        {message.sqlResult.rows.length ===
+                                          0 && (
+                                          <Callout.Root>
+                                            <Callout.Text>
+                                              No results found
+                                            </Callout.Text>
+                                          </Callout.Root>
+                                        )}
+                                      </Flex>
+                                    </Box>
+                                  )}
+                                </Flex>
+                              </Box>
+                            </Card>
+                          ))
+                        )}
                       </Flex>
+                    </Box>
+
+                    <Separator size="4" />
+
+                    {/* Message Input */}
+                    <Box p="4">
+                      <Flex direction="column" gap="2">
+                        <Callout.Root size="1" color="blue">
+                          <Callout.Text>
+                            💡 Tip: Start your message with <Code>/sql</Code>,{" "}
+                            <Code>sql:</Code>, or write a <Code>SELECT</Code>{" "}
+                            query to query the database
+                          </Callout.Text>
+                        </Callout.Root>
+                        <Flex gap="2">
+                          <TextArea
+                            placeholder="Ask a question or write a SQL query (e.g., 'SELECT * FROM jobs LIMIT 10')"
+                            value={messageInput}
+                            onChange={(e) => setMessageInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                void sendMessage();
+                              }
+                            }}
+                            style={{ flex: 1 }}
+                            rows={3}
+                            disabled={isLoading}
+                          />
+                          <Button
+                            onClick={() => void sendMessage()}
+                            size="3"
+                            disabled={isLoading || !messageInput.trim()}
+                          >
+                            {isLoading ? <Spinner /> : "Send"}
+                          </Button>
+                        </Flex>
+                      </Flex>
+                    </Box>
+                  </>
+                ) : (
+                  <Box p="8" style={{ textAlign: "center" }}>
+                    <Flex direction="column" gap="3" align="center">
+                      <LightningBoltIcon width="48" height="48" />
+                      <Text color="gray" size="4">
+                        Select a conversation or create a new one
+                      </Text>
+                      <Text color="gray" size="2">
+                        Query the database with natural language or SQL
+                      </Text>
                     </Flex>
                   </Box>
-                </>
-              ) : (
-                <Box p="8" style={{ textAlign: "center" }}>
-                  <Flex direction="column" gap="3" align="center">
-                    <LightningBoltIcon width="48" height="48" />
-                    <Text color="gray" size="4">
-                      Select a conversation or create a new one
-                    </Text>
-                    <Text color="gray" size="2">
-                      Query the database with natural language or SQL
-                    </Text>
-                  </Flex>
-                </Box>
-              )}
+                )}
+              </Flex>
             </Flex>
-          </Flex>
           </Flex>
         )}
       </Flex>

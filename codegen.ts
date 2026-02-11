@@ -1,7 +1,7 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
-  schema: "src/apollo/type-defs.ts",
+  schema: "schema/**/*.graphql",
   documents: ["src/**/*.{ts,tsx,graphql}", "!src/__generated__/**/*"],
   ignoreNoDocuments: true,
   generates: {

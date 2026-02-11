@@ -478,7 +478,7 @@ export const typeDefs = gql`
     ): UserSettings!
     deleteJob(id: Int!): DeleteJobResponse!
 
-    submitApplication(input: ApplicationInput!): Application!
+    createApplication(input: ApplicationInput!): Application!
 
     createCompany(input: CreateCompanyInput!): Company!
     updateCompany(id: Int!, input: UpdateCompanyInput!): Company!

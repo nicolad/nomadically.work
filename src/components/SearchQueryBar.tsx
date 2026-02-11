@@ -53,12 +53,6 @@ export function SearchQueryBar({
         debounceMs={searchDebounceMs}
         placeholder="Search jobs…"
       />
-
-      <Box mt="2">
-        <Text size="2" color="gray">
-          Press Enter to search · Esc to clear
-        </Text>
-      </Box>
     </Box>
   );
 }

@@ -294,7 +294,6 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
                     )}
                   </Flex>
                 )}
-                Callback
                 <Flex justify="between" align="center" mt="4">
                   <Text size="1" color="gray">
                     {job.source_kind && <span>Source: {job.source_kind}</span>}

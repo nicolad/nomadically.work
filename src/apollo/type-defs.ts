@@ -4,6 +4,8 @@ export const typeDefs = gql`
   scalar JSON
   scalar DateTime
   scalar URL
+  scalar EmailAddress
+  scalar Upload
 
   # Enums
   enum SourceType {
@@ -248,6 +250,19 @@ export const typeDefs = gql`
     totalCount: Int!
   }
 
+  type QuestionAnswer {
+    questionId: String!
+    questionText: String!
+    answerText: String!
+  }
+
+  type Application {
+    email: EmailAddress!
+    jobId: String!
+    resume: Upload
+    questions: [QuestionAnswer!]!
+  }
+
   type CompaniesResponse {
     companies: [Company!]!
     totalCount: Int!
@@ -277,6 +292,19 @@ export const typeDefs = gql`
     excluded_companies: [String!]
     dark_mode: Boolean
     jobs_per_page: Int
+  }
+
+  input QuestionAnswerInput {
+    questionId: String!
+    questionText: String!
+    answerText: String!
+  }
+
+  input ApplicationInput {
+    email: EmailAddress!
+    jobId: String!
+    resume: Upload
+    questions: [QuestionAnswerInput!]!
   }
 
   input CreateCompanyInput {
@@ -449,6 +477,8 @@ export const typeDefs = gql`
       settings: UserSettingsInput!
     ): UserSettings!
     deleteJob(id: Int!): DeleteJobResponse!
+
+    submitApplication(input: ApplicationInput!): Application!
 
     createCompany(input: CreateCompanyInput!): Company!
     updateCompany(id: Int!, input: UpdateCompanyInput!): Company!

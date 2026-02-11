@@ -37,6 +37,9 @@ export default function RootLayout({
                     />
                   </Link>
                   <Flex gap="4" align="center">
+                    <Link href="/applications">
+                      <Button variant="soft">Applications</Button>
+                    </Link>
                     <Link href="/companies">
                       <Button variant="soft">Companies</Button>
                     </Link>

@@ -1,23 +1,10 @@
-import { Langfuse } from "langfuse";
-import { LangfuseClient } from "@langfuse/client";
 import {
-  LANGFUSE_SECRET_KEY,
-  LANGFUSE_PUBLIC_KEY,
-  LANGFUSE_BASE_URL,
-} from "@/config/env";
+  createLangfusePrompt,
+  fetchLangfusePrompt,
+  listLangfusePrompts,
+  resolveComposedPrompt,
+} from "@/langfuse";
 import { GraphQLContext } from "@/apollo/context";
-
-const langfuse = new Langfuse({
-  secretKey: LANGFUSE_SECRET_KEY,
-  publicKey: LANGFUSE_PUBLIC_KEY,
-  baseUrl: LANGFUSE_BASE_URL,
-});
-
-const langfuseClient = new LangfuseClient({
-  secretKey: LANGFUSE_SECRET_KEY,
-  publicKey: LANGFUSE_PUBLIC_KEY,
-  baseUrl: LANGFUSE_BASE_URL,
-});
 
 // In-memory storage for prompt usage tracking (replace with DB in production)
 const promptUsageLog: Array<{
@@ -33,27 +20,39 @@ export const promptResolvers = {
   Query: {
     prompt: async (
       _: any,
-      { name, version, label }: { name: string; version?: number; label?: string },
-      context: GraphQLContext
+      {
+        name,
+        version,
+        label,
+        resolveComposition,
+      }: {
+        name: string;
+        version?: number;
+        label?: string;
+        resolveComposition?: boolean;
+      },
+      context: GraphQLContext,
     ) => {
       try {
-        let prompt;
         let promptName = name;
-        
+
         // If user is authenticated and name doesn't include namespace, add it
-        if (context.userEmail && !name.includes('__')) {
-          const userNamespace = context.userEmail.replace(/[^a-zA-Z0-9@.]/g, '-');
+        if (context.userEmail && !name.includes("__")) {
+          const userNamespace = context.userEmail.replace(
+            /[^a-zA-Z0-9@.]/g,
+            "-",
+          );
           promptName = `${userNamespace}__${name}`;
         }
-        
-        if (label) {
-          // Fetch by label (e.g., 'production', 'latest')
-          prompt = await langfuse.getPrompt(promptName, undefined, { label });
-        } else if (version) {
-          prompt = await langfuse.getPrompt(promptName, version);
-        } else {
-          // Default to production label
-          prompt = await langfuse.getPrompt(promptName);
+
+        let prompt = await fetchLangfusePrompt(promptName, {
+          version,
+          label,
+        });
+
+        // Optionally resolve composed prompts
+        if (resolveComposition !== false) {
+          prompt = await resolveComposedPrompt(prompt);
         }
 
         // Log usage if user is authenticated
@@ -74,7 +73,7 @@ export const promptResolvers = {
 
         // Transform Langfuse prompt to our GraphQL schema
         const isChat = prompt.type === "chat";
-        
+
         return {
           name: prompt.name,
           version: prompt.version,
@@ -91,55 +90,42 @@ export const promptResolvers = {
         };
       } catch (error) {
         console.error("Error fetching prompt:", error);
-        throw new Error(`Failed to fetch prompt: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to fetch prompt: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
 
     prompts: async (_: any, __: any, context: GraphQLContext) => {
       try {
-        // Fetch prompts filtered by user email tag
-        const userTag = context.userEmail ? `user:${context.userEmail}` : null;
-        // https://api.reference.langfuse.com/#tag/prompts/GET/api/public/v2/prompts
-        const url = new URL(`${LANGFUSE_BASE_URL}/api/public/v2/prompts`);
-        if (userTag) {
-          url.searchParams.set('tag', userTag);
-        }
+        const apiResponse = await listLangfusePrompts(context.userEmail);
 
-        const response = await fetch(url.toString(), {
-          headers: {
-            Authorization: `Basic ${Buffer.from(
-              `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`
-            ).toString("base64")}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Langfuse API error: ${response.statusText}`);
-        }
-
-        const apiResponse = await response.json();
-        
         // Map Langfuse API response to GraphQL schema
-        const registeredPrompts = (apiResponse.data || []).map((prompt: any) => {
-          const usageCount = promptUsageLog.filter(
-            u => u.promptName === prompt.name
-          ).length;
+        const registeredPrompts = (apiResponse.data || []).map(
+          (prompt: any) => {
+            const usageCount = promptUsageLog.filter(
+              (u) => u.promptName === prompt.name,
+            ).length;
 
-          const lastUsage = promptUsageLog
-            .filter(u => u.promptName === prompt.name)
-            .sort((a, b) => new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime())[0];
+            const lastUsage = promptUsageLog
+              .filter((u) => u.promptName === prompt.name)
+              .sort(
+                (a, b) =>
+                  new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime(),
+              )[0];
 
-          return {
-            ...prompt,
-            usageCount,
-            lastUsedBy: lastUsage?.userEmail || null,
-          };
-        });
+            return {
+              ...prompt,
+              usageCount,
+              lastUsedBy: lastUsage?.userEmail || null,
+            };
+          },
+        );
 
         return registeredPrompts;
       } catch (error) {
         console.error("Error fetching prompts from Langfuse:", error);
-        
+
         // Return empty array on error instead of throwing
         return [];
       }
@@ -148,14 +134,14 @@ export const promptResolvers = {
     myPromptUsage: async (
       _: any,
       { limit = 50 }: { limit?: number },
-      context: GraphQLContext
+      context: GraphQLContext,
     ) => {
       if (!context.userEmail) {
         return [];
       }
 
       return promptUsageLog
-        .filter(u => u.userEmail === context.userEmail)
+        .filter((u) => u.userEmail === context.userEmail)
         .slice(-limit)
         .reverse();
     },
@@ -165,7 +151,7 @@ export const promptResolvers = {
     createPrompt: async (
       _: any,
       { input }: { input: any },
-      context: GraphQLContext
+      context: GraphQLContext,
     ) => {
       if (!context.userEmail) {
         throw new Error("Authentication required to create prompts");
@@ -173,9 +159,9 @@ export const promptResolvers = {
 
       try {
         // Create user-specific prompt name to ensure strict coupling
-        const userNamespace = context.userEmail.replace(/[^a-zA-Z0-9@.]/g, '-');
+        const userNamespace = context.userEmail.replace(/[^a-zA-Z0-9@.]/g, "-");
         const userSpecificName = `${userNamespace}__${input.name}`;
-        
+
         // Create prompt in Langfuse with user tags for strict ownership
         const promptData: any = {
           name: userSpecificName,
@@ -199,11 +185,7 @@ export const promptResolvers = {
           promptData.config = input.config;
         }
 
-        // Use the Langfuse client SDK to create prompt
-        await langfuseClient.prompt.create(promptData);
-
-        // Fetch the created prompt to get full details with version
-        const created = await langfuse.getPrompt(userSpecificName);
+        const created = await createLangfusePrompt(promptData);
         const isChat = created.type === "chat";
 
         return {
@@ -222,14 +204,20 @@ export const promptResolvers = {
         };
       } catch (error) {
         console.error("Error creating prompt:", error);
-        throw new Error(`Failed to create prompt: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to create prompt: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
 
     updatePromptLabel: async (
       _: any,
-      { name, version, label }: { name: string; version: number; label: string },
-      context: GraphQLContext
+      {
+        name,
+        version,
+        label,
+      }: { name: string; version: number; label: string },
+      context: GraphQLContext,
     ) => {
       if (!context.userEmail) {
         throw new Error("Authentication required to update prompt labels");
@@ -239,7 +227,7 @@ export const promptResolvers = {
         // Note: Langfuse SDK doesn't have direct label update method
         // This would typically be done via the Langfuse UI or API
         // For now, we'll fetch the prompt and return it
-        const prompt = await langfuse.getPrompt(name, version);
+        const prompt = await fetchLangfusePrompt(name, { version });
         const isChat = prompt.type === "chat";
 
         return {
@@ -258,7 +246,9 @@ export const promptResolvers = {
         };
       } catch (error) {
         console.error("Error updating prompt label:", error);
-        throw new Error(`Failed to update prompt label: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to update prompt label: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
   },

@@ -467,6 +467,7 @@ export type PromptUsage = {
 
 export type Query = {
   __typename: 'Query';
+  applications: Array<Application>;
   companies: CompaniesResponse;
   company: Maybe<Company>;
   company_ats_boards: Array<AtsBoard>;

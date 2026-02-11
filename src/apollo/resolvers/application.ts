@@ -1,6 +1,27 @@
 import type { GraphQLContext } from "../context";
 
 export const applicationResolvers = {
+  Query: {
+    async applications(
+      _parent: any,
+      _args: any,
+      context: GraphQLContext,
+    ) {
+      try {
+        // Get applications for authenticated user
+        if (!context.userEmail) {
+          throw new Error("User must be authenticated to view applications");
+        }
+
+        // TODO: Fetch applications from database
+        // For now, return empty array
+        return [];
+      } catch (error) {
+        console.error("Error fetching applications:", error);
+        throw new Error("Failed to fetch applications");
+      }
+    },
+  },
   Mutation: {
     async createApplication(
       _parent: any,

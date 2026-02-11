@@ -12,13 +12,17 @@ import {
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useAuth } from "@/auth/hooks";
-import { useCreateApplicationMutation } from "@/__generated__/hooks";
+import {
+  useCreateApplicationMutation,
+  useGetApplicationsQuery,
+} from "@/__generated__/hooks";
 
 export default function ApplicationsPage() {
   const [open, setOpen] = useState(false);
   const [jobId, setJobId] = useState("");
   const { user } = useAuth();
   const [createApplication, { loading }] = useCreateApplicationMutation();
+  const { data, loading: loadingApplications, refetch } = useGetApplicationsQuery();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +43,7 @@ export default function ApplicationsPage() {
       });
       setOpen(false);
       setJobId("");
+      refetch(); // Refresh the list after creating
     } catch (error) {
       console.error("Error creating application:", error);
     }
@@ -88,6 +93,54 @@ export default function ApplicationsPage() {
           </Dialog.Content>
         </Dialog.Root>
       </Flex>
+
+      {loadingApplications ? (
+        <Flex justify="center" p="8">
+          Loading applications...
+        </Flex>
+      ) : data?.applications && data.applications.length > 0 ? (
+        <Flex direction="column" gap="3">
+          {data.applications.map((app, index) => (
+            <Flex
+              key={index}
+              p="4"
+              style={{
+                border: "1px solid var(--gray-6)",
+                borderRadius: "8px",
+              }}
+              direction="column"
+              gap="2"
+            >
+              <Flex justify="between">
+                <strong>Job ID:</strong> {app.jobId}
+              </Flex>
+              <Flex>
+                <strong>Email:</strong> {app.email}
+              </Flex>
+              {app.questions.length > 0 && (
+                <Flex direction="column" gap="1">
+                  <strong>Questions:</strong>
+                  {app.questions.map((q, qIndex) => (
+                    <Flex key={qIndex} pl="3" direction="column">
+                      <span>
+                        Q: {q.questionText}
+                      </span>
+                      <span style={{ color: "var(--gray-11)" }}>
+                        A: {q.answerText}
+                      </span>
+                    </Flex>
+                  ))}
+                </Flex>
+              )}
+            </Flex>
+          ))}
+        </Flex>
+      ) : (
+        <Flex justify="center" p="8" style={{ color: "var(--gray-11)" }}>
+          No applications yet. Click &quot;Add Application&quot; to submit your
+          first one.
+        </Flex>
+      )}
     </Container>
   );
 }

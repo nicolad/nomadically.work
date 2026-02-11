@@ -470,6 +470,7 @@ export type PromptUsage = {
 
 export type Query = {
   __typename?: 'Query';
+  applications: Array<Application>;
   companies: CompaniesResponse;
   company: Maybe<Company>;
   company_ats_boards: Array<AtsBoard>;
@@ -1059,6 +1060,7 @@ export type PromptUsageResolvers<ContextType = GraphQLContext, ParentType extend
 };
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  applications?: Resolver<Array<ResolversTypes['Application']>, ParentType, ContextType>;
   companies?: Resolver<ResolversTypes['CompaniesResponse'], ParentType, ContextType, Partial<QueryCompaniesArgs>>;
   company?: Resolver<Maybe<ResolversTypes['Company']>, ParentType, ContextType, Partial<QueryCompanyArgs>>;
   company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<QueryCompany_Ats_BoardsArgs, 'company_id'>>;

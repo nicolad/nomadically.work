@@ -54,6 +54,16 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
     tag.startsWith('category:')
   )?.replace('category:', '') || "general";
 
+  // Extract project ID from Langfuse public key (format: pk-lf-{projectId}-{hash})
+  const getLangfuseProjectId = () => {
+    const publicKey = process.env.NEXT_PUBLIC_LANGFUSE_PUBLIC_KEY;
+    if (publicKey) {
+      const parts = publicKey.split('-');
+      return parts[2] || null;
+    }
+    return null;
+  };
+
   const handleCopyPrompt = async () => {
     try {
       let textToCopy = '';
@@ -116,11 +126,24 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
                 size="2"
                 onClick={() => {
                   const langfuseUrl = process.env.NEXT_PUBLIC_LANGFUSE_BASE_URL || "https://cloud.langfuse.com";
-                  window.open(`${langfuseUrl}/prompts`, "_blank");
+                  const projectId = getLangfuseProjectId();
+                  
+                  console.log('Langfuse URL:', langfuseUrl);
+                  console.log('Project ID:', projectId);
+                  console.log('Prompt Name:', prompt.name);
+                  
+                  if (projectId) {
+                    const url = `${langfuseUrl}/project/${projectId}/prompts/${encodeURIComponent(prompt.name)}`;
+                    console.log('Opening URL:', url);
+                    window.open(url, "_blank");
+                  } else {
+                    console.warn('No project ID found, opening general prompts page');
+                    window.open(`${langfuseUrl}/prompts`, "_blank");
+                  }
                 }}
               >
                 <ExternalLinkIcon />
-                View in Langfuse
+                Edit in Langfuse
               </Button>
               <Button
                 variant="surface"

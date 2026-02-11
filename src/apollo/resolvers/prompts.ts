@@ -3,18 +3,14 @@ import {
   fetchLangfusePrompt,
   listLangfusePrompts,
   resolveComposedPrompt,
+  toUserPromptName,
+  assertPromptAccess,
+  compilePrompt,
+  pickAbLabel,
 } from "@/langfuse";
+import { getRecentGenerationsForUser } from "@/langfuse/usage";
+import { createScore } from "@/langfuse/scores";
 import { GraphQLContext } from "@/apollo/context";
-
-// In-memory storage for prompt usage tracking (replace with DB in production)
-const promptUsageLog: Array<{
-  promptName: string;
-  userEmail: string;
-  version: number;
-  label?: string;
-  usedAt: string;
-  traceId?: string;
-}> = [];
 
 export const promptResolvers = {
   Query: {
@@ -34,20 +30,20 @@ export const promptResolvers = {
       context: GraphQLContext,
     ) => {
       try {
-        let promptName = name;
+        // Convert short name to user-namespaced name if needed
+        const fullName = name.includes("/")
+          ? name
+          : toUserPromptName(context.userEmail, name);
 
-        // If user is authenticated and name doesn't include namespace, add it
-        if (context.userEmail && !name.includes("__")) {
-          const userNamespace = context.userEmail.replace(
-            /[^a-zA-Z0-9@.]/g,
-            "-",
-          );
-          promptName = `${userNamespace}__${name}`;
+        // Enforce ACL
+        if (context.userEmail) {
+          assertPromptAccess(fullName, context.userEmail);
         }
 
-        let prompt = await fetchLangfusePrompt(promptName, {
+        let prompt = await fetchLangfusePrompt(fullName, {
           version,
           label,
+          type: undefined, // auto-detect
         });
 
         // Optionally resolve composed prompts
@@ -55,21 +51,8 @@ export const promptResolvers = {
           prompt = await resolveComposedPrompt(prompt);
         }
 
-        // Log usage if user is authenticated
-        if (context.userEmail) {
-          promptUsageLog.push({
-            promptName: name,
-            userEmail: context.userEmail,
-            version: prompt.version || 0,
-            label: label,
-            usedAt: new Date().toISOString(),
-          });
-
-          // Keep only last 1000 entries
-          if (promptUsageLog.length > 1000) {
-            promptUsageLog.shift();
-          }
-        }
+        // Note: No longer logging usage in-memory
+        // Real usage is available via myPromptUsage query
 
         // Transform Langfuse prompt to our GraphQL schema
         const isChat = prompt.type === "chat";
@@ -86,7 +69,7 @@ export const promptResolvers = {
           createdAt: null,
           updatedAt: null,
           createdBy: null, // Langfuse SDK doesn't expose creator
-          isUserSpecific: false, // Could be enhanced to check tags/metadata
+          isUserSpecific: fullName.startsWith("users/"),
         };
       } catch (error) {
         console.error("Error fetching prompt:", error);
@@ -103,21 +86,11 @@ export const promptResolvers = {
         // Map Langfuse API response to GraphQL schema
         const registeredPrompts = (apiResponse.data || []).map(
           (prompt: any) => {
-            const usageCount = promptUsageLog.filter(
-              (u) => u.promptName === prompt.name,
-            ).length;
-
-            const lastUsage = promptUsageLog
-              .filter((u) => u.promptName === prompt.name)
-              .sort(
-                (a, b) =>
-                  new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime(),
-              )[0];
-
             return {
               ...prompt,
-              usageCount,
-              lastUsedBy: lastUsage?.userEmail || null,
+              // Usage count would require separate Observations API call per prompt
+              usageCount: 0,
+              lastUsedBy: null,
             };
           },
         );
@@ -140,10 +113,24 @@ export const promptResolvers = {
         return [];
       }
 
-      return promptUsageLog
-        .filter((u) => u.userEmail === context.userEmail)
-        .slice(-limit)
-        .reverse();
+      try {
+        // Use real Observations API instead of in-memory log
+        const observations = await getRecentGenerationsForUser({
+          userId: context.userEmail,
+          limit,
+        });
+
+        return observations.map((o) => ({
+          promptName: o.promptName,
+          userEmail: context.userEmail,
+          version: o.promptVersion ?? 0,
+          usedAt: o.startTime,
+          traceId: o.traceId,
+        }));
+      } catch (error) {
+        console.error("Error fetching prompt usage:", error);
+        return [];
+      }
     },
   },
 
@@ -158,11 +145,13 @@ export const promptResolvers = {
       }
 
       try {
-        // Create user-specific prompt name to ensure strict coupling
-        const userNamespace = context.userEmail.replace(/[^a-zA-Z0-9@.]/g, "-");
-        const userSpecificName = `${userNamespace}__${input.name}`;
+        // Create user-specific prompt name using folder-style naming
+        const userSpecificName = toUserPromptName(
+          context.userEmail,
+          input.name,
+        );
 
-        // Create prompt in Langfuse with user tags for strict ownership
+        // Create prompt in Langfuse with user tags for ownership
         const promptData: any = {
           name: userSpecificName,
           type: input.type.toLowerCase(),

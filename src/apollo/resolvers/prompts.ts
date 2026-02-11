@@ -83,16 +83,37 @@ export const promptResolvers = {
       try {
         const apiResponse = await listLangfusePrompts(context.userEmail);
 
-        // Map Langfuse API response to GraphQL schema
-        const registeredPrompts = (apiResponse.data || []).map(
-          (prompt: any) => {
-            return {
-              ...prompt,
-              // Usage count would require separate Observations API call per prompt
-              usageCount: 0,
-              lastUsedBy: null,
-            };
-          },
+        // Fetch full details for each prompt to get the content
+        const registeredPrompts = await Promise.all(
+          (apiResponse.data || []).map(async (promptMeta: any) => {
+            try {
+              // Fetch the full prompt with content using the latest label
+              const fullPrompt = await fetchLangfusePrompt(promptMeta.name, {
+                label: promptMeta.labels?.[0] || undefined,
+              });
+
+              // For text prompts, content is a string
+              // For chat prompts, content is an array of messages
+              const content = fullPrompt.prompt;
+
+              return {
+                ...promptMeta,
+                content, // Add the actual prompt content
+                // Usage count would require separate Observations API call per prompt
+                usageCount: 0,
+                lastUsedBy: null,
+              };
+            } catch (err) {
+              // If fetching individual prompt fails, return metadata only
+              console.error(`Failed to fetch full prompt ${promptMeta.name}:`, err);
+              return {
+                ...promptMeta,
+                content: null,
+                usageCount: 0,
+                lastUsedBy: null,
+              };
+            }
+          }),
         );
 
         return registeredPrompts;

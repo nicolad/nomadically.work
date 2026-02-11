@@ -2,6 +2,7 @@ query GetPrompts {
   prompts {
     name
     type
+    content
     tags
     labels
     versions

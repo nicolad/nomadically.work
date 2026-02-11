@@ -28,6 +28,7 @@ import {
   ExternalLinkIcon,
   PlusIcon,
   CheckIcon,
+  CopyIcon,
 } from "@radix-ui/react-icons";
 import { useAuth } from "@/auth/hooks";
 import {
@@ -41,6 +42,7 @@ type PromptInfo = GetPromptsQuery['prompts'][0];
 
 function PromptCard({ prompt }: { prompt: PromptInfo }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Extract user-friendly name (remove email prefix if present)
   const displayName = prompt.name.includes('__') 
@@ -51,6 +53,29 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
   const category = prompt.tags.find((tag: string) => 
     tag.startsWith('category:')
   )?.replace('category:', '') || "general";
+
+  const handleCopyPrompt = async () => {
+    try {
+      let textToCopy = '';
+      
+      if (prompt.type === 'text') {
+        textToCopy = prompt.content || '';
+      } else {
+        // For chat prompts, format as readable text
+        if (Array.isArray(prompt.content)) {
+          textToCopy = prompt.content
+            .map((msg: any) => `[${msg.role.toUpperCase()}]\n${msg.content}`)
+            .join('\n\n');
+        }
+      }
+      
+      await navigator.clipboard.writeText(textToCopy);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   return (
     <Card style={{ borderLeft: "3px solid var(--blue-9)" }}>
@@ -87,6 +112,17 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
 
             <Flex gap="2" align="center">
               <Button
+                variant="soft"
+                size="2"
+                onClick={() => {
+                  const langfuseUrl = process.env.NEXT_PUBLIC_LANGFUSE_BASE_URL || "https://cloud.langfuse.com";
+                  window.open(`${langfuseUrl}/prompts/${encodeURIComponent(prompt.name)}`, "_blank");
+                }}
+              >
+                <ExternalLinkIcon />
+                Edit in Langfuse
+              </Button>
+              <Button
                 variant="surface"
                 size="2"
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -103,6 +139,84 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
             <>
               <Separator size="4" />
               <Flex direction="column" gap="3">
+                {/* Prompt Content */}
+                {prompt.content && (
+                  <Box>
+                    <Flex justify="between" align="center" mb="2">
+                      <Text size="2" weight="bold" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                        Prompt Content
+                      </Text>
+                      <Button
+                        variant="soft"
+                        size="1"
+                        onClick={handleCopyPrompt}
+                        style={{ cursor: "pointer" }}
+                      >
+                        {isCopied ? (
+                          <>
+                            <CheckIcon /> Copied!
+                          </>
+                        ) : (
+                          <>
+                            <CopyIcon /> Copy
+                          </>
+                        )}
+                      </Button>
+                    </Flex>
+                    {prompt.type === 'text' ? (
+                      <Box
+                        p="4"
+                        style={{
+                          backgroundColor: "var(--gray-2)",
+                          borderRadius: "var(--radius-3)",
+                          border: "1px solid var(--gray-6)",
+                          fontFamily: "var(--code-font-family)",
+                          fontSize: "13px",
+                          lineHeight: "1.6",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          maxHeight: "400px",
+                          overflowY: "auto",
+                        }}
+                      >
+                        {prompt.content}
+                      </Box>
+                    ) : (
+                      <Flex direction="column" gap="2">
+                        {Array.isArray(prompt.content) && prompt.content.map((msg: any, idx: number) => (
+                          <Box
+                            key={idx}
+                            p="3"
+                            style={{
+                              backgroundColor: "var(--gray-2)",
+                              borderRadius: "var(--radius-3)",
+                              border: "1px solid var(--gray-6)",
+                            }}
+                          >
+                            <Flex direction="column" gap="2">
+                              <Badge size="1" color={msg.role === 'system' ? 'purple' : msg.role === 'user' ? 'blue' : 'green'} variant="soft">
+                                {msg.role}
+                              </Badge>
+                              <Text
+                                size="2"
+                                style={{
+                                  fontFamily: "var(--code-font-family)",
+                                  fontSize: "13px",
+                                  lineHeight: "1.6",
+                                  whiteSpace: "pre-wrap",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {msg.content}
+                              </Text>
+                            </Flex>
+                          </Box>
+                        ))}
+                      </Flex>
+                    )}
+                  </Box>
+                )}
+
                 <Box>
                   <Text size="2" weight="bold" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px", display: "block" }}>
                     Metadata
@@ -635,16 +749,26 @@ export default function PromptsPage() {
         <Flex direction="column" gap="2">
           <Flex align="center" justify="between">
             <Heading size="8">Prompt Management</Heading>
-            {user && (
-              <Flex align="center" gap="2">
-                <Text size="2" color="gray">
-                  Signed in as
-                </Text>
-                <Badge color="blue" variant="soft">
-                  {user.email}
-                </Badge>
-              </Flex>
-            )}
+            <Flex align="center" gap="3">
+              <Button
+                variant="soft"
+                size="2"
+                onClick={() => window.open(process.env.NEXT_PUBLIC_LANGFUSE_BASE_URL || "https://cloud.langfuse.com", "_blank")}
+              >
+                <ExternalLinkIcon />
+                Open Langfuse
+              </Button>
+              {user && (
+                <Flex align="center" gap="2">
+                  <Text size="2" color="gray">
+                    Signed in as
+                  </Text>
+                  <Badge color="blue" variant="soft">
+                    {user.email}
+                  </Badge>
+                </Flex>
+              )}
+            </Flex>
           </Flex>
           <Text size="3" color="gray">
             Centralized prompt storage, versioning, and deployment via Langfuse
@@ -676,7 +800,7 @@ export default function PromptsPage() {
 
         <Tabs.Root defaultValue="prompts">
           <Tabs.List>
-            <Tabs.Trigger value="prompts">Registered Prompts</Tabs.Trigger>
+            <Tabs.Trigger value="prompts">Prompts</Tabs.Trigger>
             <Tabs.Trigger value="create">Create Prompt</Tabs.Trigger>
             <Tabs.Trigger value="usage">My Usage</Tabs.Trigger>
             <Tabs.Trigger value="setup">Setup Guide</Tabs.Trigger>

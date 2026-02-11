@@ -547,6 +547,7 @@ export type QueryUserSettingsArgs = {
 
 export type RegisteredPrompt = {
   __typename?: 'RegisteredPrompt';
+  content?: Maybe<Scalars['JSON']['output']>;
   labels: Array<Scalars['String']['output']>;
   lastConfig?: Maybe<Scalars['JSON']['output']>;
   lastUpdatedAt: Scalars['String']['output'];
@@ -818,7 +819,7 @@ export type CompanyAuditQuery = { __typename?: 'Query', company?: { __typename?:
 export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, type: string, tags: Array<string>, labels: Array<string>, versions: Array<number>, lastUpdatedAt: string, lastConfig?: any | null, usageCount?: number | null, lastUsedBy?: string | null }> };
+export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, type: string, content?: any | null, tags: Array<string>, labels: Array<string>, versions: Array<number>, lastUpdatedAt: string, lastConfig?: any | null, usageCount?: number | null, lastUsedBy?: string | null }> };
 
 export type GetMyPromptUsageQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -1869,6 +1870,7 @@ export const GetPromptsDocument = gql`
   prompts {
     name
     type
+    content
     tags
     labels
     versions

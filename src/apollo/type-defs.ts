@@ -89,6 +89,7 @@ export const typeDefs = gql`
   type RegisteredPrompt {
     name: String!
     type: String!
+    content: JSON
     tags: [String!]!
     labels: [String!]!
     versions: [Int!]!

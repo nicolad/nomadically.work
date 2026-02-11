@@ -46,6 +46,9 @@ export default function RootLayout({
                     <Link href="/prompts">
                       <Button variant="soft">Prompts</Button>
                     </Link>
+                    <Link href="/chats">
+                      <Button variant="soft">Query</Button>
+                    </Link>
                     <AuthHeader />
                     <Link
                       href="https://github.com/nicolad/nomadically.work"

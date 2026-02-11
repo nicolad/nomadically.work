@@ -22,11 +22,7 @@ export default function ApplicationsPage() {
   const [jobId, setJobId] = useState("");
   const { user } = useAuth();
   const [createApplication, { loading }] = useCreateApplicationMutation();
-  const {
-    data,
-    loading: loadingApplications,
-    refetch,
-  } = useGetApplicationsQuery();
+  const { data, loading: loadingApplications } = useGetApplicationsQuery();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,10 +40,11 @@ export default function ApplicationsPage() {
             questions: [],
           },
         },
+        refetchQueries: ["GetApplications"],
+        awaitRefetchQueries: true,
       });
       setOpen(false);
       setJobId("");
-      refetch(); // Refresh the list after creating
     } catch (error) {
       console.error("Error creating application:", error);
     }

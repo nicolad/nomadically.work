@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
+import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -14,15 +14,15 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
-  DateTime: { input: any; output: any; }
-  EmailAddress: { input: any; output: any; }
+  DateTime: { input: string; output: string; }
+  EmailAddress: { input: string; output: string; }
   JSON: { input: any; output: any; }
-  URL: { input: any; output: any; }
-  Upload: { input: any; output: any; }
+  URL: { input: string; output: string; }
+  Upload: { input: File; output: File; }
 };
 
 export type AtsBoard = {
-  __typename?: 'ATSBoard';
+  __typename: 'ATSBoard';
   board_type: AtsBoardType;
   company_id: Scalars['Int']['output'];
   confidence: Scalars['Float']['output'];
@@ -37,12 +37,11 @@ export type AtsBoard = {
   vendor: AtsVendor;
 };
 
-export enum AtsBoardType {
-  BoardApi = 'BOARD_API',
-  BoardWidget = 'BOARD_WIDGET',
-  JobsPage = 'JOBS_PAGE',
-  Unknown = 'UNKNOWN'
-}
+export type AtsBoardType =
+  | 'BOARD_API'
+  | 'BOARD_WIDGET'
+  | 'JOBS_PAGE'
+  | 'UNKNOWN';
 
 export type AtsBoardUpsertInput = {
   board_type: AtsBoardType;
@@ -54,28 +53,27 @@ export type AtsBoardUpsertInput = {
   vendor: AtsVendor;
 };
 
-export enum AtsVendor {
-  Ashby = 'ASHBY',
-  Breezyhr = 'BREEZYHR',
-  Greenhouse = 'GREENHOUSE',
-  Icims = 'ICIMS',
-  Jazzhr = 'JAZZHR',
-  Jobvite = 'JOBVITE',
-  Lever = 'LEVER',
-  OracleTaleo = 'ORACLE_TALEO',
-  Other = 'OTHER',
-  SapSuccessfactors = 'SAP_SUCCESSFACTORS',
-  Smartrecruiters = 'SMARTRECRUITERS',
-  Teamtailor = 'TEAMTAILOR',
-  Workable = 'WORKABLE'
-}
+export type AtsVendor =
+  | 'ASHBY'
+  | 'BREEZYHR'
+  | 'GREENHOUSE'
+  | 'ICIMS'
+  | 'JAZZHR'
+  | 'JOBVITE'
+  | 'LEVER'
+  | 'ORACLE_TALEO'
+  | 'OTHER'
+  | 'SAP_SUCCESSFACTORS'
+  | 'SMARTRECRUITERS'
+  | 'TEAMTAILOR'
+  | 'WORKABLE';
 
 export type Application = {
-  __typename?: 'Application';
+  __typename: 'Application';
   email: Scalars['EmailAddress']['output'];
   jobId: Scalars['String']['output'];
   questions: Array<QuestionAnswer>;
-  resume?: Maybe<Scalars['Upload']['output']>;
+  resume: Maybe<Scalars['Upload']['output']>;
 };
 
 export type ApplicationInput = {
@@ -86,7 +84,7 @@ export type ApplicationInput = {
 };
 
 export type ChatMessage = {
-  __typename?: 'ChatMessage';
+  __typename: 'ChatMessage';
   content: Scalars['String']['output'];
   role: Scalars['String']['output'];
 };
@@ -97,40 +95,40 @@ export type ChatMessageInput = {
 };
 
 export type CompaniesResponse = {
-  __typename?: 'CompaniesResponse';
+  __typename: 'CompaniesResponse';
   companies: Array<Company>;
   totalCount: Scalars['Int']['output'];
 };
 
 export type Company = {
-  __typename?: 'Company';
+  __typename: 'Company';
   ats_boards: Array<AtsBoard>;
-  canonical_domain?: Maybe<Scalars['String']['output']>;
+  canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
   created_at: Scalars['String']['output'];
-  description?: Maybe<Scalars['String']['output']>;
+  description: Maybe<Scalars['String']['output']>;
   facts: Array<CompanyFact>;
   facts_count: Scalars['Int']['output'];
   id: Scalars['Int']['output'];
   industries: Array<Scalars['String']['output']>;
-  industry?: Maybe<Scalars['String']['output']>;
+  industry: Maybe<Scalars['String']['output']>;
   key: Scalars['String']['output'];
-  last_seen_capture_timestamp?: Maybe<Scalars['String']['output']>;
-  last_seen_crawl_id?: Maybe<Scalars['String']['output']>;
-  last_seen_source_url?: Maybe<Scalars['String']['output']>;
-  location?: Maybe<Scalars['String']['output']>;
-  logo_url?: Maybe<Scalars['String']['output']>;
+  last_seen_capture_timestamp: Maybe<Scalars['String']['output']>;
+  last_seen_crawl_id: Maybe<Scalars['String']['output']>;
+  last_seen_source_url: Maybe<Scalars['String']['output']>;
+  location: Maybe<Scalars['String']['output']>;
+  logo_url: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   score: Scalars['Float']['output'];
   score_reasons: Array<Scalars['String']['output']>;
   service_taxonomy: Array<Scalars['String']['output']>;
   services: Array<Scalars['String']['output']>;
-  size?: Maybe<Scalars['String']['output']>;
+  size: Maybe<Scalars['String']['output']>;
   snapshots: Array<CompanySnapshot>;
   snapshots_count: Scalars['Int']['output'];
   tags: Array<Scalars['String']['output']>;
   updated_at: Scalars['String']['output'];
-  website?: Maybe<Scalars['String']['output']>;
+  website: Maybe<Scalars['String']['output']>;
 };
 
 
@@ -146,27 +144,26 @@ export type CompanySnapshotsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export enum CompanyCategory {
-  Agency = 'AGENCY',
-  Consultancy = 'CONSULTANCY',
-  Directory = 'DIRECTORY',
-  Other = 'OTHER',
-  Product = 'PRODUCT',
-  Staffing = 'STAFFING',
-  Unknown = 'UNKNOWN'
-}
+export type CompanyCategory =
+  | 'AGENCY'
+  | 'CONSULTANCY'
+  | 'DIRECTORY'
+  | 'OTHER'
+  | 'PRODUCT'
+  | 'STAFFING'
+  | 'UNKNOWN';
 
 export type CompanyFact = {
-  __typename?: 'CompanyFact';
+  __typename: 'CompanyFact';
   company_id: Scalars['Int']['output'];
   confidence: Scalars['Float']['output'];
   created_at: Scalars['String']['output'];
   evidence: Evidence;
   field: Scalars['String']['output'];
   id: Scalars['Int']['output'];
-  normalized_value?: Maybe<Scalars['JSON']['output']>;
-  value_json?: Maybe<Scalars['JSON']['output']>;
-  value_text?: Maybe<Scalars['String']['output']>;
+  normalized_value: Maybe<Scalars['JSON']['output']>;
+  value_json: Maybe<Scalars['JSON']['output']>;
+  value_text: Maybe<Scalars['String']['output']>;
 };
 
 export type CompanyFactInput = {
@@ -187,28 +184,27 @@ export type CompanyFilterInput = {
   text?: InputMaybe<Scalars['String']['input']>;
 };
 
-export enum CompanyOrderBy {
-  CreatedAtDesc = 'CREATED_AT_DESC',
-  ScoreDesc = 'SCORE_DESC',
-  UpdatedAtDesc = 'UPDATED_AT_DESC'
-}
+export type CompanyOrderBy =
+  | 'CREATED_AT_DESC'
+  | 'SCORE_DESC'
+  | 'UPDATED_AT_DESC';
 
 export type CompanySnapshot = {
-  __typename?: 'CompanySnapshot';
-  capture_timestamp?: Maybe<Scalars['String']['output']>;
+  __typename: 'CompanySnapshot';
+  capture_timestamp: Maybe<Scalars['String']['output']>;
   company_id: Scalars['Int']['output'];
-  content_hash?: Maybe<Scalars['String']['output']>;
-  crawl_id?: Maybe<Scalars['String']['output']>;
+  content_hash: Maybe<Scalars['String']['output']>;
+  crawl_id: Maybe<Scalars['String']['output']>;
   created_at: Scalars['String']['output'];
   evidence: Evidence;
-  extracted?: Maybe<Scalars['JSON']['output']>;
+  extracted: Maybe<Scalars['JSON']['output']>;
   fetched_at: Scalars['String']['output'];
-  http_status?: Maybe<Scalars['Int']['output']>;
+  http_status: Maybe<Scalars['Int']['output']>;
   id: Scalars['Int']['output'];
-  jsonld?: Maybe<Scalars['JSON']['output']>;
-  mime?: Maybe<Scalars['String']['output']>;
+  jsonld: Maybe<Scalars['JSON']['output']>;
+  mime: Maybe<Scalars['String']['output']>;
   source_url: Scalars['String']['output'];
-  text_sample?: Maybe<Scalars['String']['output']>;
+  text_sample: Maybe<Scalars['String']['output']>;
 };
 
 export type CreateCompanyInput = {
@@ -239,38 +235,38 @@ export type CreatePromptInput = {
 };
 
 export type DeleteCompanyResponse = {
-  __typename?: 'DeleteCompanyResponse';
-  message?: Maybe<Scalars['String']['output']>;
+  __typename: 'DeleteCompanyResponse';
+  message: Maybe<Scalars['String']['output']>;
   success: Scalars['Boolean']['output'];
 };
 
 export type DeleteJobResponse = {
-  __typename?: 'DeleteJobResponse';
-  message?: Maybe<Scalars['String']['output']>;
+  __typename: 'DeleteJobResponse';
+  message: Maybe<Scalars['String']['output']>;
   success: Scalars['Boolean']['output'];
 };
 
 export type EnhanceCompanyResponse = {
-  __typename?: 'EnhanceCompanyResponse';
-  companyId?: Maybe<Scalars['Int']['output']>;
-  companyKey?: Maybe<Scalars['String']['output']>;
-  message?: Maybe<Scalars['String']['output']>;
+  __typename: 'EnhanceCompanyResponse';
+  companyId: Maybe<Scalars['Int']['output']>;
+  companyKey: Maybe<Scalars['String']['output']>;
+  message: Maybe<Scalars['String']['output']>;
   success: Scalars['Boolean']['output'];
 };
 
 export type Evidence = {
-  __typename?: 'Evidence';
-  capture_timestamp?: Maybe<Scalars['String']['output']>;
-  content_hash?: Maybe<Scalars['String']['output']>;
-  crawl_id?: Maybe<Scalars['String']['output']>;
-  extractor_version?: Maybe<Scalars['String']['output']>;
-  http_status?: Maybe<Scalars['Int']['output']>;
+  __typename: 'Evidence';
+  capture_timestamp: Maybe<Scalars['String']['output']>;
+  content_hash: Maybe<Scalars['String']['output']>;
+  crawl_id: Maybe<Scalars['String']['output']>;
+  extractor_version: Maybe<Scalars['String']['output']>;
+  http_status: Maybe<Scalars['Int']['output']>;
   method: ExtractMethod;
-  mime?: Maybe<Scalars['String']['output']>;
+  mime: Maybe<Scalars['String']['output']>;
   observed_at: Scalars['String']['output'];
   source_type: SourceType;
   source_url: Scalars['String']['output'];
-  warc?: Maybe<WarcPointer>;
+  warc: Maybe<WarcPointer>;
 };
 
 export type EvidenceInput = {
@@ -287,55 +283,54 @@ export type EvidenceInput = {
   warc?: InputMaybe<WarcPointerInput>;
 };
 
-export enum ExtractMethod {
-  Dom = 'DOM',
-  Heuristic = 'HEURISTIC',
-  Jsonld = 'JSONLD',
-  Llm = 'LLM',
-  Meta = 'META'
-}
+export type ExtractMethod =
+  | 'DOM'
+  | 'HEURISTIC'
+  | 'JSONLD'
+  | 'LLM'
+  | 'META';
 
 export type Job = {
-  __typename?: 'Job';
-  company?: Maybe<Company>;
-  company_id?: Maybe<Scalars['Int']['output']>;
+  __typename: 'Job';
+  company: Maybe<Company>;
+  company_id: Maybe<Scalars['Int']['output']>;
   company_key: Scalars['String']['output'];
   created_at: Scalars['String']['output'];
-  description?: Maybe<Scalars['String']['output']>;
+  description: Maybe<Scalars['String']['output']>;
   external_id: Scalars['String']['output'];
   id: Scalars['Int']['output'];
-  is_remote_eu?: Maybe<Scalars['Boolean']['output']>;
-  location?: Maybe<Scalars['String']['output']>;
+  is_remote_eu: Maybe<Scalars['Boolean']['output']>;
+  location: Maybe<Scalars['String']['output']>;
   posted_at: Scalars['String']['output'];
-  remote_eu_confidence?: Maybe<Scalars['String']['output']>;
-  remote_eu_reason?: Maybe<Scalars['String']['output']>;
-  score?: Maybe<Scalars['Float']['output']>;
-  score_reason?: Maybe<Scalars['String']['output']>;
-  skills?: Maybe<Array<JobSkill>>;
-  source_id?: Maybe<Scalars['String']['output']>;
+  remote_eu_confidence: Maybe<Scalars['String']['output']>;
+  remote_eu_reason: Maybe<Scalars['String']['output']>;
+  score: Maybe<Scalars['Float']['output']>;
+  score_reason: Maybe<Scalars['String']['output']>;
+  skills: Maybe<Array<JobSkill>>;
+  source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status?: Maybe<Scalars['String']['output']>;
+  status: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
 };
 
 export type JobSkill = {
-  __typename?: 'JobSkill';
-  confidence?: Maybe<Scalars['Float']['output']>;
-  evidence?: Maybe<Scalars['String']['output']>;
+  __typename: 'JobSkill';
+  confidence: Maybe<Scalars['Float']['output']>;
+  evidence: Maybe<Scalars['String']['output']>;
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
 
 export type JobsResponse = {
-  __typename?: 'JobsResponse';
+  __typename: 'JobsResponse';
   jobs: Array<Job>;
   totalCount: Scalars['Int']['output'];
 };
 
 export type Mutation = {
-  __typename?: 'Mutation';
+  __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
   createApplication: Application;
   createCompany: Company;
@@ -429,27 +424,27 @@ export type MutationUpsert_Company_Ats_BoardsArgs = {
 };
 
 export type Prompt = {
-  __typename?: 'Prompt';
-  chatMessages?: Maybe<Array<ChatMessage>>;
-  config?: Maybe<PromptConfig>;
-  createdAt?: Maybe<Scalars['String']['output']>;
-  createdBy?: Maybe<Scalars['String']['output']>;
+  __typename: 'Prompt';
+  chatMessages: Maybe<Array<ChatMessage>>;
+  config: Maybe<PromptConfig>;
+  createdAt: Maybe<Scalars['String']['output']>;
+  createdBy: Maybe<Scalars['String']['output']>;
   isUserSpecific: Scalars['Boolean']['output'];
-  labels?: Maybe<Array<Scalars['String']['output']>>;
+  labels: Maybe<Array<Scalars['String']['output']>>;
   name: Scalars['String']['output'];
-  prompt?: Maybe<Scalars['String']['output']>;
-  tags?: Maybe<Array<Scalars['String']['output']>>;
+  prompt: Maybe<Scalars['String']['output']>;
+  tags: Maybe<Array<Scalars['String']['output']>>;
   type: PromptType;
-  updatedAt?: Maybe<Scalars['String']['output']>;
-  version?: Maybe<Scalars['Int']['output']>;
+  updatedAt: Maybe<Scalars['String']['output']>;
+  version: Maybe<Scalars['Int']['output']>;
 };
 
 export type PromptConfig = {
-  __typename?: 'PromptConfig';
-  max_tokens?: Maybe<Scalars['Int']['output']>;
-  model?: Maybe<Scalars['String']['output']>;
-  temperature?: Maybe<Scalars['Float']['output']>;
-  top_p?: Maybe<Scalars['Float']['output']>;
+  __typename: 'PromptConfig';
+  max_tokens: Maybe<Scalars['Int']['output']>;
+  model: Maybe<Scalars['String']['output']>;
+  temperature: Maybe<Scalars['Float']['output']>;
+  top_p: Maybe<Scalars['Float']['output']>;
 };
 
 export type PromptConfigInput = {
@@ -459,36 +454,35 @@ export type PromptConfigInput = {
   top_p?: InputMaybe<Scalars['Float']['input']>;
 };
 
-export enum PromptType {
-  Chat = 'CHAT',
-  Text = 'TEXT'
-}
+export type PromptType =
+  | 'CHAT'
+  | 'TEXT';
 
 export type PromptUsage = {
-  __typename?: 'PromptUsage';
-  label?: Maybe<Scalars['String']['output']>;
+  __typename: 'PromptUsage';
+  label: Maybe<Scalars['String']['output']>;
   promptName: Scalars['String']['output'];
-  traceId?: Maybe<Scalars['String']['output']>;
+  traceId: Maybe<Scalars['String']['output']>;
   usedAt: Scalars['String']['output'];
   userEmail: Scalars['String']['output'];
-  version?: Maybe<Scalars['Int']['output']>;
+  version: Maybe<Scalars['Int']['output']>;
 };
 
 export type Query = {
-  __typename?: 'Query';
+  __typename: 'Query';
   companies: CompaniesResponse;
-  company?: Maybe<Company>;
+  company: Maybe<Company>;
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
   executeSql: TextToSqlResult;
-  job?: Maybe<Job>;
+  job: Maybe<Job>;
   jobs: JobsResponse;
   myPromptUsage: Array<PromptUsage>;
-  prompt?: Maybe<Prompt>;
+  prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   textToSql: TextToSqlResult;
-  userSettings?: Maybe<UserSettings>;
+  userSettings: Maybe<UserSettings>;
 };
 
 
@@ -568,7 +562,7 @@ export type QueryUserSettingsArgs = {
 };
 
 export type QuestionAnswer = {
-  __typename?: 'QuestionAnswer';
+  __typename: 'QuestionAnswer';
   answerText: Scalars['String']['output'];
   questionId: Scalars['String']['output'];
   questionText: Scalars['String']['output'];
@@ -581,31 +575,30 @@ export type QuestionAnswerInput = {
 };
 
 export type RegisteredPrompt = {
-  __typename?: 'RegisteredPrompt';
-  content?: Maybe<Scalars['JSON']['output']>;
+  __typename: 'RegisteredPrompt';
+  content: Maybe<Scalars['JSON']['output']>;
   labels: Array<Scalars['String']['output']>;
-  lastConfig?: Maybe<Scalars['JSON']['output']>;
+  lastConfig: Maybe<Scalars['JSON']['output']>;
   lastUpdatedAt: Scalars['String']['output'];
-  lastUsedBy?: Maybe<Scalars['String']['output']>;
+  lastUsedBy: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   tags: Array<Scalars['String']['output']>;
   type: Scalars['String']['output'];
-  usageCount?: Maybe<Scalars['Int']['output']>;
+  usageCount: Maybe<Scalars['Int']['output']>;
   versions: Array<Scalars['Int']['output']>;
 };
 
-export enum SourceType {
-  Commoncrawl = 'COMMONCRAWL',
-  LiveFetch = 'LIVE_FETCH',
-  Manual = 'MANUAL',
-  Partner = 'PARTNER'
-}
+export type SourceType =
+  | 'COMMONCRAWL'
+  | 'LIVE_FETCH'
+  | 'MANUAL'
+  | 'PARTNER';
 
 export type TextToSqlResult = {
-  __typename?: 'TextToSqlResult';
+  __typename: 'TextToSqlResult';
   columns: Array<Scalars['String']['output']>;
-  drilldownSearchQuery?: Maybe<Scalars['String']['output']>;
-  explanation?: Maybe<Scalars['String']['output']>;
+  drilldownSearchQuery: Maybe<Scalars['String']['output']>;
+  explanation: Maybe<Scalars['String']['output']>;
   rows: Array<Maybe<Array<Maybe<Scalars['JSON']['output']>>>>;
   sql: Scalars['String']['output'];
 };
@@ -630,17 +623,17 @@ export type UpdateCompanyInput = {
 };
 
 export type UserSettings = {
-  __typename?: 'UserSettings';
+  __typename: 'UserSettings';
   created_at: Scalars['String']['output'];
   daily_digest: Scalars['Boolean']['output'];
   dark_mode: Scalars['Boolean']['output'];
   email_notifications: Scalars['Boolean']['output'];
-  excluded_companies?: Maybe<Array<Scalars['String']['output']>>;
+  excluded_companies: Maybe<Array<Scalars['String']['output']>>;
   id: Scalars['Int']['output'];
   jobs_per_page: Scalars['Int']['output'];
   new_job_alerts: Scalars['Boolean']['output'];
-  preferred_locations?: Maybe<Array<Scalars['String']['output']>>;
-  preferred_skills?: Maybe<Array<Scalars['String']['output']>>;
+  preferred_locations: Maybe<Array<Scalars['String']['output']>>;
+  preferred_skills: Maybe<Array<Scalars['String']['output']>>;
   updated_at: Scalars['String']['output'];
   user_id: Scalars['String']['output'];
 };
@@ -657,8 +650,8 @@ export type UserSettingsInput = {
 };
 
 export type WarcPointer = {
-  __typename?: 'WarcPointer';
-  digest?: Maybe<Scalars['String']['output']>;
+  __typename: 'WarcPointer';
+  digest: Maybe<Scalars['String']['output']>;
   filename: Scalars['String']['output'];
   length: Scalars['Int']['output'];
   offset: Scalars['Int']['output'];
@@ -676,24 +669,24 @@ export type DeleteJobMutationVariables = Exact<{
 }>;
 
 
-export type DeleteJobMutation = { __typename?: 'Mutation', deleteJob: { __typename?: 'DeleteJobResponse', success: boolean, message?: string | null } };
+export type DeleteJobMutation = { __typename: 'Mutation', deleteJob: { __typename: 'DeleteJobResponse', success: boolean, message: string | null } };
 
 export type ExecuteSqlQueryVariables = Exact<{
   sql: Scalars['String']['input'];
 }>;
 
 
-export type ExecuteSqlQuery = { __typename?: 'Query', executeSql: { __typename?: 'TextToSqlResult', sql: string, explanation?: string | null, columns: Array<string>, rows: Array<Array<any | null> | null>, drilldownSearchQuery?: string | null } };
+export type ExecuteSqlQuery = { __typename: 'Query', executeSql: { __typename: 'TextToSqlResult', sql: string, explanation: string | null, columns: Array<string>, rows: Array<Array<any | null> | null>, drilldownSearchQuery: string | null } };
 
 export type GetJobQueryVariables = Exact<{
   id: Scalars['String']['input'];
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job?: { __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_id?: number | null, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, is_remote_eu?: boolean | null, remote_eu_confidence?: string | null, remote_eu_reason?: string | null, created_at: string, updated_at: string, company?: (
-      { __typename?: 'Company' }
+export type GetJobQuery = { __typename: 'Query', job: { __typename: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: (
+      { __typename: 'Company' }
       & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
-    ) | null, skills?: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence?: number | null, evidence?: string | null }> | null } | null };
+    ) | null, skills: Array<{ __typename: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null } | null };
 
 export type GetJobsQueryVariables = Exact<{
   sourceType?: InputMaybe<Scalars['String']['input']>;
@@ -705,24 +698,24 @@ export type GetJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id?: string | null, source_kind: string, company_id?: number | null, company_key: string, title: string, location?: string | null, url: string, description?: string | null, posted_at: string, score?: number | null, score_reason?: string | null, status?: string | null, created_at: string, updated_at: string, company?: (
-        { __typename?: 'Company' }
+export type GetJobsQuery = { __typename: 'Query', jobs: { __typename: 'JobsResponse', totalCount: number, jobs: Array<{ __typename: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, created_at: string, updated_at: string, company: (
+        { __typename: 'Company' }
         & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
-      ) | null, skills?: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null }> } };
+      ) | null, skills: Array<{ __typename: 'JobSkill', tag: string, level: string }> | null }> } };
 
 export type GetUserSettingsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
 }>;
 
 
-export type GetUserSettingsQuery = { __typename?: 'Query', userSettings?: { __typename?: 'UserSettings', id: number, user_id: string, preferred_locations?: Array<string> | null, preferred_skills?: Array<string> | null, excluded_companies?: Array<string> | null } | null };
+export type GetUserSettingsQuery = { __typename: 'Query', userSettings: { __typename: 'UserSettings', id: number, user_id: string, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null } | null };
 
 export type TextToSqlQueryVariables = Exact<{
   question: Scalars['String']['input'];
 }>;
 
 
-export type TextToSqlQuery = { __typename?: 'Query', textToSql: { __typename?: 'TextToSqlResult', sql: string, explanation?: string | null, columns: Array<string>, rows: Array<Array<any | null> | null>, drilldownSearchQuery?: string | null } };
+export type TextToSqlQuery = { __typename: 'Query', textToSql: { __typename: 'TextToSqlResult', sql: string, explanation: string | null, columns: Array<string>, rows: Array<Array<any | null> | null>, drilldownSearchQuery: string | null } };
 
 export type UpdateUserSettingsMutationVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -730,41 +723,41 @@ export type UpdateUserSettingsMutationVariables = Exact<{
 }>;
 
 
-export type UpdateUserSettingsMutation = { __typename?: 'Mutation', updateUserSettings: { __typename?: 'UserSettings', id: number, user_id: string, email_notifications: boolean, daily_digest: boolean, new_job_alerts: boolean, preferred_locations?: Array<string> | null, preferred_skills?: Array<string> | null, excluded_companies?: Array<string> | null, dark_mode: boolean, jobs_per_page: number, created_at: string, updated_at: string } };
+export type UpdateUserSettingsMutation = { __typename: 'Mutation', updateUserSettings: { __typename: 'UserSettings', id: number, user_id: string, email_notifications: boolean, daily_digest: boolean, new_job_alerts: boolean, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null, dark_mode: boolean, jobs_per_page: number, created_at: string, updated_at: string } };
 
 export type CreateApplicationMutationVariables = Exact<{
   input: ApplicationInput;
 }>;
 
 
-export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', email: any, jobId: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> } };
+export type CreateApplicationMutation = { __typename: 'Mutation', createApplication: { __typename: 'Application', email: string, jobId: string, questions: Array<{ __typename: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> } };
 
-export type EvidenceFieldsFragment = { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id?: string | null, capture_timestamp?: string | null, observed_at: string, method: ExtractMethod, extractor_version?: string | null, http_status?: number | null, mime?: string | null, content_hash?: string | null, warc?: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest?: string | null } | null } & { ' $fragmentName'?: 'EvidenceFieldsFragment' };
+export type EvidenceFieldsFragment = { __typename: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } & { ' $fragmentName'?: 'EvidenceFieldsFragment' };
 
-export type AtsBoardFieldsFragment = { __typename?: 'ATSBoard', id: number, company_id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string, created_at: string, updated_at: string, evidence: (
-    { __typename?: 'Evidence' }
+export type AtsBoardFieldsFragment = { __typename: 'ATSBoard', id: number, company_id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string, created_at: string, updated_at: string, evidence: (
+    { __typename: 'Evidence' }
     & { ' $fragmentRefs'?: { 'EvidenceFieldsFragment': EvidenceFieldsFragment } }
   ) } & { ' $fragmentName'?: 'AtsBoardFieldsFragment' };
 
-export type CompanyFactFieldsFragment = { __typename?: 'CompanyFact', id: number, company_id: number, field: string, value_json?: any | null, value_text?: string | null, normalized_value?: any | null, confidence: number, created_at: string, evidence: (
-    { __typename?: 'Evidence' }
+export type CompanyFactFieldsFragment = { __typename: 'CompanyFact', id: number, company_id: number, field: string, value_json: any | null, value_text: string | null, normalized_value: any | null, confidence: number, created_at: string, evidence: (
+    { __typename: 'Evidence' }
     & { ' $fragmentRefs'?: { 'EvidenceFieldsFragment': EvidenceFieldsFragment } }
   ) } & { ' $fragmentName'?: 'CompanyFactFieldsFragment' };
 
-export type CompanySnapshotFieldsFragment = { __typename?: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id?: string | null, capture_timestamp?: string | null, fetched_at: string, http_status?: number | null, mime?: string | null, content_hash?: string | null, text_sample?: string | null, jsonld?: any | null, extracted?: any | null, created_at: string, evidence: (
-    { __typename?: 'Evidence' }
+export type CompanySnapshotFieldsFragment = { __typename: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id: string | null, capture_timestamp: string | null, fetched_at: string, http_status: number | null, mime: string | null, content_hash: string | null, text_sample: string | null, jsonld: any | null, extracted: any | null, created_at: string, evidence: (
+    { __typename: 'Evidence' }
     & { ' $fragmentRefs'?: { 'EvidenceFieldsFragment': EvidenceFieldsFragment } }
   ) } & { ' $fragmentName'?: 'CompanySnapshotFieldsFragment' };
 
-export type CompanyFieldsFragment = { __typename?: 'Company', id: number, key: string, name: string, logo_url?: string | null, website?: string | null, description?: string | null, industry?: string | null, size?: string | null, location?: string | null, created_at: string, updated_at: string, canonical_domain?: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id?: string | null, last_seen_capture_timestamp?: string | null, last_seen_source_url?: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } & { ' $fragmentName'?: 'CompanyFieldsFragment' };
+export type CompanyFieldsFragment = { __typename: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } & { ' $fragmentName'?: 'CompanyFieldsFragment' };
 
 export type CreateCompanyMutationVariables = Exact<{
   input: CreateCompanyInput;
 }>;
 
 
-export type CreateCompanyMutation = { __typename?: 'Mutation', createCompany: (
-    { __typename?: 'Company' }
+export type CreateCompanyMutation = { __typename: 'Mutation', createCompany: (
+    { __typename: 'Company' }
     & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
   ) };
 
@@ -774,8 +767,8 @@ export type UpdateCompanyMutationVariables = Exact<{
 }>;
 
 
-export type UpdateCompanyMutation = { __typename?: 'Mutation', updateCompany: (
-    { __typename?: 'Company' }
+export type UpdateCompanyMutation = { __typename: 'Mutation', updateCompany: (
+    { __typename: 'Company' }
     & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
   ) };
 
@@ -784,7 +777,7 @@ export type DeleteCompanyMutationVariables = Exact<{
 }>;
 
 
-export type DeleteCompanyMutation = { __typename?: 'Mutation', deleteCompany: { __typename?: 'DeleteCompanyResponse', success: boolean, message?: string | null } };
+export type DeleteCompanyMutation = { __typename: 'Mutation', deleteCompany: { __typename: 'DeleteCompanyResponse', success: boolean, message: string | null } };
 
 export type EnhanceCompanyMutationVariables = Exact<{
   id?: InputMaybe<Scalars['Int']['input']>;
@@ -792,7 +785,7 @@ export type EnhanceCompanyMutationVariables = Exact<{
 }>;
 
 
-export type EnhanceCompanyMutation = { __typename?: 'Mutation', enhanceCompany: { __typename?: 'EnhanceCompanyResponse', success: boolean, message?: string | null, companyId?: number | null, companyKey?: string | null } };
+export type EnhanceCompanyMutation = { __typename: 'Mutation', enhanceCompany: { __typename: 'EnhanceCompanyResponse', success: boolean, message: string | null, companyId: number | null, companyKey: string | null } };
 
 export type AddCompanyFactsMutationVariables = Exact<{
   company_id: Scalars['Int']['input'];
@@ -800,8 +793,8 @@ export type AddCompanyFactsMutationVariables = Exact<{
 }>;
 
 
-export type AddCompanyFactsMutation = { __typename?: 'Mutation', add_company_facts: Array<(
-    { __typename?: 'CompanyFact' }
+export type AddCompanyFactsMutation = { __typename: 'Mutation', add_company_facts: Array<(
+    { __typename: 'CompanyFact' }
     & { ' $fragmentRefs'?: { 'CompanyFactFieldsFragment': CompanyFactFieldsFragment } }
   )> };
 
@@ -811,8 +804,8 @@ export type UpsertCompanyAtsBoardsMutationVariables = Exact<{
 }>;
 
 
-export type UpsertCompanyAtsBoardsMutation = { __typename?: 'Mutation', upsert_company_ats_boards: Array<(
-    { __typename?: 'ATSBoard' }
+export type UpsertCompanyAtsBoardsMutation = { __typename: 'Mutation', upsert_company_ats_boards: Array<(
+    { __typename: 'ATSBoard' }
     & { ' $fragmentRefs'?: { 'AtsBoardFieldsFragment': AtsBoardFieldsFragment } }
   )> };
 
@@ -832,8 +825,8 @@ export type IngestCompanySnapshotMutationVariables = Exact<{
 }>;
 
 
-export type IngestCompanySnapshotMutation = { __typename?: 'Mutation', ingest_company_snapshot: (
-    { __typename?: 'CompanySnapshot' }
+export type IngestCompanySnapshotMutation = { __typename: 'Mutation', ingest_company_snapshot: (
+    { __typename: 'CompanySnapshot' }
     & { ' $fragmentRefs'?: { 'CompanySnapshotFieldsFragment': CompanySnapshotFieldsFragment } }
   ) };
 
@@ -843,8 +836,8 @@ export type GetCompanyQueryVariables = Exact<{
 }>;
 
 
-export type GetCompanyQuery = { __typename?: 'Query', company?: (
-    { __typename?: 'Company' }
+export type GetCompanyQuery = { __typename: 'Query', company: (
+    { __typename: 'Company' }
     & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
   ) | null };
 
@@ -855,8 +848,8 @@ export type GetCompaniesQueryVariables = Exact<{
 }>;
 
 
-export type GetCompaniesQuery = { __typename?: 'Query', companies: { __typename?: 'CompaniesResponse', totalCount: number, companies: Array<(
-      { __typename?: 'Company' }
+export type GetCompaniesQuery = { __typename: 'Query', companies: { __typename: 'CompaniesResponse', totalCount: number, companies: Array<(
+      { __typename: 'Company' }
       & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
     )> } };
 
@@ -868,8 +861,8 @@ export type SearchCompaniesQueryVariables = Exact<{
 }>;
 
 
-export type SearchCompaniesQuery = { __typename?: 'Query', companies: { __typename?: 'CompaniesResponse', totalCount: number, companies: Array<(
-      { __typename?: 'Company' }
+export type SearchCompaniesQuery = { __typename: 'Query', companies: { __typename: 'CompaniesResponse', totalCount: number, companies: Array<(
+      { __typename: 'Company' }
       & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
     )> } };
 
@@ -881,8 +874,8 @@ export type GetCompanyFactsQueryVariables = Exact<{
 }>;
 
 
-export type GetCompanyFactsQuery = { __typename?: 'Query', company_facts: Array<(
-    { __typename?: 'CompanyFact' }
+export type GetCompanyFactsQuery = { __typename: 'Query', company_facts: Array<(
+    { __typename: 'CompanyFact' }
     & { ' $fragmentRefs'?: { 'CompanyFactFieldsFragment': CompanyFactFieldsFragment } }
   )> };
 
@@ -891,8 +884,8 @@ export type GetCompanyAtsBoardsQueryVariables = Exact<{
 }>;
 
 
-export type GetCompanyAtsBoardsQuery = { __typename?: 'Query', company_ats_boards: Array<(
-    { __typename?: 'ATSBoard' }
+export type GetCompanyAtsBoardsQuery = { __typename: 'Query', company_ats_boards: Array<(
+    { __typename: 'ATSBoard' }
     & { ' $fragmentRefs'?: { 'AtsBoardFieldsFragment': AtsBoardFieldsFragment } }
   )> };
 
@@ -901,12 +894,12 @@ export type CompanyAuditQueryVariables = Exact<{
 }>;
 
 
-export type CompanyAuditQuery = { __typename?: 'Query', company?: (
-    { __typename?: 'Company', facts_count: number, snapshots_count: number, facts: Array<(
-      { __typename?: 'CompanyFact' }
+export type CompanyAuditQuery = { __typename: 'Query', company: (
+    { __typename: 'Company', facts_count: number, snapshots_count: number, facts: Array<(
+      { __typename: 'CompanyFact' }
       & { ' $fragmentRefs'?: { 'CompanyFactFieldsFragment': CompanyFactFieldsFragment } }
     )>, snapshots: Array<(
-      { __typename?: 'CompanySnapshot' }
+      { __typename: 'CompanySnapshot' }
       & { ' $fragmentRefs'?: { 'CompanySnapshotFieldsFragment': CompanySnapshotFieldsFragment } }
     )> }
     & { ' $fragmentRefs'?: { 'CompanyFieldsFragment': CompanyFieldsFragment } }
@@ -915,21 +908,21 @@ export type CompanyAuditQuery = { __typename?: 'Query', company?: (
 export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetPromptsQuery = { __typename?: 'Query', prompts: Array<{ __typename?: 'RegisteredPrompt', name: string, type: string, content?: any | null, tags: Array<string>, labels: Array<string>, versions: Array<number>, lastUpdatedAt: string, lastConfig?: any | null, usageCount?: number | null, lastUsedBy?: string | null }> };
+export type GetPromptsQuery = { __typename: 'Query', prompts: Array<{ __typename: 'RegisteredPrompt', name: string, type: string, content: any | null, tags: Array<string>, labels: Array<string>, versions: Array<number>, lastUpdatedAt: string, lastConfig: any | null, usageCount: number | null, lastUsedBy: string | null }> };
 
 export type GetMyPromptUsageQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 
-export type GetMyPromptUsageQuery = { __typename?: 'Query', myPromptUsage: Array<{ __typename?: 'PromptUsage', promptName: string, userEmail: string, version?: number | null, label?: string | null, usedAt: string, traceId?: string | null }> };
+export type GetMyPromptUsageQuery = { __typename: 'Query', myPromptUsage: Array<{ __typename: 'PromptUsage', promptName: string, userEmail: string, version: number | null, label: string | null, usedAt: string, traceId: string | null }> };
 
 export type CreatePromptMutationVariables = Exact<{
   input: CreatePromptInput;
 }>;
 
 
-export type CreatePromptMutation = { __typename?: 'Mutation', createPrompt: { __typename?: 'Prompt', name: string, version?: number | null, type: PromptType, labels?: Array<string> | null, tags?: Array<string> | null, createdBy?: string | null } };
+export type CreatePromptMutation = { __typename: 'Mutation', createPrompt: { __typename: 'Prompt', name: string, version: number | null, type: PromptType, labels: Array<string> | null, tags: Array<string> | null, createdBy: string | null } };
 
 export const EvidenceFieldsFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"EvidenceFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Evidence"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"source_type"}},{"kind":"Field","name":{"kind":"Name","value":"source_url"}},{"kind":"Field","name":{"kind":"Name","value":"crawl_id"}},{"kind":"Field","name":{"kind":"Name","value":"capture_timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"observed_at"}},{"kind":"Field","name":{"kind":"Name","value":"method"}},{"kind":"Field","name":{"kind":"Name","value":"extractor_version"}},{"kind":"Field","name":{"kind":"Name","value":"http_status"}},{"kind":"Field","name":{"kind":"Name","value":"mime"}},{"kind":"Field","name":{"kind":"Name","value":"content_hash"}},{"kind":"Field","name":{"kind":"Name","value":"warc"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"filename"}},{"kind":"Field","name":{"kind":"Name","value":"offset"}},{"kind":"Field","name":{"kind":"Name","value":"length"}},{"kind":"Field","name":{"kind":"Name","value":"digest"}}]}}]}}]} as unknown as DocumentNode<EvidenceFieldsFragment, unknown>;
 export const AtsBoardFieldsFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ATSBoardFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ATSBoard"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"company_id"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"vendor"}},{"kind":"Field","name":{"kind":"Name","value":"board_type"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"is_active"}},{"kind":"Field","name":{"kind":"Name","value":"first_seen_at"}},{"kind":"Field","name":{"kind":"Name","value":"last_seen_at"}},{"kind":"Field","name":{"kind":"Name","value":"evidence"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"EvidenceFields"}}]}},{"kind":"Field","name":{"kind":"Name","value":"created_at"}},{"kind":"Field","name":{"kind":"Name","value":"updated_at"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"EvidenceFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Evidence"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"source_type"}},{"kind":"Field","name":{"kind":"Name","value":"source_url"}},{"kind":"Field","name":{"kind":"Name","value":"crawl_id"}},{"kind":"Field","name":{"kind":"Name","value":"capture_timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"observed_at"}},{"kind":"Field","name":{"kind":"Name","value":"method"}},{"kind":"Field","name":{"kind":"Name","value":"extractor_version"}},{"kind":"Field","name":{"kind":"Name","value":"http_status"}},{"kind":"Field","name":{"kind":"Name","value":"mime"}},{"kind":"Field","name":{"kind":"Name","value":"content_hash"}},{"kind":"Field","name":{"kind":"Name","value":"warc"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"filename"}},{"kind":"Field","name":{"kind":"Name","value":"offset"}},{"kind":"Field","name":{"kind":"Name","value":"length"}},{"kind":"Field","name":{"kind":"Name","value":"digest"}}]}}]}}]} as unknown as DocumentNode<AtsBoardFieldsFragment, unknown>;

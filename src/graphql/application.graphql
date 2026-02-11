@@ -2,7 +2,7 @@
 
 mutation CreateApplication($input: ApplicationInput!) {
   createApplication(input: $input) {
-    email # Email of the currently authenticated user
+    email
     jobId
     questions {
       questionId

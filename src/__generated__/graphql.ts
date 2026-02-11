@@ -77,7 +77,6 @@ export type Application = {
 };
 
 export type ApplicationInput = {
-  email: Scalars['EmailAddress']['input'];
   jobId: Scalars['String']['input'];
   questions: Array<QuestionAnswerInput>;
   resume?: InputMaybe<Scalars['Upload']['input']>;

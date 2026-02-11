@@ -23,8 +23,6 @@ input QuestionAnswerInput {
 }
 
 input ApplicationInput {
-  # Email of the currently authenticated user
-  email: EmailAddress!
   jobId: String!
   resume: Upload
   questions: [QuestionAnswerInput!]!

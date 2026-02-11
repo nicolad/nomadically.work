@@ -1,6 +1,6 @@
 import type { GraphQLContext } from "../context";
 import { getDb } from "@/db";
-import { applications } from "@/db/schema";
+import { applications, userSettings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 
 export const applicationResolvers = {
@@ -57,6 +57,20 @@ export const applicationResolvers = {
 
         const db = getDb();
 
+        // Ensure user_settings record exists for this user
+        const existingSettings = await db
+          .select()
+          .from(userSettings)
+          .where(eq(userSettings.user_id, context.userId))
+          .limit(1);
+
+        if (existingSettings.length === 0) {
+          // Create user_settings record if it doesn't exist
+          await db.insert(userSettings).values({
+            user_id: context.userId,
+          });
+        }
+
         // TODO: Handle resume upload to cloud storage
         // For now, store resume as-is (it's an Upload scalar)
         const resumeUrl = args.input.resume ? null : null;
@@ -73,9 +87,6 @@ export const applicationResolvers = {
             status: "pending",
           })
           .returning();
-
-        // TODO: Send confirmation email
-        // TODO: Process resume upload if provided
 
         return {
           email: newApplication.email,

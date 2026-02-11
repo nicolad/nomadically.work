@@ -301,7 +301,8 @@ export const typeDefs = gql`
   }
 
   input ApplicationInput {
-    email: EmailAddress! # Email of the currently authenticated user
+    # Email of the currently authenticated user
+    email: EmailAddress!
     jobId: String!
     resume: Upload
     questions: [QuestionAnswerInput!]!

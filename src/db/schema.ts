@@ -400,3 +400,29 @@ export const userPreferences = sqliteTable(
 
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+
+// Applications
+export const applications = sqliteTable("applications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  user_id: text("user_id")
+    .notNull()
+    .references(() => userSettings.user_id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  job_id: text("job_id").notNull(), // Job URL
+  resume_url: text("resume_url"), // Store uploaded resume URL
+  questions: text("questions"), // JSON array of {questionId, questionText, answerText}
+  status: text("status", {
+    enum: ["pending", "submitted", "reviewed", "rejected", "accepted"],
+  })
+    .notNull()
+    .default("pending"),
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+export type Application = typeof applications.$inferSelect;
+export type NewApplication = typeof applications.$inferInsert;

@@ -1,17 +1,30 @@
 import type { GraphQLContext } from "../context";
+import { getDb } from "@/db";
+import { applications } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export const applicationResolvers = {
   Query: {
     async applications(_parent: any, _args: any, context: GraphQLContext) {
       try {
         // Get applications for authenticated user
-        if (!context.userEmail) {
+        if (!context.userEmail || !context.userId) {
           throw new Error("User must be authenticated to view applications");
         }
 
-        // TODO: Fetch applications from database
-        // For now, return empty array
-        return [];
+        const db = getDb();
+        const userApplications = await db
+          .select()
+          .from(applications)
+          .where(eq(applications.user_id, context.userId))
+          .orderBy(desc(applications.created_at));
+
+        return userApplications.map((app) => ({
+          email: app.email,
+          jobId: app.job_id,
+          resume: app.resume_url,
+          questions: app.questions ? JSON.parse(app.questions) : [],
+        }));
       } catch (error) {
         console.error("Error fetching applications:", error);
         throw new Error("Failed to fetch applications");
@@ -36,22 +49,41 @@ export const applicationResolvers = {
     ) {
       try {
         // Get email from authenticated user context
-        if (!context.userEmail) {
+        if (!context.userEmail || !context.userId) {
           throw new Error(
             "User must be authenticated to submit an application",
           );
         }
 
-        // TODO: Implement application creation logic
-        // - Store application in database
-        // - Handle resume upload
-        // - Send confirmation email
+        const db = getDb();
+
+        // TODO: Handle resume upload to cloud storage
+        // For now, store resume as-is (it's an Upload scalar)
+        const resumeUrl = args.input.resume ? null : null;
+
+        // Insert application into database
+        const [newApplication] = await db
+          .insert(applications)
+          .values({
+            user_id: context.userId,
+            email: context.userEmail,
+            job_id: args.input.jobId,
+            resume_url: resumeUrl,
+            questions: JSON.stringify(args.input.questions),
+            status: "pending",
+          })
+          .returning();
+
+        // TODO: Send confirmation email
+        // TODO: Process resume upload if provided
 
         return {
-          email: context.userEmail,
-          jobId: args.input.jobId,
-          resume: args.input.resume,
-          questions: args.input.questions,
+          email: newApplication.email,
+          jobId: newApplication.job_id,
+          resume: newApplication.resume_url,
+          questions: newApplication.questions
+            ? JSON.parse(newApplication.questions)
+            : [],
         };
       } catch (error) {
         console.error("Error creating application:", error);

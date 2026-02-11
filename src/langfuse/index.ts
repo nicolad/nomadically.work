@@ -114,7 +114,7 @@ export async function fetchLangfusePrompt(
   options: PromptFetchOptions = {},
 ) {
   const langfuse = getLangfuseClient();
-  
+
   return await langfuse.prompt.get(name, {
     type: options.type,
     label: options.label,

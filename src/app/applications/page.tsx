@@ -22,7 +22,11 @@ export default function ApplicationsPage() {
   const [jobId, setJobId] = useState("");
   const { user } = useAuth();
   const [createApplication, { loading }] = useCreateApplicationMutation();
-  const { data, loading: loadingApplications, refetch } = useGetApplicationsQuery();
+  const {
+    data,
+    loading: loadingApplications,
+    refetch,
+  } = useGetApplicationsQuery();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,9 +126,7 @@ export default function ApplicationsPage() {
                   <strong>Questions:</strong>
                   {app.questions.map((q, qIndex) => (
                     <Flex key={qIndex} pl="3" direction="column">
-                      <span>
-                        Q: {q.questionText}
-                      </span>
+                      <span>Q: {q.questionText}</span>
                       <span style={{ color: "var(--gray-11)" }}>
                         A: {q.answerText}
                       </span>

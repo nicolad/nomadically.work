@@ -2,11 +2,7 @@ import type { GraphQLContext } from "../context";
 
 export const applicationResolvers = {
   Query: {
-    async applications(
-      _parent: any,
-      _args: any,
-      context: GraphQLContext,
-    ) {
+    async applications(_parent: any, _args: any, context: GraphQLContext) {
       try {
         // Get applications for authenticated user
         if (!context.userEmail) {

@@ -1,6 +1,14 @@
 "use client";
 
-import { Container, Heading, Button, Flex, Dialog, TextField, TextArea } from "@radix-ui/themes";
+import {
+  Container,
+  Heading,
+  Button,
+  Flex,
+  Dialog,
+  TextField,
+  TextArea,
+} from "@radix-ui/themes";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useMutation } from "@apollo/client";
@@ -28,7 +36,7 @@ export default function ApplicationsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       await createApplication({
         variables: {
@@ -67,7 +75,7 @@ export default function ApplicationsPage() {
             <form onSubmit={handleSubmit}>
               <Flex direction="column" gap="3">
                 <label>
-                  <TextField.Input
+                  <TextField
                     placeholder="Email"
                     type="email"
                     value={email}
@@ -76,7 +84,7 @@ export default function ApplicationsPage() {
                   />
                 </label>
                 <label>
-                  <TextField.Input
+                  <TextField
                     placeholder="Job ID"
                     value={jobId}
                     onChange={(e) => setJobId(e.target.value)}

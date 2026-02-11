@@ -15,6 +15,13 @@
       "when": 1770373023036,
       "tag": "0001_eminent_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1770817700000,
+      "tag": "0002_add_applications_table",
+      "breakpoints": true
     }
   ]
 }

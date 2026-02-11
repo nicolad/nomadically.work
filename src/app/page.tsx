@@ -12,9 +12,9 @@ const Page = () => {
         </Container>
       }
     >
-      <div className={styles.content}>
+      <Container size="4" p="8" className={styles.content}>
         <UnifiedJobsProvider />
-      </div>
+      </Container>
     </Suspense>
   );
 };

@@ -1,4 +1,3 @@
-import { Langfuse } from "langfuse";
 import { LangfuseClient } from "@langfuse/client";
 
 import {
@@ -7,21 +6,38 @@ import {
   LANGFUSE_SECRET_KEY,
 } from "@/config/env";
 
-const langfuse = new Langfuse({
-  secretKey: LANGFUSE_SECRET_KEY,
-  publicKey: LANGFUSE_PUBLIC_KEY,
-  baseUrl: LANGFUSE_BASE_URL,
-});
+let singleton: LangfuseClient | null = null;
 
-const langfuseClient = new LangfuseClient({
-  secretKey: LANGFUSE_SECRET_KEY,
-  publicKey: LANGFUSE_PUBLIC_KEY,
-  baseUrl: LANGFUSE_BASE_URL,
-});
+/**
+ * Get the singleton Langfuse client instance.
+ * Configured automatically from environment variables.
+ */
+export function getLangfuseClient(): LangfuseClient {
+  if (!singleton) {
+    singleton = new LangfuseClient({
+      secretKey: LANGFUSE_SECRET_KEY,
+      publicKey: LANGFUSE_PUBLIC_KEY,
+      baseUrl: LANGFUSE_BASE_URL,
+    });
+  }
+  return singleton;
+}
 
 type PromptFetchOptions = {
+  type?: "text" | "chat";
   version?: number;
   label?: string;
+  cacheTtlSeconds?: number;
+  fallback?: string | Array<{ role: string; content: string }>;
+};
+
+export type ChatMessage =
+  | { role: string; content: string }
+  | { type: "placeholder"; name: string };
+
+export type CompileInput = {
+  variables?: Record<string, unknown>;
+  placeholders?: Record<string, Array<{ role: string; content: string }>>;
 };
 
 // Common DeepSeek-focused prompt config fields. Config is arbitrary JSON, so keep this loose.
@@ -40,21 +56,108 @@ export type PromptConfig = {
 
 export const DEFAULT_DEEPSEEK_MODEL = "deepseek/deepseek-chat";
 
+/**
+ * Convert user ID/email to a safe folder-style prompt name.
+ * Example: "users/alice-example-com/my-prompt"
+ * This gives clean organization in Langfuse UI.
+ */
+export function toUserPromptName(
+  userIdOrEmail: string,
+  shortName: string,
+): string {
+  const safe = userIdOrEmail
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9@._-]+/g, "-")
+    .replace(/@/g, "-at-");
+  return `users/${safe}/${shortName}`;
+}
+
+/**
+ * Assert that the current user has access to this prompt.
+ * Throws if access is denied.
+ */
+export function assertPromptAccess(
+  promptName: string,
+  userIdOrEmail: string,
+  allowedSharedPrefixes: string[] = ["shared/", "public/"],
+) {
+  const userPrefix = toUserPromptName(userIdOrEmail, "").replace(/\/$/, "");
+  const isUserOwned = promptName.startsWith(userPrefix + "/");
+  const isShared = allowedSharedPrefixes.some((p) => promptName.startsWith(p));
+
+  if (!isUserOwned && !isShared) {
+    throw new Error(`Access denied to prompt: ${promptName}`);
+  }
+}
+
+/**
+ * Compile a prompt with variables and placeholders.
+ * Supports both text and chat prompts.
+ */
+export function compilePrompt(prompt: any, input: CompileInput = {}) {
+  const vars = input.variables ?? {};
+  const placeholders = input.placeholders;
+
+  // Message placeholders are compiled via compile(vars, placeholders) for chat prompts
+  if (placeholders) return prompt.compile(vars, placeholders);
+  return prompt.compile(vars);
+}
+
+/**
+ * Fetch a prompt from Langfuse with caching and fallback support.
+ * Caching behavior: default TTL is 60s; stale prompt can be served while revalidating.
+ * For instant updates in dev, set cacheTtlSeconds=0.
+ */
 export async function fetchLangfusePrompt(
   name: string,
   options: PromptFetchOptions = {},
 ) {
-  const { version, label } = options;
+  const langfuse = getLangfuseClient();
+  
+  return await langfuse.prompt.get(name, {
+    type: options.type,
+    label: options.label,
+    version: options.version,
+    cacheTtlSeconds: options.cacheTtlSeconds ?? defaultCacheTtlSeconds(),
+    fallback: options.fallback,
+  });
+}
 
-  if (label) {
-    return langfuse.getPrompt(name, undefined, { label });
-  }
+/**
+ * Default cache TTL: 300s in production, 0 in development for instant updates.
+ */
+export function defaultCacheTtlSeconds(): number {
+  return process.env.NODE_ENV === "production" ? 300 : 0;
+}
 
-  if (version) {
-    return langfuse.getPrompt(name, version);
-  }
+/**
+ * Prewarm prompts on startup for guaranteed availability.
+ * Call this in your server bootstrap to cache critical prompts.
+ */
+export async function prewarmPrompts(names: string[]) {
+  await Promise.all(names.map((n) => fetchLangfusePrompt(n)));
+}
 
-  return langfuse.getPrompt(name);
+/**
+ * Deterministic A/B routing using labels like "prod-a" / "prod-b".
+ * Hash-based routing ensures sticky assignment per user/session.
+ */
+function hashToUnit(seed: string): number {
+  const crypto = require("crypto");
+  const h = crypto.createHash("sha256").update(seed).digest();
+  // Return value between 0 and 1
+  return h.readUInt32BE(0) / 0xffffffff;
+}
+
+export function pickAbLabel(params: {
+  seed: string; // stable userId/sessionId
+  labelA: string; // "prod-a"
+  labelB: string; // "prod-b"
+  splitA?: number; // default 0.5
+}): string {
+  const u = hashToUnit(params.seed);
+  return u < (params.splitA ?? 0.5) ? params.labelA : params.labelB;
 }
 
 const isNumber = (value: unknown): value is number => typeof value === "number";
@@ -117,9 +220,11 @@ export async function listLangfusePrompts(userEmail?: string) {
 }
 
 export async function createLangfusePrompt(promptData: any) {
-  await langfuseClient.prompt.create(promptData);
+  const langfuse = getLangfuseClient();
+  await langfuse.prompt.create(promptData);
 
-  return langfuse.getPrompt(promptData.name);
+  // Fetch the created prompt to get full details with version
+  return langfuse.prompt.get(promptData.name);
 }
 
 // Prompt composability: parse references to other prompts

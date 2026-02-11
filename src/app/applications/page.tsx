@@ -75,7 +75,7 @@ export default function ApplicationsPage() {
             <form onSubmit={handleSubmit}>
               <Flex direction="column" gap="3">
                 <label>
-                  <TextField
+                  <TextField.Root
                     placeholder="Email"
                     type="email"
                     value={email}
@@ -84,7 +84,7 @@ export default function ApplicationsPage() {
                   />
                 </label>
                 <label>
-                  <TextField
+                  <TextField.Root
                     placeholder="Job ID"
                     value={jobId}
                     onChange={(e) => setJobId(e.target.value)}

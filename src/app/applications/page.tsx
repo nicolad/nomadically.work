@@ -11,29 +11,14 @@ import {
 } from "@radix-ui/themes";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { useMutation } from "@apollo/client";
-import { gql } from "@/__generated__";
 import { useAuth } from "@/auth/hooks";
-
-const CREATE_APPLICATION = gql(`
-  mutation CreateApplication($input: ApplicationInput!) {
-    createApplication(input: $input) {
-      email
-      jobId
-      questions {
-        questionId
-        questionText
-        answerText
-      }
-    }
-  }
-`);
+import { useCreateApplicationMutation } from "@/__generated__/hooks";
 
 export default function ApplicationsPage() {
   const [open, setOpen] = useState(false);
   const [jobId, setJobId] = useState("");
   const { user } = useAuth();
-  const [createApplication, { loading }] = useMutation(CREATE_APPLICATION);
+  const [createApplication, { loading }] = useCreateApplicationMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +32,6 @@ export default function ApplicationsPage() {
       await createApplication({
         variables: {
           input: {
-            email: user.email,
             jobId,
             questions: [],
           },
@@ -81,7 +65,8 @@ export default function ApplicationsPage() {
               <Flex direction="column" gap="3">
                 <label>
                   <TextField.Root
-                    placeholder="Job ID"
+                    placeholder="Job URL"
+                    type="url"
                     value={jobId}
                     onChange={(e) => setJobId(e.target.value)}
                     required

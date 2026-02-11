@@ -1,7 +1,7 @@
 # Application-related GraphQL mutations and queries
 
-mutation SubmitApplication($input: ApplicationInput!) {
-  submitApplication(input: $input) {
+mutation CreateApplication($input: ApplicationInput!) {
+  createApplication(input: $input) {
     email
     jobId
     questions {

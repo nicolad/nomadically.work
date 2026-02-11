@@ -16,11 +16,11 @@ export const applicationResolvers = {
         const userApplications = await db
           .select()
           .from(applications)
-          .where(eq(applications.user_id, context.userId))
+          .where(eq(applications.user_email, context.userEmail))
           .orderBy(desc(applications.created_at));
 
         return userApplications.map((app) => ({
-          email: app.email,
+          email: app.user_email,
           jobId: app.job_id,
           resume: app.resume_url,
           questions: app.questions ? JSON.parse(app.questions) : [],
@@ -65,8 +65,7 @@ export const applicationResolvers = {
         const [newApplication] = await db
           .insert(applications)
           .values({
-            user_id: context.userId,
-            email: context.userEmail,
+            user_email: context.userEmail,
             job_id: args.input.jobId,
             resume_url: resumeUrl,
             questions: JSON.stringify(args.input.questions),
@@ -75,7 +74,7 @@ export const applicationResolvers = {
           .returning();
 
         return {
-          email: newApplication.email,
+          email: newApplication.user_email,
           jobId: newApplication.job_id,
           resume: newApplication.resume_url,
           questions: newApplication.questions

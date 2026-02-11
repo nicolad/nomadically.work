@@ -1,0 +1,26 @@
+# Application-related GraphQL queries and mutations
+
+query GetApplications {
+  applications {
+    email
+    jobId
+    resume
+    questions {
+      questionId
+      questionText
+      answerText
+    }
+  }
+}
+
+mutation CreateApplication($input: ApplicationInput!) {
+  createApplication(input: $input) {
+    email
+    jobId
+    questions {
+      questionId
+      questionText
+      answerText
+    }
+  }
+}

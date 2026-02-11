@@ -2,4 +2,4 @@
 - Implemented multi-agent AI system with DeepSeek/GPT-4o for job classification, text-to-SQL, and personalized recommendations
 - Built Cloudflare Workers AI pipeline with hybrid search (BM25 + vector embeddings), LLM-powered skill extraction, and automated company categorization
 - Added Langfuse observability with quality scorers (toxicity, bias, hallucination detection) and Mastra eval framework for continuous improvement
-- Created Common Crawl workflows for evidence-based company data enrichment and daily discovery cron with Brave Search
+- Created workflows for AI evidence-based company data enrichment and daily discovery cron with Brave Search

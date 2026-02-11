@@ -116,11 +116,11 @@ function PromptCard({ prompt }: { prompt: PromptInfo }) {
                 size="2"
                 onClick={() => {
                   const langfuseUrl = process.env.NEXT_PUBLIC_LANGFUSE_BASE_URL || "https://cloud.langfuse.com";
-                  window.open(`${langfuseUrl}/prompts/${encodeURIComponent(prompt.name)}`, "_blank");
+                  window.open(`${langfuseUrl}/prompts`, "_blank");
                 }}
               >
                 <ExternalLinkIcon />
-                Edit in Langfuse
+                View in Langfuse
               </Button>
               <Button
                 variant="surface"

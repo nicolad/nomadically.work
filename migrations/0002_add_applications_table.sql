@@ -7,6 +7,5 @@ CREATE TABLE `applications` (
 	`questions` text,
 	`status` text DEFAULT 'pending' NOT NULL,
 	`created_at` text DEFAULT (datetime('now')) NOT NULL,
-	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user_settings`(`user_id`) ON UPDATE no action ON DELETE cascade
+	`updated_at` text DEFAULT (datetime('now')) NOT NULL
 );

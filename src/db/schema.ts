@@ -404,9 +404,7 @@ export type NewUserPreference = typeof userPreferences.$inferInsert;
 // Applications
 export const applications = sqliteTable("applications", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  user_id: text("user_id")
-    .notNull()
-    .references(() => userSettings.user_id, { onDelete: "cascade" }),
+  user_id: text("user_id").notNull(), // Reference to user, but no FK constraint
   email: text("email").notNull(),
   job_id: text("job_id").notNull(), // Job URL
   resume_url: text("resume_url"), // Store uploaded resume URL

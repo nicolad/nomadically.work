@@ -1,7 +1,6 @@
 CREATE TABLE `applications` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`user_id` text NOT NULL,
-	`email` text NOT NULL,
+	`user_email` text NOT NULL,
 	`job_id` text NOT NULL,
 	`resume_url` text,
 	`questions` text,

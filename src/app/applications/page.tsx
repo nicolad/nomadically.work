@@ -13,6 +13,7 @@ import { PlusIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { gql } from "@/__generated__";
+import { useAuth } from "@/auth/hooks";
 
 const CREATE_APPLICATION = gql(`
   mutation CreateApplication($input: ApplicationInput!) {
@@ -31,17 +32,22 @@ const CREATE_APPLICATION = gql(`
 export default function ApplicationsPage() {
   const [open, setOpen] = useState(false);
   const [jobId, setJobId] = useState("");
-  const [email, setEmail] = useState("");
+  const { user } = useAuth();
   const [createApplication, { loading }] = useMutation(CREATE_APPLICATION);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!user?.email) {
+      console.error("User email not available");
+      return;
+    }
+
     try {
       await createApplication({
         variables: {
           input: {
-            email,
+            email: user.email,
             jobId,
             questions: [],
           },
@@ -49,7 +55,6 @@ export default function ApplicationsPage() {
       });
       setOpen(false);
       setJobId("");
-      setEmail("");
     } catch (error) {
       console.error("Error creating application:", error);
     }
@@ -74,15 +79,6 @@ export default function ApplicationsPage() {
 
             <form onSubmit={handleSubmit}>
               <Flex direction="column" gap="3">
-                <label>
-                  <TextField.Root
-                    placeholder="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </label>
                 <label>
                   <TextField.Root
                     placeholder="Job ID"

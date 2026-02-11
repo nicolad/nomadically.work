@@ -14,6 +14,7 @@ import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
+    "\n  mutation CreateApplication($input: ApplicationInput!) {\n    createApplication(input: $input) {\n      email\n      jobId\n      questions {\n        questionId\n        questionText\n        answerText\n      }\n    }\n  }\n": typeof types.CreateApplicationDocument,
     "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}": typeof types.DeleteJobDocument,
     "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}": typeof types.ExecuteSqlDocument,
     "query GetJob($id: String!) {\n  job(id: $id) {\n    id\n    external_id\n    source_id\n    source_kind\n    company_id\n    company_key\n    company {\n      ...CompanyFields\n    }\n    title\n    location\n    url\n    description\n    posted_at\n    score\n    score_reason\n    status\n    is_remote_eu\n    remote_eu_confidence\n    remote_eu_reason\n    skills {\n      tag\n      level\n      confidence\n      evidence\n    }\n    created_at\n    updated_at\n  }\n}": typeof types.GetJobDocument,
@@ -28,6 +29,7 @@ type Documents = {
     "query GetPrompts {\n  prompts {\n    name\n    type\n    content\n    tags\n    labels\n    versions\n    lastUpdatedAt\n    lastConfig\n    usageCount\n    lastUsedBy\n  }\n}\n\nquery GetMyPromptUsage($limit: Int) {\n  myPromptUsage(limit: $limit) {\n    promptName\n    userEmail\n    version\n    label\n    usedAt\n    traceId\n  }\n}\n\nmutation CreatePrompt($input: CreatePromptInput!) {\n  createPrompt(input: $input) {\n    name\n    version\n    type\n    labels\n    tags\n    createdBy\n  }\n}": typeof types.GetPromptsDocument,
 };
 const documents: Documents = {
+    "\n  mutation CreateApplication($input: ApplicationInput!) {\n    createApplication(input: $input) {\n      email\n      jobId\n      questions {\n        questionId\n        questionText\n        answerText\n      }\n    }\n  }\n": types.CreateApplicationDocument,
     "mutation DeleteJob($id: Int!) {\n  deleteJob(id: $id) {\n    success\n    message\n  }\n}": types.DeleteJobDocument,
     "query ExecuteSql($sql: String!) {\n  executeSql(sql: $sql) {\n    sql\n    explanation\n    columns\n    rows\n    drilldownSearchQuery\n  }\n}": types.ExecuteSqlDocument,
     "query GetJob($id: String!) {\n  job(id: $id) {\n    id\n    external_id\n    source_id\n    source_kind\n    company_id\n    company_key\n    company {\n      ...CompanyFields\n    }\n    title\n    location\n    url\n    description\n    posted_at\n    score\n    score_reason\n    status\n    is_remote_eu\n    remote_eu_confidence\n    remote_eu_reason\n    skills {\n      tag\n      level\n      confidence\n      evidence\n    }\n    created_at\n    updated_at\n  }\n}": types.GetJobDocument,
@@ -56,6 +58,10 @@ const documents: Documents = {
  */
 export function gql(source: string): unknown;
 
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "\n  mutation CreateApplication($input: ApplicationInput!) {\n    createApplication(input: $input) {\n      email\n      jobId\n      questions {\n        questionId\n        questionText\n        answerText\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation CreateApplication($input: ApplicationInput!) {\n    createApplication(input: $input) {\n      email\n      jobId\n      questions {\n        questionId\n        questionText\n        answerText\n      }\n    }\n  }\n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

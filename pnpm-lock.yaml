@@ -119,6 +119,9 @@ importers:
       langfuse:
         specifier: ^3.38.6
         version: 3.38.6
+      langsmith:
+        specifier: ^0.5.2
+        version: 0.5.2(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.211.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.5.0(@opentelemetry/api@1.9.0))(openai@6.21.0(ws@8.19.0)(zod@3.25.76))
       linkedom:
         specifier: ^0.18.12
         version: 0.18.12
@@ -3909,6 +3912,9 @@ packages:
   '@types/tedious@4.0.14':
     resolution: {integrity: sha512-KHPsfX/FoVbUGbyYvk1q9MMQHLPeRZhRJZdO45Q4YjvFkv4hMNghCWTvy7rdKessBsmtz4euWCWAB6/tVpI1Iw==}
 
+  '@types/uuid@10.0.0':
+    resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
+
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
@@ -4344,6 +4350,9 @@ packages:
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
+
+  console-table-printer@2.15.0:
+    resolution: {integrity: sha512-SrhBq4hYVjLCkBVOWaTzceJalvn5K1Zq5aQA6wXC/cYjI3frKWNPEMK3sZsJfNNQApvCQmgBcc13ZKmFj8qExw==}
 
   constant-case@3.0.4:
     resolution: {integrity: sha512-I2hSBi7Vvs7BEuJDr5dDHfzb/Ruj3FyvFyh7KLilAjNQw3Be+xgqUBA2W6scVEcL0hL1dwPRtIqEPVUCKkSsyQ==}
@@ -4794,6 +4803,9 @@ packages:
   event-target-shim@5.0.1:
     resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
     engines: {node: '>=6'}
+
+  eventemitter3@4.0.7:
+    resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
 
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
@@ -5395,6 +5407,23 @@ packages:
     resolution: {integrity: sha512-mtwfsNGIYvObRh+NYNGlJQJDiBN+Wr3Hnr++wN25mxuOpSTdXX+JQqVCyAqGL5GD2TAXRZ7COsN42Vmp9krYmg==}
     engines: {node: '>=18'}
 
+  langsmith@0.5.2:
+    resolution: {integrity: sha512-CfkcQsiajtTWknAcyItvJsKEQdY2VgDpm6U8pRI9wnM07mevnOv5EF+RcqWGwx37SEUxtyi2RXMwnKW8b06JtA==}
+    peerDependencies:
+      '@opentelemetry/api': '*'
+      '@opentelemetry/exporter-trace-otlp-proto': '*'
+      '@opentelemetry/sdk-trace-base': '*'
+      openai: '*'
+    peerDependenciesMeta:
+      '@opentelemetry/api':
+        optional: true
+      '@opentelemetry/exporter-trace-otlp-proto':
+        optional: true
+      '@opentelemetry/sdk-trace-base':
+        optional: true
+      openai:
+        optional: true
+
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
@@ -5708,6 +5737,10 @@ packages:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
 
+  p-finally@1.0.0:
+    resolution: {integrity: sha512-LICb2p9CB7FS+0eR1oqWnHhp0FljGLZCWBE9aix0Uye9W8LTQPwMTYVGWQWIw9RdQiDg4+epXQODwIYJtSJaow==}
+    engines: {node: '>=4'}
+
   p-limit@2.3.0:
     resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
     engines: {node: '>=6'}
@@ -5728,9 +5761,17 @@ packages:
     resolution: {integrity: sha512-tkAQEw8ysMzmkhgw8k+1U/iPhWNhykKnSk4Rd5zLoPJCuJaGRPo6YposrZgaxHKzDHdDWWZvE/Sk7hsL2X/CpQ==}
     engines: {node: '>=18'}
 
+  p-queue@6.6.2:
+    resolution: {integrity: sha512-RwFpb72c/BhQLEXIZ5K2e+AhgNVmIejGlTgiB9MzZ0e93GRvqZ7uSi0dvRF7/XIXDeNkra2fNHBxTyPDGySpjQ==}
+    engines: {node: '>=8'}
+
   p-retry@7.1.1:
     resolution: {integrity: sha512-J5ApzjyRkkf601HpEeykoiCvzHQjWxPAHhyjFcEUP2SWq0+35NKh8TLhpLw+Dkq5TZBFvUM6UigdE9hIVYTl5w==}
     engines: {node: '>=20'}
+
+  p-timeout@3.2.0:
+    resolution: {integrity: sha512-rhIwUycgwwKcP9yTOOFK/AKsAopjjCakVqLHePO3CC6Mir1Z99xT+R63jZxAT5lFZLa2inS5h+ZS2GvR99/FBg==}
+    engines: {node: '>=8'}
 
   p-try@2.2.0:
     resolution: {integrity: sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==}
@@ -6193,6 +6234,9 @@ packages:
   signedsource@1.0.0:
     resolution: {integrity: sha512-6+eerH9fEnNmi/hyM1DXcRK3pWdoMQtlkQ+ns0ntzunjKqp5i3sKCc80ym8Fib3iaYhdJUOPdhlJWj1tvge2Ww==}
 
+  simple-wcswidth@1.1.2:
+    resolution: {integrity: sha512-j7piyCjAeTDSjzTSQ7DokZtMNwNlEAyxqSZeCS+CXH7fJ4jx3FuJ/mTW3mE+6JLs4VJBbcll0Kjn+KXI5t21Iw==}
+
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
@@ -6487,6 +6531,10 @@ packages:
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
+
+  uuid@10.0.0:
+    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    hasBin: true
 
   uuid@11.1.0:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
@@ -10824,6 +10872,8 @@ snapshots:
     dependencies:
       '@types/node': 22.19.7
 
+  '@types/uuid@10.0.0': {}
+
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 22.19.7
@@ -11304,6 +11354,10 @@ snapshots:
 
   concat-map@0.0.1: {}
 
+  console-table-printer@2.15.0:
+    dependencies:
+      simple-wcswidth: 1.1.2
+
   constant-case@3.0.4:
     dependencies:
       no-case: 3.0.4
@@ -11734,6 +11788,8 @@ snapshots:
   etag@1.8.1: {}
 
   event-target-shim@5.0.1: {}
+
+  eventemitter3@4.0.7: {}
 
   eventemitter3@5.0.4: {}
 
@@ -12384,6 +12440,20 @@ snapshots:
     dependencies:
       langfuse-core: 3.38.6
 
+  langsmith@0.5.2(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.211.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.5.0(@opentelemetry/api@1.9.0))(openai@6.21.0(ws@8.19.0)(zod@3.25.76)):
+    dependencies:
+      '@types/uuid': 10.0.0
+      chalk: 4.1.2
+      console-table-printer: 2.15.0
+      p-queue: 6.6.2
+      semver: 7.7.3
+      uuid: 10.0.0
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/exporter-trace-otlp-proto': 0.211.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base': 2.5.0(@opentelemetry/api@1.9.0)
+      openai: 6.21.0(ws@8.19.0)(zod@3.25.76)
+
   levn@0.4.1:
     dependencies:
       prelude-ls: 1.2.1
@@ -12666,6 +12736,8 @@ snapshots:
       type-check: 0.4.0
       word-wrap: 1.2.5
 
+  p-finally@1.0.0: {}
+
   p-limit@2.3.0:
     dependencies:
       p-try: 2.2.0
@@ -12684,9 +12756,18 @@ snapshots:
 
   p-map@7.0.4: {}
 
+  p-queue@6.6.2:
+    dependencies:
+      eventemitter3: 4.0.7
+      p-timeout: 3.2.0
+
   p-retry@7.1.1:
     dependencies:
       is-network-error: 1.3.0
+
+  p-timeout@3.2.0:
+    dependencies:
+      p-finally: 1.0.0
 
   p-try@2.2.0: {}
 
@@ -13278,6 +13359,8 @@ snapshots:
 
   signedsource@1.0.0: {}
 
+  simple-wcswidth@1.1.2: {}
+
   slash@3.0.0: {}
 
   slice-ansi@7.1.2:
@@ -13533,6 +13616,8 @@ snapshots:
       react: 19.1.1
 
   utils-merge@1.0.1: {}
+
+  uuid@10.0.0: {}
 
   uuid@11.1.0: {}
 

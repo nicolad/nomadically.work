@@ -1,0 +1,132 @@
+query GetLangSmithPrompts(
+  $isPublic: Boolean
+  $isArchived: Boolean
+  $query: String
+) {
+  langsmithPrompts(
+    isPublic: $isPublic
+    isArchived: $isArchived
+    query: $query
+  ) {
+    id
+    promptHandle
+    fullName
+    description
+    readme
+    tenantId
+    createdAt
+    updatedAt
+    isPublic
+    isArchived
+    tags
+    owner
+    numLikes
+    numDownloads
+    numViews
+    numCommits
+    lastCommitHash
+    likedByAuthUser
+  }
+}
+
+query GetLangSmithPrompt($promptIdentifier: String!) {
+  langsmithPrompt(promptIdentifier: $promptIdentifier) {
+    id
+    promptHandle
+    fullName
+    description
+    readme
+    tenantId
+    createdAt
+    updatedAt
+    isPublic
+    isArchived
+    tags
+    owner
+    numLikes
+    numDownloads
+    numViews
+    numCommits
+    lastCommitHash
+    likedByAuthUser
+  }
+}
+
+query GetLangSmithPromptCommit(
+  $promptIdentifier: String!
+  $includeModel: Boolean
+) {
+  langsmithPromptCommit(
+    promptIdentifier: $promptIdentifier
+    includeModel: $includeModel
+  ) {
+    owner
+    promptName
+    commitHash
+    manifest
+    examples
+  }
+}
+
+mutation CreateLangSmithPrompt(
+  $promptIdentifier: String!
+  $input: CreateLangSmithPromptInput
+) {
+  createLangSmithPrompt(promptIdentifier: $promptIdentifier, input: $input) {
+    id
+    promptHandle
+    fullName
+    description
+    readme
+    tenantId
+    createdAt
+    updatedAt
+    isPublic
+    isArchived
+    tags
+    owner
+    numLikes
+    numDownloads
+    numViews
+    numCommits
+    lastCommitHash
+    likedByAuthUser
+  }
+}
+
+mutation UpdateLangSmithPrompt(
+  $promptIdentifier: String!
+  $input: UpdateLangSmithPromptInput!
+) {
+  updateLangSmithPrompt(promptIdentifier: $promptIdentifier, input: $input) {
+    id
+    promptHandle
+    fullName
+    description
+    readme
+    tenantId
+    createdAt
+    updatedAt
+    isPublic
+    isArchived
+    tags
+    owner
+    numLikes
+    numDownloads
+    numViews
+    numCommits
+    lastCommitHash
+    likedByAuthUser
+  }
+}
+
+mutation DeleteLangSmithPrompt($promptIdentifier: String!) {
+  deleteLangSmithPrompt(promptIdentifier: $promptIdentifier)
+}
+
+mutation PushLangSmithPrompt(
+  $promptIdentifier: String!
+  $input: PushLangSmithPromptInput
+) {
+  pushLangSmithPrompt(promptIdentifier: $promptIdentifier, input: $input)
+}

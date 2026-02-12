@@ -1,0 +1,81 @@
+extend type Query {
+  langsmithPrompt(promptIdentifier: String!): LangSmithPrompt
+  langsmithPrompts(
+    isPublic: Boolean
+    isArchived: Boolean
+    query: String
+  ): [LangSmithPrompt!]!
+  langsmithPromptCommit(
+    promptIdentifier: String!
+    includeModel: Boolean
+  ): LangSmithPromptCommit
+}
+
+extend type Mutation {
+  createLangSmithPrompt(
+    promptIdentifier: String!
+    input: CreateLangSmithPromptInput
+  ): LangSmithPrompt!
+  updateLangSmithPrompt(
+    promptIdentifier: String!
+    input: UpdateLangSmithPromptInput!
+  ): LangSmithPrompt!
+  deleteLangSmithPrompt(promptIdentifier: String!): Boolean!
+  pushLangSmithPrompt(
+    promptIdentifier: String!
+    input: PushLangSmithPromptInput
+  ): String!
+}
+
+type LangSmithPrompt {
+  id: String!
+  promptHandle: String!
+  fullName: String!
+  description: String
+  readme: String
+  tenantId: String!
+  createdAt: String!
+  updatedAt: String!
+  isPublic: Boolean!
+  isArchived: Boolean!
+  tags: [String!]!
+  owner: String
+  numLikes: Int!
+  numDownloads: Int!
+  numViews: Int!
+  numCommits: Int!
+  lastCommitHash: String
+  likedByAuthUser: Boolean!
+}
+
+type LangSmithPromptCommit {
+  owner: String!
+  promptName: String!
+  commitHash: String!
+  manifest: JSON!
+  examples: [JSON!]!
+}
+
+input CreateLangSmithPromptInput {
+  description: String
+  readme: String
+  tags: [String!]
+  isPublic: Boolean
+}
+
+input UpdateLangSmithPromptInput {
+  description: String
+  readme: String
+  tags: [String!]
+  isPublic: Boolean
+  isArchived: Boolean
+}
+
+input PushLangSmithPromptInput {
+  object: JSON
+  parentCommitHash: String
+  description: String
+  readme: String
+  tags: [String!]
+  isPublic: Boolean
+}

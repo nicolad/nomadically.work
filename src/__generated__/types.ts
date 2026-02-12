@@ -221,6 +221,13 @@ export type CreateCompanyInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type CreateLangSmithPromptInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  isPublic?: InputMaybe<Scalars['Boolean']['input']>;
+  readme?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type CreatePromptInput = {
   chatMessages?: InputMaybe<Array<ChatMessageInput>>;
   config?: InputMaybe<PromptConfigInput>;
@@ -326,17 +333,52 @@ export type JobsResponse = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LangSmithPrompt = {
+  __typename: 'LangSmithPrompt';
+  createdAt: Scalars['String']['output'];
+  description: Maybe<Scalars['String']['output']>;
+  fullName: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  isArchived: Scalars['Boolean']['output'];
+  isPublic: Scalars['Boolean']['output'];
+  lastCommitHash: Maybe<Scalars['String']['output']>;
+  likedByAuthUser: Scalars['Boolean']['output'];
+  numCommits: Scalars['Int']['output'];
+  numDownloads: Scalars['Int']['output'];
+  numLikes: Scalars['Int']['output'];
+  numViews: Scalars['Int']['output'];
+  owner: Maybe<Scalars['String']['output']>;
+  promptHandle: Scalars['String']['output'];
+  readme: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  tenantId: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export type LangSmithPromptCommit = {
+  __typename: 'LangSmithPromptCommit';
+  commitHash: Scalars['String']['output'];
+  examples: Array<Scalars['JSON']['output']>;
+  manifest: Scalars['JSON']['output'];
+  owner: Scalars['String']['output'];
+  promptName: Scalars['String']['output'];
+};
+
 export type Mutation = {
   __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
   createApplication: Application;
   createCompany: Company;
+  createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
+  deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
   ingest_company_snapshot: CompanySnapshot;
+  pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
+  updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   upsert_company_ats_boards: Array<AtsBoard>;
@@ -359,6 +401,12 @@ export type MutationCreateCompanyArgs = {
 };
 
 
+export type MutationCreateLangSmithPromptArgs = {
+  input?: InputMaybe<CreateLangSmithPromptInput>;
+  promptIdentifier: Scalars['String']['input'];
+};
+
+
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
 };
@@ -371,6 +419,11 @@ export type MutationDeleteCompanyArgs = {
 
 export type MutationDeleteJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationDeleteLangSmithPromptArgs = {
+  promptIdentifier: Scalars['String']['input'];
 };
 
 
@@ -396,9 +449,21 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationPushLangSmithPromptArgs = {
+  input?: InputMaybe<PushLangSmithPromptInput>;
+  promptIdentifier: Scalars['String']['input'];
+};
+
+
 export type MutationUpdateCompanyArgs = {
   id: Scalars['Int']['input'];
   input: UpdateCompanyInput;
+};
+
+
+export type MutationUpdateLangSmithPromptArgs = {
+  input: UpdateLangSmithPromptInput;
+  promptIdentifier: Scalars['String']['input'];
 };
 
 
@@ -465,6 +530,15 @@ export type PromptUsage = {
   version: Maybe<Scalars['Int']['output']>;
 };
 
+export type PushLangSmithPromptInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  isPublic?: InputMaybe<Scalars['Boolean']['input']>;
+  object?: InputMaybe<Scalars['JSON']['input']>;
+  parentCommitHash?: InputMaybe<Scalars['String']['input']>;
+  readme?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type Query = {
   __typename: 'Query';
   applications: Array<Application>;
@@ -476,6 +550,9 @@ export type Query = {
   executeSql: TextToSqlResult;
   job: Maybe<Job>;
   jobs: JobsResponse;
+  langsmithPrompt: Maybe<LangSmithPrompt>;
+  langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
+  langsmithPrompts: Array<LangSmithPrompt>;
   myPromptUsage: Array<PromptUsage>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
@@ -535,6 +612,24 @@ export type QueryJobsArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryLangsmithPromptArgs = {
+  promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type QueryLangsmithPromptCommitArgs = {
+  includeModel?: InputMaybe<Scalars['Boolean']['input']>;
+  promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type QueryLangsmithPromptsArgs = {
+  isArchived?: InputMaybe<Scalars['Boolean']['input']>;
+  isPublic?: InputMaybe<Scalars['Boolean']['input']>;
+  query?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -618,6 +713,14 @@ export type UpdateCompanyInput = {
   size?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   website?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateLangSmithPromptInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  isArchived?: InputMaybe<Scalars['Boolean']['input']>;
+  isPublic?: InputMaybe<Scalars['Boolean']['input']>;
+  readme?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type UserSettings = {

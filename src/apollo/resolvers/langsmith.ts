@@ -36,8 +36,20 @@ export const langsmithResolvers = {
       context: GraphQLContext
     ) => {
       try {
-        // Fetch all prompts and filter to user's prompts only
-        const allPrompts = await listLangSmithPrompts({ isPublic, isArchived, query });
+        // Fetch all prompts (include private by default)
+        // Note: LangSmith API will only return prompts accessible by the API key
+        const allPrompts = await listLangSmithPrompts({ 
+          isPublic: isPublic ?? undefined, // Don't filter by public/private by default
+          isArchived, 
+          query 
+        });
+        
+        console.log('LangSmith raw prompts:', allPrompts.length, allPrompts.map(p => ({ 
+          name: p.fullName, 
+          tags: p.tags, 
+          owner: p.owner,
+          isPublic: p.isPublic 
+        })));
         
         // If no user email, return empty array
         if (!context.userEmail) {
@@ -59,6 +71,8 @@ export const langsmithResolvers = {
           
           return hasUserTag || isOwner;
         });
+        
+        console.log('Filtered user prompts:', userPrompts.length, userPrompts.map(p => p.fullName));
         
         return userPrompts;
       } catch (error) {

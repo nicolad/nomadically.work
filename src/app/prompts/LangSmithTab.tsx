@@ -245,6 +245,13 @@ function LangSmithPromptsList() {
   // All prompts from the backend query
   const prompts = data?.langsmithPrompts || [];
 
+  // Debug logging
+  React.useEffect(() => {
+    if (data?.langsmithPrompts) {
+      console.log('LangSmith prompts loaded:', data.langsmithPrompts.length, data.langsmithPrompts);
+    }
+  }, [data]);
+
   if (loading) {
     return (
       <Card>

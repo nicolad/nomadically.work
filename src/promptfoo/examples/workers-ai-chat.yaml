@@ -1,0 +1,62 @@
+# Cloudflare Workers AI - Basic Chat Configuration
+# Compares latest flagship chat models
+
+description: "Compare Cloudflare Workers AI flagship models"
+
+prompts:
+  - "Answer this question about {{topic}}: {{question}}"
+
+providers:
+  # OpenAI's production model with high reasoning
+  - id: cloudflare-ai:chat:@cf/openai/gpt-oss-120b
+    label: "OpenAI GPT-OSS 120B"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+  # Meta's Llama 4 Scout with multimodal capabilities
+  - id: cloudflare-ai:chat:@cf/meta/llama-4-scout-17b-16e-instruct
+    label: "Llama 4 Scout"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+  # Optimized 70B model with fp8 quantization
+  - id: cloudflare-ai:chat:@cf/meta/llama-3.3-70b-instruct-fp8-fast
+    label: "Llama 3.3 70B Fast"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+tests:
+  - vars:
+      topic: "artificial intelligence"
+      question: "What are the key differences between supervised and unsupervised learning?"
+    assert:
+      - type: contains
+        value: "supervised"
+      - type: contains
+        value: "unsupervised"
+      - type: not-contains
+        value: "ERROR"
+
+  - vars:
+      topic: "programming"
+      question: "Explain the concept of recursion with a simple example"
+    assert:
+      - type: contains-any
+        value:
+          - "function"
+          - "recursion"
+          - "base case"
+      - type: javascript
+        value: "output.length > 50"
+
+  - vars:
+      topic: "technology"
+      question: "What is edge computing and why is it important?"
+    assert:
+      - type: icontains
+        value: "edge"
+      - type: javascript
+        value: "output.split(' ').length > 30"

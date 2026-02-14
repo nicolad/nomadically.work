@@ -41,6 +41,8 @@
     "@apollo/client": "^3.14.0",
     "@apollo/server": "^5.3.0",
     "@as-integrations/next": "^4.1.0",
+    "@google/adk": "^0.3.0",
+    "@google/genai": "^1.41.0",
     "@graphql-tools/load-files": "^7.0.1",
     "@graphql-tools/schema": "^10.0.31",
     "@graphql-typed-document-node/core": "^3.2.0",
@@ -84,6 +86,7 @@
   },
   "devDependencies": {
     "@eddeee888/gcg-typescript-resolver-files": "^0.15.0",
+    "@google/adk-devtools": "^0.3.0",
     "@graphql-codegen/cli": "^6.1.1",
     "@graphql-codegen/client-preset": "^5.2.2",
     "@graphql-codegen/typescript": "^5.0.7",

@@ -1,0 +1,50 @@
+# Cloudflare Workers AI - Embedding Example
+# Generate embeddings and test similarity
+
+description: "Test embedding generation and similarity with EmbeddingGemma"
+
+prompts:
+  - "{{text}}"
+
+providers:
+  # Chat model for context
+  - id: cloudflare-ai:chat:@cf/meta/llama-3.3-70b-instruct-fp8-fast
+    label: "Llama 3.3 70B"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+  # Embedding model
+  - id: cloudflare-ai:embedding:@cf/google/embeddinggemma-300m
+    label: "EmbeddingGemma 300M"
+
+tests:
+  # Test semantic similarity
+  - vars:
+      text: "quantum computing applications"
+    assert:
+      - type: similarity
+        threshold: 0.8
+        value: "quantum computer uses"
+
+  - vars:
+      text: "machine learning algorithms"
+    assert:
+      - type: similarity
+        threshold: 0.75
+        value: "AI and ML techniques"
+
+  - vars:
+      text: "edge computing benefits"
+    assert:
+      - type: similarity
+        threshold: 0.7
+        value: "distributed computing advantages"
+
+  # Test that unrelated concepts have low similarity
+  - vars:
+      text: "quantum computing"
+    assert:
+      - type: not-similar
+        threshold: 0.5
+        value: "cooking recipes"

@@ -1,0 +1,64 @@
+# Cloudflare AI Gateway - Multi-Provider Comparison
+# Route requests through AI Gateway for caching and analytics
+
+description: "Compare multiple AI providers through Cloudflare AI Gateway"
+
+prompts:
+  - "{{prompt}}"
+
+providers:
+  # OpenAI through gateway
+  - id: cloudflare-gateway:openai:gpt-4o-mini
+    label: "OpenAI GPT-4o Mini"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+  # Anthropic through gateway
+  - id: cloudflare-gateway:anthropic:claude-3-5-haiku-latest
+    label: "Claude 3.5 Haiku"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+  # Groq through gateway
+  - id: cloudflare-gateway:groq:llama-3.1-8b-instant
+    label: "Llama 3.1 8B (Groq)"
+    config:
+      temperature: 0.7
+      max_tokens: 500
+
+tests:
+  - vars:
+      prompt: "Explain quantum computing in simple terms"
+    assert:
+      - type: contains-any
+        value:
+          - "quantum"
+          - "qubit"
+          - "superposition"
+      - type: javascript
+        value: "output.length > 100"
+
+  - vars:
+      prompt: "What are the benefits of edge computing?"
+    assert:
+      - type: icontains
+        value: "latency"
+      - type: contains-any
+        value:
+          - "performance"
+          - "speed"
+          - "distributed"
+
+  - vars:
+      prompt: "Write a Python function to calculate fibonacci numbers"
+    assert:
+      - type: contains
+        value: "def"
+      - type: contains-any
+        value:
+          - "fibonacci"
+          - "fib"
+      - type: not-contains
+        value: "ERROR"

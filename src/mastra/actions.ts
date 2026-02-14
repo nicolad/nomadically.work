@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { createDeepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
 import { createWorkflow, createStep } from "@/mastra/workflows";
 import { createScorer } from "@mastra/core/evals";
@@ -28,11 +29,20 @@ import { jobs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 /**
- * DeepSeek models via Mastra model router.
+ * DeepSeek models via direct DeepSeek SDK with proper base URL.
  * Ensure you have DEEPSEEK_API_KEY set in your environment.
  */
-const AGENT_MODEL = "deepseek/deepseek-reasoner";
-const JUDGE_MODEL = "deepseek/deepseek-chat";
+const deepseek = createDeepseek({
+  baseURL: 'https://api.deepseek.com/v1',
+  apiKey: process.env.DEEPSEEK_API_KEY,
+});
+
+/**
+ * AGENT_MODEL uses SDK object for Agent, JUDGE_MODEL_STRING for scorers
+ */
+const AGENT_MODEL = deepseek("deepseek-reasoner");
+const JUDGE_MODEL_STRING = "deepseek-chat"; // Direct SDK, not routed through OpenRouter
+const JUDGE_MODEL = deepseek("deepseek-chat");
 
 /* ------------------------------------------------------------------------------------------------
  * Types + Schemas
@@ -293,7 +303,7 @@ const promptAlignmentScorer = wrapBuiltInScorerForStep({
   id: "job-prompt-alignment",
   description:
     "Built-in prompt-alignment: does output follow the rubric + required format?",
-  baseScorer: createPromptAlignmentScorerLLM({ model: JUDGE_MODEL }),
+  baseScorer: createPromptAlignmentScorerLLM({ model: JUDGE_MODEL_STRING }),
   buildInput: buildJobClassificationPrompt,
   buildOutput: formatClassificationAsText,
 });
@@ -303,7 +313,7 @@ const answerRelevancyScorer = wrapBuiltInScorerForStep({
   id: "job-answer-relevancy",
   description:
     "Built-in answer-relevancy: is the output relevant to the prompt/job posting?",
-  baseScorer: createAnswerRelevancyScorer({ model: JUDGE_MODEL }),
+  baseScorer: createAnswerRelevancyScorer({ model: JUDGE_MODEL_STRING }),
   buildInput: buildJobClassificationPrompt,
   buildOutput: formatClassificationAsText,
 });
@@ -347,7 +357,7 @@ const faithfulnessScorer = wrapBuiltInScorerForStep({
   description:
     "Built-in faithfulness: is the reason supported by the job text?",
   baseScorer: createFaithfulnessScorer({
-    model: JUDGE_MODEL,
+    model: JUDGE_MODEL_STRING,
     options: {
       context: [], // We'll pass context via input string
     },
@@ -368,7 +378,7 @@ const nonHallucinationScorer = wrapBuiltInScorerForStep({
   id: "job-non-hallucination",
   description:
     "Built-in hallucination (inverted): higher means fewer contradictions/unsupported claims.",
-  baseScorer: createHallucinationScorer({ model: JUDGE_MODEL }),
+  baseScorer: createHallucinationScorer({ model: JUDGE_MODEL_STRING }),
   buildInput: ({ title, location, description }) =>
     `Context:\nTitle: ${title}\nLocation: ${location}\nDescription: ${description}`,
   buildOutput: (o) => o.reason,
@@ -385,7 +395,7 @@ const contextRelevanceScorer = wrapBuiltInScorerForStep({
   description:
     "Built-in context-relevance over (job text + rubric) vs explanation.",
   baseScorer: createContextRelevanceScorerLLM({
-    model: JUDGE_MODEL,
+    model: JUDGE_MODEL_STRING,
     options: {
       // We'll extract context from the input string we provide
       contextExtractor: (input) => {
@@ -410,7 +420,7 @@ const contextRelevanceScorer = wrapBuiltInScorerForStep({
 const nonToxicityScorer = wrapBuiltInScorerForStep({
   id: "job-non-toxicity",
   description: "Built-in toxicity (inverted): higher means less toxic.",
-  baseScorer: createToxicityScorer({ model: JUDGE_MODEL }),
+  baseScorer: createToxicityScorer({ model: JUDGE_MODEL_STRING }),
   buildInput: () => "Evaluate toxicity of the following text.",
   buildOutput: (o) => o.reason,
   transformScore: (raw) => 1 - raw,
@@ -424,7 +434,7 @@ const nonToxicityScorer = wrapBuiltInScorerForStep({
 const nonBiasScorer = wrapBuiltInScorerForStep({
   id: "job-non-bias",
   description: "Built-in bias (inverted): higher means less bias.",
-  baseScorer: createBiasScorer({ model: JUDGE_MODEL }),
+  baseScorer: createBiasScorer({ model: JUDGE_MODEL_STRING }),
   buildInput: () => "Evaluate bias of the following text.",
   buildOutput: (o) => o.reason,
   transformScore: (raw) => 1 - raw,

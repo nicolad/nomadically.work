@@ -395,6 +395,7 @@ const discoverAndEnrichStep = createStep({
               freshness: "pd",
               count: 20,
               offset: 0,
+              safesearch: "off",
               extra_snippets: true,
               search_lang: "en",
               ...(country ? { country } : {}),

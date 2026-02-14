@@ -165,6 +165,7 @@ async function discoverJobs(mode: "worldwide" | "europe", queryHint?: string) {
           freshness: "pd",
           count: 20,
           offset: 0,
+          safesearch: "off",
           extra_snippets: true,
           search_lang: "en",
           ...(country ? { country } : {}),
@@ -204,10 +205,13 @@ async function enrichWithContext(
     try {
       const ctx = await braveLlmContextTool.execute!(
         {
-          url: c.url,
-          snippets: [c.title, c.description, ...(c.extra ?? [])]
-            .filter(Boolean)
-            .join("\n"),
+          q: `${c.title} ${c.description || ""}`,
+          count: 5,
+          maximum_number_of_urls: 5,
+          maximum_number_of_tokens: 2048,
+          maximum_number_of_snippets_per_url: 3,
+          maximum_number_of_tokens_per_url: 1024,
+          context_threshold_mode: "balanced" as const,
         },
         {},
       );

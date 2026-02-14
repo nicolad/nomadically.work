@@ -236,40 +236,29 @@ function regionGuard(job: Job, mode: RegionMode) {
 }
 
 function buildQueries(mode: RegionMode, hint?: string) {
-  const roles =
-    '("AI Engineer" OR "Applied AI Engineer" OR "GenAI Engineer" OR "LLM Engineer" OR "Agentic AI Engineer" OR "AI Platform Engineer")';
-
-  const remote =
-    '("fully remote" OR "100% remote" OR "remote-first" OR distributed OR "work from home" OR WFH)';
-  const noHybrid = '-hybrid -onsite -"on-site" -"in office" -"in-office"';
+  // Shortened to fit Brave's 400 char limit
+  const roles = '("AI Engineer" OR "GenAI Engineer" OR "LLM Engineer")';
+  const remote = '("remote" OR "100% remote" OR WFH)';
+  const noHybrid = "-hybrid -onsite";
 
   const scope =
     mode === "worldwide"
-      ? '("work from anywhere" OR worldwide OR "global remote" OR "remote anywhere" OR "location-agnostic")'
-      : '(Europe OR EU OR EEA OR UK OR "United Kingdom" OR EMEA OR CET OR CEST OR EET OR EEST OR "UTC+1" OR "UTC+2" OR "UTC+3")';
+      ? '(worldwide OR "work from anywhere")'
+      : "(Europe OR EU OR UK OR EMEA)";
 
   const ats = [
     "site:boards.greenhouse.io",
     "site:jobs.lever.co",
     "site:jobs.ashbyhq.com",
-    "site:myworkdayjobs.com",
-    "site:apply.workable.com",
-    "site:recruitee.com",
-    "site:teamtailor.com",
-    "site:bamboohr.com",
   ].join(" OR ");
 
   const boards = [
     "site:remotive.com",
     "site:weworkremotely.com",
-    "site:remoteok.com",
     "site:wellfound.com",
-    "site:otta.com",
-    "site:himalayas.app",
   ].join(" OR ");
 
-  const freshnessTerms =
-    '("hours ago" OR "hour ago" OR today OR "just posted" OR datePosted OR "posted on")';
+  const freshnessTerms = '("hours ago" OR today OR "just posted")';
   const maybeHint = hint?.trim() ? `(${hint.trim()})` : "";
 
   const q1 = [
@@ -380,7 +369,7 @@ const discoverAndEnrichStep = createStep({
   }),
   execute: async ({ inputData }) => {
     async function discover(mode: RegionMode) {
-      const europeCountries = ["GB", "DE", "FR", "NL", "PL", "RO"];
+      const europeCountries = ["GB", "FR", "DE", "NL", "BE", "ES", "IT"];
       const countries = mode === "europe" ? europeCountries : [undefined];
 
       const queries = buildQueries(mode, inputData.queryHint).map((q) =>

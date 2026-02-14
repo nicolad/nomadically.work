@@ -327,12 +327,63 @@ try {
 }
 ```
 
+## Deployment
+
+### Deploy to Cloudflare Workers
+
+Deploy the Promptfoo evaluation service as a Cloudflare Worker with HTTP API endpoints:
+
+```bash
+# Quick deploy
+./src/promptfoo/deploy.sh
+
+# Or manually
+npx wrangler deploy --config wrangler.promptfoo.toml
+```
+
+**API Endpoints:**
+
+- `POST /eval` - Run an evaluation
+- `GET /models` - List available models
+- `GET /health` - Health check
+
+**Example Usage:**
+
+```bash
+# Health check
+curl https://your-worker.workers.dev/health
+
+# Run evaluation
+curl -X POST https://your-worker.workers.dev/eval \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What is edge computing?",
+    "provider": {
+      "type": "workers-ai",
+      "model": "@cf/meta/llama-3.1-8b-instruct"
+    }
+  }'
+```
+
+**Client Example:**
+
+```bash
+# Set your worker URL
+export PROMPTFOO_WORKER_URL=https://your-worker.workers.dev
+
+# Run example client
+npx tsx src/promptfoo/examples/client.ts
+```
+
+📖 **Full deployment guide:** [DEPLOYMENT.md](./DEPLOYMENT.md)
+
 ## References
 
 - [Cloudflare Workers AI Documentation](https://developers.cloudflare.com/workers-ai/)
 - [Cloudflare AI Gateway Documentation](https://developers.cloudflare.com/ai-gateway/)
 - [OpenAI API Compatibility](https://developers.cloudflare.com/workers-ai/openai-compatibility/)
 - [Promptfoo Documentation](https://www.promptfoo.dev/)
+- [Deployment Guide](./DEPLOYMENT.md)
 
 ## License
 

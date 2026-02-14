@@ -63,7 +63,7 @@ export class CloudflareAIGatewayProvider {
 
     // Resolve account ID
     const accountIdEnvar = config.accountIdEnvar || ENV_VARS.CLOUDFLARE_ACCOUNT_ID;
-    this.accountId = config.accountId || process.env[accountIdEnvar] || "";
+    this.accountId = config.accountId || (typeof process !== 'undefined' ? process.env[accountIdEnvar] : undefined) || "";
     
     if (!this.accountId) {
       throw new Error(ERROR_MESSAGES.NO_ACCOUNT_ID);
@@ -71,7 +71,7 @@ export class CloudflareAIGatewayProvider {
 
     // Resolve gateway ID
     const gatewayIdEnvar = config.gatewayIdEnvar || ENV_VARS.CLOUDFLARE_GATEWAY_ID;
-    this.gatewayId = config.gatewayId || process.env[gatewayIdEnvar] || "";
+    this.gatewayId = config.gatewayId || (typeof process !== 'undefined' ? process.env[gatewayIdEnvar] : undefined) || "";
     
     if (!this.gatewayId) {
       throw new Error(ERROR_MESSAGES.NO_GATEWAY_ID);
@@ -79,12 +79,12 @@ export class CloudflareAIGatewayProvider {
 
     // Resolve gateway auth token (optional)
     const cfAigTokenEnvar = config.cfAigTokenEnvar || ENV_VARS.CF_AIG_TOKEN;
-    this.cfAigToken = config.cfAigToken || process.env[cfAigTokenEnvar];
+    this.cfAigToken = config.cfAigToken || (typeof process !== 'undefined' ? process.env[cfAigTokenEnvar] : undefined);
 
     // Resolve provider API key (optional if using BYOK)
     const defaultApiKeyEnvar = PROVIDER_API_KEY_MAP[config.provider];
     const apiKeyEnvar = config.providerApiKeyEnvar || defaultApiKeyEnvar;
-    this.providerApiKey = config.providerApiKey || (apiKeyEnvar ? process.env[apiKeyEnvar] : undefined);
+    this.providerApiKey = config.providerApiKey || (apiKeyEnvar && typeof process !== 'undefined' ? process.env[apiKeyEnvar] : undefined);
 
     // Validate Azure-specific configuration
     if (config.provider === AI_GATEWAY_PROVIDERS.AZURE_OPENAI) {

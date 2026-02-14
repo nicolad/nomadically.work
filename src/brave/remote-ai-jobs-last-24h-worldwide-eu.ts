@@ -47,7 +47,7 @@ export type WorkflowOutput = z.infer<typeof outputSchema>;
 const extractorAgent = new Agent({
   id: "remote-ai-job-extractor",
   name: "Remote AI Job Extractor",
-  model: "deepseek/deepseek-chat",
+  model: "openrouter/deepseek/deepseek-chat",
   instructions: [
     "Extract AI/ML/LLM/GenAI engineering job postings from web snippets.",
     "",

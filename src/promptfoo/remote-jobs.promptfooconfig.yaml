@@ -22,10 +22,10 @@ prompts:
   - "RUN_MASTRA_PIPELINE"
 
 providers:
-  # Custom JS/TS provider file.
+  # Custom JS/TS provider file - bypasses Mastra workflow engine to avoid stream bugs
   # promptfoo supports loading providers from local files using file://
-  - id: file://./providers/mastra-remote-jobs-provider.ts
-    label: mastra-remote-jobs
+  - id: file://./providers/direct-remote-jobs-provider.ts
+    label: direct-remote-jobs
 
 # Default assertions for all tests
 defaultTest:

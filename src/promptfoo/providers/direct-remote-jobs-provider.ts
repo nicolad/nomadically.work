@@ -9,6 +9,7 @@ import {
   braveLlmContextTool,
 } from "../../brave/brave-search-tools";
 import { createDeepSeekClient } from "../../deepseek/index";
+import { getAnswers } from "../../brave/answers";
 import { z } from "zod";
 import { LangfuseClient } from "@langfuse/client";
 
@@ -247,9 +248,7 @@ async function extractJobs(
   promptMessages: any[],
   vars: Record<string, any>,
 ) {
-  const client = createDeepSeekClient({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-  });
+  const llmProvider = vars.llm_provider || "deepseek"; // "deepseek" or "brave"
 
   const docBlobs = docs
     .map(
@@ -279,18 +278,37 @@ async function extractJobs(
   });
 
   try {
-    const response = await client.chat({
-      model: "deepseek-chat",
-      messages: substitutedMessages,
-      temperature: 0.1,
-      response_format: { type: "json_object" },
-    });
+    let content: string;
 
-    const content = response.choices[0]?.message?.content || "{}";
+    if (llmProvider === "brave") {
+      // Use Brave AI (grounded search-powered AI)
+      console.log(`🔍 Using Brave AI for ${mode} extraction`);
+      const braveResponse = await getAnswers({
+        messages: substitutedMessages as any,
+        model: "brave-search", // Uses grounded search context
+        temperature: 0.1,
+        max_tokens: 8000,
+      });
+      content = braveResponse.choices[0]?.message?.content || "{}";
+    } else {
+      // Use DeepSeek (default)
+      console.log(`🤖 Using DeepSeek for ${mode} extraction`);
+      const client = createDeepSeekClient({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+      });
+      const response = await client.chat({
+        model: "deepseek-chat",
+        messages: substitutedMessages,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      });
+      content = response.choices[0]?.message?.content || "{}";
+    }
+
     const parsed = JSON.parse(content);
     return Array.isArray(parsed?.jobs) ? parsed.jobs : [];
   } catch (error) {
-    console.error("Extract jobs error:", error);
+    console.error(`Extract jobs error (${llmProvider}):`, error);
     return [];
   }
 }
@@ -340,6 +358,7 @@ class DirectRemoteJobsProvider {
         const minConfidence = vars.minConfidence ?? 0.6;
         const maxHoursAgo = vars.max_hours_ago ?? 24;
         const qualityLevel = vars.quality_level ?? "strict";
+        const llmProvider = vars.llm_provider ?? "deepseek"; // "deepseek" or "brave"
 
         // Fetch extraction prompt from Langfuse (chat prompt with variable substitution)
         console.log(
@@ -374,17 +393,20 @@ class DirectRemoteJobsProvider {
           ),
         ]);
 
-        // Extract jobs using Langfuse prompt
+        // Extract jobs using Langfuse prompt + selected LLM provider
+        console.log(`🎯 LLM Provider: ${llmProvider.toUpperCase()}`);
         const [worldwideJobs, europeJobs] = await Promise.all([
           extractJobs(worldwideEnriched, "worldwide", promptMessages, {
             max_hours_ago: maxHoursAgo,
             min_confidence: minConfidence,
             quality_level: qualityLevel,
+            llm_provider: llmProvider,
           }),
           extractJobs(europeEnriched, "europe", promptMessages, {
             max_hours_ago: maxHoursAgo,
             min_confidence: minConfidence,
             quality_level: qualityLevel,
+            llm_provider: llmProvider,
           }),
         ]);
 

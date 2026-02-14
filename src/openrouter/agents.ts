@@ -28,7 +28,7 @@ export function createChatAgent(config: AgentConfig) {
   const model = deepseekModels[modelKey]();
   
   return new Agent({
-    id: config.id,
+    id: config.id || `chat-agent-${Date.now()}`,
     name: config.name,
     instructions: config.instructions,
     model,
@@ -40,7 +40,7 @@ export function createChatAgent(config: AgentConfig) {
  */
 export function createReasoningAgent(config: Omit<AgentConfig, 'model'>) {
   return new Agent({
-    id: config.id,
+    id: config.id || `reasoning-agent-${Date.now()}`,
     name: config.name,
     instructions: config.instructions,
     model: deepseekModels.r1(),
@@ -52,7 +52,7 @@ export function createReasoningAgent(config: Omit<AgentConfig, 'model'>) {
  */
 export function createCodingAgent(config: Omit<AgentConfig, 'model'>) {
   return new Agent({
-    id: config.id,
+    id: config.id || `coding-agent-${Date.now()}`,
     name: config.name,
     instructions: config.instructions,
     model: deepseekModels.coder(),

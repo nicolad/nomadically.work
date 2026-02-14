@@ -4,6 +4,7 @@ import { executeSqlQuery } from "@/tools/libsql-query";
 import { sqlWorkspace } from "@/workspace";
 
 export const sqlAgent = new Agent({
+  id: "sql-agent",
   name: "SQL Agent",
   instructions: `You are a SQL (SQLite/LibSQL) expert for the nomadically.work database. Generate and execute queries that answer user questions about jobs, companies, and related data.
 

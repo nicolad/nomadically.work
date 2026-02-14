@@ -18,8 +18,9 @@ description: "Remote AI jobs pipeline evals (2 buckets, strict remote/region/fre
 #         Score 1.0 only if ALL items satisfy ALL requirements based on evidence fields; otherwise score lower.
 
 prompts:
-  # The provider ignores this prompt body and reads vars from the test case.
-  - "RUN_MASTRA_PIPELINE"
+  # Langfuse-managed prompt (production label)
+  # Update prompts in Langfuse UI without changing this config
+  - "langfuse://remote-ai-jobs-eval@production"
 
 providers:
   # Custom JS/TS provider file - bypasses Mastra workflow engine to avoid stream bugs

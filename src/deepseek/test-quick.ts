@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createDeepSeekClient, DEEPSEEK_MODELS } from './index';
 
 async function test() {
@@ -5,9 +6,7 @@ async function test() {
   
   const client = createDeepSeekClient();
 
-  const response = await client.chatCompletion('What is 2+2? Answer in one word.', {
-    model: DEEPSEEK_MODELS.CHAT,
-  });
+  const response = await client.chatCompletion('What is 2+2? Answer in one word.');
 
   console.log('Q: What is 2+2?');
   console.log('A:', response);

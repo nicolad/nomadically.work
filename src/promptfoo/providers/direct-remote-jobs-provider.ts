@@ -342,13 +342,17 @@ class DirectRemoteJobsProvider {
         const qualityLevel = vars.quality_level ?? "strict";
 
         // Fetch extraction prompt from Langfuse (chat prompt with variable substitution)
-        console.log("📥 Fetching prompt from Langfuse: remote-ai-jobs-extractor@production");
-        const langfusePrompt = await langfuse.prompt.get({
-          name: "remote-ai-jobs-extractor",
-          label: "production",
-        });
+        console.log(
+          "📥 Fetching prompt from Langfuse: remote-ai-jobs-extractor@production",
+        );
+        const langfusePrompt = await langfuse.getPrompt(
+          "remote-ai-jobs-extractor",
+          { label: "production" },
+        );
         const promptMessages = langfusePrompt.prompt as any[];
-        console.log(`✅ Using Langfuse prompt version ${(langfusePrompt as any).version}`);
+        console.log(
+          `✅ Using Langfuse prompt version ${(langfusePrompt as any).version}`,
+        );
 
         // Discover jobs for both modes
         const [worldwideCandidates, europeCandidates] = await Promise.all([

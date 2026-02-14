@@ -54,6 +54,60 @@ function readJson(filePath: string): any {
   return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
+function saveResults(
+  result: any,
+  llmProvider: string,
+  metadata: Record<string, any>,
+) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `brave-llm-results-${llmProvider}-${timestamp}.json`;
+  const resultPath = path.resolve(process.cwd(), "results", filename);
+
+  // Ensure results directory exists
+  const resultsDir = path.dirname(resultPath);
+  if (!fs.existsSync(resultsDir)) {
+    fs.mkdirSync(resultsDir, { recursive: true });
+  }
+
+  const output = {
+    timestamp: new Date().toISOString(),
+    llmProvider,
+    metadata,
+    result,
+  };
+
+  fs.writeFileSync(resultPath, JSON.stringify(output, null, 2), "utf8");
+  console.log(`💾 Saved results to: ${filename}`);
+  return filename;
+}
+
+function loadLatestResults(llmProvider?: string): any {
+  const resultsDir = path.resolve(process.cwd(), "results");
+  if (!fs.existsSync(resultsDir)) {
+    throw new Error("No results directory found. Run live mode first.");
+  }
+
+  const files = fs
+    .readdirSync(resultsDir)
+    .filter((f) => f.startsWith("brave-llm-results-") && f.endsWith(".json"))
+    .filter((f) => !llmProvider || f.includes(`-${llmProvider}-`));
+
+  if (files.length === 0) {
+    throw new Error(
+      `No saved results found${llmProvider ? ` for provider: ${llmProvider}` : ""}`,
+    );
+  }
+
+  // Sort by filename (contains timestamp)
+  files.sort();
+  const latestFile = files[files.length - 1];
+  const filePath = path.resolve(resultsDir, latestFile);
+
+  console.log(`📂 Loading results from: ${latestFile}`);
+  const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  return data.result;
+}
+
 function stableJsonStringify(obj: any): string {
   const seen = new WeakSet<object>();
   const normalize = (v: any): any => {
@@ -350,6 +404,26 @@ class DirectRemoteJobsProvider {
       return { output: stableJsonStringify(result) };
     }
 
+    if (mode === "saved") {
+      try {
+        const llmProvider = vars.llm_provider;
+        const result = loadLatestResults(llmProvider);
+        console.log(
+          `✅ Loaded saved results (${result.worldwide?.length || 0} worldwide, ${result.europe?.length || 0} europe)`,
+        );
+        return { output: stableJsonStringify(result) };
+      } catch (error) {
+        console.error("Error loading saved results:", error);
+        return {
+          output: stableJsonStringify({
+            worldwide: [],
+            europe: [],
+            _error: `Failed to load saved results: ${error instanceof Error ? error.message : String(error)}`,
+          }),
+        };
+      }
+    }
+
     if (mode === "live") {
       try {
         const queryHint = vars.queryHint;
@@ -414,6 +488,21 @@ class DirectRemoteJobsProvider {
         const allJobs = [...worldwideJobs, ...europeJobs];
         const result = filterJobs(allJobs, minConfidence);
 
+        // Save results to JSON file
+        const metadata = {
+          queryHint,
+          maxCandidates,
+          verifyTopN,
+          minConfidence,
+          maxHoursAgo,
+          qualityLevel,
+          promptVersion: (langfusePrompt as any).version,
+          totalJobsExtracted: allJobs.length,
+          worldwideCount: result.worldwide.length,
+          europeCount: result.europe.length,
+        };
+        saveResults(result, llmProvider, metadata);
+
         return { output: stableJsonStringify(result) };
       } catch (error) {
         console.error("Live workflow error:", error);
@@ -431,7 +520,7 @@ class DirectRemoteJobsProvider {
       output: stableJsonStringify({
         worldwide: [],
         europe: [],
-        _error: `Unknown mode '${mode}'. Use 'fixture' or 'live'.`,
+        _error: `Unknown mode '${mode}'. Use 'fixture', 'saved', or 'live'.`,
       }),
     };
   }

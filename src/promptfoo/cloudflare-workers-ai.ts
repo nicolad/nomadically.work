@@ -40,7 +40,7 @@ export class CloudflareWorkersAIProvider {
 
     // Resolve account ID
     const accountIdEnvar = config.accountIdEnvar || ENV_VARS.CLOUDFLARE_ACCOUNT_ID;
-    this.accountId = config.accountId || process.env[accountIdEnvar] || "";
+    this.accountId = config.accountId || (typeof process !== 'undefined' ? process.env[accountIdEnvar] : undefined) || "";
     
     if (!this.accountId) {
       throw new Error(ERROR_MESSAGES.NO_ACCOUNT_ID);
@@ -48,7 +48,7 @@ export class CloudflareWorkersAIProvider {
 
     // Resolve API key
     const apiKeyEnvar = config.apiKeyEnvar || ENV_VARS.CLOUDFLARE_API_KEY;
-    this.apiKey = config.apiKey || process.env[apiKeyEnvar] || "";
+    this.apiKey = config.apiKey || (typeof process !== 'undefined' ? process.env[apiKeyEnvar] : undefined) || "";
     
     if (!this.apiKey) {
       throw new Error(ERROR_MESSAGES.NO_API_KEY);

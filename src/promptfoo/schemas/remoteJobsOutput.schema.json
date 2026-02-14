@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RemoteJobsOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["worldwide", "europe"],
+  "properties": {
+    "worldwide": { "$ref": "#/$defs/jobArray" },
+    "europe": { "$ref": "#/$defs/jobArray" }
+  },
+  "$defs": {
+    "jobArray": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/job" }
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "title",
+        "company",
+        "isFullyRemote",
+        "remoteRegion",
+        "sourceUrl",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "company": { "type": "string", "minLength": 1 },
+        "isFullyRemote": { "type": "boolean" },
+        "remoteRegion": {
+          "type": "string",
+          "enum": ["worldwide", "europe", "unknown"]
+        },
+        "postedHoursAgo": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 168
+        },
+        "postedAtIso": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "applyUrl": { "type": "string" },
+        "locationText": { "type": "string" },
+        "salaryText": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

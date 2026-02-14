@@ -6,8 +6,8 @@ import path from "node:path";
 import {
   braveWebSearchTool,
   braveLlmContextTool,
-} from "../../brave/brave-search-tools.js";
-import { createDeepSeekClient } from "../../deepseek/index.js";
+} from "../../brave/brave-search-tools";
+import { createDeepSeekClient } from "../../deepseek/index";
 import { z } from "zod";
 
 const jobSchema = z.object({

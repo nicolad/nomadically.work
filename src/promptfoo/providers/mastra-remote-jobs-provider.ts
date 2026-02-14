@@ -5,7 +5,7 @@ import path from "node:path";
 import {
   remoteAiJobsFilterOnlyWorkflow,
   remoteAiJobsLast24hWorldwideEuWorkflow,
-} from "../../brave/remote-ai-jobs-last-24h-worldwide-eu.js";
+} from "../../brave/remote-ai-jobs-last-24h-worldwide-eu";
 
 type PromptfooContext = {
   vars: Record<string, any>;

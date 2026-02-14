@@ -1,5 +1,6 @@
 // src/promptfoo/providers/direct-remote-jobs-provider.ts
 // Direct implementation bypassing Mastra workflow engine to avoid stream bugs
+// Uses Langfuse-managed prompts for dynamic updates without code changes
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
@@ -9,6 +10,17 @@ import {
 } from "../../brave/brave-search-tools";
 import { createDeepSeekClient } from "../../deepseek/index";
 import { z } from "zod";
+import { LangfuseClient } from "@langfuse/client";
+
+// Langfuse client for fetching prompts
+const langfuse = new LangfuseClient({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY!,
+  secretKey: process.env.LANGFUSE_SECRET_KEY!,
+  baseUrl:
+    process.env.LANGFUSE_BASE_URL ||
+    process.env.LANGFUSE_HOST ||
+    "https://cloud.langfuse.com",
+});
 
 const jobSchema = z.object({
   title: z.string(),
@@ -229,7 +241,12 @@ async function enrichWithContext(
   return enriched;
 }
 
-async function extractJobs(docs: any[], mode: "worldwide" | "europe") {
+async function extractJobs(
+  docs: any[],
+  mode: "worldwide" | "europe",
+  promptMessages: any[],
+  vars: Record<string, any>,
+) {
   const client = createDeepSeekClient({
     apiKey: process.env.DEEPSEEK_API_KEY,
   });
@@ -241,30 +258,30 @@ async function extractJobs(docs: any[], mode: "worldwide" | "europe") {
     )
     .join("\n\n");
 
-  const systemPrompt = [
-    "Extract AI/ML/LLM/GenAI engineering job postings from web snippets.",
-    "",
-    "INCLUDE only roles in scope: AI Engineer, GenAI Engineer, LLM Engineer, Agentic AI Engineer.",
-    "",
-    "REMOTE RULES: isFullyRemote=true ONLY if explicitly Remote/Fully remote/100% remote/WFH (not hybrid).",
-    "",
-    "REGION RULES:",
-    "- remoteRegion=worldwide ONLY if worldwide/global/anywhere/work-from-anywhere.",
-    "- remoteRegion=europe ONLY if Europe/EU/UK/EMEA or timezone constraints (CET/CEST/UTC±0..3).",
-    "- Otherwise remoteRegion=unknown.",
-    "",
-    "FRESHNESS RULES: Prefer 'X hours ago' -> postedHoursAgo=X.",
-    "",
-    "Return valid JSON matching this schema: { jobs: [{ title, company, isFullyRemote, remoteRegion, sourceUrl, applyUrl?, locationText?, salaryText?, postedHoursAgo?, postedAtIso?, confidence, evidence }] }",
-  ].join("\n");
+  // Substitute variables in prompt messages from Langfuse
+  const substitutedMessages = promptMessages.map((msg: any) => {
+    let content = msg.content;
+    // Replace variables like {{search_results}}, {{max_hours_ago}}, etc.
+    content = content.replace(/\{\{search_results\}\}/g, docBlobs);
+    content = content.replace(
+      /\{\{max_hours_ago\}\}/g,
+      String(vars.max_hours_ago || 24),
+    );
+    content = content.replace(
+      /\{\{min_confidence\}\}/g,
+      String(vars.min_confidence || 0.6),
+    );
+    content = content.replace(
+      /\{\{quality_level\}\}/g,
+      String(vars.quality_level || "strict"),
+    );
+    return { role: msg.role, content };
+  });
 
   try {
     const response = await client.chat({
       model: "deepseek-chat",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: docBlobs },
-      ],
+      messages: substitutedMessages,
       temperature: 0.1,
       response_format: { type: "json_object" },
     });
@@ -321,6 +338,17 @@ class DirectRemoteJobsProvider {
         const maxCandidates = vars.maxCandidatesPerMode ?? 25;
         const verifyTopN = vars.verifyTopNWithContext ?? 8;
         const minConfidence = vars.minConfidence ?? 0.6;
+        const maxHoursAgo = vars.max_hours_ago ?? 24;
+        const qualityLevel = vars.quality_level ?? "strict";
+
+        // Fetch extraction prompt from Langfuse (chat prompt with variable substitution)
+        console.log("📥 Fetching prompt from Langfuse: remote-ai-jobs-extractor@production");
+        const langfusePrompt = await langfuse.prompt.get({
+          name: "remote-ai-jobs-extractor",
+          label: "production",
+        });
+        const promptMessages = langfusePrompt.prompt as any[];
+        console.log(`✅ Using Langfuse prompt version ${(langfusePrompt as any).version}`);
 
         // Discover jobs for both modes
         const [worldwideCandidates, europeCandidates] = await Promise.all([
@@ -342,10 +370,18 @@ class DirectRemoteJobsProvider {
           ),
         ]);
 
-        // Extract jobs
+        // Extract jobs using Langfuse prompt
         const [worldwideJobs, europeJobs] = await Promise.all([
-          extractJobs(worldwideEnriched, "worldwide"),
-          extractJobs(europeEnriched, "europe"),
+          extractJobs(worldwideEnriched, "worldwide", promptMessages, {
+            max_hours_ago: maxHoursAgo,
+            min_confidence: minConfidence,
+            quality_level: qualityLevel,
+          }),
+          extractJobs(europeEnriched, "europe", promptMessages, {
+            max_hours_ago: maxHoursAgo,
+            min_confidence: minConfidence,
+            quality_level: qualityLevel,
+          }),
         ]);
 
         // Filter and split

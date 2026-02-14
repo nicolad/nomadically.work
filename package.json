@@ -18,7 +18,6 @@
     "test:eval:watch": "vitest src/evals",
     "test:openrouter": "tsx src/openrouter/test-integration.ts",
     "eval:promptfoo": "NODE_OPTIONS='--import tsx/esm' npx promptfoo eval -c src/promptfoo/remote-jobs.promptfooconfig.yaml",
-    "eval:promptfoo:setup": "tsx scripts/setup-langfuse-prompts.ts",
     "mastra:init": "pnpm dlx mastra init",
     "mastra:dev": "pnpm dlx mastra dev",
     "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest",

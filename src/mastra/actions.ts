@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { createDeepseek } from "@ai-sdk/deepseek";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
 import { createWorkflow, createStep } from "@/mastra/workflows";
 import { createScorer } from "@mastra/core/evals";
@@ -32,8 +32,8 @@ import { eq } from "drizzle-orm";
  * DeepSeek models via direct DeepSeek SDK with proper base URL.
  * Ensure you have DEEPSEEK_API_KEY set in your environment.
  */
-const deepseek = createDeepseek({
-  baseURL: 'https://api.deepseek.com/v1',
+const deepseek = createDeepSeek({
+  baseURL: "https://api.deepseek.com/v1",
   apiKey: process.env.DEEPSEEK_API_KEY,
 });
 

@@ -7,8 +7,7 @@ import {
   braveWebSearchTool,
   braveLlmContextTool,
 } from "../../brave/brave-search-tools.js";
-import { generateObject } from "ai";
-import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createDeepSeekClient } from "../../deepseek/index.js";
 import { z } from "zod";
 
 const jobSchema = z.object({
@@ -227,7 +226,7 @@ async function enrichWithContext(
 }
 
 async function extractJobs(docs: any[], mode: "worldwide" | "europe") {
-  const deepseek = createDeepSeek({
+  const client = createDeepSeekClient({
     apiKey: process.env.DEEPSEEK_API_KEY,
   });
 
@@ -238,7 +237,7 @@ async function extractJobs(docs: any[], mode: "worldwide" | "europe") {
     )
     .join("\n\n");
 
-  const prompt = [
+  const systemPrompt = [
     "Extract AI/ML/LLM/GenAI engineering job postings from web snippets.",
     "",
     "INCLUDE only roles in scope: AI Engineer, GenAI Engineer, LLM Engineer, Agentic AI Engineer.",
@@ -252,20 +251,23 @@ async function extractJobs(docs: any[], mode: "worldwide" | "europe") {
     "",
     "FRESHNESS RULES: Prefer 'X hours ago' -> postedHoursAgo=X.",
     "",
-    "Return JSON only.",
-    "",
-    docBlobs,
+    "Return valid JSON matching this schema: { jobs: [{ title, company, isFullyRemote, remoteRegion, sourceUrl, applyUrl?, locationText?, salaryText?, postedHoursAgo?, postedAtIso?, confidence, evidence }] }",
   ].join("\n");
 
   try {
-    const { object } = await generateObject({
-      model: deepseek("deepseek-chat"),
-      schema: extractedSchema,
-      prompt,
+    const response = await client.chat({
+      model: "deepseek-chat",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: docBlobs },
+      ],
       temperature: 0.1,
+      response_format: { type: "json_object" },
     });
 
-    return Array.isArray(object?.jobs) ? object.jobs : [];
+    const content = response.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed?.jobs) ? parsed.jobs : [];
   } catch (error) {
     console.error("Extract jobs error:", error);
     return [];

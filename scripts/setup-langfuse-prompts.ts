@@ -147,7 +147,7 @@ async function setupPrompts() {
             "<0.6: Reject (insufficient evidence or hybrid/unclear)",
             "",
             "OUTPUT SCHEMA:",
-            "{\n  \"worldwide\": [{ title, company, url, region, posted_date, confidence, evidence }],\n  \"europe\": [{ ... }]\n}",
+            '{\n  "worldwide": [{ title, company, url, region, posted_date, confidence, evidence }],\n  "europe": [{ ... }]\n}',
           ].join("\n"),
         },
         {

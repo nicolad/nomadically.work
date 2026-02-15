@@ -27,7 +27,63 @@
       "idx": 3,
       "version": "6",
       "when": 1771157079409,
-      "tag": "0003_third_tony_stark",
+      "tag": "0003_add_remote_eu_classification",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1771157079410,
+      "tag": "0004_add_companies_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1771157079411,
+      "tag": "0005_add_user_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1771157079412,
+      "tag": "0006_add_evidence_bundles",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1771157079413,
+      "tag": "0007_add_company_golden_record_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1771157079414,
+      "tag": "0008_add_company_evidence_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1771157079415,
+      "tag": "0009_add_ats_data_to_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1771157079416,
+      "tag": "0010_add_greenhouse_enhanced_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1771170569000,
+      "tag": "0011_add_lever_fields",
       "breakpoints": true
     }
   ]

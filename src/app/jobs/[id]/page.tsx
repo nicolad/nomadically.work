@@ -1187,10 +1187,279 @@ function JobPageContent() {
               </Card>
             )}
 
-          {/* Fallback to DB description if no Ashby data and not Greenhouse */}
+          {/* Lever Enhanced Data */}
+          {job.source_kind === "lever" &&
+            (job.categories ||
+              job.workplace_type ||
+              job.country ||
+              job.lists) && (
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Heading size="6" mb="2">
+                    🎯 Enhanced Job Data (Lever API)
+                  </Heading>
+
+                  {/* Basic Information */}
+                  <Box>
+                    <Heading size="4" mb="2">
+                      Basic Information
+                    </Heading>
+                    <Box
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "12px 24px",
+                      }}
+                    >
+                      {job.title && (
+                        <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                          <Text weight="bold" as="span">
+                            Title:
+                          </Text>{" "}
+                          {job.title}
+                        </Text>
+                      )}
+                      {job.workplace_type && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Workplace Type:
+                          </Text>{" "}
+                          <Badge
+                            color={
+                              job.workplace_type === "remote"
+                                ? "green"
+                                : job.workplace_type === "hybrid"
+                                  ? "blue"
+                                  : "gray"
+                            }
+                          >
+                            {job.workplace_type.toUpperCase()}
+                          </Badge>
+                        </Text>
+                      )}
+                      {job.country && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Country:
+                          </Text>{" "}
+                          {job.country}
+                        </Text>
+                      )}
+                      {job.ats_created_at && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Created in ATS:
+                          </Text>{" "}
+                          {new Date(job.ats_created_at).toLocaleString()}
+                        </Text>
+                      )}
+                      {job.updated_at && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Last Updated:
+                          </Text>{" "}
+                          {new Date(job.updated_at).toLocaleString()}
+                        </Text>
+                      )}
+                      {job.external_id && (
+                        <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                          <Text weight="bold" as="span">
+                            Job URL:
+                          </Text>{" "}
+                          <a
+                            href={job.external_id}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "var(--accent-11)" }}
+                          >
+                            {job.external_id}
+                          </a>
+                        </Text>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Categories */}
+                  {job.categories && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Categories
+                      </Heading>
+                      <Box
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "12px 24px",
+                        }}
+                      >
+                        {job.categories.commitment && (
+                          <Text size="2">
+                            <Text weight="bold" as="span">
+                              Commitment:
+                            </Text>{" "}
+                            {job.categories.commitment}
+                          </Text>
+                        )}
+                        {job.categories.department && (
+                          <Text size="2">
+                            <Text weight="bold" as="span">
+                              Department:
+                            </Text>{" "}
+                            {job.categories.department}
+                          </Text>
+                        )}
+                        {job.categories.team && (
+                          <Text size="2">
+                            <Text weight="bold" as="span">
+                              Team:
+                            </Text>{" "}
+                            {job.categories.team}
+                          </Text>
+                        )}
+                        {job.categories.location && (
+                          <Text size="2">
+                            <Text weight="bold" as="span">
+                              Location:
+                            </Text>{" "}
+                            {job.categories.location}
+                          </Text>
+                        )}
+                        {job.categories.allLocations &&
+                          job.categories.allLocations.length > 0 && (
+                            <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                              <Text weight="bold" as="span">
+                                All Locations:
+                              </Text>{" "}
+                              {job.categories.allLocations.join(", ")}
+                            </Text>
+                          )}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Job Description Sections */}
+                  {(job.opening ||
+                    job.description_body ||
+                    job.additional) && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Job Description
+                      </Heading>
+                      <Flex direction="column" gap="3">
+                        {job.opening && (
+                          <Box>
+                            <Text size="2" weight="bold" mb="1">
+                              Opening
+                            </Text>
+                            <Box
+                              p="3"
+                              style={{
+                                backgroundColor: "var(--gray-2)",
+                                borderRadius: "var(--radius-3)",
+                              }}
+                            >
+                              <Text
+                                size="2"
+                                as="div"
+                                dangerouslySetInnerHTML={{
+                                  __html: job.opening,
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        )}
+                        {job.description_body && (
+                          <Box>
+                            <Text size="2" weight="bold" mb="1">
+                              Description
+                            </Text>
+                            <Box
+                              p="3"
+                              style={{
+                                backgroundColor: "var(--gray-2)",
+                                borderRadius: "var(--radius-3)",
+                              }}
+                            >
+                              <Text
+                                size="2"
+                                as="div"
+                                dangerouslySetInnerHTML={{
+                                  __html: job.description_body,
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        )}
+                        {job.additional && (
+                          <Box>
+                            <Text size="2" weight="bold" mb="1">
+                              Additional Information
+                            </Text>
+                            <Box
+                              p="3"
+                              style={{
+                                backgroundColor: "var(--gray-2)",
+                                borderRadius: "var(--radius-3)",
+                              }}
+                            >
+                              <Text
+                                size="2"
+                                as="div"
+                                dangerouslySetInnerHTML={{
+                                  __html: job.additional,
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        )}
+                      </Flex>
+                    </Box>
+                  )}
+
+                  {/* Requirements/Lists */}
+                  {job.lists && job.lists.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Requirements & Details
+                      </Heading>
+                      <Flex direction="column" gap="3">
+                        {job.lists.map((list: any, idx: number) => (
+                          <Box
+                            key={idx}
+                            p="3"
+                            style={{
+                              backgroundColor: "var(--blue-2)",
+                              borderRadius: "var(--radius-3)",
+                              border: "1px solid var(--blue-6)",
+                            }}
+                          >
+                            {list.text && (
+                              <Text size="3" weight="bold" mb="2">
+                                {list.text}
+                              </Text>
+                            )}
+                            {list.content && (
+                              <Box
+                                as="div"
+                                dangerouslySetInnerHTML={{
+                                  __html: `<ul style="margin: 0; padding-left: 20px;">${list.content}</ul>`,
+                                }}
+                              />
+                            )}
+                          </Box>
+                        ))}
+                      </Flex>
+                    </Box>
+                  )}
+                </Flex>
+              </Card>
+            )}
+
+          {/* Fallback to DB description if no Ashby data and not Greenhouse/Lever */}
           {!ashbyData &&
             job.description &&
-            job.source_kind !== "greenhouse" && (
+            job.source_kind !== "greenhouse" &&
+            job.source_kind !== "lever" && (
               <Card>
                 <Heading size="5" mb="3">
                   Description

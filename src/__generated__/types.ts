@@ -258,6 +258,14 @@ export type EnhanceCompanyResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceJobResponse = {
+  __typename: 'EnhanceJobResponse';
+  enhancedData: Maybe<Scalars['JSON']['output']>;
+  job: Maybe<Job>;
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type Evidence = {
   __typename: 'Evidence';
   capture_timestamp: Maybe<Scalars['String']['output']>;
@@ -375,6 +383,7 @@ export type Mutation = {
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
+  enhanceJobFromATS: EnhanceJobResponse;
   ingest_company_snapshot: CompanySnapshot;
   pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
@@ -430,6 +439,13 @@ export type MutationDeleteLangSmithPromptArgs = {
 export type MutationEnhanceCompanyArgs = {
   id?: InputMaybe<Scalars['Int']['input']>;
   key?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationEnhanceJobFromAtsArgs = {
+  company: Scalars['String']['input'];
+  jobId: Scalars['String']['input'];
+  source: Scalars['String']['input'];
 };
 
 

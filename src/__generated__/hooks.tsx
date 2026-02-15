@@ -261,6 +261,14 @@ export type EnhanceCompanyResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceJobResponse = {
+  __typename?: 'EnhanceJobResponse';
+  enhancedData: Maybe<Scalars['JSON']['output']>;
+  job: Maybe<Job>;
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type Evidence = {
   __typename?: 'Evidence';
   capture_timestamp: Maybe<Scalars['String']['output']>;
@@ -378,6 +386,7 @@ export type Mutation = {
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
+  enhanceJobFromATS: EnhanceJobResponse;
   ingest_company_snapshot: CompanySnapshot;
   pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
@@ -433,6 +442,13 @@ export type MutationDeleteLangSmithPromptArgs = {
 export type MutationEnhanceCompanyArgs = {
   id?: InputMaybe<Scalars['Int']['input']>;
   key?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationEnhanceJobFromAtsArgs = {
+  company: Scalars['String']['input'];
+  jobId: Scalars['String']['input'];
+  source: Scalars['String']['input'];
 };
 
 
@@ -959,6 +975,31 @@ export type CompanyAuditQueryVariables = Exact<{
 
 
 export type CompanyAuditQuery = { __typename?: 'Query', company: { __typename?: 'Company', facts_count: number, snapshots_count: number, id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, facts: Array<{ __typename?: 'CompanyFact', id: number, company_id: number, field: string, value_json: any | null, value_text: string | null, normalized_value: any | null, confidence: number, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, snapshots: Array<{ __typename?: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id: string | null, capture_timestamp: string | null, fetched_at: string, http_status: number | null, mime: string | null, content_hash: string | null, text_sample: string | null, jsonld: any | null, extracted: any | null, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null };
+
+export type GetGreenhouseJobsQueryVariables = Exact<{
+  search?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetGreenhouseJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null }> } };
+
+export type GetGreenhouseJobByIdQueryVariables = Exact<{
+  id: Scalars['String']['input'];
+}>;
+
+
+export type GetGreenhouseJobByIdQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null } | null };
+
+export type EnhanceJobFromGreenhouseAtsMutationVariables = Exact<{
+  jobId: Scalars['String']['input'];
+  company: Scalars['String']['input'];
+  source: Scalars['String']['input'];
+}>;
+
+
+export type EnhanceJobFromGreenhouseAtsMutation = { __typename?: 'Mutation', enhanceJobFromATS: { __typename?: 'EnhanceJobResponse', success: boolean, message: string | null, enhancedData: any | null, job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null } | null } };
 
 export type GetLangSmithPromptsQueryVariables = Exact<{
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2152,6 +2193,218 @@ export type CompanyAuditQueryHookResult = ReturnType<typeof useCompanyAuditQuery
 export type CompanyAuditLazyQueryHookResult = ReturnType<typeof useCompanyAuditLazyQuery>;
 export type CompanyAuditSuspenseQueryHookResult = ReturnType<typeof useCompanyAuditSuspenseQuery>;
 export type CompanyAuditQueryResult = Apollo.QueryResult<CompanyAuditQuery, CompanyAuditQueryVariables>;
+export const GetGreenhouseJobsDocument = gql`
+    query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
+  jobs(sourceType: "greenhouse", search: $search, limit: $limit, offset: $offset) {
+    jobs {
+      id
+      external_id
+      source_id
+      source_kind
+      company_id
+      company_key
+      company {
+        ...CompanyFields
+      }
+      title
+      location
+      url
+      description
+      posted_at
+      score
+      score_reason
+      status
+      is_remote_eu
+      remote_eu_confidence
+      remote_eu_reason
+      skills {
+        tag
+        level
+        confidence
+        evidence
+      }
+      created_at
+      updated_at
+    }
+    totalCount
+  }
+}
+    ${CompanyFieldsFragmentDoc}`;
+
+/**
+ * __useGetGreenhouseJobsQuery__
+ *
+ * To run a query within a React component, call `useGetGreenhouseJobsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetGreenhouseJobsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetGreenhouseJobsQuery({
+ *   variables: {
+ *      search: // value for 'search'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
+ *   },
+ * });
+ */
+export function useGetGreenhouseJobsQuery(baseOptions?: Apollo.QueryHookOptions<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>(GetGreenhouseJobsDocument, options);
+      }
+export function useGetGreenhouseJobsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>(GetGreenhouseJobsDocument, options);
+        }
+// @ts-ignore
+export function useGetGreenhouseJobsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>): Apollo.UseSuspenseQueryResult<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>;
+export function useGetGreenhouseJobsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>): Apollo.UseSuspenseQueryResult<GetGreenhouseJobsQuery | undefined, GetGreenhouseJobsQueryVariables>;
+export function useGetGreenhouseJobsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>(GetGreenhouseJobsDocument, options);
+        }
+export type GetGreenhouseJobsQueryHookResult = ReturnType<typeof useGetGreenhouseJobsQuery>;
+export type GetGreenhouseJobsLazyQueryHookResult = ReturnType<typeof useGetGreenhouseJobsLazyQuery>;
+export type GetGreenhouseJobsSuspenseQueryHookResult = ReturnType<typeof useGetGreenhouseJobsSuspenseQuery>;
+export type GetGreenhouseJobsQueryResult = Apollo.QueryResult<GetGreenhouseJobsQuery, GetGreenhouseJobsQueryVariables>;
+export const GetGreenhouseJobByIdDocument = gql`
+    query GetGreenhouseJobById($id: String!) {
+  job(id: $id) {
+    id
+    external_id
+    source_id
+    source_kind
+    company_id
+    company_key
+    company {
+      ...CompanyFields
+    }
+    title
+    location
+    url
+    description
+    posted_at
+    score
+    score_reason
+    status
+    is_remote_eu
+    remote_eu_confidence
+    remote_eu_reason
+    skills {
+      tag
+      level
+      confidence
+      evidence
+    }
+    created_at
+    updated_at
+  }
+}
+    ${CompanyFieldsFragmentDoc}`;
+
+/**
+ * __useGetGreenhouseJobByIdQuery__
+ *
+ * To run a query within a React component, call `useGetGreenhouseJobByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetGreenhouseJobByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetGreenhouseJobByIdQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetGreenhouseJobByIdQuery(baseOptions: Apollo.QueryHookOptions<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables> & ({ variables: GetGreenhouseJobByIdQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>(GetGreenhouseJobByIdDocument, options);
+      }
+export function useGetGreenhouseJobByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>(GetGreenhouseJobByIdDocument, options);
+        }
+// @ts-ignore
+export function useGetGreenhouseJobByIdSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>): Apollo.UseSuspenseQueryResult<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>;
+export function useGetGreenhouseJobByIdSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>): Apollo.UseSuspenseQueryResult<GetGreenhouseJobByIdQuery | undefined, GetGreenhouseJobByIdQueryVariables>;
+export function useGetGreenhouseJobByIdSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>(GetGreenhouseJobByIdDocument, options);
+        }
+export type GetGreenhouseJobByIdQueryHookResult = ReturnType<typeof useGetGreenhouseJobByIdQuery>;
+export type GetGreenhouseJobByIdLazyQueryHookResult = ReturnType<typeof useGetGreenhouseJobByIdLazyQuery>;
+export type GetGreenhouseJobByIdSuspenseQueryHookResult = ReturnType<typeof useGetGreenhouseJobByIdSuspenseQuery>;
+export type GetGreenhouseJobByIdQueryResult = Apollo.QueryResult<GetGreenhouseJobByIdQuery, GetGreenhouseJobByIdQueryVariables>;
+export const EnhanceJobFromGreenhouseAtsDocument = gql`
+    mutation EnhanceJobFromGreenhouseATS($jobId: String!, $company: String!, $source: String!) {
+  enhanceJobFromATS(jobId: $jobId, company: $company, source: $source) {
+    success
+    message
+    job {
+      id
+      external_id
+      source_id
+      source_kind
+      company_id
+      company_key
+      company {
+        ...CompanyFields
+      }
+      title
+      location
+      url
+      description
+      posted_at
+      score
+      score_reason
+      status
+      is_remote_eu
+      remote_eu_confidence
+      remote_eu_reason
+      skills {
+        tag
+        level
+        confidence
+        evidence
+      }
+      created_at
+      updated_at
+    }
+    enhancedData
+  }
+}
+    ${CompanyFieldsFragmentDoc}`;
+export type EnhanceJobFromGreenhouseAtsMutationFn = Apollo.MutationFunction<EnhanceJobFromGreenhouseAtsMutation, EnhanceJobFromGreenhouseAtsMutationVariables>;
+
+/**
+ * __useEnhanceJobFromGreenhouseAtsMutation__
+ *
+ * To run a mutation, you first call `useEnhanceJobFromGreenhouseAtsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useEnhanceJobFromGreenhouseAtsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [enhanceJobFromGreenhouseAtsMutation, { data, loading, error }] = useEnhanceJobFromGreenhouseAtsMutation({
+ *   variables: {
+ *      jobId: // value for 'jobId'
+ *      company: // value for 'company'
+ *      source: // value for 'source'
+ *   },
+ * });
+ */
+export function useEnhanceJobFromGreenhouseAtsMutation(baseOptions?: Apollo.MutationHookOptions<EnhanceJobFromGreenhouseAtsMutation, EnhanceJobFromGreenhouseAtsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<EnhanceJobFromGreenhouseAtsMutation, EnhanceJobFromGreenhouseAtsMutationVariables>(EnhanceJobFromGreenhouseAtsDocument, options);
+      }
+export type EnhanceJobFromGreenhouseAtsMutationHookResult = ReturnType<typeof useEnhanceJobFromGreenhouseAtsMutation>;
+export type EnhanceJobFromGreenhouseAtsMutationResult = Apollo.MutationResult<EnhanceJobFromGreenhouseAtsMutation>;
+export type EnhanceJobFromGreenhouseAtsMutationOptions = Apollo.BaseMutationOptions<EnhanceJobFromGreenhouseAtsMutation, EnhanceJobFromGreenhouseAtsMutationVariables>;
 export const GetLangSmithPromptsDocument = gql`
     query GetLangSmithPrompts($isPublic: Boolean, $isArchived: Boolean, $query: String) {
   langsmithPrompts(isPublic: $isPublic, isArchived: $isArchived, query: $query) {

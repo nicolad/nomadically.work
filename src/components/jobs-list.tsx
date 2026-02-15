@@ -102,22 +102,9 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
     },
-    pollInterval: 60000, // Refresh every minute
     notifyOnNetworkStatusChange: true,
+    fetchPolicy: "cache-and-network",
   });
-
-  // Refetch when search filter changes
-  useEffect(() => {
-    if (refetch) {
-      refetch({
-        search: searchFilter || undefined,
-        limit: 20,
-        offset: 0,
-        excludedCompanies:
-          excludedCompanies.length > 0 ? excludedCompanies : undefined,
-      });
-    }
-  }, [searchFilter, excludedCompanies, refetch]);
 
   const jobs = data?.jobs.jobs || [];
   const totalCount = data?.jobs.totalCount || 0;
@@ -131,23 +118,12 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       await fetchMore({
         variables: {
           offset: jobs.length,
-          excludedCompanies:
-            excludedCompanies.length > 0 ? excludedCompanies : undefined,
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult) return prev;
-          return {
-            jobs: {
-              ...fetchMoreResult.jobs,
-              jobs: [...prev.jobs.jobs, ...fetchMoreResult.jobs.jobs],
-            },
-          };
         },
       });
     } catch (err) {
       console.error("Error loading more jobs:", err);
     }
-  }, [hasMore, loading, jobs.length, fetchMore, excludedCompanies]);
+  }, [hasMore, loading, jobs.length, fetchMore]);
 
   // Ref callback for infinite scroll
   const loadMoreRefCallback = useCallback(
@@ -312,28 +288,34 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
         })}
       </Flex>
 
-      {/* Infinite scroll trigger */}
-      <Box ref={loadMoreRefCallback} py="6">
-        {loading && (
-          <Flex justify="center" align="center">
-            <Spinner size="3" />
-          </Flex>
-        )}
-        {!loading && hasMore && (
+      {/* Infinite scroll trigger - only render when there's more to load */}
+      {hasMore && (
+        <Box ref={loadMoreRefCallback} py="6">
+          {loading && (
+            <Flex justify="center" align="center">
+              <Spinner size="3" />
+            </Flex>
+          )}
+          {!loading && (
+            <Flex justify="center">
+              <Text size="2" color="gray">
+                Scroll for more...
+              </Text>
+            </Flex>
+          )}
+        </Box>
+      )}
+
+      {/* End of list message */}
+      {!hasMore && jobs.length > 0 && (
+        <Box py="6">
           <Flex justify="center">
             <Text size="2" color="gray">
-              Scroll for more...
+              No more jobs to load ({jobs.length} of {totalCount})
             </Text>
           </Flex>
-        )}
-        {!loading && !hasMore && jobs.length > 0 && (
-          <Flex justify="center">
-            <Text size="2" color="gray">
-              No more jobs to load
-            </Text>
-          </Flex>
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 }

@@ -73,6 +73,20 @@ export const jobs = sqliteTable("jobs", {
     enum: ["high", "medium", "low"],
   }),
   remote_eu_reason: text("remote_eu_reason"),
+
+  // Enhanced ATS data (JSON fields)
+  ats_data: text("ats_data"), // Full JSON response from ATS API
+
+  // ATS-specific fields (primarily Greenhouse)
+  internal_job_id: integer("internal_job_id"),
+  requisition_id: text("requisition_id"),
+  departments: text("departments"), // JSON array
+  offices: text("offices"), // JSON array
+  questions: text("questions"), // JSON array
+  location_questions: text("location_questions"), // JSON array
+  compliance: text("compliance"), // JSON array
+  demographic_questions: text("demographic_questions"), // JSON object
+
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

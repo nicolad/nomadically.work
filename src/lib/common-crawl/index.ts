@@ -9,6 +9,8 @@
  * - Building golden records from crawl data
  */
 
+import { ASHBY_JOBS_DOMAIN } from "../../constants/ats";
+
 // ============================================================================
 // CCX Tools - Common Crawl data access
 // ============================================================================
@@ -90,7 +92,7 @@ export async function queryAshbyJobBoardURLs(
   // - Only HTML content (mime:text/html)
   // - Only successful responses (status:200)
   const url = new URL(`https://index.commoncrawl.org/${indexToUse}-index`);
-  url.searchParams.set("url", "jobs.ashbyhq.com/*");
+  url.searchParams.set("url", `${ASHBY_JOBS_DOMAIN}/*`);
   url.searchParams.set("output", "json");
   url.searchParams.set("filter", "mime:text/html");
   url.searchParams.set("filter", "status:200");

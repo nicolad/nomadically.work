@@ -19,6 +19,11 @@ extend type Mutation {
     settings: UserSettingsInput!
   ): UserSettings!
   deleteJob(id: Int!): DeleteJobResponse!
+  enhanceJobFromATS(
+    jobId: String!
+    company: String!
+    source: String!
+  ): EnhanceJobResponse!
 }
 
 type JobSkill {
@@ -94,4 +99,11 @@ type TextToSqlResult {
 type DeleteJobResponse {
   success: Boolean!
   message: String
+}
+
+type EnhanceJobResponse {
+  success: Boolean!
+  message: String
+  job: Job
+  enhancedData: JSON
 }

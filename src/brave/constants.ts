@@ -1,6 +1,6 @@
 /**
  * Brave API Constants
- * 
+ *
  * Centralized constants for Brave Search API integration
  */
 
@@ -27,18 +27,6 @@ export const BRAVE_API_ENDPOINTS = {
 // ============================================================================
 
 /**
- * Applicant Tracking System (ATS) sites to search
- */
-export const ATS_SITES = [
-  "site:boards.greenhouse.io",
-  "site:jobs.lever.co",
-  "site:ashbyhq.com",
-  "site:myworkdayjobs.com",
-  "site:apply.workable.com",
-  "site:breezy.hr",
-];
-
-/**
  * Default job search queries for remote AI/GenAI consulting roles
  */
 export const DEFAULT_JOB_QUERIES: string[] = [
@@ -49,6 +37,9 @@ export const DEFAULT_JOB_QUERIES: string[] = [
   'remote "AI delivery manager" consultancy OR agency LLM OR GenAI (last 7 days)',
   'fully remote "AI specialist" consulting OR agency "client projects" EU (last 7 days)',
 ];
+
+// ============================================================================
+import { ASHBY_JOBS_DOMAIN } from "../constants/ats";
 
 // ============================================================================
 // SEARCH PAGINATION DEFAULTS
@@ -65,7 +56,7 @@ export const SEARCH_DEFAULTS = {
   MAX_RESULTS: 100,
 
   /** Default site for Ashby job searches */
-  ASHBY_SITE: "jobs.ashbyhq.com",
+  ASHBY_SITE: ASHBY_JOBS_DOMAIN,
 } as const;
 
 // ============================================================================
@@ -209,9 +200,11 @@ export const LOCATION_HEADERS = {
 // ============================================================================
 
 export const ERROR_MESSAGES = {
-  NO_API_KEY: "Brave API key is required. Set BRAVE_API_KEY environment variable or pass it as a parameter.",
+  NO_API_KEY:
+    "Brave API key is required. Set BRAVE_API_KEY environment variable or pass it as a parameter.",
   NO_RESPONSE_BODY: "No response body",
-  SEARCH_CLIENT_NO_API_KEY: "BRAVE_SEARCH_API_KEY or BRAVE_API_KEY is required. Set it in environment variables.",
+  SEARCH_CLIENT_NO_API_KEY:
+    "BRAVE_SEARCH_API_KEY or BRAVE_API_KEY is required. Set it in environment variables.",
 } as const;
 
 // ============================================================================

@@ -261,6 +261,14 @@ export type EnhanceCompanyResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceJobResponse = {
+  __typename?: 'EnhanceJobResponse';
+  enhancedData: Maybe<Scalars['JSON']['output']>;
+  job: Maybe<Job>;
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type Evidence = {
   __typename?: 'Evidence';
   capture_timestamp: Maybe<Scalars['String']['output']>;
@@ -378,6 +386,7 @@ export type Mutation = {
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
+  enhanceJobFromATS: EnhanceJobResponse;
   ingest_company_snapshot: CompanySnapshot;
   pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
@@ -433,6 +442,13 @@ export type MutationDeleteLangSmithPromptArgs = {
 export type MutationEnhanceCompanyArgs = {
   id?: InputMaybe<Scalars['Int']['input']>;
   key?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationEnhanceJobFromAtsArgs = {
+  company: Scalars['String']['input'];
+  jobId: Scalars['String']['input'];
+  source: Scalars['String']['input'];
 };
 
 
@@ -866,6 +882,7 @@ export type ResolversTypes = {
   DeleteJobResponse: ResolverTypeWrapper<Partial<DeleteJobResponse>>;
   EmailAddress: ResolverTypeWrapper<Partial<Scalars['EmailAddress']['output']>>;
   EnhanceCompanyResponse: ResolverTypeWrapper<Partial<EnhanceCompanyResponse>>;
+  EnhanceJobResponse: ResolverTypeWrapper<Partial<EnhanceJobResponse>>;
   Evidence: ResolverTypeWrapper<Partial<Evidence>>;
   EvidenceInput: ResolverTypeWrapper<Partial<EvidenceInput>>;
   ExtractMethod: ResolverTypeWrapper<Partial<ExtractMethod>>;
@@ -924,6 +941,7 @@ export type ResolversParentTypes = {
   DeleteJobResponse: Partial<DeleteJobResponse>;
   EmailAddress: Partial<Scalars['EmailAddress']['output']>;
   EnhanceCompanyResponse: Partial<EnhanceCompanyResponse>;
+  EnhanceJobResponse: Partial<EnhanceJobResponse>;
   Evidence: Partial<Evidence>;
   EvidenceInput: Partial<EvidenceInput>;
   Float: Partial<Scalars['Float']['output']>;
@@ -1072,6 +1090,13 @@ export type EnhanceCompanyResponseResolvers<ContextType = GraphQLContext, Parent
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
 };
 
+export type EnhanceJobResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EnhanceJobResponse'] = ResolversParentTypes['EnhanceJobResponse']> = {
+  enhancedData?: Resolver<Maybe<ResolversTypes['JSON']>, ParentType, ContextType>;
+  job?: Resolver<Maybe<ResolversTypes['Job']>, ParentType, ContextType>;
+  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+};
+
 export type EvidenceResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Evidence'] = ResolversParentTypes['Evidence']> = {
   capture_timestamp?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   content_hash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1165,6 +1190,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteJob?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType, RequireFields<MutationDeleteJobArgs, 'id'>>;
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
+  enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
   updateCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationUpdateCompanyArgs, 'id' | 'input'>>;
@@ -1295,6 +1321,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   DeleteJobResponse?: DeleteJobResponseResolvers<ContextType>;
   EmailAddress?: GraphQLScalarType;
   EnhanceCompanyResponse?: EnhanceCompanyResponseResolvers<ContextType>;
+  EnhanceJobResponse?: EnhanceJobResponseResolvers<ContextType>;
   Evidence?: EvidenceResolvers<ContextType>;
   JSON?: GraphQLScalarType;
   Job?: JobResolvers<ContextType>;

@@ -63,3 +63,5 @@ workspace/*
 src/workspace/skills/*
 !src/workspace/skills/*.md
 results/*.json
+
+.trigger

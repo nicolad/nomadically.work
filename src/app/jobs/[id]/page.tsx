@@ -1,11 +1,14 @@
 "use client";
 
+import { ASHBY_API_DOMAIN } from "@/constants/ats";
+
 import { useState, useEffect } from "react";
 import {
   useGetJobQuery,
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
   useDeleteJobMutation,
+  useEnhanceJobFromGreenhouseAtsMutation,
 } from "@/__generated__/hooks";
 import { orderBy } from "lodash";
 import {
@@ -108,6 +111,8 @@ function JobPageContent() {
   const [ashbyData, setAshbyData] = useState<AshbyJobPosting | null>(null);
   const [ashbyLoading, setAshbyLoading] = useState(false);
   const [hideCompanyLoading, setHideCompanyLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhancementData, setEnhancementData] = useState<any>(null);
 
   const { data, loading, error, refetch } = useGetJobQuery({
     variables: { id },
@@ -121,6 +126,7 @@ function JobPageContent() {
 
   const [updateSettings] = useUpdateUserSettingsMutation();
   const [deleteJobMutation] = useDeleteJobMutation();
+  const [enhanceJobMutation] = useEnhanceJobFromGreenhouseAtsMutation();
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -146,7 +152,7 @@ function JobPageContent() {
         setAshbyLoading(true);
         try {
           const response = await fetch(
-            `https://api.ashbyhq.com/posting-api/job-board/${company}?includeCompensation=true`,
+            `https://${ASHBY_API_DOMAIN}/posting-api/job-board/${company}?includeCompensation=true`,
             {
               method: "GET",
               headers: {
@@ -277,14 +283,43 @@ function JobPageContent() {
     }
   };
 
+  const handleEnhance = async () => {
+    if (!source || !company || !id) {
+      return;
+    }
+
+    setEnhancing(true);
+    try {
+      // Use GraphQL mutation to enhance the job
+      const result = await enhanceJobMutation({
+        variables: {
+          jobId: id,
+          company: company,
+          source: source,
+        },
+      });
+
+      if (result.data?.enhanceJobFromATS?.success) {
+        setEnhancementData(result.data.enhanceJobFromATS.enhancedData);
+        // Refetch the job to get updated data
+        await refetch();
+      } else {
+        const errorMsg =
+          result.data?.enhanceJobFromATS?.message || "Failed to enhance job";
+      }
+    } catch (error) {
+      console.error("Error enhancing job:", error);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const handleHideCompany = async () => {
     if (!user?.id) {
-      alert("You must be signed in to hide companies");
       return;
     }
 
     if (!job.company_key) {
-      alert("No company information available");
       return;
     }
 
@@ -293,7 +328,6 @@ function JobPageContent() {
       userSettingsData?.userSettings?.excluded_companies || [];
 
     if (currentExcludedCompanies.includes(companyToHide)) {
-      alert("This company is already hidden");
       return;
     }
 
@@ -323,7 +357,6 @@ function JobPageContent() {
       await refetchUserSettings();
     } catch (error) {
       console.error("Error hiding company:", error);
-      alert("Failed to hide company. Please try again.");
     } finally {
       setHideCompanyLoading(false);
     }
@@ -515,6 +548,21 @@ function JobPageContent() {
 
         {/* Action Buttons */}
         <Flex gap="3" mt="4">
+          {(source === "greenhouse" ||
+            source === "ashby" ||
+            source === "lever") && (
+            <Button
+              size="3"
+              variant="soft"
+              color="blue"
+              onClick={handleEnhance}
+              disabled={enhancing}
+              loading={enhancing}
+              style={{ cursor: "pointer" }}
+            >
+              {enhancing ? "Enhancing..." : `Enhance Job (${source})`}
+            </Button>
+          )}
           {(ashbyData?.jobUrl || job.url) && (
             <Button asChild size="3" variant="outline">
               <a
@@ -707,6 +755,487 @@ function JobPageContent() {
                     </Text>
                   </Box>
                 )}
+              </Flex>
+            </Card>
+          )}
+
+          {/* Greenhouse Enhanced Data */}
+          {enhancementData && (
+            <Card>
+              <Flex direction="column" gap="4">
+                <Heading size="6" mb="2">
+                  🌿 Enhanced Job Data (Greenhouse API)
+                </Heading>
+
+                {/* Basic Information */}
+                <Box>
+                  <Heading size="4" mb="2">
+                    Basic Information
+                  </Heading>
+                  <Box
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px 24px",
+                    }}
+                  >
+                    {enhancementData.title && (
+                      <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                        <Text weight="bold" as="span">
+                          Title:
+                        </Text>{" "}
+                        {enhancementData.title}
+                      </Text>
+                    )}
+                    {enhancementData.company_name && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Company:
+                        </Text>{" "}
+                        {enhancementData.company_name}
+                      </Text>
+                    )}
+                    {enhancementData.location && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Location:
+                        </Text>{" "}
+                        {enhancementData.location.name}
+                      </Text>
+                    )}
+                    {enhancementData.internal_job_id && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Internal Job ID:
+                        </Text>{" "}
+                        {enhancementData.internal_job_id}
+                      </Text>
+                    )}
+                    {enhancementData.requisition_id && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Requisition ID:
+                        </Text>{" "}
+                        {enhancementData.requisition_id}
+                      </Text>
+                    )}
+                    {enhancementData.id && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Job Post ID:
+                        </Text>{" "}
+                        {enhancementData.id}
+                      </Text>
+                    )}
+                    {enhancementData.language && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Language:
+                        </Text>{" "}
+                        {enhancementData.language.toUpperCase()}
+                      </Text>
+                    )}
+                    {enhancementData.first_published && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          First Published:
+                        </Text>{" "}
+                        {new Date(
+                          enhancementData.first_published,
+                        ).toLocaleString()}
+                      </Text>
+                    )}
+                    {enhancementData.updated_at && (
+                      <Text size="2">
+                        <Text weight="bold" as="span">
+                          Last Updated:
+                        </Text>{" "}
+                        {new Date(enhancementData.updated_at).toLocaleString()}
+                      </Text>
+                    )}
+                    {enhancementData.absolute_url && (
+                      <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                        <Text weight="bold" as="span">
+                          Job Board URL:
+                        </Text>{" "}
+                        <a
+                          href={enhancementData.absolute_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--accent-11)" }}
+                        >
+                          {enhancementData.absolute_url}
+                        </a>
+                      </Text>
+                    )}
+                  </Box>
+                </Box>
+
+                {/* Departments */}
+                {enhancementData.departments &&
+                  enhancementData.departments.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Departments
+                      </Heading>
+                      <Flex direction="column" gap="2">
+                        {enhancementData.departments.map((dept: any) => (
+                          <Box
+                            key={dept.id}
+                            p="2"
+                            style={{
+                              backgroundColor: "var(--gray-3)",
+                              borderRadius: "var(--radius-2)",
+                            }}
+                          >
+                            <Text size="2" weight="medium">
+                              {dept.name}
+                            </Text>
+                            <Text size="1" color="gray">
+                              ID: {dept.id}
+                              {dept.parent_id && ` | Parent: ${dept.parent_id}`}
+                            </Text>
+                          </Box>
+                        ))}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Offices */}
+                {enhancementData.offices &&
+                  enhancementData.offices.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Offices / Locations
+                      </Heading>
+                      <Flex direction="column" gap="2">
+                        {enhancementData.offices.map((office: any) => (
+                          <Box
+                            key={office.id}
+                            p="2"
+                            style={{
+                              backgroundColor: "var(--gray-3)",
+                              borderRadius: "var(--radius-2)",
+                            }}
+                          >
+                            <Text size="2" weight="medium">
+                              📍 {office.name}
+                            </Text>
+                            <Text size="1" color="gray">
+                              ID: {office.id}
+                              {office.location && ` | ${office.location}`}
+                              {office.parent_id &&
+                                ` | Parent: ${office.parent_id}`}
+                            </Text>
+                          </Box>
+                        ))}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Job Description */}
+                {enhancementData.content && (
+                  <Box>
+                    <Heading size="4" mb="2">
+                      Full Job Description
+                    </Heading>
+                    <Box
+                      p="3"
+                      style={{
+                        backgroundColor: "var(--gray-2)",
+                        borderRadius: "var(--radius-3)",
+                        border: "1px solid var(--gray-5)",
+                        maxHeight: "500px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      <Text
+                        as="div"
+                        size="2"
+                        style={{
+                          lineHeight: "1.6",
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: enhancementData.content,
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Application Questions */}
+                {enhancementData.questions &&
+                  enhancementData.questions.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Application Questions (
+                        {enhancementData.questions.length})
+                      </Heading>
+                      <Flex direction="column" gap="2">
+                        {enhancementData.questions.map(
+                          (q: any, idx: number) => (
+                            <Box
+                              key={idx}
+                              p="3"
+                              style={{
+                                backgroundColor: "var(--gray-3)",
+                                borderRadius: "var(--radius-2)",
+                                border: "1px solid var(--gray-5)",
+                              }}
+                            >
+                              <Flex justify="between" align="start" mb="1">
+                                <Text size="2" weight="medium">
+                                  {idx + 1}. {q.label}
+                                </Text>
+                                {q.required && (
+                                  <Badge size="1" color="red">
+                                    Required
+                                  </Badge>
+                                )}
+                              </Flex>
+                              {q.description && (
+                                <Text
+                                  size="1"
+                                  color="gray"
+                                  dangerouslySetInnerHTML={{
+                                    __html: q.description,
+                                  }}
+                                />
+                              )}
+                              {q.fields && q.fields.length > 0 && (
+                                <Box mt="1">
+                                  {q.fields.map((field: any, fidx: number) => (
+                                    <Text size="1" color="gray" key={fidx}>
+                                      Field type: {field.type}
+                                      {field.name && ` - ${field.name}`}
+                                    </Text>
+                                  ))}
+                                </Box>
+                              )}
+                            </Box>
+                          ),
+                        )}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Location Questions */}
+                {enhancementData.location_questions &&
+                  enhancementData.location_questions.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Location Questions (
+                        {enhancementData.location_questions.length})
+                      </Heading>
+                      <Flex direction="column" gap="2">
+                        {enhancementData.location_questions.map(
+                          (q: any, idx: number) => (
+                            <Box
+                              key={idx}
+                              p="2"
+                              style={{
+                                backgroundColor: "var(--gray-3)",
+                                borderRadius: "var(--radius-2)",
+                              }}
+                            >
+                              <Text size="2">
+                                {q.label}
+                                {q.required && (
+                                  <Badge size="1" color="red" ml="2">
+                                    Required
+                                  </Badge>
+                                )}
+                              </Text>
+                            </Box>
+                          ),
+                        )}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Data Compliance */}
+                {enhancementData.data_compliance &&
+                  enhancementData.data_compliance.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Data Compliance
+                      </Heading>
+                      <Flex direction="column" gap="2">
+                        {enhancementData.data_compliance.map(
+                          (dc: any, idx: number) => (
+                            <Box
+                              key={idx}
+                              p="3"
+                              style={{
+                                backgroundColor: "var(--blue-3)",
+                                borderRadius: "var(--radius-2)",
+                                border: "1px solid var(--blue-6)",
+                              }}
+                            >
+                              <Flex gap="2" wrap="wrap" mb="1">
+                                <Badge color="blue" size="2">
+                                  {dc.type.toUpperCase()}
+                                </Badge>
+                                {dc.requires_consent && (
+                                  <Badge size="1" color="orange">
+                                    Requires Consent
+                                  </Badge>
+                                )}
+                                {dc.requires_processing_consent && (
+                                  <Badge size="1" color="orange">
+                                    Processing Consent
+                                  </Badge>
+                                )}
+                                {dc.requires_retention_consent && (
+                                  <Badge size="1" color="orange">
+                                    Retention Consent
+                                  </Badge>
+                                )}
+                              </Flex>
+                              {dc.retention_period && (
+                                <Text size="2" color="gray">
+                                  Retention: {dc.retention_period}
+                                </Text>
+                              )}
+                            </Box>
+                          ),
+                        )}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Compliance Forms (EEOC) */}
+                {enhancementData.compliance &&
+                  enhancementData.compliance.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Compliance & EEOC Forms (
+                        {enhancementData.compliance.length})
+                      </Heading>
+                      <Flex direction="column" gap="3">
+                        {enhancementData.compliance.map(
+                          (comp: any, idx: number) => (
+                            <Box
+                              key={idx}
+                              p="3"
+                              style={{
+                                backgroundColor: "var(--gray-2)",
+                                borderRadius: "var(--radius-3)",
+                                border: "1px solid var(--gray-6)",
+                              }}
+                            >
+                              <Badge color="purple" size="2" mb="2">
+                                {comp.type.toUpperCase()}
+                              </Badge>
+                              {comp.description && (
+                                <Box
+                                  mt="2"
+                                  p="2"
+                                  style={{
+                                    backgroundColor: "var(--gray-3)",
+                                    borderRadius: "var(--radius-2)",
+                                    maxHeight: "200px",
+                                    overflowY: "auto",
+                                  }}
+                                >
+                                  <Text
+                                    size="1"
+                                    as="div"
+                                    dangerouslySetInnerHTML={{
+                                      __html: comp.description,
+                                    }}
+                                  />
+                                </Box>
+                              )}
+                              {comp.questions && comp.questions.length > 0 && (
+                                <Box mt="2">
+                                  <Text size="2" weight="medium">
+                                    Questions: {comp.questions.length}
+                                  </Text>
+                                </Box>
+                              )}
+                            </Box>
+                          ),
+                        )}
+                      </Flex>
+                    </Box>
+                  )}
+
+                {/* Demographic Questions */}
+                {enhancementData.demographic_questions && (
+                  <Box>
+                    <Heading size="4" mb="2">
+                      Demographic Questions
+                    </Heading>
+                    <Box
+                      p="3"
+                      style={{
+                        backgroundColor: "var(--violet-3)",
+                        borderRadius: "var(--radius-3)",
+                        border: "1px solid var(--violet-6)",
+                      }}
+                    >
+                      {enhancementData.demographic_questions.header && (
+                        <Text size="3" weight="bold" mb="2">
+                          {enhancementData.demographic_questions.header}
+                        </Text>
+                      )}
+                      {enhancementData.demographic_questions.description && (
+                        <Box
+                          mb="2"
+                          p="2"
+                          style={{
+                            backgroundColor: "var(--violet-2)",
+                            borderRadius: "var(--radius-2)",
+                          }}
+                        >
+                          <Text
+                            size="2"
+                            as="div"
+                            dangerouslySetInnerHTML={{
+                              __html:
+                                enhancementData.demographic_questions
+                                  .description,
+                            }}
+                          />
+                        </Box>
+                      )}
+                      {enhancementData.demographic_questions.questions &&
+                        enhancementData.demographic_questions.questions.length >
+                          0 && (
+                          <Text size="2" color="gray">
+                            Contains{" "}
+                            {
+                              enhancementData.demographic_questions.questions
+                                .length
+                            }{" "}
+                            demographic question(s)
+                          </Text>
+                        )}
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Raw JSON Data (for debugging) */}
+                <Box>
+                  <Heading size="4" mb="2">
+                    Complete API Response (JSON)
+                  </Heading>
+                  <Box
+                    p="3"
+                    style={{
+                      backgroundColor: "var(--gray-1)",
+                      borderRadius: "var(--radius-2)",
+                      border: "1px solid var(--gray-5)",
+                      maxHeight: "400px",
+                      overflowY: "auto",
+                      fontFamily: "monospace",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <pre>{JSON.stringify(enhancementData, null, 2)}</pre>
+                  </Box>
+                </Box>
               </Flex>
             </Card>
           )}

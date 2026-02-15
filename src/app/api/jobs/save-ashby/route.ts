@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { jobs, companies } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { ASHBY_JOBS_DOMAIN } from "@/constants/ats";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const externalId = jobUrl || `https://jobs.ashbyhq.com/${company}/${id}`;
+    const externalId =
+      jobUrl || `https://${ASHBY_JOBS_DOMAIN}/${company}/${id}`;
 
     // Find or create the company
     let companyRecord = await db
@@ -44,10 +46,13 @@ export async function POST(request: NextRequest) {
 
     if (companyRecord.length === 0) {
       // Create new company record
-      const result = await db.insert(companies).values({
-        key: company,
-        name: company,
-      }).returning();
+      const result = await db
+        .insert(companies)
+        .values({
+          key: company,
+          name: company,
+        })
+        .returning();
       companyId = result[0].id;
     } else {
       companyId = companyRecord[0].id;
@@ -80,13 +85,16 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Insert new job
-      const result = await db.insert(jobs).values({
-        external_id: externalId,
-        source_kind: "ashby",
-        company_id: companyId,
-        company_key: company,
-        ...jobData,
-      }).returning();
+      const result = await db
+        .insert(jobs)
+        .values({
+          external_id: externalId,
+          source_kind: "ashby",
+          company_id: companyId,
+          company_key: company,
+          ...jobData,
+        })
+        .returning();
 
       return NextResponse.json({
         success: true,

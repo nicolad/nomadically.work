@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@libsql/client";
+import { ASHBY_JOBS_DOMAIN, ASHBY_API_DOMAIN } from "../src/constants/ats";
 
 interface Env {
   BRAVE_API_KEY: string;
@@ -76,7 +77,7 @@ const DISCOVERY_QUERIES = [
   {
     kind: "ashby",
     q: [
-      "site:jobs.ashbyhq.com",
+      `site:${ASHBY_JOBS_DOMAIN}`,
       '("remote" OR "fully remote" OR "100% remote")',
       '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
       "-hybrid -onsite -on-site -office -in-office",
@@ -217,13 +218,13 @@ function extractJobSource(url: string): JobSource | null {
       }
     }
 
-    if (hostname === "jobs.ashbyhq.com") {
+    if (hostname === ASHBY_JOBS_DOMAIN) {
       const company = firstSeg(path);
       if (company) {
         return {
           kind: "ashby",
           company_key: company,
-          canonical_url: `https://api.ashbyhq.com/posting-api/job-board/${company}`,
+          canonical_url: `https://${ASHBY_API_DOMAIN}/posting-api/job-board/${company}`,
           first_seen_at: Date.now(),
         };
       }

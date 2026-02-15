@@ -124,7 +124,6 @@ export {
 export {
   BRAVE_API_ENDPOINTS,
   DEFAULT_JOB_QUERIES,
-  ATS_SITES,
   SEARCH_DEFAULTS,
   LLM_CONTEXT_DEFAULTS,
   COMPREHENSIVE_LLM_LIMITS,
@@ -137,3 +136,5 @@ export {
   STREAMING,
   type RegionMode,
 } from "./constants";
+
+export { ATS_SITES } from "../constants/ats";

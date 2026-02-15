@@ -21,6 +21,7 @@
 
 import { z } from "zod";
 import { parseHTML } from "linkedom";
+import { ASHBY_JOBS_DOMAIN } from "../src/constants/ats";
 import { createHash } from "node:crypto";
 import { gunzipSync, brotliDecompressSync, inflateSync } from "node:zlib";
 import { db } from "../src/db/index.ts";
@@ -513,12 +514,12 @@ function extractAtsBoard(
     const parts = path.split("/").filter(Boolean);
 
     // Ashby: jobs.ashbyhq.com/<company>[/...]
-    if (host === "jobs.ashbyhq.com" && parts.length >= 1) {
+    if (host === ASHBY_JOBS_DOMAIN && parts.length >= 1) {
       const slug = parts[0]!;
       return {
         provider: "ashby",
         slug,
-        boardUrl: `https://jobs.ashbyhq.com/${slug}`,
+        boardUrl: `https://${ASHBY_JOBS_DOMAIN}/${slug}`,
       };
     }
 
@@ -566,7 +567,7 @@ async function discoverAtsBoardsFromCrawl({
   perProviderLimit?: number;
 }): Promise<AtsBoard[]> {
   const providerPrefixes: Array<{ provider: AtsProvider; prefix: string }> = [
-    { provider: "ashby", prefix: "https://jobs.ashbyhq.com/" },
+    { provider: "ashby", prefix: `https://${ASHBY_JOBS_DOMAIN}/` },
     { provider: "greenhouse", prefix: "https://boards.greenhouse.io/" },
     { provider: "lever", prefix: "https://jobs.lever.co/" },
     { provider: "workable", prefix: "https://apply.workable.com/" },
@@ -658,7 +659,7 @@ function domainFromUrlMaybe(s: string): string | null {
 
 function isProviderHost(host: string): boolean {
   return [
-    "jobs.ashbyhq.com",
+    ASHBY_JOBS_DOMAIN,
     "boards.greenhouse.io",
     "jobs.lever.co",
     "apply.workable.com",

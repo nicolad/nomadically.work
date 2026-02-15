@@ -2,6 +2,7 @@
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
+import { ASHBY_JOBS_DOMAIN } from "../constants/ats";
 import { braveWebSearchTool, braveLlmContextTool } from "./brave-search-tools";
 
 type RegionMode = "worldwide" | "europe";
@@ -249,7 +250,7 @@ function buildQueries(mode: RegionMode, hint?: string) {
   const ats = [
     "site:boards.greenhouse.io",
     "site:jobs.lever.co",
-    "site:jobs.ashbyhq.com",
+    `site:${ASHBY_JOBS_DOMAIN}`,
   ].join(" OR ");
 
   const boards = [

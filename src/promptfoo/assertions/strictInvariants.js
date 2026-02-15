@@ -95,14 +95,14 @@ function inferPostedHoursAgo(job) {
   return null;
 }
 
-function within24hStrict(job, nowMs) {
+function within24hStrict(job, nowMs, maxHoursAgo = 24) {
   const h = inferPostedHoursAgo(job);
-  if (h != null) return h <= 24;
+  if (h != null) return h <= maxHoursAgo;
 
   if (job.postedAtIso) {
     const ms = Date.parse(job.postedAtIso);
     if (!Number.isFinite(ms)) return false;
-    return nowMs - ms <= 24 * 60 * 60 * 1000;
+    return nowMs - ms <= maxHoursAgo * 60 * 60 * 1000;
   }
   return false;
 }
@@ -117,6 +117,10 @@ module.exports = (output, context) => {
 
   const nowMs =
     typeof context?.vars?.nowMs === "number" ? context.vars.nowMs : Date.now();
+  const maxHoursAgo =
+    typeof context?.vars?.max_hours_ago === "number"
+      ? context.vars.max_hours_ago
+      : 24;
 
   const worldwide = Array.isArray(obj.worldwide) ? obj.worldwide : [];
   const europe = Array.isArray(obj.europe) ? obj.europe : [];
@@ -155,7 +159,7 @@ module.exports = (output, context) => {
           hasEuropeSignal(t) &&
           !hasRegionLock(t);
 
-    const freshOk = within24hStrict(job, nowMs);
+    const freshOk = within24hStrict(job, nowMs, maxHoursAgo);
 
     if (remoteOk && regionOk && freshOk) ok++;
   }

@@ -1,5 +1,7 @@
 "use client";
 
+import { ASHBY_JOBS_DOMAIN } from "@/constants/ats";
+
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -128,7 +130,10 @@ export default function BoardPage() {
             {jobs.length} active {jobs.length === 1 ? "position" : "positions"}
           </Text>
         </Flex>
-        <Link href={`https://jobs.ashbyhq.com/${boardName}`} target="_blank">
+        <Link
+          href={`https://${ASHBY_JOBS_DOMAIN}/${boardName}`}
+          target="_blank"
+        >
           <Button variant="soft">View on Ashby</Button>
         </Link>
       </Flex>

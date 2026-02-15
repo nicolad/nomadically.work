@@ -8,9 +8,11 @@ import {
   braveWebSearchTool,
   braveLlmContextTool,
 } from "../../brave/brave-search-tools";
+import { BraveSearchAgent } from "../../brave/search-agent";
 import { createDeepSeekClient } from "../../deepseek/index";
 import { getAnswers } from "../../brave/answers";
 import { z } from "zod";
+import { ASHBY_JOBS_DOMAIN } from "../../constants/ats";
 import { LangfuseClient } from "@langfuse/client";
 
 // Langfuse client for fetching prompts
@@ -49,11 +51,6 @@ const outputSchema = z.object({
 
 type Job = z.infer<typeof jobSchema>;
 
-function readJson(filePath: string): any {
-  const p = path.resolve(process.cwd(), filePath);
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
-
 function saveResults(
   result: any,
   llmProvider: string,
@@ -78,6 +75,46 @@ function saveResults(
 
   fs.writeFileSync(resultPath, JSON.stringify(output, null, 2), "utf8");
   console.log(`💾 Saved results to: ${filename}`);
+  return filename;
+}
+
+function saveBraveSearchDebug(
+  worldwideCandidates: any[],
+  europeCandidates: any[],
+  worldwideEnriched: any[],
+  europeEnriched: any[],
+) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `brave-search-debug-${timestamp}.json`;
+  const resultPath = path.resolve(process.cwd(), "results", filename);
+
+  const resultsDir = path.dirname(resultPath);
+  if (!fs.existsSync(resultsDir)) {
+    fs.mkdirSync(resultsDir, { recursive: true });
+  }
+
+  const output = {
+    timestamp: new Date().toISOString(),
+    worldwideCandidates: {
+      count: worldwideCandidates.length,
+      samples: worldwideCandidates.slice(0, 5),
+    },
+    europeCandidates: {
+      count: europeCandidates.length,
+      samples: europeCandidates.slice(0, 5),
+    },
+    worldwideEnriched: {
+      count: worldwideEnriched.length,
+      samples: worldwideEnriched.slice(0, 3),
+    },
+    europeEnriched: {
+      count: europeEnriched.length,
+      samples: europeEnriched.slice(0, 3),
+    },
+  };
+
+  fs.writeFileSync(resultPath, JSON.stringify(output, null, 2), "utf8");
+  console.log(`🔍 Saved Brave Search debug data to: ${filename}`);
   return filename;
 }
 
@@ -161,13 +198,11 @@ function buildQueries(mode: "worldwide" | "europe", hint?: string) {
   const ats = [
     "site:boards.greenhouse.io",
     "site:jobs.lever.co",
-    "site:jobs.ashbyhq.com",
+    `site:${ASHBY_JOBS_DOMAIN}`,
   ].join(" OR ");
-  const boards = [
-    "site:remotive.com",
-    "site:weworkremotely.com",
-    "site:wellfound.com",
-  ].join(" OR ");
+
+  // Removed job boards query - those are aggregator listing pages we filter out anyway
+
   const freshnessTerms = '("hours ago" OR today OR "just posted")';
   const maybeHint = hint?.trim() ? `(${hint.trim()})` : "";
 
@@ -244,6 +279,15 @@ async function discoverJobs(mode: "worldwide" | "europe", queryHint?: string) {
         for (const r of web.results) {
           const url = canonicalUrl(r.url);
           if (!url) continue;
+
+          // Filter out job aggregator listing pages at source (before LLM extraction)
+          if (isJobAggregatorListingPage(url)) {
+            console.log(
+              `🚫 Brave Search: Skipping aggregator listing page: ${url}`,
+            );
+            continue;
+          }
+
           if (!candidates.has(url)) {
             candidates.set(url, {
               url,
@@ -258,7 +302,11 @@ async function discoverJobs(mode: "worldwide" | "europe", queryHint?: string) {
     }
   }
 
-  return Array.from(candidates.values()).slice(0, 100);
+  const candidatesArray = Array.from(candidates.values()).slice(0, 100);
+  console.log(
+    `📊 Brave Search (${mode}): Found ${candidatesArray.length} candidates after filtering`,
+  );
+  return candidatesArray;
 }
 
 async function enrichWithContext(
@@ -294,6 +342,220 @@ async function enrichWithContext(
     enriched.push({ ...candidates[i], context: "" });
   }
   return enriched;
+}
+
+/**
+ * Directly extract jobs using Brave LLM API with grounded search.
+ * Bypasses Brave Search API completely - uses LLM's built-in web search.
+ */
+async function extractJobsDirectly(
+  mode: "worldwide" | "europe",
+  queryHint: string,
+  promptMessages: any[],
+  vars: Record<string, any>,
+): Promise<Job[]> {
+  const llmProvider = vars.llm_provider || "brave";
+  const maxHoursAgo = vars.max_hours_ago || 24;
+  const minConfidence = vars.min_confidence || 0.6;
+  const qualityLevel = vars.quality_level || "strict";
+
+  // Build search query focused on job titles and companies
+  // Brave Search's site: operators are inconsistent, so search by job title + company keywords
+  const jobTitles = [
+    '"AI Engineer"',
+    '"ML Engineer"',
+    '"Machine Learning Engineer"',
+    '"LLM Engineer"',
+    '"AI/ML Engineer"',
+  ];
+  const remoteKeywords = '"remote" OR "fully remote" OR "Remote (Worldwide)"';
+  const atsSites = `${ASHBY_JOBS_DOMAIN} OR boards.greenhouse.io OR jobs.lever.co`;
+
+  const searchQuery = `(${jobTitles.join(" OR ")}) ${remoteKeywords} (${atsSites}) -turing.com -builtin.com -ziprecruiter.com -remoteok.com -reddit.com -hnhiring.com`;
+
+  console.log(`🔍 Brave LLM Context search for ${mode}: ${searchQuery}`);
+
+  try {
+    // Use Brave LLM Context API (same as brave-search.ts script)
+    const agent = new BraveSearchAgent();
+    const response = await agent.search({
+      q: searchQuery,
+      count: 50,
+      maximum_number_of_tokens: 16384,
+      maximum_number_of_urls: 50,
+      maximum_number_of_snippets: 100,
+      context_threshold_mode: "lenient",
+      search_lang: "en",
+    });
+
+    // Extract sources from grounding data
+    const sources = response.grounding.generic.map((item) => ({
+      url: item.url,
+      title: item.title,
+      snippets: item.snippets.join("\n"),
+      metadata: response.sources[item.url],
+    }));
+
+    console.log(
+      `📥 Found ${sources.length} sources from Brave LLM Context API`,
+    );
+
+    // Filter out aggregator listing pages
+    const filteredSources = sources.filter((source) => {
+      if (isJobAggregatorListingPage(source.url)) {
+        console.log(`🚫 Brave LLM Context: Skipping aggregator: ${source.url}`);
+        return false;
+      }
+      return true;
+    });
+
+    console.log(
+      `📊 After aggregator filter: ${filteredSources.length} candidates`,
+    );
+
+    // Filter by age (last 24 hours)
+    const freshSources = filteredSources.filter((source) => {
+      const age = source.metadata?.age;
+      if (!age) {
+        // No age metadata - include it (some ATS platforms don't provide age)
+        return true;
+      }
+
+      const [, , relativeTime] = age;
+      if (!relativeTime) return true;
+
+      // Parse "X hours ago" or "X days ago"
+      const hoursMatch = relativeTime.match(/(\d+)\s+hours?\s+ago/i);
+      if (hoursMatch) {
+        const hours = parseInt(hoursMatch[1]);
+        if (hours <= maxHoursAgo) return true;
+        console.log(`⏰ Too old (${hours}h ago): ${source.url}`);
+        return false;
+      }
+
+      const daysMatch = relativeTime.match(/(\d+)\s+days?\s+ago/i);
+      if (daysMatch) {
+        const days = parseInt(daysMatch[1]);
+        if (days === 0) return true; // Today = 0 days
+        console.log(`⏰ Too old (${days}d ago): ${source.url}`);
+        return false;
+      }
+
+      // "today" or "yesterday"
+      if (/today/i.test(relativeTime)) return true;
+      if (/yesterday/i.test(relativeTime)) {
+        console.log(`⏰ Too old (yesterday): ${source.url}`);
+        return false;
+      }
+
+      // Unknown format - include it
+      return true;
+    });
+
+    console.log(
+      `📊 Brave LLM Context (${mode}): Found ${freshSources.length} candidates after filtering (≤${maxHoursAgo}h)`,
+    );
+
+    if (freshSources.length > 0) {
+      console.log(`📋 Fresh candidates for ${mode}:`);
+      freshSources.forEach((s, i) => {
+        const age = s.metadata?.age?.[2] || "unknown";
+        console.log(`   ${i + 1}. ${s.title} (${age})`);
+        console.log(`      ${s.url}`);
+      });
+    }
+
+    if (freshSources.length === 0) {
+      console.log(`⚠️  No valid sources found for ${mode}`);
+      return [];
+    }
+
+    // Create search results blob for LLM extraction
+    const docBlobs = freshSources
+      .map(
+        (s, i) =>
+          `[Doc ${i + 1}]\nURL: ${s.url}\nTitle: ${s.title}\nSnippets: ${s.snippets}`,
+      )
+      .join("\n\n");
+
+    // Substitute variables in Langfuse prompt
+    const substitutedMessages = promptMessages.map((msg: any) => {
+      let content = msg.content;
+      content = content.replace(/\{\{search_results\}\}/g, docBlobs);
+      content = content.replace(/\{\{max_hours_ago\}\}/g, String(maxHoursAgo));
+      content = content.replace(
+        /\{\{min_confidence\}\}/g,
+        String(minConfidence),
+      );
+      content = content.replace(/\{\{quality_level\}\}/g, String(qualityLevel));
+      return { role: msg.role, content };
+    });
+
+    // Extract jobs using LLM (DeepSeek or Brave Answers as fallback)
+    let content: string;
+
+    if (llmProvider === "brave") {
+      // Try Brave Answers API first, fall back to DeepSeek if it fails
+      try {
+        console.log(`🔍 Using Brave Answers API for ${mode} extraction`);
+        const braveResponse = await getAnswers({
+          messages: substitutedMessages as any,
+          model: "brave-search",
+          temperature: 0.1,
+          max_tokens: 8000,
+        });
+        content = braveResponse.choices[0]?.message?.content || "{}";
+      } catch (braveError) {
+        console.warn(`⚠️  Brave Answers API failed, falling back to DeepSeek`);
+        const client = createDeepSeekClient({
+          apiKey: process.env.DEEPSEEK_API_KEY,
+        });
+        const response = await client.chat({
+          model: "deepseek-chat",
+          messages: substitutedMessages,
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+        content = response.choices[0]?.message?.content || "{}";
+      }
+    } else {
+      // Use DeepSeek
+      console.log(`🤖 Using DeepSeek for ${mode} extraction`);
+      const client = createDeepSeekClient({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+      });
+      const response = await client.chat({
+        model: "deepseek-chat",
+        messages: substitutedMessages,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      });
+      content = response.choices[0]?.message?.content || "{}";
+    }
+
+    const parsed = JSON.parse(content);
+    console.log(
+      `📦 DeepSeek extraction for ${mode}: ${parsed?.jobs?.length || parsed?.[mode]?.length || 0} jobs found`,
+    );
+
+    // Handle both response formats: {jobs: []} and {worldwide: [], europe: []}
+    const jobs = parsed?.jobs || parsed?.[mode] || [];
+
+    if (jobs.length > 0) {
+      console.log(
+        `   Sample job URLs: ${jobs
+          .slice(0, 3)
+          .map((j: Job) => j.sourceUrl || j.url)
+          .join(", ")}`,
+      );
+    } else {
+      console.log(`   Response excerpt: ${content.substring(0, 800)}...`);
+    }
+    return Array.isArray(jobs) ? jobs : [];
+  } catch (error) {
+    console.error(`Direct extraction error (${llmProvider}):`, error);
+    return [];
+  }
 }
 
 async function extractJobs(
@@ -367,6 +629,55 @@ async function extractJobs(
   }
 }
 
+/**
+ * Detects if a URL is a job aggregator listing page (not a single job posting).
+ * These pages list MULTIPLE jobs instead of being a direct link to one specific job.
+ *
+ * IMPORTANT: ATS platforms (Ashby, Greenhouse, Lever) host INDIVIDUAL job postings
+ * for companies - those are GOOD and should NOT be filtered.
+ * Job boards (Turing, Built In, ZipRecruiter) list MULTIPLE jobs - those are BAD.
+ */
+function isJobAggregatorListingPage(url: string): boolean {
+  const urlLower = url.toLowerCase();
+
+  // Job board/aggregator domains that list MULTIPLE jobs (not single postings)
+  // These are search/browse pages showing many jobs from different companies
+  const aggregatorDomains = [
+    "turing.com/jobs", // Turing job board listing page
+    "builtin.com/jobs", // Built In search results
+    "builtinchicago.org/jobs", // Built In Chicago search results
+    "ziprecruiter.com", // ZipRecruiter job listings
+    "glassdoor.com/job", // Glassdoor search results
+    "remotive.com/remote", // Remotive job listings
+    "remoteok.com", // RemoteOK job listings
+    "weworkremotely.com/remote-jobs", // WeWorkRemotely listings
+    "wellfound.com/jobs", // Wellfound job search
+    "indeed.com/jobs", // Indeed search results
+    "linkedin.com/jobs/search", // LinkedIn job search
+  ];
+
+  // Check for known aggregator domains
+  if (aggregatorDomains.some((domain) => urlLower.includes(domain))) {
+    return true;
+  }
+
+  // URL patterns that indicate multi-job listing pages (not single postings)
+  const listingPatterns = [
+    "/jobs/remote-", // e.g., /jobs/remote-ai-engineer-jobs (Turing pattern)
+    "/remote-jobs/", // e.g., /remote-jobs/category
+    "/jobs/search", // e.g., /jobs/search?q=remote
+    "/remote-job-search",
+    "/browse",
+  ];
+
+  // Check for multi-job listing URL patterns
+  if (listingPatterns.some((pattern) => urlLower.includes(pattern))) {
+    return true;
+  }
+
+  return false;
+}
+
 function filterJobs(
   jobs: Job[],
   minConfidence: number,
@@ -375,16 +686,42 @@ function filterJobs(
   const worldwide: Job[] = [];
   const europe: Job[] = [];
 
+  console.log(
+    `🔍 Filtering ${jobs.length} jobs (minConfidence: ${minConfidence})`,
+  );
+
   for (const job of jobs) {
-    if (job.confidence < minConfidence) continue;
-    if (!job.isFullyRemote) continue;
-    if (seen.has(job.sourceUrl)) continue;
+    if (job.confidence < minConfidence) {
+      console.log(`   ❌ Low confidence (${job.confidence}): ${job.title}`);
+      continue;
+    }
+    if (!job.isFullyRemote) {
+      console.log(`   ❌ Not fully remote: ${job.title}`);
+      continue;
+    }
+    if (seen.has(job.sourceUrl)) {
+      console.log(`   ❌ Duplicate: ${job.sourceUrl}`);
+      continue;
+    }
+
+    // Exclude job aggregator listing pages (not single job postings)
+    if (isJobAggregatorListingPage(job.sourceUrl)) {
+      console.log(`⚠️  Excluded aggregator listing page: ${job.sourceUrl}`);
+      continue;
+    }
+
+    console.log(
+      `   ✅ Accepted (${job.remoteRegion}): ${job.title} (confidence: ${job.confidence})`,
+    );
     seen.add(job.sourceUrl);
 
     if (job.remoteRegion === "worldwide") worldwide.push(job);
     else if (job.remoteRegion === "europe") europe.push(job);
   }
 
+  console.log(
+    `📊 Filtering complete: ${worldwide.length} worldwide, ${europe.length} europe`,
+  );
   return { worldwide, europe };
 }
 
@@ -395,14 +732,7 @@ class DirectRemoteJobsProvider {
 
   async callApi(_prompt: string, context: any): Promise<{ output: string }> {
     const vars = context?.vars ?? {};
-    const mode = String(vars.mode ?? "fixture");
-
-    if (mode === "fixture") {
-      const fixtureInput = readJson("src/promptfoo/fixtures/filterInput.json");
-      const jobs: Job[] = fixtureInput.jobs ?? [];
-      const result = filterJobs(jobs, 0.5);
-      return { output: stableJsonStringify(result) };
-    }
+    const mode = String(vars.mode ?? "live");
 
     if (mode === "saved") {
       try {
@@ -447,36 +777,20 @@ class DirectRemoteJobsProvider {
           `✅ Using Langfuse prompt version ${(langfusePrompt as any).version}`,
         );
 
-        // Discover jobs for both modes
-        const [worldwideCandidates, europeCandidates] = await Promise.all([
-          discoverJobs("worldwide", queryHint),
-          discoverJobs("europe", queryHint),
-        ]);
-
-        // Enrich top candidates
-        const [worldwideEnriched, europeEnriched] = await Promise.all([
-          enrichWithContext(
-            worldwideCandidates.slice(0, maxCandidates),
-            "worldwide",
-            verifyTopN,
-          ),
-          enrichWithContext(
-            europeCandidates.slice(0, maxCandidates),
-            "europe",
-            verifyTopN,
-          ),
-        ]);
-
-        // Extract jobs using Langfuse prompt + selected LLM provider
+        // Use Brave LLM API directly for job discovery (no Brave Search)
         console.log(`🎯 LLM Provider: ${llmProvider.toUpperCase()}`);
+        console.log(
+          `🚀 Using Brave LLM API directly to discover and extract jobs`,
+        );
+
         const [worldwideJobs, europeJobs] = await Promise.all([
-          extractJobs(worldwideEnriched, "worldwide", promptMessages, {
+          extractJobsDirectly("worldwide", queryHint, promptMessages, {
             max_hours_ago: maxHoursAgo,
             min_confidence: minConfidence,
             quality_level: qualityLevel,
             llm_provider: llmProvider,
           }),
-          extractJobs(europeEnriched, "europe", promptMessages, {
+          extractJobsDirectly("europe", queryHint, promptMessages, {
             max_hours_ago: maxHoursAgo,
             min_confidence: minConfidence,
             quality_level: qualityLevel,

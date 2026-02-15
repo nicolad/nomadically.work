@@ -1,0 +1,122 @@
+# Greenhouse ATS-related GraphQL queries
+#import "./company-fragments.graphql"
+
+# Query to fetch all Greenhouse jobs
+query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
+  jobs(
+    sourceType: "greenhouse"
+    search: $search
+    limit: $limit
+    offset: $offset
+  ) {
+    jobs {
+      id
+      external_id
+      source_id
+      source_kind
+      company_id
+      company_key
+      company {
+        ...CompanyFields
+      }
+      title
+      location
+      url
+      description
+      posted_at
+      score
+      score_reason
+      status
+      is_remote_eu
+      remote_eu_confidence
+      remote_eu_reason
+      skills {
+        tag
+        level
+        confidence
+        evidence
+      }
+      created_at
+      updated_at
+    }
+    totalCount
+  }
+}
+
+# Query to fetch a single Greenhouse job by ID
+# Useful for checking if a job already exists during ingestion
+query GetGreenhouseJobById($id: String!) {
+  job(id: $id) {
+    id
+    external_id
+    source_id
+    source_kind
+    company_id
+    company_key
+    company {
+      ...CompanyFields
+    }
+    title
+    location
+    url
+    description
+    posted_at
+    score
+    score_reason
+    status
+    is_remote_eu
+    remote_eu_confidence
+    remote_eu_reason
+    skills {
+      tag
+      level
+      confidence
+      evidence
+    }
+    created_at
+    updated_at
+  }
+}
+
+# Mutation to enhance a job with data from Greenhouse API
+mutation EnhanceJobFromGreenhouseATS(
+  $jobId: String!
+  $company: String!
+  $source: String!
+) {
+  enhanceJobFromATS(jobId: $jobId, company: $company, source: $source) {
+    success
+    message
+    job {
+      id
+      external_id
+      source_id
+      source_kind
+      company_id
+      company_key
+      company {
+        ...CompanyFields
+      }
+      title
+      location
+      url
+      description
+      posted_at
+      score
+      score_reason
+      status
+      is_remote_eu
+      remote_eu_confidence
+      remote_eu_reason
+      skills {
+        tag
+        level
+        confidence
+        evidence
+      }
+      created_at
+      updated_at
+    }
+    enhancedData
+  }
+}

@@ -28,7 +28,33 @@ function createApolloClient() {
   return new ApolloClient({
     ssrMode: typeof window === "undefined",
     link: createIsomorphLink(),
-    cache: new InMemoryCache(),
+    cache: new InMemoryCache({
+      typePolicies: {
+        Query: {
+          fields: {
+            jobs: {
+              keyArgs: ["sourceType", "status", "search", "excludedCompanies"],
+              merge(existing, incoming, { args }) {
+                if (!incoming) return existing;
+                if (!existing || !args?.offset) {
+                  return incoming;
+                }
+                return {
+                  ...incoming,
+                  jobs: [...existing.jobs, ...incoming.jobs],
+                };
+              },
+            },
+          },
+        },
+        Job: {
+          keyFields: ["id"],
+        },
+        Company: {
+          keyFields: ["id"],
+        },
+      },
+    }),
   });
 }
 

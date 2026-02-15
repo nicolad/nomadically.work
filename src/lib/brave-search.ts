@@ -3,6 +3,7 @@
  */
 
 import _ from "lodash";
+import { ASHBY_JOBS_DOMAIN, ASHBY_API_DOMAIN } from "../constants/ats";
 
 type BraveWebResult = {
   title?: string;
@@ -64,7 +65,7 @@ export const DISCOVERY_QUERIES = [
   {
     kind: "ashby",
     q: [
-      "site:jobs.ashbyhq.com",
+      `site:${ASHBY_JOBS_DOMAIN}`,
       '("remote" OR "fully remote" OR "100% remote")',
       '("Europe" OR EU OR EMEA OR CET OR "GMT+1" OR "GMT+2")',
       "-hybrid -onsite -on-site -office -in-office",
@@ -260,9 +261,9 @@ export function extractJobSource(url: string): JobSource | null {
           `https://api.lever.co/v0/postings/${company}`,
       },
       ashby: {
-        hosts: ["jobs.ashbyhq.com"],
+        hosts: [ASHBY_JOBS_DOMAIN],
         apiTemplate: (company: string) =>
-          `https://api.ashbyhq.com/posting-api/job-board/${company}`,
+          `https://${ASHBY_API_DOMAIN}/posting-api/job-board/${company}`,
       },
       workable: {
         hosts: ["apply.workable.com"],

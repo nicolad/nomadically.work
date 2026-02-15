@@ -47,28 +47,46 @@ defaultTest:
     - type: javascript
       value: file://./assertions/excludesBadUrls.js
 
+    # 5) No job aggregator listing pages (must be direct job postings)
+    - type: javascript
+      value: file://./assertions/noAggregatorListingPages.js
+
 tests:
   # ----------------------------
-  # Saved mode (uses pre-generated Brave AI results from results/ folder)
-  # Fast, deterministic, no API costs - perfect for rapid iteration
+  # Live test with Brave AI (requires BRAVE_SEARCH_API_KEY + BRAVE_API_KEY)
+  # Fetches fresh jobs from ATS platforms, filters aggregators, saves to results/
   # ----------------------------
-  - description: "Saved: Brave AI results from latest JSON file"
+  - description: "Live: Brave AI + Brave Search, last-7d worldwide+europe"
     vars:
-      mode: "saved"
+      mode: "live"
+      queryHint: "agentic"
+      maxCandidatesPerMode: 25
+      verifyTopNWithContext: 8
+      minConfidence: 0.6
+      max_hours_ago: 168 # 7 days - more realistic for AI/ML roles
       llm_provider: "brave"
 
   # ----------------------------
-  # Live test with Brave AI (requires BRAVE_SEARCH_API_KEY + BRAVE_API_KEY)
-  # Uncomment to generate fresh results and save to results/ folder
+  # Saved mode (uses pre-generated Brave AI results from results/ folder)
+  # Fast, deterministic, no API costs - perfect for rapid iteration
+  # Uncomment after generating results with live mode
   # ----------------------------
-  # - description: "Live: Brave AI + Brave Search, last-24h worldwide+europe"
+  # - description: "Saved: Brave AI results from latest JSON file"
+  #   vars:
+  #     mode: "saved"
+  #     llm_provider: "brave"
+
+  # ----------------------------
+  # Live test with DeepSeek (fallback, requires BRAVE_SEARCH_API_KEY + DEEPSEEK_API_KEY)
+  # ----------------------------
+  # - description: "Live: DeepSeek + Brave Search, last-24h worldwide+europe"
   #   vars:
   #     mode: "live"
   #     queryHint: "agentic"
   #     maxCandidatesPerMode: 25
   #     verifyTopNWithContext: 8
   #     minConfidence: 0.6
-  #     llm_provider: "brave"
+  #     llm_provider: "deepseek"
 
   # ----------------------------
   # Live test with DeepSeek (fallback, requires BRAVE_SEARCH_API_KEY + DEEPSEEK_API_KEY)

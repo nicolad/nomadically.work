@@ -138,7 +138,7 @@ function JobPageContent() {
       });
 
       // Navigate back to jobs list
-      router.push("/jobs");
+      router.push("/");
     } catch (error) {
       console.error("Error deleting job:", error);
     }

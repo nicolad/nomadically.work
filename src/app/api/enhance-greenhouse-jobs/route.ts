@@ -45,7 +45,11 @@ export async function POST(request: NextRequest) {
     let successCount = 0;
     let failureCount = 0;
     let skippedCount = 0;
-    const errors: Array<{ jobId: number; error: string; type: "error" | "not_found" }> = [];
+    const errors: Array<{
+      jobId: number;
+      error: string;
+      type: "error" | "not_found";
+    }> = [];
 
     for (const [index, job] of jobsToEnhance.entries()) {
       console.log(
@@ -79,10 +83,12 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        
+
         // Check if this is a 404 (job no longer exists)
-        const is404 = errorMessage.includes("404") && errorMessage.includes("Job not found");
-        
+        const is404 =
+          errorMessage.includes("404") &&
+          errorMessage.includes("Job not found");
+
         if (is404) {
           console.log(`⏭️  Skipping job (no longer exists on Greenhouse)`, {
             jobId: job.id,

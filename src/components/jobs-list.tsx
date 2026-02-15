@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -94,16 +94,22 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
     }
   };
 
-  const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
-    variables: {
+  // Memoize query variables to ensure stable object reference
+  const queryVariables = useMemo(
+    () => ({
       search: searchFilter || undefined,
       limit: 20,
       offset: 0,
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
-    },
+    }),
+    [searchFilter, excludedCompanies]
+  );
+
+  const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
+    variables: queryVariables,
     notifyOnNetworkStatusChange: true,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "network-only", // Force network fetch to ensure fresh data
   });
 
   const jobs = data?.jobs.jobs || [];

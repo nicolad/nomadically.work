@@ -77,7 +77,7 @@ export const jobs = sqliteTable("jobs", {
   // Enhanced ATS data (JSON fields)
   ats_data: text("ats_data"), // Full JSON response from ATS API
 
-  // ATS-specific fields (primarily Greenhouse)
+  // Greenhouse ATS-specific fields
   absolute_url: text("absolute_url"),
   internal_job_id: integer("internal_job_id"),
   requisition_id: text("requisition_id"),
@@ -92,6 +92,19 @@ export const jobs = sqliteTable("jobs", {
   compliance: text("compliance"), // JSON array
   demographic_questions: text("demographic_questions"), // JSON object
   data_compliance: text("data_compliance"), // JSON array
+
+  // Lever ATS-specific fields
+  categories: text("categories"), // JSON object: { commitment, location, team, department, allLocations }
+  workplace_type: text("workplace_type"), // on-site, remote, hybrid, unspecified
+  country: text("country"), // ISO 3166-1 alpha-2 country code
+  opening: text("opening"), // Job description opening (HTML)
+  opening_plain: text("opening_plain"), // Job description opening (plaintext)
+  description_body: text("description_body"), // Job description body without opening (HTML)
+  description_body_plain: text("description_body_plain"), // Job description body without opening (plaintext)
+  additional: text("additional"), // Optional closing content (HTML)
+  additional_plain: text("additional_plain"), // Optional closing content (plaintext)
+  lists: text("lists"), // JSON array of { text, content }
+  ats_created_at: text("ats_created_at"), // When the posting was created in the ATS
 
   created_at: text("created_at")
     .notNull()

@@ -19,10 +19,30 @@ extend type Mutation {
     settings: UserSettingsInput!
   ): UserSettings!
   deleteJob(id: Int!): DeleteJobResponse!
+  """
+  Enhance a job posting by fetching detailed data from the ATS (Applicant Tracking System).
+
+  Supported ATS sources:
+  - greenhouse: Greenhouse ATS (https://greenhouse.io)
+  - lever: Lever ATS (https://lever.co)
+
+  For Greenhouse:
+  - jobId: The job posting ID from the URL (e.g., "5802159004" from https://job-boards.greenhouse.io/grafanalabs/jobs/5802159004)
+  - company: The board token (e.g., "grafanalabs")
+
+  For Lever:
+  - jobId: The posting ID (e.g., "5ac21346-8e0c-4494-8e7a-3eb92ff77902")
+  - company: The site name (e.g., "leverdemo")
+
+  The mutation will:
+  1. Fetch comprehensive job data from the ATS API
+  2. Save enhanced fields (description, departments, offices, questions, etc.)
+  3. Return the updated job with full ATS data
+  """
   enhanceJobFromATS(
-    jobId: String!
-    company: String!
-    source: String!
+    jobId: String! # The unique job/posting ID from the ATS
+    company: String! # The company identifier (board_token for Greenhouse, site name for Lever)
+    source: String! # ATS source: "greenhouse" or "lever"
   ): EnhanceJobResponse!
 }
 
@@ -88,6 +108,21 @@ type GreenhouseDemographicQuestions {
   questions: [GreenhouseQuestion!]
 }
 
+# Lever ATS types
+
+type LeverCategories {
+  commitment: String
+  location: String
+  team: String
+  department: String
+  allLocations: [String!]
+}
+
+type LeverList {
+  text: String!
+  content: String!
+}
+
 type Job {
   id: Int!
   external_id: String!
@@ -125,6 +160,18 @@ type Job {
   demographic_questions: GreenhouseDemographicQuestions
   data_compliance: [GreenhouseDataCompliance!]
 
+  # Lever ATS fields (parsed from ats_data)
+  categories: LeverCategories
+  workplace_type: String # on-site, remote, hybrid, or unspecified
+  country: String # ISO 3166-1 alpha-2 country code
+  opening: String # Job description opening (HTML)
+  opening_plain: String # Job description opening (plaintext)
+  description_body: String # Job description body without opening (HTML)
+  description_body_plain: String # Job description body without opening (plaintext)
+  additional: String # Optional closing content (HTML)
+  additional_plain: String # Optional closing content (plaintext)
+  lists: [LeverList!] # Requirements, benefits, etc.
+  ats_created_at: String # When the posting was created in the ATS
   created_at: String!
   updated_at: String!
 }
@@ -173,9 +220,41 @@ type DeleteJobResponse {
   message: String
 }
 
+"""
+Response from enhancing a job with ATS data
+"""
 type EnhanceJobResponse {
+  """
+  Whether the enhancement was successful
+  """
   success: Boolean!
+  """
+  Human-readable message about the operation result
+  """
   message: String
+  """
+  The updated job record with enhanced data from the ATS
+  """
   job: Job
+  """
+  Raw enhanced data from the ATS API (Greenhouse or Lever).
+
+  Greenhouse data includes:
+  - content: Full HTML job description
+  - departments: Array of department objects with id, name, child_ids, parent_id
+  - offices: Array of office objects with id, name, location, child_ids, parent_id
+  - questions: Application form questions
+  - metadata: Custom fields
+  - compliance: Compliance questions
+  - demographic_questions: EEOC/diversity questions
+
+  Lever data includes:
+  - description: Combined job description (HTML)
+  - descriptionPlain: Description as plaintext
+  - categories: location, commitment, team, department
+  - lists: Requirements, benefits, etc.
+  - workplaceType: on-site, remote, hybrid, or unspecified
+  - salaryRange: Currency, interval, min, max
+  """
   enhancedData: JSON
 }

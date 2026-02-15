@@ -151,12 +151,9 @@ export async function saveGreenhouseJobData(
   greenhouseData: any,
 ) {
   try {
-    // Update the jobs table with Greenhouse data
+    // Update the jobs table with Greenhouse data - save all fields individually
     const updateData = {
-      // Store full ATS data
-      ats_data: JSON.stringify(greenhouseData),
-
-      // ATS-specific fields
+      // Greenhouse-specific fields
       absolute_url: greenhouseData.absolute_url,
       internal_job_id: greenhouseData.internal_job_id,
       requisition_id: greenhouseData.requisition_id,

@@ -8,7 +8,7 @@ import {
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
   useDeleteJobMutation,
-  useEnhanceJobFromGreenhouseAtsMutation,
+  useEnhanceJobFromAtsMutation,
 } from "@/__generated__/hooks";
 import { orderBy } from "lodash";
 import {
@@ -125,7 +125,7 @@ function JobPageContent() {
 
   const [updateSettings] = useUpdateUserSettingsMutation();
   const [deleteJobMutation] = useDeleteJobMutation();
-  const [enhanceJobMutation] = useEnhanceJobFromGreenhouseAtsMutation();
+  const [enhanceJobMutation] = useEnhanceJobFromAtsMutation();
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 

@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
         message: "No jobs to enhance",
         totalJobs: 0,
         successCount: 0,
+        skippedCount: 0,
         failureCount: 0,
       });
     }
@@ -43,7 +44,8 @@ export async function POST(request: NextRequest) {
     // Process each job
     let successCount = 0;
     let failureCount = 0;
-    const errors: Array<{ jobId: number; error: string }> = [];
+    let skippedCount = 0;
+    const errors: Array<{ jobId: number; error: string; type: "error" | "not_found" }> = [];
 
     for (const [index, job] of jobsToEnhance.entries()) {
       console.log(
@@ -77,15 +79,32 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(`❌ Failed to enhance job: ${errorMessage}`, {
-          jobId: job.id,
-          error: errorMessage,
-        });
-        failureCount++;
-        errors.push({
-          jobId: job.id,
-          error: errorMessage,
-        });
+        
+        // Check if this is a 404 (job no longer exists)
+        const is404 = errorMessage.includes("404") && errorMessage.includes("Job not found");
+        
+        if (is404) {
+          console.log(`⏭️  Skipping job (no longer exists on Greenhouse)`, {
+            jobId: job.id,
+          });
+          skippedCount++;
+          errors.push({
+            jobId: job.id,
+            error: "Job not found (404)",
+            type: "not_found",
+          });
+        } else {
+          console.error(`❌ Failed to enhance job: ${errorMessage}`, {
+            jobId: job.id,
+            error: errorMessage,
+          });
+          failureCount++;
+          errors.push({
+            jobId: job.id,
+            error: errorMessage,
+            type: "error",
+          });
+        }
       }
     }
 
@@ -94,10 +113,11 @@ export async function POST(request: NextRequest) {
       success: failureCount === 0,
       message:
         failureCount === 0
-          ? "All jobs enhanced successfully"
-          : `${successCount} jobs enhanced, ${failureCount} failed`,
+          ? `All jobs processed: ${successCount} enhanced, ${skippedCount} no longer exist`
+          : `${successCount} jobs enhanced, ${skippedCount} skipped (not found), ${failureCount} failed`,
       totalJobs: jobsToEnhance.length,
       successCount,
+      skippedCount,
       failureCount,
       errors: errors.length > 0 ? errors : undefined,
     };

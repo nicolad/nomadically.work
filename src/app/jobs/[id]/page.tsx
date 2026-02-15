@@ -231,7 +231,7 @@ function JobPageContent() {
               The job you're looking for doesn't exist or has been removed.
             </Text>
             <Button asChild>
-              <Link href="/jobs">← Back to Jobs</Link>
+              <Link href="/">← Back to Jobs</Link>
             </Button>
           </Flex>
         </Card>
@@ -336,13 +336,6 @@ function JobPageContent() {
         variables: {
           userId: user.id,
           settings: {
-            email_notifications:
-              userSettingsData?.userSettings?.email_notifications ?? true,
-            daily_digest: userSettingsData?.userSettings?.daily_digest ?? false,
-            new_job_alerts:
-              userSettingsData?.userSettings?.new_job_alerts ?? true,
-            dark_mode: userSettingsData?.userSettings?.dark_mode ?? true,
-            jobs_per_page: userSettingsData?.userSettings?.jobs_per_page ?? 50,
             preferred_locations:
               userSettingsData?.userSettings?.preferred_locations || [],
             preferred_skills:
@@ -364,7 +357,7 @@ function JobPageContent() {
     <Container size="4" p="8" style={{ maxWidth: "1400px", width: "100%" }}>
       <Box mb="6">
         <Button variant="ghost" asChild>
-          <Link href="/jobs">← Back to Jobs</Link>
+          <Link href="/">← Back to Jobs</Link>
         </Button>
       </Box>
 

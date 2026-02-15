@@ -221,8 +221,6 @@ export const jobResolvers = {
 
     async job(_parent: any, args: { id: string }, _context: GraphQLContext) {
       try {
-        console.log(`🔍 [Job Resolver] Querying for job ID: ${args.id}`);
-
         // Try to find the job by matching external_id pattern
         // external_id typically contains the full URL like:
         // https://job-boards.greenhouse.io/databricks/jobs/7434532002
@@ -233,14 +231,7 @@ export const jobResolvers = {
           .from(jobs)
           .where(like(jobs.external_id, `%/${args.id}`));
 
-        console.log(
-          `🔍 [Job Resolver] First query (with /) found: ${results.length} job(s)`,
-        );
-
         if (results.length > 0) {
-          console.log(
-            `✅ [Job Resolver] Returning job: ${results[0].title} (ID: ${results[0].id})`,
-          );
           return results[0];
         }
 
@@ -251,21 +242,13 @@ export const jobResolvers = {
           .from(jobs)
           .where(like(jobs.external_id, `%${args.id}%`));
 
-        console.log(
-          `🔍 [Job Resolver] Second query (wildcard) found: ${directResults.length} job(s)`,
-        );
-
         if (directResults.length > 0) {
           // Find the one where the id is actually at the end
           const exactMatch = directResults.find((job) => {
             const jobId = last(split(job.external_id, "/"));
             return jobId === args.id;
           });
-          const result = exactMatch || directResults[0];
-          console.log(
-            `✅ [Job Resolver] Returning job: ${result.title} (ID: ${result.id})`,
-          );
-          return result;
+          return exactMatch || directResults[0];
         }
 
         console.log(`❌ [Job Resolver] No job found for ID: ${args.id}`);

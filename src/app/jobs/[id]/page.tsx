@@ -1194,22 +1194,24 @@ function JobPageContent() {
               </Card>
             )}
 
-          {/* Fallback to DB description if no Ashby data */}
-          {!ashbyData && job.description && (
-            <Card>
-              <Heading size="5" mb="3">
-                Description
-              </Heading>
-              <Text
-                as="div"
-                color="gray"
-                style={{ whiteSpace: "pre-wrap" }}
-                dangerouslySetInnerHTML={{
-                  __html: job.description || "No description available",
-                }}
-              />
-            </Card>
-          )}
+          {/* Fallback to DB description if no Ashby data and not Greenhouse */}
+          {!ashbyData &&
+            job.description &&
+            job.source_kind !== "greenhouse" && (
+              <Card>
+                <Heading size="5" mb="3">
+                  Description
+                </Heading>
+                <Text
+                  as="div"
+                  color="gray"
+                  style={{ whiteSpace: "pre-wrap" }}
+                  dangerouslySetInnerHTML={{
+                    __html: job.description || "No description available",
+                  }}
+                />
+              </Card>
+            )}
         </Box>
 
         {/* Right Column - Classification & Metadata */}

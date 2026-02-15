@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq, and, or, like, desc } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
+import { EXCLUDED_LOCATIONS } from "./constants";
 
 export async function jobsQuery(
   _parent: any,
@@ -56,10 +57,12 @@ export async function jobsQuery(
       );
     }
 
-    // Filter out jobs with location "Bangalore "
+    // Filter out jobs with excluded locations
     filteredJobs = filteredJobs.filter(
-      // (job) => job.location !== "Bangalore ",
-      (job) => job?.location?.includes("Bangalore") === false,
+      (job) =>
+        !EXCLUDED_LOCATIONS.some((location) =>
+          job?.location?.includes(location),
+        ),
     );
 
     // Calculate total count from filtered results

@@ -135,6 +135,7 @@ export async function fetchGreenhouseJobPost(
   }
 
   const data = await res.json();
+  console.log(data);
   return data;
 }
 
@@ -156,8 +157,13 @@ export async function saveGreenhouseJobData(
       ats_data: JSON.stringify(greenhouseData),
 
       // ATS-specific fields
+      absolute_url: greenhouseData.absolute_url,
       internal_job_id: greenhouseData.internal_job_id,
       requisition_id: greenhouseData.requisition_id,
+      company_name: greenhouseData.company_name,
+      first_published: greenhouseData.first_published,
+      language: greenhouseData.language,
+      metadata: JSON.stringify(greenhouseData.metadata || []),
       departments: JSON.stringify(greenhouseData.departments || []),
       offices: JSON.stringify(greenhouseData.offices || []),
       questions: JSON.stringify(greenhouseData.questions || []),
@@ -168,6 +174,7 @@ export async function saveGreenhouseJobData(
       demographic_questions: JSON.stringify(
         greenhouseData.demographic_questions || {},
       ),
+      data_compliance: JSON.stringify(greenhouseData.data_compliance || []),
 
       // Update core fields if they're better/more complete
       description: greenhouseData.content || undefined,

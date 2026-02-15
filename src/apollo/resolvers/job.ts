@@ -9,6 +9,17 @@ import {
   saveGreenhouseJobData,
 } from "@/ingestion/greenhouse";
 
+// Helper to safely parse ats_data
+function parseAtsData(parent: any): any | null {
+  if (!parent.ats_data) return null;
+  try {
+    return JSON.parse(parent.ats_data);
+  } catch (error) {
+    console.error("Error parsing ats_data:", error);
+    return null;
+  }
+}
+
 export const jobResolvers = {
   Job: {
     async skills(parent: any) {
@@ -37,6 +48,100 @@ export const jobResolvers = {
       } catch (error) {
         console.error("Error fetching company:", error);
         return null;
+      }
+    },
+    description(parent: any) {
+      const atsData = parseAtsData(parent);
+      // Greenhouse provides 'content' field with full HTML description
+      if (atsData?.content) {
+        return atsData.content;
+      }
+      // Fall back to the original description field
+      return parent.description;
+    },
+    absolute_url(parent: any) {
+      return parent.absolute_url || null;
+    },
+    internal_job_id(parent: any) {
+      return parent.internal_job_id || null;
+    },
+    requisition_id(parent: any) {
+      return parent.requisition_id || null;
+    },
+    company_name(parent: any) {
+      return parent.company_name || null;
+    },
+    first_published(parent: any) {
+      return parent.first_published || null;
+    },
+    language(parent: any) {
+      return parent.language || null;
+    },
+    metadata(parent: any) {
+      if (!parent.metadata) return [];
+      try {
+        return JSON.parse(parent.metadata);
+      } catch {
+        return [];
+      }
+    },
+    departments(parent: any) {
+      if (!parent.departments) return [];
+      try {
+        return JSON.parse(parent.departments);
+      } catch {
+        return [];
+      }
+    },
+    offices(parent: any) {
+      if (!parent.offices) return [];
+      try {
+        return JSON.parse(parent.offices);
+      } catch {
+        return [];
+      }
+    },
+    questions(parent: any) {
+      if (!parent.questions) return [];
+      try {
+        return JSON.parse(parent.questions);
+      } catch {
+        return [];
+      }
+    },
+    location_questions(parent: any) {
+      if (!parent.location_questions) return [];
+      try {
+        return JSON.parse(parent.location_questions);
+      } catch {
+        return [];
+      }
+    },
+    compliance(parent: any) {
+      if (!parent.compliance) return [];
+      try {
+        return JSON.parse(parent.compliance);
+      } catch {
+        return [];
+      }
+    },
+    demographic_questions(parent: any) {
+      if (!parent.demographic_questions) return null;
+      try {
+        const parsed = JSON.parse(parent.demographic_questions);
+        // Return null if it's an empty object
+        if (Object.keys(parsed).length === 0) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    },
+    data_compliance(parent: any) {
+      if (!parent.data_compliance) return [];
+      try {
+        return JSON.parse(parent.data_compliance);
+      } catch {
+        return [];
       }
     },
   },

@@ -112,7 +112,6 @@ function JobPageContent() {
   const [ashbyLoading, setAshbyLoading] = useState(false);
   const [hideCompanyLoading, setHideCompanyLoading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
-  const [enhancementData, setEnhancementData] = useState<any>(null);
 
   const { data, loading, error, refetch } = useGetJobQuery({
     variables: { id },
@@ -300,8 +299,7 @@ function JobPageContent() {
       });
 
       if (result.data?.enhanceJobFromATS?.success) {
-        setEnhancementData(result.data.enhanceJobFromATS.enhancedData);
-        // Refetch the job to get updated data
+        // Refetch the job to get updated data from the backend
         await refetch();
       } else {
         const errorMsg =
@@ -760,126 +758,124 @@ function JobPageContent() {
           )}
 
           {/* Greenhouse Enhanced Data */}
-          {enhancementData && (
-            <Card>
-              <Flex direction="column" gap="4">
-                <Heading size="6" mb="2">
-                  🌿 Enhanced Job Data (Greenhouse API)
-                </Heading>
-
-                {/* Basic Information */}
-                <Box>
-                  <Heading size="4" mb="2">
-                    Basic Information
+          {job.source_kind === "greenhouse" &&
+            (job.departments || job.offices || job.questions) && (
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Heading size="6" mb="2">
+                    🌿 Enhanced Job Data (Greenhouse API)
                   </Heading>
-                  <Box
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "12px 24px",
-                    }}
-                  >
-                    {enhancementData.title && (
-                      <Text size="2" style={{ gridColumn: "1 / -1" }}>
-                        <Text weight="bold" as="span">
-                          Title:
-                        </Text>{" "}
-                        {enhancementData.title}
-                      </Text>
-                    )}
-                    {enhancementData.company_name && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Company:
-                        </Text>{" "}
-                        {enhancementData.company_name}
-                      </Text>
-                    )}
-                    {enhancementData.location && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Location:
-                        </Text>{" "}
-                        {enhancementData.location.name}
-                      </Text>
-                    )}
-                    {enhancementData.internal_job_id && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Internal Job ID:
-                        </Text>{" "}
-                        {enhancementData.internal_job_id}
-                      </Text>
-                    )}
-                    {enhancementData.requisition_id && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Requisition ID:
-                        </Text>{" "}
-                        {enhancementData.requisition_id}
-                      </Text>
-                    )}
-                    {enhancementData.id && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Job Post ID:
-                        </Text>{" "}
-                        {enhancementData.id}
-                      </Text>
-                    )}
-                    {enhancementData.language && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Language:
-                        </Text>{" "}
-                        {enhancementData.language.toUpperCase()}
-                      </Text>
-                    )}
-                    {enhancementData.first_published && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          First Published:
-                        </Text>{" "}
-                        {new Date(
-                          enhancementData.first_published,
-                        ).toLocaleString()}
-                      </Text>
-                    )}
-                    {enhancementData.updated_at && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          Last Updated:
-                        </Text>{" "}
-                        {new Date(enhancementData.updated_at).toLocaleString()}
-                      </Text>
-                    )}
-                    {enhancementData.absolute_url && (
-                      <Text size="2" style={{ gridColumn: "1 / -1" }}>
-                        <Text weight="bold" as="span">
-                          Job Board URL:
-                        </Text>{" "}
-                        <a
-                          href={enhancementData.absolute_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: "var(--accent-11)" }}
-                        >
-                          {enhancementData.absolute_url}
-                        </a>
-                      </Text>
-                    )}
-                  </Box>
-                </Box>
 
-                {/* Departments */}
-                {enhancementData.departments &&
-                  enhancementData.departments.length > 0 && (
+                  {/* Basic Information */}
+                  <Box>
+                    <Heading size="4" mb="2">
+                      Basic Information
+                    </Heading>
+                    <Box
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "12px 24px",
+                      }}
+                    >
+                      {job.title && (
+                        <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                          <Text weight="bold" as="span">
+                            Title:
+                          </Text>{" "}
+                          {job.title}
+                        </Text>
+                      )}
+                      {job.company_name && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Company:
+                          </Text>{" "}
+                          {job.company_name}
+                        </Text>
+                      )}
+                      {job.location && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Location:
+                          </Text>{" "}
+                          {job.location}
+                        </Text>
+                      )}
+                      {job.internal_job_id && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Internal Job ID:
+                          </Text>{" "}
+                          {job.internal_job_id}
+                        </Text>
+                      )}
+                      {job.requisition_id && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Requisition ID:
+                          </Text>{" "}
+                          {job.requisition_id}
+                        </Text>
+                      )}
+                      {job.external_id && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Job Post ID:
+                          </Text>{" "}
+                          {job.external_id}
+                        </Text>
+                      )}
+                      {job.language && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Language:
+                          </Text>{" "}
+                          {job.language?.toUpperCase()}
+                        </Text>
+                      )}
+                      {job.first_published && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            First Published:
+                          </Text>{" "}
+                          {new Date(job.first_published).toLocaleString()}
+                        </Text>
+                      )}
+                      {job.updated_at && (
+                        <Text size="2">
+                          <Text weight="bold" as="span">
+                            Last Updated:
+                          </Text>{" "}
+                          {new Date(job.updated_at).toLocaleString()}
+                        </Text>
+                      )}
+                      {job.absolute_url && (
+                        <Text size="2" style={{ gridColumn: "1 / -1" }}>
+                          <Text weight="bold" as="span">
+                            Job Board URL:
+                          </Text>{" "}
+                          <a
+                            href={job.absolute_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "var(--accent-11)" }}
+                          >
+                            {job.absolute_url}
+                          </a>
+                        </Text>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Departments */}
+                  {job.departments && job.departments.length > 0 && (
                     <Box>
                       <Heading size="4" mb="2">
                         Departments
                       </Heading>
                       <Flex direction="column" gap="2">
-                        {enhancementData.departments.map((dept: any) => (
+                        {job.departments.map((dept: any) => (
                           <Box
                             key={dept.id}
                             p="2"
@@ -901,15 +897,14 @@ function JobPageContent() {
                     </Box>
                   )}
 
-                {/* Offices */}
-                {enhancementData.offices &&
-                  enhancementData.offices.length > 0 && (
+                  {/* Offices */}
+                  {job.offices && job.offices.length > 0 && (
                     <Box>
                       <Heading size="4" mb="2">
                         Offices / Locations
                       </Heading>
                       <Flex direction="column" gap="2">
-                        {enhancementData.offices.map((office: any) => (
+                        {job.offices.map((office: any) => (
                           <Box
                             key={office.id}
                             p="2"
@@ -933,103 +928,97 @@ function JobPageContent() {
                     </Box>
                   )}
 
-                {/* Job Description */}
-                {enhancementData.content && (
-                  <Box>
-                    <Heading size="4" mb="2">
-                      Full Job Description
-                    </Heading>
-                    <Box
-                      p="3"
-                      style={{
-                        backgroundColor: "var(--gray-2)",
-                        borderRadius: "var(--radius-3)",
-                        border: "1px solid var(--gray-5)",
-                        maxHeight: "500px",
-                        overflowY: "auto",
-                      }}
-                    >
-                      <Text
-                        as="div"
-                        size="2"
-                        style={{
-                          lineHeight: "1.6",
-                        }}
-                        dangerouslySetInnerHTML={{
-                          __html: enhancementData.content,
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                )}
-
-                {/* Application Questions */}
-                {enhancementData.questions &&
-                  enhancementData.questions.length > 0 && (
+                  {/* Job Description */}
+                  {job.description && job.source_kind === "greenhouse" && (
                     <Box>
                       <Heading size="4" mb="2">
-                        Application Questions (
-                        {enhancementData.questions.length})
+                        Full Job Description
+                      </Heading>
+                      <Box
+                        p="3"
+                        style={{
+                          backgroundColor: "var(--gray-2)",
+                          borderRadius: "var(--radius-3)",
+                          border: "1px solid var(--gray-5)",
+                          maxHeight: "500px",
+                          overflowY: "auto",
+                        }}
+                      >
+                        <Text
+                          as="div"
+                          size="2"
+                          style={{
+                            lineHeight: "1.6",
+                          }}
+                          dangerouslySetInnerHTML={{
+                            __html: job.description,
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Application Questions */}
+                  {job.questions && job.questions.length > 0 && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Application Questions ({job.questions.length})
                       </Heading>
                       <Flex direction="column" gap="2">
-                        {enhancementData.questions.map(
-                          (q: any, idx: number) => (
-                            <Box
-                              key={idx}
-                              p="3"
-                              style={{
-                                backgroundColor: "var(--gray-3)",
-                                borderRadius: "var(--radius-2)",
-                                border: "1px solid var(--gray-5)",
-                              }}
-                            >
-                              <Flex justify="between" align="start" mb="1">
-                                <Text size="2" weight="medium">
-                                  {idx + 1}. {q.label}
-                                </Text>
-                                {q.required && (
-                                  <Badge size="1" color="red">
-                                    Required
-                                  </Badge>
-                                )}
-                              </Flex>
-                              {q.description && (
-                                <Text
-                                  size="1"
-                                  color="gray"
-                                  dangerouslySetInnerHTML={{
-                                    __html: q.description,
-                                  }}
-                                />
+                        {job.questions.map((q: any, idx: number) => (
+                          <Box
+                            key={idx}
+                            p="3"
+                            style={{
+                              backgroundColor: "var(--gray-3)",
+                              borderRadius: "var(--radius-2)",
+                              border: "1px solid var(--gray-5)",
+                            }}
+                          >
+                            <Flex justify="between" align="start" mb="1">
+                              <Text size="2" weight="medium">
+                                {idx + 1}. {q.label}
+                              </Text>
+                              {q.required && (
+                                <Badge size="1" color="red">
+                                  Required
+                                </Badge>
                               )}
-                              {q.fields && q.fields.length > 0 && (
-                                <Box mt="1">
-                                  {q.fields.map((field: any, fidx: number) => (
-                                    <Text size="1" color="gray" key={fidx}>
-                                      Field type: {field.type}
-                                      {field.name && ` - ${field.name}`}
-                                    </Text>
-                                  ))}
-                                </Box>
-                              )}
-                            </Box>
-                          ),
-                        )}
+                            </Flex>
+                            {q.description && (
+                              <Text
+                                size="1"
+                                color="gray"
+                                dangerouslySetInnerHTML={{
+                                  __html: q.description,
+                                }}
+                              />
+                            )}
+                            {q.fields && q.fields.length > 0 && (
+                              <Box mt="1">
+                                {q.fields.map((field: any, fidx: number) => (
+                                  <Text size="1" color="gray" key={fidx}>
+                                    Field type: {field.type}
+                                    {field.name && ` - ${field.name}`}
+                                  </Text>
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        ))}
                       </Flex>
                     </Box>
                   )}
 
-                {/* Location Questions */}
-                {enhancementData.location_questions &&
-                  enhancementData.location_questions.length > 0 && (
-                    <Box>
-                      <Heading size="4" mb="2">
-                        Location Questions (
-                        {enhancementData.location_questions.length})
-                      </Heading>
-                      <Flex direction="column" gap="2">
-                        {enhancementData.location_questions.map(
-                          (q: any, idx: number) => (
+                  {/* Location Questions */}
+                  {job.location_questions &&
+                    job.location_questions.length > 0 && (
+                      <Box>
+                        <Heading size="4" mb="2">
+                          Location Questions ({job.location_questions.length})
+                        </Heading>
+                        <Flex direction="column" gap="2">
+                          {job.location_questions.map((q: any, idx: number) => (
                             <Box
                               key={idx}
                               p="2"
@@ -1047,198 +1036,163 @@ function JobPageContent() {
                                 )}
                               </Text>
                             </Box>
-                          ),
-                        )}
-                      </Flex>
-                    </Box>
-                  )}
+                          ))}
+                        </Flex>
+                      </Box>
+                    )}
 
-                {/* Data Compliance */}
-                {enhancementData.data_compliance &&
-                  enhancementData.data_compliance.length > 0 && (
+                  {/* Data Compliance */}
+                  {job.data_compliance && job.data_compliance.length > 0 && (
                     <Box>
                       <Heading size="4" mb="2">
                         Data Compliance
                       </Heading>
                       <Flex direction="column" gap="2">
-                        {enhancementData.data_compliance.map(
-                          (dc: any, idx: number) => (
-                            <Box
-                              key={idx}
-                              p="3"
-                              style={{
-                                backgroundColor: "var(--blue-3)",
-                                borderRadius: "var(--radius-2)",
-                                border: "1px solid var(--blue-6)",
-                              }}
-                            >
-                              <Flex gap="2" wrap="wrap" mb="1">
-                                <Badge color="blue" size="2">
-                                  {dc.type.toUpperCase()}
+                        {job.data_compliance.map((dc: any, idx: number) => (
+                          <Box
+                            key={idx}
+                            p="3"
+                            style={{
+                              backgroundColor: "var(--blue-3)",
+                              borderRadius: "var(--radius-2)",
+                              border: "1px solid var(--blue-6)",
+                            }}
+                          >
+                            <Flex gap="2" wrap="wrap" mb="1">
+                              <Badge color="blue" size="2">
+                                {dc.type.toUpperCase()}
+                              </Badge>
+                              {dc.requires_consent && (
+                                <Badge size="1" color="orange">
+                                  Requires Consent
                                 </Badge>
-                                {dc.requires_consent && (
-                                  <Badge size="1" color="orange">
-                                    Requires Consent
-                                  </Badge>
-                                )}
-                                {dc.requires_processing_consent && (
-                                  <Badge size="1" color="orange">
-                                    Processing Consent
-                                  </Badge>
-                                )}
-                                {dc.requires_retention_consent && (
-                                  <Badge size="1" color="orange">
-                                    Retention Consent
-                                  </Badge>
-                                )}
-                              </Flex>
-                              {dc.retention_period && (
-                                <Text size="2" color="gray">
-                                  Retention: {dc.retention_period}
-                                </Text>
                               )}
-                            </Box>
-                          ),
-                        )}
+                              {dc.requires_processing_consent && (
+                                <Badge size="1" color="orange">
+                                  Processing Consent
+                                </Badge>
+                              )}
+                              {dc.requires_retention_consent && (
+                                <Badge size="1" color="orange">
+                                  Retention Consent
+                                </Badge>
+                              )}
+                            </Flex>
+                            {dc.retention_period && (
+                              <Text size="2" color="gray">
+                                Retention: {dc.retention_period}
+                              </Text>
+                            )}
+                          </Box>
+                        ))}
                       </Flex>
                     </Box>
                   )}
 
-                {/* Compliance Forms (EEOC) */}
-                {enhancementData.compliance &&
-                  enhancementData.compliance.length > 0 && (
+                  {/* Compliance Forms (EEOC) */}
+                  {job.compliance && job.compliance.length > 0 && (
                     <Box>
                       <Heading size="4" mb="2">
-                        Compliance & EEOC Forms (
-                        {enhancementData.compliance.length})
+                        Compliance & EEOC Forms ({job.compliance.length})
                       </Heading>
                       <Flex direction="column" gap="3">
-                        {enhancementData.compliance.map(
-                          (comp: any, idx: number) => (
-                            <Box
-                              key={idx}
-                              p="3"
-                              style={{
-                                backgroundColor: "var(--gray-2)",
-                                borderRadius: "var(--radius-3)",
-                                border: "1px solid var(--gray-6)",
-                              }}
-                            >
-                              <Badge color="purple" size="2" mb="2">
-                                {comp.type.toUpperCase()}
-                              </Badge>
-                              {comp.description && (
-                                <Box
-                                  mt="2"
-                                  p="2"
-                                  style={{
-                                    backgroundColor: "var(--gray-3)",
-                                    borderRadius: "var(--radius-2)",
-                                    maxHeight: "200px",
-                                    overflowY: "auto",
+                        {job.compliance.map((comp: any, idx: number) => (
+                          <Box
+                            key={idx}
+                            p="3"
+                            style={{
+                              backgroundColor: "var(--gray-2)",
+                              borderRadius: "var(--radius-3)",
+                              border: "1px solid var(--gray-6)",
+                            }}
+                          >
+                            <Badge color="purple" size="2" mb="2">
+                              {comp.type.toUpperCase()}
+                            </Badge>
+                            {comp.description && (
+                              <Box
+                                mt="2"
+                                p="2"
+                                style={{
+                                  backgroundColor: "var(--gray-3)",
+                                  borderRadius: "var(--radius-2)",
+                                  maxHeight: "200px",
+                                  overflowY: "auto",
+                                }}
+                              >
+                                <Text
+                                  size="1"
+                                  as="div"
+                                  dangerouslySetInnerHTML={{
+                                    __html: comp.description,
                                   }}
-                                >
-                                  <Text
-                                    size="1"
-                                    as="div"
-                                    dangerouslySetInnerHTML={{
-                                      __html: comp.description,
-                                    }}
-                                  />
-                                </Box>
-                              )}
-                              {comp.questions && comp.questions.length > 0 && (
-                                <Box mt="2">
-                                  <Text size="2" weight="medium">
-                                    Questions: {comp.questions.length}
-                                  </Text>
-                                </Box>
-                              )}
-                            </Box>
-                          ),
-                        )}
+                                />
+                              </Box>
+                            )}
+                            {comp.questions && comp.questions.length > 0 && (
+                              <Box mt="2">
+                                <Text size="2" weight="medium">
+                                  Questions: {comp.questions.length}
+                                </Text>
+                              </Box>
+                            )}
+                          </Box>
+                        ))}
                       </Flex>
                     </Box>
                   )}
 
-                {/* Demographic Questions */}
-                {enhancementData.demographic_questions && (
-                  <Box>
-                    <Heading size="4" mb="2">
-                      Demographic Questions
-                    </Heading>
-                    <Box
-                      p="3"
-                      style={{
-                        backgroundColor: "var(--violet-3)",
-                        borderRadius: "var(--radius-3)",
-                        border: "1px solid var(--violet-6)",
-                      }}
-                    >
-                      {enhancementData.demographic_questions.header && (
-                        <Text size="3" weight="bold" mb="2">
-                          {enhancementData.demographic_questions.header}
-                        </Text>
-                      )}
-                      {enhancementData.demographic_questions.description && (
-                        <Box
-                          mb="2"
-                          p="2"
-                          style={{
-                            backgroundColor: "var(--violet-2)",
-                            borderRadius: "var(--radius-2)",
-                          }}
-                        >
-                          <Text
-                            size="2"
-                            as="div"
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                enhancementData.demographic_questions
-                                  .description,
-                            }}
-                          />
-                        </Box>
-                      )}
-                      {enhancementData.demographic_questions.questions &&
-                        enhancementData.demographic_questions.questions.length >
-                          0 && (
-                          <Text size="2" color="gray">
-                            Contains{" "}
-                            {
-                              enhancementData.demographic_questions.questions
-                                .length
-                            }{" "}
-                            demographic question(s)
+                  {/* Demographic Questions */}
+                  {job.demographic_questions && (
+                    <Box>
+                      <Heading size="4" mb="2">
+                        Demographic Questions
+                      </Heading>
+                      <Box
+                        p="3"
+                        style={{
+                          backgroundColor: "var(--violet-3)",
+                          borderRadius: "var(--radius-3)",
+                          border: "1px solid var(--violet-6)",
+                        }}
+                      >
+                        {job.demographic_questions.header && (
+                          <Text size="3" weight="bold" mb="2">
+                            {job.demographic_questions.header}
                           </Text>
                         )}
+                        {job.demographic_questions.description && (
+                          <Box
+                            mb="2"
+                            p="2"
+                            style={{
+                              backgroundColor: "var(--violet-2)",
+                              borderRadius: "var(--radius-2)",
+                            }}
+                          >
+                            <Text
+                              size="2"
+                              as="div"
+                              dangerouslySetInnerHTML={{
+                                __html: job.demographic_questions.description,
+                              }}
+                            />
+                          </Box>
+                        )}
+                        {job.demographic_questions.questions &&
+                          job.demographic_questions.questions.length > 0 && (
+                            <Text size="2" color="gray">
+                              Contains{" "}
+                              {job.demographic_questions.questions.length}{" "}
+                              demographic question(s)
+                            </Text>
+                          )}
+                      </Box>
                     </Box>
-                  </Box>
-                )}
-
-                {/* Raw JSON Data (for debugging) */}
-                <Box>
-                  <Heading size="4" mb="2">
-                    Complete API Response (JSON)
-                  </Heading>
-                  <Box
-                    p="3"
-                    style={{
-                      backgroundColor: "var(--gray-1)",
-                      borderRadius: "var(--radius-2)",
-                      border: "1px solid var(--gray-5)",
-                      maxHeight: "400px",
-                      overflowY: "auto",
-                      fontFamily: "monospace",
-                      fontSize: "12px",
-                    }}
-                  >
-                    <pre>{JSON.stringify(enhancementData, null, 2)}</pre>
-                  </Box>
-                </Box>
-              </Flex>
-            </Card>
-          )}
+                  )}
+                </Flex>
+              </Card>
+            )}
 
           {/* Fallback to DB description if no Ashby data */}
           {!ashbyData && job.description && (

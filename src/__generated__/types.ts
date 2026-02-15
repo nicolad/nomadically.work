@@ -302,20 +302,97 @@ export type ExtractMethod =
   | 'LLM'
   | 'META';
 
+export type GreenhouseCompliance = {
+  __typename: 'GreenhouseCompliance';
+  description: Maybe<Scalars['String']['output']>;
+  questions: Maybe<Array<GreenhouseQuestion>>;
+  type: Scalars['String']['output'];
+};
+
+export type GreenhouseDataCompliance = {
+  __typename: 'GreenhouseDataCompliance';
+  demographic_data_consent_applies: Scalars['Boolean']['output'];
+  requires_consent: Scalars['Boolean']['output'];
+  requires_processing_consent: Scalars['Boolean']['output'];
+  requires_retention_consent: Scalars['Boolean']['output'];
+  retention_period: Maybe<Scalars['Int']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type GreenhouseDemographicQuestions = {
+  __typename: 'GreenhouseDemographicQuestions';
+  description: Maybe<Scalars['String']['output']>;
+  header: Maybe<Scalars['String']['output']>;
+  questions: Maybe<Array<GreenhouseQuestion>>;
+};
+
+export type GreenhouseDepartment = {
+  __typename: 'GreenhouseDepartment';
+  child_ids: Array<Scalars['Int']['output']>;
+  id: Scalars['Int']['output'];
+  name: Scalars['String']['output'];
+  parent_id: Maybe<Scalars['Int']['output']>;
+};
+
+export type GreenhouseMetadata = {
+  __typename: 'GreenhouseMetadata';
+  id: Scalars['Int']['output'];
+  name: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+  value_type: Scalars['String']['output'];
+};
+
+export type GreenhouseOffice = {
+  __typename: 'GreenhouseOffice';
+  child_ids: Array<Scalars['Int']['output']>;
+  id: Scalars['Int']['output'];
+  location: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  parent_id: Maybe<Scalars['Int']['output']>;
+};
+
+export type GreenhouseQuestion = {
+  __typename: 'GreenhouseQuestion';
+  description: Maybe<Scalars['String']['output']>;
+  fields: Array<GreenhouseQuestionField>;
+  label: Scalars['String']['output'];
+  required: Scalars['Boolean']['output'];
+};
+
+export type GreenhouseQuestionField = {
+  __typename: 'GreenhouseQuestionField';
+  name: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
 export type Job = {
   __typename: 'Job';
+  absolute_url: Maybe<Scalars['String']['output']>;
   company: Maybe<Company>;
   company_id: Maybe<Scalars['Int']['output']>;
   company_key: Scalars['String']['output'];
+  company_name: Maybe<Scalars['String']['output']>;
+  compliance: Maybe<Array<GreenhouseCompliance>>;
   created_at: Scalars['String']['output'];
+  data_compliance: Maybe<Array<GreenhouseDataCompliance>>;
+  demographic_questions: Maybe<GreenhouseDemographicQuestions>;
+  departments: Maybe<Array<GreenhouseDepartment>>;
   description: Maybe<Scalars['String']['output']>;
   external_id: Scalars['String']['output'];
+  first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
+  internal_job_id: Maybe<Scalars['Int']['output']>;
   is_remote_eu: Maybe<Scalars['Boolean']['output']>;
+  language: Maybe<Scalars['String']['output']>;
   location: Maybe<Scalars['String']['output']>;
+  location_questions: Maybe<Array<GreenhouseQuestion>>;
+  metadata: Maybe<Array<GreenhouseMetadata>>;
+  offices: Maybe<Array<GreenhouseOffice>>;
   posted_at: Scalars['String']['output'];
+  questions: Maybe<Array<GreenhouseQuestion>>;
   remote_eu_confidence: Maybe<Scalars['String']['output']>;
   remote_eu_reason: Maybe<Scalars['String']['output']>;
+  requisition_id: Maybe<Scalars['String']['output']>;
   score: Maybe<Scalars['Float']['output']>;
   score_reason: Maybe<Scalars['String']['output']>;
   skills: Maybe<Array<JobSkill>>;

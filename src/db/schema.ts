@@ -78,14 +78,20 @@ export const jobs = sqliteTable("jobs", {
   ats_data: text("ats_data"), // Full JSON response from ATS API
 
   // ATS-specific fields (primarily Greenhouse)
+  absolute_url: text("absolute_url"),
   internal_job_id: integer("internal_job_id"),
   requisition_id: text("requisition_id"),
+  company_name: text("company_name"),
+  first_published: text("first_published"),
+  language: text("language"),
+  metadata: text("metadata"), // JSON array
   departments: text("departments"), // JSON array
   offices: text("offices"), // JSON array
   questions: text("questions"), // JSON array
   location_questions: text("location_questions"), // JSON array
   compliance: text("compliance"), // JSON array
   demographic_questions: text("demographic_questions"), // JSON object
+  data_compliance: text("data_compliance"), // JSON array
 
   created_at: text("created_at")
     .notNull()

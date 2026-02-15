@@ -33,6 +33,61 @@ type JobSkill {
   evidence: String
 }
 
+type GreenhouseDepartment {
+  id: Int!
+  name: String!
+  child_ids: [Int!]!
+  parent_id: Int
+}
+
+type GreenhouseOffice {
+  id: Int!
+  name: String!
+  location: String
+  child_ids: [Int!]!
+  parent_id: Int
+}
+
+type GreenhouseQuestionField {
+  type: String!
+  name: String
+}
+
+type GreenhouseQuestion {
+  description: String
+  label: String!
+  required: Boolean!
+  fields: [GreenhouseQuestionField!]!
+}
+
+type GreenhouseMetadata {
+  id: Int!
+  name: String!
+  value: String!
+  value_type: String!
+}
+
+type GreenhouseDataCompliance {
+  type: String!
+  requires_consent: Boolean!
+  requires_processing_consent: Boolean!
+  requires_retention_consent: Boolean!
+  retention_period: Int
+  demographic_data_consent_applies: Boolean!
+}
+
+type GreenhouseCompliance {
+  type: String!
+  description: String
+  questions: [GreenhouseQuestion!]
+}
+
+type GreenhouseDemographicQuestions {
+  header: String
+  description: String
+  questions: [GreenhouseQuestion!]
+}
+
 type Job {
   id: Int!
   external_id: String!
@@ -53,6 +108,23 @@ type Job {
   remote_eu_confidence: String
   remote_eu_reason: String
   skills: [JobSkill!]
+
+  # Greenhouse ATS fields (parsed from ats_data)
+  absolute_url: String
+  internal_job_id: Int
+  requisition_id: String
+  company_name: String
+  first_published: String
+  language: String
+  metadata: [GreenhouseMetadata!]
+  departments: [GreenhouseDepartment!]
+  offices: [GreenhouseOffice!]
+  questions: [GreenhouseQuestion!]
+  location_questions: [GreenhouseQuestion!]
+  compliance: [GreenhouseCompliance!]
+  demographic_questions: GreenhouseDemographicQuestions
+  data_compliance: [GreenhouseDataCompliance!]
+
   created_at: String!
   updated_at: String!
 }

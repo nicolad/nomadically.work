@@ -221,14 +221,37 @@ export const jobResolvers = {
 
     async job(_parent: any, args: { id: string }, _context: GraphQLContext) {
       try {
-        // The id might be just a UUID, so we need to match against external_id which contains full URL
-        // Find by checking if external_id ends with the provided id
-        const allJobs = await db.select().from(jobs);
-        const result = allJobs.find((job) => {
-          const jobId = last(split(job.external_id, "/"));
-          return jobId === args.id;
-        });
-        return result || null;
+        // Try to find the job by matching external_id pattern
+        // external_id typically contains the full URL like:
+        // https://job-boards.greenhouse.io/databricks/jobs/7434532002
+        // We need to match jobs where external_id ends with the provided id
+
+        const results = await db
+          .select()
+          .from(jobs)
+          .where(like(jobs.external_id, `%/${args.id}`));
+
+        if (results.length > 0) {
+          return results[0];
+        }
+
+        // If no match found with trailing slash, try without it
+        // (in case it's a direct match or different format)
+        const directResults = await db
+          .select()
+          .from(jobs)
+          .where(like(jobs.external_id, `%${args.id}%`));
+
+        if (directResults.length > 0) {
+          // Find the one where the id is actually at the end
+          const exactMatch = directResults.find((job) => {
+            const jobId = last(split(job.external_id, "/"));
+            return jobId === args.id;
+          });
+          return exactMatch || directResults[0];
+        }
+
+        return null;
       } catch (error) {
         console.error("Error fetching job:", error);
         return null;

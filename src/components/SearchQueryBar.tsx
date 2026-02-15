@@ -28,13 +28,11 @@ export function SearchQueryBar({
 }: Props) {
   const [jobsValue, setJobsValue] = React.useState(initialQuery);
 
-  const handleJobsChange = React.useCallback(
-    (q: string) => {
-      setJobsValue(q);
-      onSearchQueryChange?.(q);
-    },
-    [onSearchQueryChange],
-  );
+  const handleJobsChange = React.useCallback((q: string) => {
+    // Only update local state, don't notify parent yet
+    // Parent will be notified via handleJobsSubmit (debounced or on Enter)
+    setJobsValue(q);
+  }, []);
 
   const handleJobsSubmit = React.useCallback(
     (q: string) => {

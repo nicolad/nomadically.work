@@ -11,10 +11,7 @@ export function UnifiedJobsProvider() {
   return (
     <Container size="4" py="6">
       <Box mb="6">
-        <SearchQueryBar
-          onSearchQueryChange={(q) => setSearchFilter(q)}
-          onSearchSubmit={(q) => setSearchFilter(q)}
-        />
+        <SearchQueryBar onSearchSubmit={(q) => setSearchFilter(q)} />
       </Box>
       <Box mt="4">
         <JobsList searchFilter={searchFilter} />

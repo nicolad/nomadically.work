@@ -80,16 +80,23 @@ export async function enhanceJobFromATS(
         `✅ [Enhance Job] Successfully enhanced Greenhouse job ${jobId}`,
       );
     } else if (source.toLowerCase() === "lever") {
+      // For Lever, extract site name from the external_id URL
+      // Format: https://jobs.lever.co/{site}/{posting_id}
+      const urlParts = job.external_id.split("/");
+      const leverSite =
+        urlParts.length >= 5 ? urlParts[urlParts.length - 2] : company;
+      const leverPostingId = last(urlParts) || jobId;
+
       console.log(
-        `🔄 [Enhance Job] Fetching Lever data for posting ${jobId} from site ${company}`,
+        `🔄 [Enhance Job] Fetching Lever data for posting ${leverPostingId} from site ${leverSite}`,
       );
 
       // Lever uses 'site' (company name) and posting ID
       // Try both global and EU regions
       try {
         enhancedData = await getLeverPosting({
-          site: company,
-          postingId: jobId,
+          site: leverSite,
+          postingId: leverPostingId,
           region: "global",
         });
       } catch (globalError) {
@@ -98,8 +105,8 @@ export async function enhanceJobFromATS(
         );
         // If global fails, try EU region
         enhancedData = await getLeverPosting({
-          site: company,
-          postingId: jobId,
+          site: leverSite,
+          postingId: leverPostingId,
           region: "eu",
         });
       }
@@ -107,7 +114,9 @@ export async function enhanceJobFromATS(
       // Save the enhanced data to the database
       updatedJob = await saveLeverJobData(job.id, enhancedData);
 
-      console.log(`✅ [Enhance Job] Successfully enhanced Lever job ${jobId}`);
+      console.log(
+        `✅ [Enhance Job] Successfully enhanced Lever job ${leverPostingId}`,
+      );
     }
 
     return {

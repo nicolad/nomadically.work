@@ -331,15 +331,15 @@ export type GreenhouseDemographicQuestions = {
 
 export type GreenhouseDepartment = {
   __typename?: 'GreenhouseDepartment';
-  child_ids: Array<Scalars['Int']['output']>;
-  id: Scalars['Int']['output'];
+  child_ids: Array<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  parent_id: Maybe<Scalars['Int']['output']>;
+  parent_id: Maybe<Scalars['String']['output']>;
 };
 
 export type GreenhouseMetadata = {
   __typename?: 'GreenhouseMetadata';
-  id: Scalars['Int']['output'];
+  id: Scalars['String']['output'];
   name: Scalars['String']['output'];
   value: Scalars['String']['output'];
   value_type: Scalars['String']['output'];
@@ -347,11 +347,11 @@ export type GreenhouseMetadata = {
 
 export type GreenhouseOffice = {
   __typename?: 'GreenhouseOffice';
-  child_ids: Array<Scalars['Int']['output']>;
-  id: Scalars['Int']['output'];
+  child_ids: Array<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
   location: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
-  parent_id: Maybe<Scalars['Int']['output']>;
+  parent_id: Maybe<Scalars['String']['output']>;
 };
 
 export type GreenhouseQuestion = {
@@ -384,7 +384,7 @@ export type Job = {
   external_id: Scalars['String']['output'];
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
-  internal_job_id: Maybe<Scalars['Int']['output']>;
+  internal_job_id: Maybe<Scalars['String']['output']>;
   is_remote_eu: Maybe<Scalars['Boolean']['output']>;
   language: Maybe<Scalars['String']['output']>;
   location: Maybe<Scalars['String']['output']>;
@@ -880,7 +880,7 @@ export type GetJobQueryVariables = Exact<{
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, absolute_url: string | null, internal_job_id: number | null, requisition_id: string | null, company_name: string | null, first_published: string | null, language: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null, metadata: Array<{ __typename?: 'GreenhouseMetadata', id: number, name: string, value: string, value_type: string }> | null, departments: Array<{ __typename?: 'GreenhouseDepartment', id: number, name: string, child_ids: Array<number>, parent_id: number | null }> | null, offices: Array<{ __typename?: 'GreenhouseOffice', id: number, name: string, location: string | null, child_ids: Array<number>, parent_id: number | null }> | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, location_questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, compliance: Array<{ __typename?: 'GreenhouseCompliance', type: string, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null }> | null, demographic_questions: { __typename?: 'GreenhouseDemographicQuestions', header: string | null, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null } | null, data_compliance: Array<{ __typename?: 'GreenhouseDataCompliance', type: string, requires_consent: boolean, requires_processing_consent: boolean, requires_retention_consent: boolean, retention_period: number | null, demographic_data_consent_applies: boolean }> | null } | null };
+export type GetJobQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, absolute_url: string | null, internal_job_id: string | null, requisition_id: string | null, company_name: string | null, first_published: string | null, language: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null, metadata: Array<{ __typename?: 'GreenhouseMetadata', id: string, name: string, value: string, value_type: string }> | null, departments: Array<{ __typename?: 'GreenhouseDepartment', id: string, name: string, child_ids: Array<string>, parent_id: string | null }> | null, offices: Array<{ __typename?: 'GreenhouseOffice', id: string, name: string, location: string | null, child_ids: Array<string>, parent_id: string | null }> | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, location_questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, compliance: Array<{ __typename?: 'GreenhouseCompliance', type: string, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null }> | null, demographic_questions: { __typename?: 'GreenhouseDemographicQuestions', header: string | null, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null } | null, data_compliance: Array<{ __typename?: 'GreenhouseDataCompliance', type: string, requires_consent: boolean, requires_processing_consent: boolean, requires_retention_consent: boolean, retention_period: number | null, demographic_data_consent_applies: boolean }> | null } | null };
 
 export type GetJobsQueryVariables = Exact<{
   sourceType?: InputMaybe<Scalars['String']['input']>;

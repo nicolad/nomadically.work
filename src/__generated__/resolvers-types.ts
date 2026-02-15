@@ -331,15 +331,15 @@ export type GreenhouseDemographicQuestions = {
 
 export type GreenhouseDepartment = {
   __typename?: 'GreenhouseDepartment';
-  child_ids: Array<Scalars['Int']['output']>;
-  id: Scalars['Int']['output'];
+  child_ids: Array<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  parent_id: Maybe<Scalars['Int']['output']>;
+  parent_id: Maybe<Scalars['String']['output']>;
 };
 
 export type GreenhouseMetadata = {
   __typename?: 'GreenhouseMetadata';
-  id: Scalars['Int']['output'];
+  id: Scalars['String']['output'];
   name: Scalars['String']['output'];
   value: Scalars['String']['output'];
   value_type: Scalars['String']['output'];
@@ -347,11 +347,11 @@ export type GreenhouseMetadata = {
 
 export type GreenhouseOffice = {
   __typename?: 'GreenhouseOffice';
-  child_ids: Array<Scalars['Int']['output']>;
-  id: Scalars['Int']['output'];
+  child_ids: Array<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
   location: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
-  parent_id: Maybe<Scalars['Int']['output']>;
+  parent_id: Maybe<Scalars['String']['output']>;
 };
 
 export type GreenhouseQuestion = {
@@ -384,7 +384,7 @@ export type Job = {
   external_id: Scalars['String']['output'];
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
-  internal_job_id: Maybe<Scalars['Int']['output']>;
+  internal_job_id: Maybe<Scalars['String']['output']>;
   is_remote_eu: Maybe<Scalars['Boolean']['output']>;
   language: Maybe<Scalars['String']['output']>;
   location: Maybe<Scalars['String']['output']>;
@@ -1226,25 +1226,25 @@ export type GreenhouseDemographicQuestionsResolvers<ContextType = GraphQLContext
 };
 
 export type GreenhouseDepartmentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseDepartment'] = ResolversParentTypes['GreenhouseDepartment']> = {
-  child_ids?: Resolver<Array<ResolversTypes['Int']>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  child_ids?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  parent_id?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  parent_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type GreenhouseMetadataResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseMetadata'] = ResolversParentTypes['GreenhouseMetadata']> = {
-  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   value?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   value_type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type GreenhouseOfficeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseOffice'] = ResolversParentTypes['GreenhouseOffice']> = {
-  child_ids?: Resolver<Array<ResolversTypes['Int']>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  child_ids?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  parent_id?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  parent_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type GreenhouseQuestionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseQuestion'] = ResolversParentTypes['GreenhouseQuestion']> = {
@@ -1278,7 +1278,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   external_id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   first_published?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  internal_job_id?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  internal_job_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   is_remote_eu?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
   language?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;

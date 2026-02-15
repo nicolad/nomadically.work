@@ -34,18 +34,18 @@ type JobSkill {
 }
 
 type GreenhouseDepartment {
-  id: Int!
+  id: String!
   name: String!
-  child_ids: [Int!]!
-  parent_id: Int
+  child_ids: [String!]!
+  parent_id: String
 }
 
 type GreenhouseOffice {
-  id: Int!
+  id: String!
   name: String!
   location: String
-  child_ids: [Int!]!
-  parent_id: Int
+  child_ids: [String!]!
+  parent_id: String
 }
 
 type GreenhouseQuestionField {
@@ -61,7 +61,7 @@ type GreenhouseQuestion {
 }
 
 type GreenhouseMetadata {
-  id: Int!
+  id: String!
   name: String!
   value: String!
   value_type: String!
@@ -111,7 +111,7 @@ type Job {
 
   # Greenhouse ATS fields (parsed from ats_data)
   absolute_url: String
-  internal_job_id: Int
+  internal_job_id: String
   requisition_id: String
   company_name: String
   first_published: String

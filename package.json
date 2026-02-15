@@ -10,6 +10,7 @@
     "trigger": "pnpm dlx trigger.dev@latest deploy",
     "trigger:dev": "pnpm dlx trigger.dev@latest dev",
     "trigger:run": "tsx scripts/enhance-greenhouse-jobs.ts",
+    "jobs:enhance": "tsx scripts/enhance-all-jobs.ts",
     "test:skills": "tsx scripts/test-workspace-skills.ts",
     "demo:skills": "tsx scripts/demo-skills-in-production.ts",
     "demo:bm25": "tsx scripts/demo-bm25-skills.ts",

@@ -35,6 +35,7 @@ type JobStatus = "eu-remote" | "non-eu-remote" | "eu-onsite" | "non-eu" | "all";
 
 interface JobsListProps {
   searchFilter?: string;
+  searchTrigger?: number;
 }
 
 const getStatusBadgeColor = (status: Job["status"]): BadgeColor => {
@@ -59,7 +60,10 @@ const getStatusLabel = (status: Job["status"]): string => {
   }
 };
 
-export function JobsList({ searchFilter = "" }: JobsListProps) {
+export function JobsList({
+  searchFilter = "",
+  searchTrigger = 0,
+}: JobsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -103,7 +107,7 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
     }),
-    [searchFilter, excludedCompanies],
+    [searchFilter, excludedCompanies, searchTrigger], // Include searchTrigger to force refetch
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({

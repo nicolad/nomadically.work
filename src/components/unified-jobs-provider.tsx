@@ -7,14 +7,21 @@ import { JobsList } from "./jobs-list";
 
 export function UnifiedJobsProvider() {
   const [searchFilter, setSearchFilter] = useState("");
+  const [searchTrigger, setSearchTrigger] = useState(0);
+
+  const handleSearch = (query: string) => {
+    setSearchFilter(query);
+    // Increment trigger to force refetch even if query is the same
+    setSearchTrigger((prev) => prev + 1);
+  };
 
   return (
     <Container size="4" py="6">
       <Box mb="6">
-        <SearchQueryBar onSearchSubmit={(q) => setSearchFilter(q)} />
+        <SearchQueryBar onSearchSubmit={handleSearch} />
       </Box>
       <Box mt="4">
-        <JobsList searchFilter={searchFilter} />
+        <JobsList searchFilter={searchFilter} searchTrigger={searchTrigger} />
       </Box>
     </Container>
   );

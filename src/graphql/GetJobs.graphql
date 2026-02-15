@@ -38,6 +38,17 @@ query GetJobs(
         tag
         level
       }
+
+      # ATS-specific fields (shown when available)
+      categories {
+        commitment
+        location
+        team
+        department
+      }
+      workplace_type
+      country
+
       created_at
       updated_at
     }

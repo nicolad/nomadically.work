@@ -4,22 +4,8 @@ import { eq, like } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import { last, split } from "lodash";
 import { isAdminEmail } from "@/lib/admin";
-import {
-  fetchGreenhouseJobPost,
-  saveGreenhouseJobData,
-} from "@/ingestion/greenhouse";
 import { jobsQuery } from "./jobs-query";
-
-// Helper to safely parse ats_data
-function parseAtsData(parent: any): any | null {
-  if (!parent.ats_data) return null;
-  try {
-    return JSON.parse(parent.ats_data);
-  } catch (error) {
-    console.error("Error parsing ats_data:", error);
-    return null;
-  }
-}
+import { enhanceJobFromATS } from "./enhance-job";
 
 export const jobResolvers = {
   Job: {
@@ -52,12 +38,7 @@ export const jobResolvers = {
       }
     },
     description(parent: any) {
-      const atsData = parseAtsData(parent);
-      // Greenhouse provides 'content' field with full HTML description
-      if (atsData?.content) {
-        return atsData.content;
-      }
-      // Fall back to the original description field
+      // Description is stored directly in the column (from Greenhouse's 'content' or Lever's text)
       return parent.description;
     },
     absolute_url(parent: any) {
@@ -145,6 +126,55 @@ export const jobResolvers = {
         return [];
       }
     },
+
+    // Lever ATS field resolvers - read from individual columns
+    categories(parent: any) {
+      if (!parent.categories) return null;
+      try {
+        return typeof parent.categories === "string"
+          ? JSON.parse(parent.categories)
+          : parent.categories;
+      } catch {
+        return null;
+      }
+    },
+    workplace_type(parent: any) {
+      return parent.workplace_type || null;
+    },
+    country(parent: any) {
+      return parent.country || null;
+    },
+    opening(parent: any) {
+      return parent.opening || null;
+    },
+    opening_plain(parent: any) {
+      return parent.opening_plain || null;
+    },
+    description_body(parent: any) {
+      return parent.description_body || null;
+    },
+    description_body_plain(parent: any) {
+      return parent.description_body_plain || null;
+    },
+    additional(parent: any) {
+      return parent.additional || null;
+    },
+    additional_plain(parent: any) {
+      return parent.additional_plain || null;
+    },
+    lists(parent: any) {
+      if (!parent.lists) return [];
+      try {
+        return typeof parent.lists === "string"
+          ? JSON.parse(parent.lists)
+          : parent.lists;
+      } catch {
+        return [];
+      }
+    },
+    ats_created_at(parent: any) {
+      return parent.ats_created_at || null;
+    },
   },
 
   Query: {
@@ -221,63 +251,6 @@ export const jobResolvers = {
       }
     },
 
-    async enhanceJobFromATS(
-      _parent: any,
-      args: { jobId: string; company: string; source: string },
-      _context: GraphQLContext,
-    ) {
-      try {
-        const { jobId, company, source } = args;
-
-        // Currently only Greenhouse is supported
-        if (source !== "greenhouse") {
-          throw new Error(`ATS source "${source}" is not yet supported`);
-        }
-
-        // Find the job in the database first
-        const allJobs = await db.select().from(jobs);
-        const job = allJobs.find((job) => {
-          const jobIdFromUrl = last(split(job.external_id, "/"));
-          return jobIdFromUrl === jobId;
-        });
-
-        if (!job) {
-          return {
-            success: false,
-            message: `Job not found with ID: ${jobId}`,
-            job: null,
-            enhancedData: null,
-          };
-        }
-
-        // Construct the appropriate ATS URL based on source
-        let enhancedData;
-        if (source === "greenhouse") {
-          const jobBoardUrl = `https://job-boards.greenhouse.io/${company}/jobs/${jobId}`;
-          enhancedData = await fetchGreenhouseJobPost(jobBoardUrl, {
-            questions: true,
-          });
-
-          // Save the enhanced data to the database
-          await saveGreenhouseJobData(job.id, enhancedData);
-        }
-
-        return {
-          success: true,
-          message: "Job enhanced and saved successfully",
-          job: job,
-          enhancedData,
-        };
-      } catch (error) {
-        console.error("Error enhancing job:", error);
-        return {
-          success: false,
-          message:
-            error instanceof Error ? error.message : "Failed to enhance job",
-          job: null,
-          enhancedData: null,
-        };
-      }
-    },
+    enhanceJobFromATS,
   },
 };

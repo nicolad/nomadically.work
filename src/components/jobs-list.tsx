@@ -103,7 +103,7 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
     }),
-    [searchFilter, excludedCompanies]
+    [searchFilter, excludedCompanies],
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({

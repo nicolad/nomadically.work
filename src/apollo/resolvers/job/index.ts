@@ -1,14 +1,14 @@
 import { db } from "@/db";
 import { jobs, jobSkillTags, companies } from "@/db/schema";
 import { eq, like } from "drizzle-orm";
-import type { GraphQLContext } from "../context";
+import type { GraphQLContext } from "../../context";
 import { last, split } from "lodash";
 import { isAdminEmail } from "@/lib/admin";
 import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
 } from "@/ingestion/greenhouse";
-import { jobsQuery } from "./job/jobs-query";
+import { jobsQuery } from "./jobs-query";
 
 // Helper to safely parse ats_data
 function parseAtsData(parent: any): any | null {

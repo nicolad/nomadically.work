@@ -28,8 +28,7 @@ type ExecutionContext = {
 };
 
 interface Env {
-  TURSO_DB_URL: string;
-  TURSO_DB_AUTH_TOKEN: string;
+  DB: D1Database;
 
   // Auth for the ingest endpoint (optional)
   API_SECRET?: string;
@@ -301,11 +300,8 @@ export default {
         );
       }
 
-      // Create Turso client
-      const turso = createClient({
-        url: env.TURSO_DB_URL,
-        authToken: env.TURSO_DB_AUTH_TOKEN,
-      });
+      // Use D1 binding for database operations
+      const turso = env.DB;
 
       // Insert/upsert jobs
       const insertResults = await Promise.all(

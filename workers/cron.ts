@@ -406,27 +406,25 @@ export default {
       console.log(`✅ Discovered ${result.stats.sourcesExtracted} sources`);
       console.log(`Stats: ${JSON.stringify(result.stats)}`);
 
-      // Save discovered sources to Turso database
+      // Save discovered sources to D1 database
       if (result.sources.length > 0) {
-        console.log("💾 Saving sources to Turso...");
-        const turso = createClient({
-          url: env.TURSO_DB_URL,
-          authToken: env.TURSO_DB_AUTH_TOKEN,
-        });
+        console.log("💾 Saving sources to D1...");
+        const db = env.DB;
 
         let savedCount = 0;
         for (const source of result.sources) {
           try {
-            await turso.execute({
-              sql: `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
-                    VALUES (?, ?, ?, ?)`,
-              args: [
-                source.kind,
-                source.company_key,
-                source.canonical_url || "",
-                new Date(source.first_seen_at).toISOString(),
-              ],
-            });
+            await db.prepare(
+              `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+               VALUES (?, ?, ?, ?)`
+            )
+            .bind(
+              source.kind,
+              source.company_key,
+              source.canonical_url || "",
+              new Date(source.first_seen_at).toISOString()
+            )
+            .run();
             savedCount++;
           } catch (err) {
             console.error(
@@ -436,7 +434,7 @@ export default {
           }
         }
         console.log(
-          `✅ Saved ${savedCount}/${result.sources.length} sources to Turso`,
+          `✅ Saved ${savedCount}/${result.sources.length} sources to D1`,
         );
       }
 

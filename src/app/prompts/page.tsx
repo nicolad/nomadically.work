@@ -19,7 +19,7 @@ import {
   InfoCircledIcon,
   ExternalLinkIcon,
 } from "@radix-ui/react-icons";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import { useGetPromptsQuery } from "@/__generated__/hooks";
 import { LangfuseTab } from "./LangfuseTab";
 import { LangSmithTab } from "./LangSmithTab";

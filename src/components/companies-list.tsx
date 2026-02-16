@@ -7,7 +7,7 @@ import {
   useDeleteCompanyMutation,
 } from "@/__generated__/hooks";
 import type { GetCompaniesQuery } from "@/__generated__/graphql";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   Box,
   Container,

@@ -12,7 +12,7 @@
  */
 
 import { config } from "dotenv";
-import { createClient } from "@libsql/client";
+import { turso as db } from "../src/db";
 
 // Load .env.local for environment variables
 config({ path: ".env.local" });
@@ -23,25 +23,13 @@ config({ path: ".env.local" });
 
 interface Config {
   nextBaseUrl: string;
-  tursoDbUrl: string;
-  tursoAuthToken: string;
 }
 
 function getConfig(): Config {
   const nextBaseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-  const tursoDbUrl = process.env.TURSO_DB_URL;
-  const tursoAuthToken = process.env.TURSO_DB_AUTH_TOKEN;
-
-  if (!tursoDbUrl || !tursoAuthToken) {
-    throw new Error(
-      "Missing required environment variables: TURSO_DB_URL and TURSO_DB_AUTH_TOKEN",
-    );
-  }
 
   return {
     nextBaseUrl,
-    tursoDbUrl,
-    tursoAuthToken,
   };
 }
 
@@ -53,29 +41,20 @@ async function getJobsNeedingSkillExtraction(
   config: Config,
   limit: number = 100,
 ): Promise<any[]> {
-  const db = createClient({
-    url: config.tursoDbUrl,
-    authToken: config.tursoAuthToken,
+  // Get jobs that have a description (needed for skill extraction)
+  const result = await db.execute({
+    sql: `
+      SELECT id, title, company_key, status, description, created_at, updated_at
+      FROM jobs
+      WHERE description IS NOT NULL
+        AND description != ''
+      ORDER BY created_at DESC
+      LIMIT ?
+    `,
+    args: [limit],
   });
 
-  try {
-    // Get jobs that have a description (needed for skill extraction)
-    const result = await db.execute({
-      sql: `
-        SELECT id, title, company_key, status, description, created_at, updated_at
-        FROM jobs
-        WHERE description IS NOT NULL
-          AND description != ''
-        ORDER BY created_at DESC
-        LIMIT ?
-      `,
-      args: [limit],
-    });
-
-    return result.rows;
-  } finally {
-    db.close();
-  }
+  return result.rows;
 }
 
 // ============================================================================
@@ -105,7 +84,10 @@ async function extractSkillsForJob(
       );
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as {
+      success?: boolean;
+      skillsExtracted?: number;
+    };
     return {
       success: result.success || false,
       skillsExtracted: result.skillsExtracted || 0,

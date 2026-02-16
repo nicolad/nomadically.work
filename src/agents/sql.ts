@@ -1,14 +1,17 @@
 import { deepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
-import { executeSqlQuery } from "@/tools/libsql-query";
+// import { executeSqlQuery } from "@/tools/libsql-query"; // Removed - migrated to D1
 import { sqlWorkspace } from "@/workspace";
+
+// TODO: Re-implement with D1 database access
+// SQL agent is currently disabled pending D1 integration
 
 export const sqlAgent = new Agent({
   id: "sql-agent",
   name: "SQL Agent",
   instructions: `You are a SQL (SQLite/LibSQL) expert for the nomadically.work database. Generate and execute queries that answer user questions about jobs, companies, and related data.
 
-    DATABASE SCHEMA (LibSQL/SQLite):
+    DATABASE SCHEMA (D1/SQLite):
     
     companies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -177,8 +180,8 @@ export const sqlAgent = new Agent({
        [Query results in table format]
     `,
   model: deepseek("deepseek-chat"),
-  tools: {
-    executeSqlQuery: executeSqlQuery,
-  },
+  // tools: {
+  //   executeSqlQuery: executeSqlQuery,
+  // }, // Disabled - needs D1 implementation
   workspace: sqlWorkspace,
 });

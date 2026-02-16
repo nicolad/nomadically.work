@@ -1,10 +1,4 @@
-import { LibSQLVector } from "@mastra/libsql";
-import {
-  CLOUDFLARE_ACCOUNT_ID,
-  CLOUDFLARE_WORKERS_AI_KEY,
-  TURSO_DB_URL,
-  TURSO_DB_AUTH_TOKEN,
-} from "@/config/env";
+import { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_WORKERS_AI_KEY } from "@/config/env";
 
 export const SKILLS_VECTOR_STORE_NAME = "skills";
 export const SKILLS_VECTOR_INDEX = "skills_taxonomy";
@@ -14,26 +8,22 @@ export type EmbeddingVector = number[];
 // Re-export Cloudflare config for use in other skill modules
 export { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_WORKERS_AI_KEY };
 
-// Lazy initialization to avoid build-time errors
-let _skillsVector: LibSQLVector | null = null;
+// Vector storage now managed via D1 Vectorize
+// This is a placeholder for the vector store interface
+export const skillsVector = null;
 
-export const getSkillsVector = (): LibSQLVector => {
-  if (!_skillsVector) {
-    _skillsVector = new LibSQLVector({
-      id: "skills-vector",
-      url: TURSO_DB_URL,
-      authToken: TURSO_DB_AUTH_TOKEN,
-    });
+/**
+ * Get the skills vector store instance
+ * @deprecated Vector storage moved to D1 Vectorize
+ */
+export function getSkillsVector() {
+  if (!skillsVector) {
+    throw new Error(
+      "Skills vector store not initialized. Vector storage has been moved to D1 Vectorize.",
+    );
   }
-  return _skillsVector;
-};
-
-// For backwards compatibility - direct export
-export const skillsVector = new LibSQLVector({
-  id: "skills-vector",
-  url: TURSO_DB_URL,
-  authToken: TURSO_DB_AUTH_TOKEN,
-});
+  return skillsVector;
+}
 
 /**
  * Embeds text using Cloudflare Workers AI:
@@ -85,12 +75,10 @@ export async function embedWithCloudflareBgeSmall(
   return result.result.data as number[][];
 }
 
+// Note: Vector index management is now handled externally via D1 Vectorize
+// This function is deprecated
 export async function ensureSkillsVectorIndex(): Promise<void> {
-  // dimension must match your embedding model output
-  // @cf/baai/bge-small-en-v1.5 outputs 384 dimensions
-  const vector = getSkillsVector();
-  await vector.createIndex({
-    indexName: SKILLS_VECTOR_INDEX,
-    dimension: 384,
-  });
+  console.warn(
+    "ensureSkillsVectorIndex is deprecated - vector storage moved to D1 Vectorize",
+  );
 }

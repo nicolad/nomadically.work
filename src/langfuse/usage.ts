@@ -17,7 +17,8 @@ export type ObservationUsageItem = {
 };
 
 function basicAuthHeader(publicKey: string, secretKey: string) {
-  const token = Buffer.from(`${publicKey}:${secretKey}`).toString("base64");
+  // Use btoa for Edge Runtime compatibility (instead of Buffer)
+  const token = btoa(`${publicKey}:${secretKey}`);
   return `Basic ${token}`;
 }
 

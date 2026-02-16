@@ -1,4 +1,5 @@
-import { createClient } from "@libsql/client";
+// import { turso as db } from "@/db"; // Removed - migrated to D1
+// TODO: Update to use D1 database
 
 export type SkillFilteredJobsParams = {
   userId: string;
@@ -26,11 +27,6 @@ export async function getSkillFilteredJobs(
   params: SkillFilteredJobsParams,
 ): Promise<SkillFilteredJobsResult> {
   const { userId, limit = 20, offset = 0 } = params;
-
-  const db = createClient({
-    url: process.env.TURSO_DB_URL!,
-    authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-  });
 
   // 1) Load user settings
   const settingsRes = await db.execute({
@@ -110,11 +106,6 @@ export async function getSkillFilteredJobs(
  * Get all skill tags for a specific job (useful for displaying job details)
  */
 export async function getJobSkills(jobId: number): Promise<any[]> {
-  const db = createClient({
-    url: process.env.TURSO_DB_URL!,
-    authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-  });
-
   const res = await db.execute({
     sql: `
       SELECT tag, level, confidence, evidence, extracted_at, version

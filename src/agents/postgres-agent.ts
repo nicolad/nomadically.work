@@ -1,18 +1,13 @@
 import { Agent } from '@mastra/core/agent';
-import { LibSQLStore } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
 import { databaseIntrospectionTool } from '@/tools/database/database-introspection-tool';
 import { databaseSeedingTool } from '@/tools/database/database-seeding-tool';
 import { sqlExecutionTool } from '@/tools/database/sql-execution-tool';
 import { sqlGenerationTool } from '@/tools/database/sql-generation-tool';
 
-// Initialize memory with LibSQLStore for persistence
-const memory = new Memory({
-  storage: new LibSQLStore({
-    id: 'sql-agent-storage',
-    url: 'file:../mastra.db', // Or your database URL
-  }),
-});
+// Initialize memory without persistence (in-memory only)
+// For production, configure external storage as needed
+const memory = new Memory();
 
 export const postgresAgent = new Agent({
   id: 'postgres-agent',

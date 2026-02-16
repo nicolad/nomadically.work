@@ -9,8 +9,9 @@ extend type Query {
   ): JobsResponse!
   job(id: String!): Job
   userSettings(userId: String!): UserSettings
-  textToSql(question: String!): TextToSqlResult!
-  executeSql(sql: String!): TextToSqlResult!
+  # TODO: Re-enable when migrated to Edge Runtime compatible implementation
+  # textToSql(question: String!): TextToSqlResult!
+  # executeSql(sql: String!): TextToSqlResult!
 }
 
 extend type Mutation {

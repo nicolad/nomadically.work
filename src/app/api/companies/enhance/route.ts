@@ -1,24 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTurso } from "@/db";
-import { auth } from "@/auth";
+// import { getTursoClient } from "@/db"; // Removed - migrated to D1
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 /**
  * POST /api/companies/enhance
  * Triggers company data enhancement/enrichment
  * Admin only
+ * 
+ * TODO: Re-implement with D1 database access
+ * This endpoint is temporarily disabled pending D1 integration
  */
 export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { 
+      error: "This endpoint is temporarily disabled during D1 migration",
+      message: "Company enhancement feature will be restored after D1 integration is complete"
+    },
+    { status: 503 }
+  );
+  
+  /* D1 Implementation needed:
   try {
     // Check authentication
-    const { userId, user } = await auth();
+    const { userId } = await auth();
 
-    if (!userId || !user?.email) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user is admin
-    if (user.email !== ADMIN_EMAIL) {
+    const user = await clerkClient().users.getUser(userId);
+    const userEmail = user.emailAddresses[0]?.emailAddress;
+
+    if (userEmail !== ADMIN_EMAIL) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -28,11 +43,11 @@ export async function POST(request: NextRequest) {
     if (!companyId && !companyKey) {
       return NextResponse.json(
         { error: "Either companyId or companyKey is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const tursoClient = getTurso();
+    const tursoClient = getTursoClient();
 
     // Fetch current company data
     let company;
@@ -51,10 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!company) {
-      return NextResponse.json(
-        { error: "Company not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
     // TODO: Implement actual enhancement logic
@@ -64,7 +76,7 @@ export async function POST(request: NextRequest) {
     // - Updating ATS boards
     // - Fetching additional company data from external sources
     // - Updating company facts and snapshots
-    
+
     // For now, just update the updated_at timestamp to indicate processing
     await tursoClient.execute({
       sql: "UPDATE companies SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -93,7 +105,8 @@ export async function POST(request: NextRequest) {
         error: "Failed to enhance company",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
+  */
 }

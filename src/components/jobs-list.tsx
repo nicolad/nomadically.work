@@ -10,7 +10,7 @@ import {
 } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
 import { last, split, sortBy } from "lodash";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   Box,
   Container,

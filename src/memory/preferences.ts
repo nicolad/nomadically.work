@@ -5,7 +5,8 @@
  * similar to the evidence-based MDM approach used for company facts.
  */
 
-import { createClient } from "@libsql/client";
+// import { turso as db, type Client } from "@/db"; // Removed - migrated to D1
+// TODO: Update to use D1 database
 import { z } from "zod";
 
 // Preference field types
@@ -71,13 +72,12 @@ export type Preference = z.infer<typeof preferenceSchema>;
 
 // Helper functions
 export class PreferenceManager {
-  private db: ReturnType<typeof createClient>;
+  private db: any; // TODO: Replace with D1 database instance
 
   constructor() {
-    this.db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
+    // TODO: Initialize with D1 database once migration is complete
+    // For now, set to null to prevent "db is not defined" error
+    this.db = null;
   }
 
   /**
@@ -91,6 +91,11 @@ export class PreferenceManager {
     source: PreferenceSource;
     context?: Record<string, unknown>;
   }): Promise<void> {
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] PreferenceManager.setPreference disabled');
+    return;
+    
+    /* D1 Implementation needed:
     const { userId, field, value, confidence = 1.0, source, context } = params;
 
     let valueJson: string | null = null;
@@ -132,6 +137,7 @@ export class PreferenceManager {
     console.log(
       `[Preference] Stored ${field} for user ${userId} (source: ${source}, confidence: ${confidence})`,
     );
+    */
   }
 
   /**
@@ -141,10 +147,21 @@ export class PreferenceManager {
     userId: string;
     field: PreferenceField;
   }): Promise<{
-    value: string | number | boolean | string[] | Record<string, unknown> | null;
+    value:
+      | string
+      | number
+      | boolean
+      | string[]
+      | Record<string, unknown>
+      | null;
     confidence: number;
     source: PreferenceSource;
   } | null> {
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] PreferenceManager.getPreference disabled');
+    return null;
+    
+    /* D1 Implementation needed:
     const { userId, field } = params;
 
     const result = await this.db.execute({
@@ -163,7 +180,10 @@ export class PreferenceManager {
     }
 
     const row = result.rows[0];
-    let value: typeof row.value_json | typeof row.value_text | typeof row.value_number;
+    let value:
+      | typeof row.value_json
+      | typeof row.value_text
+      | typeof row.value_number;
 
     if (row.value_json) {
       value = JSON.parse(row.value_json as string);
@@ -178,6 +198,7 @@ export class PreferenceManager {
       confidence: row.confidence as number,
       source: row.source as PreferenceSource,
     };
+    */
   }
 
   /**
@@ -186,6 +207,11 @@ export class PreferenceManager {
   async getAllPreferences(params: {
     userId: string;
   }): Promise<Map<PreferenceField, Preference[]>> {
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] PreferenceManager.getAllPreferences disabled');
+    return new Map();
+    
+    /* D1 Implementation needed:
     const { userId } = params;
 
     const result = await this.db.execute({
@@ -225,26 +251,33 @@ export class PreferenceManager {
     }
 
     return preferences;
+    */
   }
 
   /**
    * Get merged preferences (highest confidence wins)
    */
   async getMergedPreferences(params: { userId: string }): Promise<
-    Record<string, {
-      value: unknown;
-      confidence: number;
-      source: PreferenceSource;
-    }>
+    Record<
+      string,
+      {
+        value: unknown;
+        confidence: number;
+        source: PreferenceSource;
+      }
+    >
   > {
     const { userId } = params;
     const allPrefs = await this.getAllPreferences({ userId });
 
-    const merged: Record<string, {
-      value: unknown;
-      confidence: number;
-      source: PreferenceSource;
-    }> = {};
+    const merged: Record<
+      string,
+      {
+        value: unknown;
+        confidence: number;
+        source: PreferenceSource;
+      }
+    > = {};
 
     for (const [field, prefs] of allPrefs) {
       if (prefs.length === 0) continue;
@@ -279,6 +312,11 @@ export class PreferenceManager {
     jobId: number;
     confidence?: number;
   }): Promise<void> {
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] PreferenceManager.inferFromAction disabled');
+    return;
+    
+    /* D1 Implementation needed:
     const { userId, action, jobId, confidence = 0.5 } = params;
 
     // Get job details to infer preferences
@@ -369,6 +407,7 @@ export class PreferenceManager {
         }
         break;
     }
+    */
   }
 
   /**

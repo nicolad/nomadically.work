@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { getTurso, type Client } from "@/db";
+import { auth, clerkClient } from "@clerk/nextjs/server";
+// import { getTursoClient, type Client } from "@/db"; // Removed - migrated to D1
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { z } from "zod";
 
@@ -8,6 +8,9 @@ import { z } from "zod";
  * POST /api/companies/bulk-import
  *
  * Bulk imports companies with duplicate prevention.
+ * 
+ * TODO: Re-implement with D1 database access
+ * This endpoint is temporarily disabled pending D1 integration
  *
  * Request body:
  * {
@@ -128,21 +131,22 @@ async function authenticateRequest(
     return; // API key is valid
   }
 
-  // Method 2: Check Better Auth (for web browser access)
-  const { userId, sessionClaims } = await auth();
+  // Method 2: Check Clerk Auth (for web browser access)
+  const { userId } = await auth();
 
   if (!userId) {
     return jsonResponse(
       {
         success: false,
-        error:
-          "Unauthorized: Provide X-API-Key header or sign in with Better Auth",
+        error: "Unauthorized: Provide X-API-Key header or sign in with Clerk",
       },
       { status: 401 },
     );
   }
 
-  const userEmail = sessionClaims?.email as string | undefined;
+  const user = await clerkClient().users.getUser(userId);
+  const userEmail = user.emailAddresses[0]?.emailAddress;
+
   if (userEmail !== ADMIN_EMAIL) {
     return jsonResponse(
       {
@@ -271,6 +275,15 @@ async function importCompany(
 }
 
 export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { 
+      error: "This endpoint is temporarily disabled during D1 migration",
+      message: "Company bulk import feature will be restored after D1 integration is complete"
+    },
+    { status: 503 }
+  );
+  
+  /* D1 Implementation needed:
   try {
     // Authenticate request
     const authError = await authenticateRequest(request);
@@ -282,8 +295,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = BulkImportRequestSchema.parse(body);
 
-    // Get Turso client instance (not the proxy)
-    const tursoClient = getTurso();
+    // Get D1 client instance
+    // const db = getDb(getRequestContext().env.DB);
 
     // Process each company
     const results: ImportResult[] = [];
@@ -336,6 +349,7 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+  */
 }
 
 /**
@@ -370,5 +384,5 @@ export async function POST(request: NextRequest) {
  * Setup:
  * 1. Set API_COMPANIES_BULK_IMPORT_KEY in your environment
  * 2. Include X-API-Key header with your API key in requests
- * 3. Alternatively, if no X-API-Key is provided, Better Auth will be used (for web access)
+ * 3. Alternatively, if no X-API-Key is provided, Clerk Auth will be used (for web access)
  */

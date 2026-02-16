@@ -1,4 +1,6 @@
-import { LangfuseClient } from "@langfuse/client";
+// Note: LangfuseClient SDK is Node.js only and not compatible with Edge Runtime.
+// We use direct fetch API calls instead for universal compatibility.
+// import { LangfuseClient } from "@langfuse/client";
 
 import {
   LANGFUSE_BASE_URL,
@@ -6,12 +8,14 @@ import {
   LANGFUSE_SECRET_KEY,
 } from "@/config/env";
 
-let singleton: LangfuseClient | null = null;
+// Deprecated: Use fetch-based API calls instead for Edge Runtime compatibility
+// let singleton: LangfuseClient | null = null;
 
 /**
- * Get the singleton Langfuse client instance.
- * Configured automatically from environment variables.
+ * Deprecated: LangfuseClient is not compatible with Edge Runtime.
+ * Use direct fetch API calls instead (fetchLangfusePrompt, createLangfusePrompt, etc.)
  */
+/*
 export function getLangfuseClient(): LangfuseClient {
   if (!singleton) {
     singleton = new LangfuseClient({
@@ -22,6 +26,7 @@ export function getLangfuseClient(): LangfuseClient {
   }
   return singleton;
 }
+*/
 
 type PromptFetchOptions = {
   type?: "text" | "chat";
@@ -106,22 +111,46 @@ export function compilePrompt(prompt: any, input: CompileInput = {}) {
 
 /**
  * Fetch a prompt from Langfuse with caching and fallback support.
- * Caching behavior: default TTL is 60s; stale prompt can be served while revalidating.
- * For instant updates in dev, set cacheTtlSeconds=0.
+ * Uses Langfuse REST API for Edge Runtime compatibility.
  */
 export async function fetchLangfusePrompt(
   name: string,
   options: PromptFetchOptions = {},
 ) {
-  const langfuse = getLangfuseClient();
+  const baseUrl = LANGFUSE_BASE_URL.replace(/\/+$/, "");
+  const url = new URL(`${baseUrl}/api/public/prompts/${encodeURIComponent(name)}`);
 
-  return await langfuse.prompt.get(name, {
-    type: options.type,
-    label: options.label,
-    version: options.version,
-    cacheTtlSeconds: options.cacheTtlSeconds ?? defaultCacheTtlSeconds(),
-    fallback: options.fallback,
+  if (options.version !== undefined) {
+    url.searchParams.set("version", String(options.version));
+  }
+  if (options.label) {
+    url.searchParams.set("label", options.label);
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Basic ${btoa(
+        `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`,
+      )}`,
+    },
   });
+
+  if (!response.ok) {
+    // If fallback is provided and request failed, return fallback
+    if (options.fallback !== undefined) {
+      return {
+        name,
+        version: options.version ?? 1,
+        type: options.type ?? "text",
+        prompt: options.fallback,
+        labels: [],
+        tags: [],
+      };
+    }
+    throw new Error(`Langfuse API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -142,21 +171,25 @@ export async function prewarmPrompts(names: string[]) {
 /**
  * Deterministic A/B routing using labels like "prod-a" / "prod-b".
  * Hash-based routing ensures sticky assignment per user/session.
+ * Uses Web Crypto API for Edge Runtime compatibility.
  */
-function hashToUnit(seed: string): number {
-  const crypto = require("crypto");
-  const h = crypto.createHash("sha256").update(seed).digest();
+async function hashToUnit(seed: string): Promise<number> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(seed);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = new Uint8Array(hashBuffer);
   // Return value between 0 and 1
-  return h.readUInt32BE(0) / 0xffffffff;
+  const num = (hashArray[0] << 24) | (hashArray[1] << 16) | (hashArray[2] << 8) | hashArray[3];
+  return num / 0xffffffff;
 }
 
-export function pickAbLabel(params: {
+export async function pickAbLabel(params: {
   seed: string; // stable userId/sessionId
   labelA: string; // "prod-a"
   labelB: string; // "prod-b"
   splitA?: number; // default 0.5
-}): string {
-  const u = hashToUnit(params.seed);
+}): Promise<string> {
+  const u = await hashToUnit(params.seed);
   return u < (params.splitA ?? 0.5) ? params.labelA : params.labelB;
 }
 
@@ -206,9 +239,9 @@ export async function listLangfusePrompts(userEmail?: string) {
 
   const response = await fetch(url.toString(), {
     headers: {
-      Authorization: `Basic ${Buffer.from(
+      Authorization: `Basic ${btoa(
         `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`,
-      ).toString("base64")}`,
+      )}`,
     },
   });
 
@@ -220,11 +253,27 @@ export async function listLangfusePrompts(userEmail?: string) {
 }
 
 export async function createLangfusePrompt(promptData: any) {
-  const langfuse = getLangfuseClient();
-  await langfuse.prompt.create(promptData);
+  const baseUrl = LANGFUSE_BASE_URL.replace(/\/+$/, "");
+  const url = new URL(`${baseUrl}/api/public/prompts`);
+
+  // Create the prompt
+  const createResponse = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${btoa(
+        `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`,
+      )}`,
+    },
+    body: JSON.stringify(promptData),
+  });
+
+  if (!createResponse.ok) {
+    throw new Error(`Langfuse API error: ${createResponse.status} ${createResponse.statusText}`);
+  }
 
   // Fetch the created prompt to get full details with version
-  return langfuse.prompt.get(promptData.name);
+  return fetchLangfusePrompt(promptData.name);
 }
 
 // Prompt composability: parse references to other prompts

@@ -2,21 +2,17 @@
  * Environment Configuration Module
  *
  * Loads and validates environment variables for scripts and applications.
- * Uses dotenv to inject variables from .env.local
  *
  * Environment variables required:
  * - LANGFUSE_SECRET_KEY
  * - LANGFUSE_PUBLIC_KEY
  * - LANGFUSE_BASE_URL
  * - OPENAI_API_KEY (or other LLM provider)
+ *
+ * Note: Next.js automatically loads .env files at build time.
+ * For standalone scripts, load dotenv before importing this module:
+ *   require('dotenv').config({ path: '.env.local' });
  */
-
-import { config } from "dotenv";
-import path from "path";
-
-// Load environment variables from .env.local
-const envPath = path.resolve(process.cwd(), ".env.local");
-config({ path: envPath });
 
 /**
  * Environment variable configuration with validation
@@ -45,7 +41,7 @@ export interface EnvConfig {
   // Turso Database Configuration
   turso: {
     url: string;
-    authToken: string;
+    authToken?: string; // Optional for local development
   };
 
   // Other APIs
@@ -105,7 +101,7 @@ export function loadEnvConfig(): EnvConfig {
 
     turso: {
       url: getRequiredEnv("TURSO_DB_URL"),
-      authToken: getRequiredEnv("TURSO_DB_AUTH_TOKEN"),
+      authToken: process.env.TURSO_DB_AUTH_TOKEN, // Optional for local dev
     },
 
     apis: {
@@ -126,7 +122,9 @@ try {
 } catch (error) {
   console.error("❌ Environment configuration error:");
   console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
+  // Re-throw the error to prevent app from starting with invalid config
+  // Note: process.exit() is not available in Edge Runtime
+  throw error;
 }
 
 /**

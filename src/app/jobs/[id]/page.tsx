@@ -1338,9 +1338,7 @@ function JobPageContent() {
                   )}
 
                   {/* Job Description Sections */}
-                  {(job.opening ||
-                    job.description_body ||
-                    job.additional) && (
+                  {(job.opening || job.description_body || job.additional) && (
                     <Box>
                       <Heading size="4" mb="2">
                         Job Description

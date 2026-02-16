@@ -6,13 +6,17 @@ compatibility_date = "2026-02-01"
 [triggers]
 crons = ["0 0 * * *"]
 
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "nomadically-work-db"
+database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
+
 # Environment variables
 [vars]
-TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
 APP_URL = "https://nomadically.work"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
-# - TURSO_DB_AUTH_TOKEN
 # - BRAVE_API_KEY
 
 # Observability - Enable logging

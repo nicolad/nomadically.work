@@ -6,12 +6,13 @@ compatibility_date = "2024-01-01"
 [triggers]
 crons = ["0 */6 * * *"]
 
-# Environment variables
-[vars]
-TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "nomadically-work-db"
+database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
 
 # Secrets (set via wrangler secret put)
-# - TURSO_DB_AUTH_TOKEN  
 # - DEEPSEEK_API_KEY (or OPENAI_API_KEY as fallback)
 # - CRON_SECRET (optional)
 

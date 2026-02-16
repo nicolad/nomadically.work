@@ -85,6 +85,13 @@
       "when": 1771170569000,
       "tag": "0011_add_lever_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1771229262200,
+      "tag": "0012_init_d1_schema",
+      "breakpoints": true
     }
   ]
 }

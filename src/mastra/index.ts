@@ -15,12 +15,13 @@ import {
   SKILLS_VECTOR_STORE_NAME,
   extractJobSkillsWorkflow,
 } from "@/lib/skills";
-import {
-  discoverConsultanciesCommonCrawlWorkflow,
-  ccxGetRecentCrawlIdsTool,
-  ccxCdxLatestTool,
-  ccxFetchHtmlFromWarcTool,
-} from "@/lib/common-crawl";
+// Note: Common Crawl tools disabled - missing ccx-tools.ts file
+// import {
+//   discoverConsultanciesCommonCrawlWorkflow,
+//   ccxGetRecentCrawlIdsTool,
+//   ccxCdxLatestTool,
+//   ccxFetchHtmlFromWarcTool,
+// } from "@/lib/common-crawl";
 import { inngest } from "./inngest";
 import { workspace } from "@/workspace";
 import {
@@ -90,7 +91,7 @@ export const mastra = new Mastra({
   workflows: {
     // Production workflows
     extractJobSkillsWorkflow,
-    discoverConsultancies: discoverConsultanciesCommonCrawlWorkflow,
+    // discoverConsultancies: discoverConsultanciesCommonCrawlWorkflow,
 
     // Scheduled workflows (cron-based)
     hourlyJobIngestion: hourlyJobIngestionWorkflow,
@@ -111,10 +112,10 @@ export const mastra = new Mastra({
     databaseQuery: databaseQueryWorkflow,
   },
   tools: {
-    // Common Crawl tools
-    ccxGetRecentCrawlIds: ccxGetRecentCrawlIdsTool,
-    ccxCdxLatest: ccxCdxLatestTool,
-    ccxFetchHtmlFromWarc: ccxFetchHtmlFromWarcTool,
+    // Common Crawl tools - disabled (missing ccx-tools.ts)
+    // ccxGetRecentCrawlIds: ccxGetRecentCrawlIdsTool,
+    // ccxCdxLatest: ccxCdxLatestTool,
+    // ccxFetchHtmlFromWarc: ccxFetchHtmlFromWarcTool,
 
     // Ops tools for admin assistant
     inspectJobDecision: inspectJobDecisionTool,

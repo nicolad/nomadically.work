@@ -1,6 +1,8 @@
-import { Langfuse } from "langfuse";
-import { buildTracingOptions } from "@mastra/observability";
-import { withLangfusePrompt } from "@mastra/langfuse";
+// Note: Langfuse SDK not compatible with Edge Runtime (has zlib dependency)
+// Use @/langfuse fetch-based API instead
+// import { Langfuse } from "langfuse";
+// import { buildTracingOptions } from "@mastra/observability";
+// import { withLangfusePrompt } from "@mastra/langfuse";
 import {
   LANGFUSE_SECRET_KEY,
   LANGFUSE_PUBLIC_KEY,
@@ -19,13 +21,15 @@ import {
  */
 
 // Initialize Langfuse client for prompt management
-const langfuse = new Langfuse({
-  secretKey: LANGFUSE_SECRET_KEY,
-  publicKey: LANGFUSE_PUBLIC_KEY,
-  baseUrl: LANGFUSE_BASE_URL,
-  // Reduce SDK logging noise during normal operation
-  release: process.env.NODE_ENV || "development",
-});
+// Note: Commented out due to Edge Runtime incompatibility
+// Use @/langfuse fetch-based API instead
+// const langfuse = new Langfuse({
+//   secretKey: LANGFUSE_SECRET_KEY,
+//   publicKey: LANGFUSE_PUBLIC_KEY,
+//   baseUrl: LANGFUSE_BASE_URL,
+//   // Reduce SDK logging noise during normal operation
+//   release: process.env.NODE_ENV || "development",
+// });
 
 // Prompt cache to avoid repeated API calls
 // Prompts are cached client-side for zero-latency retrieval
@@ -40,7 +44,8 @@ export interface PromptConfig {
 
 export interface PromptResult {
   text: string;
-  tracingOptions: ReturnType<typeof buildTracingOptions> | undefined;
+  // tracingOptions disabled - not compatible with Edge Runtime
+  // tracingOptions: ReturnType<typeof buildTracingOptions> | undefined;
 }
 
 /**
@@ -67,66 +72,77 @@ export interface PromptResult {
  * @see https://langfuse.com/docs/tracing-features/url - Link prompts to traces
  */
 export async function getPrompt(config: PromptConfig): Promise<PromptResult> {
+  // Note: Langfuse SDK integration disabled due to Edge Runtime incompatibility
+  // Always use fallback for now. Use @/langfuse fetch-based API for Edge-compatible prompts.
+  console.log(`📝 Using local fallback prompt for "${config.name}" (Langfuse SDK disabled)`);
+  return {
+    text: config.fallbackText,
+    // tracingOptions: undefined,
+  };
+
   // Skip remote fetching if explicitly disabled
-  if (process.env.SKIP_LANGFUSE_PROMPTS === "true") {
-    console.log(`📝 Using local fallback prompt for "${config.name}"`);
-    return {
-      text: config.fallbackText,
-      tracingOptions: undefined,
-    };
-  }
+  // if (process.env.SKIP_LANGFUSE_PROMPTS === "true") {
+  //   console.log(`📝 Using local fallback prompt for "${config.name}"`);
+  //   return {
+  //     text: config.fallbackText,
+  //     tracingOptions: undefined,
+  //   };
+  // }
 
-  const cacheKey = config.version
-    ? `${config.name}:${config.version}`
-    : config.name;
+  // Note: All Langfuse SDK code below is commented out due to Edge Runtime incompatibility
+  // Use @/langfuse fetch-based API instead for production Edge Runtime support
+  
+  // const cacheKey = config.version
+  //   ? `${config.name}:${config.version}`
+  //   : config.name;
 
-  // Check cache first
-  if (promptCache.has(cacheKey)) {
-    const cached = promptCache.get(cacheKey);
-    return {
-      text: cached.prompt,
-      tracingOptions: buildTracingOptions(withLangfusePrompt(cached)),
-    };
-  }
+  // // Check cache first
+  // if (promptCache.has(cacheKey)) {
+  //   const cached = promptCache.get(cacheKey);
+  //   return {
+  //     text: cached.prompt,
+  //     tracingOptions: buildTracingOptions(withLangfusePrompt(cached)),
+  //   };
+  // }
 
-  try {
-    // Fetch from Langfuse
-    const prompt = config.version
-      ? await langfuse.getPrompt(config.name, config.version)
-      : await langfuse.getPrompt(config.name);
+  // try {
+  //   // Fetch from Langfuse
+  //   const prompt = config.version
+  //     ? await langfuse.getPrompt(config.name, config.version)
+  //     : await langfuse.getPrompt(config.name);
 
-    // Cache the result
-    promptCache.set(cacheKey, prompt);
+  //   // Cache the result
+  //   promptCache.set(cacheKey, prompt);
 
-    console.log(`✅ Loaded prompt "${config.name}" from Langfuse`);
+  //   console.log(`✅ Loaded prompt "${config.name}" from Langfuse`);
 
-    return {
-      text: prompt.prompt,
-      tracingOptions: buildTracingOptions(withLangfusePrompt(prompt)),
-    };
-  } catch (error) {
-    // Provide helpful guidance on first setup
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    const isNotFound = errorMsg.includes("not found");
+  //   return {
+  //     text: prompt.prompt,
+  //     tracingOptions: buildTracingOptions(withLangfusePrompt(prompt)),
+  //   };
+  // } catch (error) {
+  //   // Provide helpful guidance on first setup
+  //   const errorMsg = error instanceof Error ? error.message : String(error);
+  //   const isNotFound = errorMsg.includes("not found");
 
-    if (isNotFound) {
-      console.warn(
-        `⚠️  Prompt "${config.name}" not found in Langfuse (using fallback)\n` +
-          `   To create it: Visit Langfuse UI → Prompts → Create "${config.name}" with label "production"\n` +
-          `   Or set SKIP_LANGFUSE_PROMPTS=true in .env.local to skip remote prompts`,
-      );
-    } else {
-      console.warn(
-        `⚠️  Failed to fetch prompt "${config.name}" from Langfuse (using fallback):`,
-        errorMsg,
-      );
-    }
+  //   if (isNotFound) {
+  //     console.warn(
+  //       `⚠️  Prompt "${config.name}" not found in Langfuse (using fallback)\n` +
+  //         `   To create it: Visit Langfuse UI → Prompts → Create "${config.name}" with label "production"\n` +
+  //         `   Or set SKIP_LANGFUSE_PROMPTS=true in .env.local to skip remote prompts`,
+  //     );
+  //   } else {
+  //     console.warn(
+  //       `⚠️  Failed to fetch prompt "${config.name}" from Langfuse (using fallback):`,
+  //       errorMsg,
+  //     );
+  //   }
 
-    return {
-      text: config.fallbackText,
-      tracingOptions: undefined, // No tracing options if prompt fetch failed
-    };
-  }
+  //   return {
+  //     text: config.fallbackText,
+  //     tracingOptions: undefined, // No tracing options if prompt fetch failed
+  //   };
+  // }
 }
 
 /**

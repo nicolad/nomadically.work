@@ -13,17 +13,19 @@ import { createDeepSeekClient } from "../../deepseek/index";
 import { getAnswers } from "../../brave/answers";
 import { z } from "zod";
 import { ASHBY_JOBS_DOMAIN } from "../../constants/ats";
-import { LangfuseClient } from "@langfuse/client";
+// Note: @langfuse/client removed due to zlib dependency
+// Use fetch-based API from @/langfuse instead
+import { fetchLangfusePrompt } from "@/langfuse";
 
-// Langfuse client for fetching prompts
-const langfuse = new LangfuseClient({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY!,
-  secretKey: process.env.LANGFUSE_SECRET_KEY!,
-  baseUrl:
-    process.env.LANGFUSE_BASE_URL ||
-    process.env.LANGFUSE_HOST ||
-    "https://cloud.langfuse.com",
-});
+// Note: LangfuseClient SDK removed - use fetch-based API instead
+// const langfuse = new LangfuseClient({
+//   publicKey: process.env.LANGFUSE_PUBLIC_KEY!,
+//   secretKey: process.env.LANGFUSE_SECRET_KEY!,
+//   baseUrl:
+//     process.env.LANGFUSE_BASE_URL ||
+//     process.env.LANGFUSE_HOST ||
+//     "https://cloud.langfuse.com",
+// });
 
 const jobSchema = z.object({
   title: z.string(),
@@ -764,17 +766,20 @@ class DirectRemoteJobsProvider {
         const qualityLevel = vars.quality_level ?? "strict";
         const llmProvider = vars.llm_provider ?? "deepseek"; // "deepseek" or "brave"
 
-        // Fetch extraction prompt from Langfuse (chat prompt with variable substitution)
+        // Fetch extraction prompt from Langfuse using fetch-based API
         console.log(
           "📥 Fetching prompt from Langfuse: remote-ai-jobs-extractor@production",
         );
-        const langfusePrompt = await langfuse.getPrompt(
+        const langfusePrompt = await fetchLangfusePrompt(
           "remote-ai-jobs-extractor",
-          { label: "production" },
+          {
+            type: "chat",
+            label: "production",
+          },
         );
         const promptMessages = langfusePrompt.prompt as any[];
         console.log(
-          `✅ Using Langfuse prompt version ${(langfusePrompt as any).version}`,
+          `✅ Using Langfuse prompt version ${langfusePrompt.version}`,
         );
 
         // Use Brave LLM API directly for job discovery (no Brave Search)

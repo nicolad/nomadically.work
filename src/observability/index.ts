@@ -1,5 +1,6 @@
 import { Observability } from "@mastra/observability";
-import { LangfuseExporter } from "@mastra/langfuse";
+// Note: LangfuseExporter removed due to Edge Runtime incompatibility (zlib dependency)
+// import { LangfuseExporter } from "@mastra/langfuse";
 import {
   LANGFUSE_PUBLIC_KEY,
   LANGFUSE_SECRET_KEY,
@@ -25,23 +26,27 @@ import {
  * @see https://langfuse.com/docs/prompt-management/overview - Prompt Management
  * @see https://langfuse.com/docs/scores/overview - Evaluation Scores
  */
+// Note: Observability disabled due to Edge Runtime incompatibility
+// LangfuseExporter has Node.js dependencies (zlib) that don't work in Edge Runtime
+// Use @/langfuse fetch-based API instead for Edge-compatible prompt management
 export const observability = new Observability({
   configs: {
-    langfuse: {
-      serviceName: "nomadically-work",
-      exporters: [
-        new LangfuseExporter({
-          publicKey: LANGFUSE_PUBLIC_KEY,
-          secretKey: LANGFUSE_SECRET_KEY,
-          baseUrl: LANGFUSE_BASE_URL,
-          realtime: process.env.NODE_ENV === "development",
-          logLevel: "info",
-          options: {
-            environment: process.env.NODE_ENV || "development",
-          },
-        }),
-      ],
-    },
+    // langfuse exporter disabled - not compatible with Edge Runtime
+    // langfuse: {
+    //   serviceName: "nomadically-work",
+    //   exporters: [
+    //     new LangfuseExporter({
+    //       publicKey: LANGFUSE_PUBLIC_KEY,
+    //       secretKey: LANGFUSE_SECRET_KEY,
+    //       baseUrl: LANGFUSE_BASE_URL,
+    //       realtime: process.env.NODE_ENV === "development",
+    //       logLevel: "info",
+    //       options: {
+    //         environment: process.env.NODE_ENV || "development",
+    //       },
+    //     }),
+    //   ],
+    // },
   },
 });
 

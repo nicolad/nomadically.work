@@ -8,6 +8,13 @@
       "when": 1771233650726,
       "tag": "0000_bouncy_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1771257302315,
+      "tag": "0001_nebulous_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }

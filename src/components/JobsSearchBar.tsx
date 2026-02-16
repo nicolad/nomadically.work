@@ -9,13 +9,14 @@
 "use client";
 
 import * as React from "react";
-import { Box, Flex, TextField, IconButton, Tooltip } from "@radix-ui/themes";
+import { Flex, TextField, IconButton, Tooltip } from "@radix-ui/themes";
 import { MagnifyingGlassIcon, Cross2Icon } from "@radix-ui/react-icons";
 
 type Props = {
   value: string;
   onChange: (value: string) => void;
   onSubmit: (query: string) => void;
+  onClear?: () => void;
   debounceMs?: number;
   placeholder?: string;
 };
@@ -29,6 +30,7 @@ export function JobsSearchBar({
   value,
   onChange,
   onSubmit,
+  onClear,
   debounceMs = 120,
   placeholder = "Search jobs…",
 }: Props) {
@@ -41,8 +43,9 @@ export function JobsSearchBar({
 
   const clear = React.useCallback(() => {
     onChange("");
+    onClear?.();
     focusInput();
-  }, [onChange, focusInput]);
+  }, [onChange, onClear, focusInput]);
 
   const handleChange = React.useCallback(
     (text: string) => {
@@ -87,36 +90,22 @@ export function JobsSearchBar({
 
   return (
     <TextField.Root
+      ref={inputRef}
       size="3"
       radius="full"
       variant="surface"
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => handleChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      aria-label="Search input"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
       style={{ boxShadow: "0 0 0 1px var(--gray-a5) inset" }}
     >
       <TextField.Slot side="left">
         <MagnifyingGlassIcon />
-      </TextField.Slot>
-
-      <TextField.Slot style={{ flex: 1 }}>
-        <input
-          ref={inputRef}
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-label="Search input"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          style={{
-            width: "100%",
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            fontSize: "inherit",
-            color: "inherit",
-            fontFamily: "inherit",
-          }}
-        />
       </TextField.Slot>
 
       <TextField.Slot side="right">

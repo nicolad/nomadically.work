@@ -21,7 +21,7 @@
  * @see https://github.com/lever/postings-api
  */
 
-import { db } from "@/db";
+import type { DbInstance } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -322,16 +322,20 @@ export function validateLeverWebhook(args: {
   return timingSafeEqualHex(body.signature, computed);
 }
 
-function timingSafeEqualHex(a: string, b: string): boolean{
+function timingSafeEqualHex(a: string, b: string): boolean {
   // Avoid leaking timing info
   if (a.length !== b.length) return false;
-  
+
   // Convert hex strings to byte arrays (Edge Runtime compatible)
-  const aBuf = new Uint8Array(a.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
-  const bBuf = new Uint8Array(b.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
-  
+  const aBuf = new Uint8Array(
+    a.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
+  );
+  const bBuf = new Uint8Array(
+    b.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
+  );
+
   if (aBuf.length !== bBuf.length) return false;
-  
+
   // Timing-safe comparison
   let result = 0;
   for (let i = 0; i < aBuf.length; i++) {
@@ -709,7 +713,11 @@ export async function applyToLeverPosting(args: {
  * @param leverData - Raw Lever API response
  * @returns Promise resolving to the updated job record
  */
-export async function saveLeverJobData(jobId: number, leverData: LeverPosting) {
+export async function saveLeverJobData(
+  db: DbInstance,
+  jobId: number,
+  leverData: LeverPosting,
+) {
   try {
     // Update the jobs table with Lever data - save all fields individually
     const updateData = {

@@ -2,7 +2,7 @@
 
 query GetJobs(
   $sourceType: String
-  $status: String
+  $status: JobStatus
   $search: String
   $limit: Int
   $offset: Int

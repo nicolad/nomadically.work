@@ -144,12 +144,18 @@ importers:
       '@google/adk-devtools':
         specifier: ^0.3.0
         version: 0.3.0(b78631b18f6dd0d79589a90a43fa2507)
+      '@graphql-codegen/add':
+        specifier: ^6.0.0
+        version: 6.0.0(graphql@16.12.0)
       '@graphql-codegen/cli':
         specifier: ^6.1.1
         version: 6.1.1(@types/node@22.19.7)(graphql@16.12.0)(typescript@5.9.3)
       '@graphql-codegen/client-preset':
         specifier: ^5.2.2
         version: 5.2.2(graphql@16.12.0)
+      '@graphql-codegen/schema-ast':
+        specifier: ^5.0.0
+        version: 5.0.0(graphql@16.12.0)
       '@graphql-codegen/typescript':
         specifier: ^5.0.7
         version: 5.0.7(graphql@16.12.0)

@@ -6,6 +6,11 @@ import {
   saveGreenhouseJobData,
 } from "@/ingestion/greenhouse";
 import { getLeverPosting, saveLeverJobData } from "@/ingestion/lever";
+import {
+  fetchAshbyJobPostFromUrl,
+  saveAshbyJobData,
+  parseAshbyJobUrl,
+} from "@/ingestion/ashby";
 
 /**
  * GraphQL mutation resolver to enhance a job posting with detailed ATS data
@@ -13,12 +18,13 @@ import { getLeverPosting, saveLeverJobData } from "@/ingestion/lever";
  * Supports:
  * - Greenhouse ATS: Fetches full job details including departments, offices, questions, compliance
  * - Lever ATS: Fetches posting details including categories, workplace type, salary range
+ * - Ashby ATS: Fetches posting details including compensation, department, team, secondary locations
  *
  * @param _parent - Parent resolver (unused)
  * @param args - Mutation arguments
  * @param args.jobId - The unique job/posting ID from the ATS
- * @param args.company - Company identifier (board_token for Greenhouse, site name for Lever)
- * @param args.source - ATS source: "greenhouse" or "lever"
+ * @param args.company - Company identifier (board_token for Greenhouse, site name for Lever, board name for Ashby)
+ * @param args.source - ATS source: "greenhouse", "lever", or "ashby"
  * @param _context - GraphQL context (unused for this public operation)
  * @returns EnhanceJobResponse with success status, message, enhanced job, and raw ATS data
  */
@@ -31,7 +37,7 @@ export async function enhanceJobFromATS(
     const { jobId, company, source } = args;
 
     // Validate source
-    const supportedSources = ["greenhouse", "lever"];
+    const supportedSources = ["greenhouse", "lever", "ashby"];
     if (!supportedSources.includes(source.toLowerCase())) {
       return {
         success: false,
@@ -73,7 +79,11 @@ export async function enhanceJobFromATS(
       });
 
       // Save the enhanced data to the database
-      updatedJob = await saveGreenhouseJobData(job.id, enhancedData);
+      updatedJob = await saveGreenhouseJobData(
+        context.db,
+        job.id,
+        enhancedData,
+      );
 
       console.log(
         `✅ [Enhance Job] Successfully enhanced Greenhouse job ${jobId}`,
@@ -111,11 +121,32 @@ export async function enhanceJobFromATS(
       }
 
       // Save the enhanced data to the database
-      updatedJob = await saveLeverJobData(job.id, enhancedData);
+      updatedJob = await saveLeverJobData(context.db, job.id, enhancedData);
 
       console.log(
         `✅ [Enhance Job] Successfully enhanced Lever job ${leverPostingId}`,
       );
+    } else if (source.toLowerCase() === "ashby") {
+      // For Ashby, construct the URL from company (board name) and jobId
+      const ashbyUrl = `https://jobs.ashbyhq.com/${company}/${jobId}`;
+
+      console.log(
+        `🔄 [Enhance Job] Fetching Ashby data for job ${jobId} from board ${company}`,
+      );
+
+      enhancedData = await fetchAshbyJobPostFromUrl(ashbyUrl, {
+        includeCompensation: true,
+      });
+
+      // Save the enhanced data to the database
+      updatedJob = await saveAshbyJobData(
+        context.db,
+        job.id,
+        enhancedData,
+        company,
+      );
+
+      console.log(`✅ [Enhance Job] Successfully enhanced Ashby job ${jobId}`);
     }
 
     return {

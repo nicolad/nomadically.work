@@ -28,6 +28,11 @@ export function SearchQueryBar({
 }: Props) {
   const [jobsValue, setJobsValue] = React.useState(initialQuery);
 
+  // Sync local state when initialQuery changes (e.g. browser back/forward)
+  React.useEffect(() => {
+    setJobsValue(initialQuery);
+  }, [initialQuery]);
+
   const handleJobsChange = React.useCallback((q: string) => {
     // Only update local state, don't notify parent yet
     // Parent will be notified via handleJobsSubmit (debounced or on Enter)
@@ -42,12 +47,18 @@ export function SearchQueryBar({
     [onSearchSubmit],
   );
 
+  const handleClear = React.useCallback(() => {
+    setJobsValue("");
+    onSearchSubmit?.("");
+  }, [onSearchSubmit]);
+
   return (
     <Box>
       <JobsSearchBar
         value={jobsValue}
         onChange={handleJobsChange}
         onSubmit={handleJobsSubmit}
+        onClear={handleClear}
         debounceMs={searchDebounceMs}
         placeholder="Search jobs…"
       />

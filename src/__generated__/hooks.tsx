@@ -83,6 +83,52 @@ export type ApplicationInput = {
   resume?: InputMaybe<Scalars['Upload']['input']>;
 };
 
+export type AshbyAddress = {
+  __typename?: 'AshbyAddress';
+  postalAddress: Maybe<AshbyPostalAddress>;
+};
+
+export type AshbyCompensation = {
+  __typename?: 'AshbyCompensation';
+  compensationTierSummary: Maybe<Scalars['String']['output']>;
+  compensationTiers: Array<AshbyCompensationTier>;
+  scrapeableCompensationSalarySummary: Maybe<Scalars['String']['output']>;
+  summaryComponents: Array<AshbyCompensationComponent>;
+};
+
+export type AshbyCompensationComponent = {
+  __typename?: 'AshbyCompensationComponent';
+  compensationType: Scalars['String']['output'];
+  currencyCode: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  interval: Scalars['String']['output'];
+  maxValue: Maybe<Scalars['Float']['output']>;
+  minValue: Maybe<Scalars['Float']['output']>;
+  summary: Scalars['String']['output'];
+};
+
+export type AshbyCompensationTier = {
+  __typename?: 'AshbyCompensationTier';
+  additionalInformation: Maybe<Scalars['String']['output']>;
+  components: Array<AshbyCompensationComponent>;
+  id: Scalars['String']['output'];
+  tierSummary: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type AshbyPostalAddress = {
+  __typename?: 'AshbyPostalAddress';
+  addressCountry: Maybe<Scalars['String']['output']>;
+  addressLocality: Maybe<Scalars['String']['output']>;
+  addressRegion: Maybe<Scalars['String']['output']>;
+};
+
+export type AshbySecondaryLocation = {
+  __typename?: 'AshbySecondaryLocation';
+  address: Maybe<AshbyPostalAddress>;
+  location: Scalars['String']['output'];
+};
+
 export type ChatMessage = {
   __typename?: 'ChatMessage';
   content: Scalars['String']['output'];
@@ -397,6 +443,17 @@ export type Job = {
   absolute_url: Maybe<Scalars['String']['output']>;
   additional: Maybe<Scalars['String']['output']>;
   additional_plain: Maybe<Scalars['String']['output']>;
+  ashby_address: Maybe<AshbyAddress>;
+  ashby_apply_url: Maybe<Scalars['String']['output']>;
+  ashby_compensation: Maybe<AshbyCompensation>;
+  ashby_department: Maybe<Scalars['String']['output']>;
+  ashby_employment_type: Maybe<Scalars['String']['output']>;
+  ashby_is_listed: Maybe<Scalars['Boolean']['output']>;
+  ashby_is_remote: Maybe<Scalars['Boolean']['output']>;
+  ashby_job_url: Maybe<Scalars['String']['output']>;
+  ashby_published_at: Maybe<Scalars['String']['output']>;
+  ashby_secondary_locations: Maybe<Array<AshbySecondaryLocation>>;
+  ashby_team: Maybe<Scalars['String']['output']>;
   ats_created_at: Maybe<Scalars['String']['output']>;
   categories: Maybe<LeverCategories>;
   company: Maybe<Company>;
@@ -435,7 +492,7 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<Scalars['String']['output']>;
+  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -449,6 +506,15 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
+
+export type JobStatus =
+  | 'enhanced'
+  | 'error'
+  /** Classified as fully remote EU position */
+  | 'eu_remote'
+  | 'new'
+  /** Classified as NOT remote EU */
+  | 'non_eu';
 
 export type JobsResponse = {
   __typename?: 'JobsResponse';
@@ -509,6 +575,7 @@ export type Mutation = {
   createCompany: Company;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
+  deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
@@ -535,6 +602,12 @@ export type Mutation = {
    */
   enhanceJobFromATS: EnhanceJobResponse;
   ingest_company_snapshot: CompanySnapshot;
+  /**
+   * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
+   * Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
+   * for remote-EU eligibility on every unclassified job.
+   */
+  processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -615,6 +688,11 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationProcessAllJobsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
@@ -649,6 +727,25 @@ export type MutationUpdateUserSettingsArgs = {
 export type MutationUpsert_Company_Ats_BoardsArgs = {
   boards: Array<AtsBoardUpsertInput>;
   company_id: Scalars['Int']['input'];
+};
+
+/** Response from triggering the classify-jobs Cloudflare Worker */
+export type ProcessAllJobsResponse = {
+  __typename?: 'ProcessAllJobsResponse';
+  /** Number of errors during ATS enhancement */
+  enhanceErrors: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs enhanced with ATS data in this run */
+  enhanced: Maybe<Scalars['Int']['output']>;
+  /** Number of errors encountered during classification */
+  errors: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs classified as EU-remote */
+  euRemote: Maybe<Scalars['Int']['output']>;
+  message: Maybe<Scalars['String']['output']>;
+  /** Number of jobs classified as non-EU */
+  nonEuRemote: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs classified in this run */
+  processed: Maybe<Scalars['Int']['output']>;
+  success: Scalars['Boolean']['output'];
 };
 
 export type Prompt = {
@@ -777,7 +874,7 @@ export type QueryJobsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<JobStatus>;
 };
 
 
@@ -931,6 +1028,11 @@ export type WarcPointerInput = {
   offset: Scalars['Int']['input'];
 };
 
+export type DeleteAllJobsMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DeleteAllJobsMutation = { __typename?: 'Mutation', deleteAllJobs: { __typename?: 'DeleteJobResponse', success: boolean, message: string | null } };
+
 export type DeleteJobMutationVariables = Exact<{
   id: Scalars['Int']['input'];
 }>;
@@ -950,11 +1052,11 @@ export type GetJobQueryVariables = Exact<{
 }>;
 
 
-export type GetJobQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, absolute_url: string | null, internal_job_id: string | null, requisition_id: string | null, company_name: string | null, first_published: string | null, language: string | null, workplace_type: string | null, country: string | null, opening: string | null, opening_plain: string | null, description_body: string | null, description_body_plain: string | null, additional: string | null, additional_plain: string | null, ats_created_at: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null, metadata: Array<{ __typename?: 'GreenhouseMetadata', id: string, name: string, value: string, value_type: string }> | null, departments: Array<{ __typename?: 'GreenhouseDepartment', id: string, name: string, child_ids: Array<string>, parent_id: string | null }> | null, offices: Array<{ __typename?: 'GreenhouseOffice', id: string, name: string, location: string | null, child_ids: Array<string>, parent_id: string | null }> | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, location_questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, compliance: Array<{ __typename?: 'GreenhouseCompliance', type: string, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null }> | null, demographic_questions: { __typename?: 'GreenhouseDemographicQuestions', header: string | null, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null } | null, data_compliance: Array<{ __typename?: 'GreenhouseDataCompliance', type: string, requires_consent: boolean, requires_processing_consent: boolean, requires_retention_consent: boolean, retention_period: number | null, demographic_data_consent_applies: boolean }> | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null, allLocations: Array<string> | null } | null, lists: Array<{ __typename?: 'LeverList', text: string, content: string }> | null } | null };
+export type GetJobQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: JobStatus | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, absolute_url: string | null, internal_job_id: string | null, requisition_id: string | null, company_name: string | null, first_published: string | null, language: string | null, ashby_department: string | null, ashby_team: string | null, ashby_employment_type: string | null, ashby_is_remote: boolean | null, ashby_is_listed: boolean | null, ashby_published_at: string | null, ashby_job_url: string | null, ashby_apply_url: string | null, workplace_type: string | null, country: string | null, opening: string | null, opening_plain: string | null, description_body: string | null, description_body_plain: string | null, additional: string | null, additional_plain: string | null, ats_created_at: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null, metadata: Array<{ __typename?: 'GreenhouseMetadata', id: string, name: string, value: string, value_type: string }> | null, departments: Array<{ __typename?: 'GreenhouseDepartment', id: string, name: string, child_ids: Array<string>, parent_id: string | null }> | null, offices: Array<{ __typename?: 'GreenhouseOffice', id: string, name: string, location: string | null, child_ids: Array<string>, parent_id: string | null }> | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, location_questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, compliance: Array<{ __typename?: 'GreenhouseCompliance', type: string, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null }> | null, demographic_questions: { __typename?: 'GreenhouseDemographicQuestions', header: string | null, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null } | null, data_compliance: Array<{ __typename?: 'GreenhouseDataCompliance', type: string, requires_consent: boolean, requires_processing_consent: boolean, requires_retention_consent: boolean, retention_period: number | null, demographic_data_consent_applies: boolean }> | null, ashby_secondary_locations: Array<{ __typename?: 'AshbySecondaryLocation', location: string, address: { __typename?: 'AshbyPostalAddress', addressLocality: string | null, addressRegion: string | null, addressCountry: string | null } | null }> | null, ashby_compensation: { __typename?: 'AshbyCompensation', compensationTierSummary: string | null, scrapeableCompensationSalarySummary: string | null, compensationTiers: Array<{ __typename?: 'AshbyCompensationTier', id: string, tierSummary: string, title: string, additionalInformation: string | null, components: Array<{ __typename?: 'AshbyCompensationComponent', id: string, summary: string, compensationType: string, interval: string, currencyCode: string | null, minValue: number | null, maxValue: number | null }> }>, summaryComponents: Array<{ __typename?: 'AshbyCompensationComponent', id: string, summary: string, compensationType: string, interval: string, currencyCode: string | null, minValue: number | null, maxValue: number | null }> } | null, ashby_address: { __typename?: 'AshbyAddress', postalAddress: { __typename?: 'AshbyPostalAddress', addressLocality: string | null, addressRegion: string | null, addressCountry: string | null } | null } | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null, allLocations: Array<string> | null } | null, lists: Array<{ __typename?: 'LeverList', text: string, content: string }> | null } | null };
 
 export type GetJobsQueryVariables = Exact<{
   sourceType?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<JobStatus>;
   search?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
@@ -962,7 +1064,7 @@ export type GetJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, workplace_type: string | null, country: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null } | null }> } };
+export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: JobStatus | null, workplace_type: string | null, country: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null } | null }> } };
 
 export type GetUserSettingsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -970,6 +1072,13 @@ export type GetUserSettingsQueryVariables = Exact<{
 
 
 export type GetUserSettingsQuery = { __typename?: 'Query', userSettings: { __typename?: 'UserSettings', id: number, user_id: string, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null } | null };
+
+export type ProcessAllJobsMutationVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type ProcessAllJobsMutation = { __typename?: 'Mutation', processAllJobs: { __typename?: 'ProcessAllJobsResponse', success: boolean, message: string | null, enhanced: number | null, enhanceErrors: number | null, processed: number | null, euRemote: number | null, nonEuRemote: number | null, errors: number | null } };
 
 export type TextToSqlQueryVariables = Exact<{
   question: Scalars['String']['input'];
@@ -1130,14 +1239,14 @@ export type GetGreenhouseJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetGreenhouseJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null }> } };
+export type GetGreenhouseJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: JobStatus | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null }> } };
 
 export type GetGreenhouseJobByIdQueryVariables = Exact<{
   id: Scalars['String']['input'];
 }>;
 
 
-export type GetGreenhouseJobByIdQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null } | null };
+export type GetGreenhouseJobByIdQuery = { __typename?: 'Query', job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: JobStatus | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null } | null };
 
 export type EnhanceJobFromAtsMutationVariables = Exact<{
   jobId: Scalars['String']['input'];
@@ -1146,7 +1255,7 @@ export type EnhanceJobFromAtsMutationVariables = Exact<{
 }>;
 
 
-export type EnhanceJobFromAtsMutation = { __typename?: 'Mutation', enhanceJobFromATS: { __typename?: 'EnhanceJobResponse', success: boolean, message: string | null, enhancedData: any | null, job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, absolute_url: string | null, internal_job_id: string | null, requisition_id: string | null, company_name: string | null, first_published: string | null, language: string | null, workplace_type: string | null, country: string | null, opening: string | null, opening_plain: string | null, description_body: string | null, description_body_plain: string | null, additional: string | null, additional_plain: string | null, ats_created_at: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null, metadata: Array<{ __typename?: 'GreenhouseMetadata', id: string, name: string, value: string, value_type: string }> | null, departments: Array<{ __typename?: 'GreenhouseDepartment', id: string, name: string, child_ids: Array<string>, parent_id: string | null }> | null, offices: Array<{ __typename?: 'GreenhouseOffice', id: string, name: string, location: string | null, child_ids: Array<string>, parent_id: string | null }> | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, location_questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, compliance: Array<{ __typename?: 'GreenhouseCompliance', type: string, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null }> | null, demographic_questions: { __typename?: 'GreenhouseDemographicQuestions', header: string | null, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null } | null, data_compliance: Array<{ __typename?: 'GreenhouseDataCompliance', type: string, requires_consent: boolean, requires_processing_consent: boolean, requires_retention_consent: boolean, retention_period: number | null, demographic_data_consent_applies: boolean }> | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null, allLocations: Array<string> | null } | null, lists: Array<{ __typename?: 'LeverList', text: string, content: string }> | null } | null } };
+export type EnhanceJobFromAtsMutation = { __typename?: 'Mutation', enhanceJobFromATS: { __typename?: 'EnhanceJobResponse', success: boolean, message: string | null, enhancedData: any | null, job: { __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: JobStatus | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, remote_eu_reason: string | null, absolute_url: string | null, internal_job_id: string | null, requisition_id: string | null, company_name: string | null, first_published: string | null, language: string | null, workplace_type: string | null, country: string | null, opening: string | null, opening_plain: string | null, description_body: string | null, description_body_plain: string | null, additional: string | null, additional_plain: string | null, ats_created_at: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string, confidence: number | null, evidence: string | null }> | null, metadata: Array<{ __typename?: 'GreenhouseMetadata', id: string, name: string, value: string, value_type: string }> | null, departments: Array<{ __typename?: 'GreenhouseDepartment', id: string, name: string, child_ids: Array<string>, parent_id: string | null }> | null, offices: Array<{ __typename?: 'GreenhouseOffice', id: string, name: string, location: string | null, child_ids: Array<string>, parent_id: string | null }> | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, location_questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null, compliance: Array<{ __typename?: 'GreenhouseCompliance', type: string, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null }> | null, demographic_questions: { __typename?: 'GreenhouseDemographicQuestions', header: string | null, description: string | null, questions: Array<{ __typename?: 'GreenhouseQuestion', description: string | null, label: string, required: boolean, fields: Array<{ __typename?: 'GreenhouseQuestionField', type: string, name: string | null }> }> | null } | null, data_compliance: Array<{ __typename?: 'GreenhouseDataCompliance', type: string, requires_consent: boolean, requires_processing_consent: boolean, requires_retention_consent: boolean, retention_period: number | null, demographic_data_consent_applies: boolean }> | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null, allLocations: Array<string> | null } | null, lists: Array<{ __typename?: 'LeverList', text: string, content: string }> | null } | null } };
 
 export type GetLangSmithPromptsQueryVariables = Exact<{
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1331,6 +1440,39 @@ export const CompanyFieldsFragmentDoc = gql`
   }
 }
     `;
+export const DeleteAllJobsDocument = gql`
+    mutation DeleteAllJobs {
+  deleteAllJobs {
+    success
+    message
+  }
+}
+    `;
+export type DeleteAllJobsMutationFn = Apollo.MutationFunction<DeleteAllJobsMutation, DeleteAllJobsMutationVariables>;
+
+/**
+ * __useDeleteAllJobsMutation__
+ *
+ * To run a mutation, you first call `useDeleteAllJobsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteAllJobsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteAllJobsMutation, { data, loading, error }] = useDeleteAllJobsMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDeleteAllJobsMutation(baseOptions?: Apollo.MutationHookOptions<DeleteAllJobsMutation, DeleteAllJobsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteAllJobsMutation, DeleteAllJobsMutationVariables>(DeleteAllJobsDocument, options);
+      }
+export type DeleteAllJobsMutationHookResult = ReturnType<typeof useDeleteAllJobsMutation>;
+export type DeleteAllJobsMutationResult = Apollo.MutationResult<DeleteAllJobsMutation>;
+export type DeleteAllJobsMutationOptions = Apollo.BaseMutationOptions<DeleteAllJobsMutation, DeleteAllJobsMutationVariables>;
 export const DeleteJobDocument = gql`
     mutation DeleteJob($id: Int!) {
   deleteJob(id: $id) {
@@ -1518,6 +1660,57 @@ export const GetJobDocument = gql`
       retention_period
       demographic_data_consent_applies
     }
+    ashby_department
+    ashby_team
+    ashby_employment_type
+    ashby_is_remote
+    ashby_is_listed
+    ashby_published_at
+    ashby_job_url
+    ashby_apply_url
+    ashby_secondary_locations {
+      location
+      address {
+        addressLocality
+        addressRegion
+        addressCountry
+      }
+    }
+    ashby_compensation {
+      compensationTierSummary
+      scrapeableCompensationSalarySummary
+      compensationTiers {
+        id
+        tierSummary
+        title
+        additionalInformation
+        components {
+          id
+          summary
+          compensationType
+          interval
+          currencyCode
+          minValue
+          maxValue
+        }
+      }
+      summaryComponents {
+        id
+        summary
+        compensationType
+        interval
+        currencyCode
+        minValue
+        maxValue
+      }
+    }
+    ashby_address {
+      postalAddress {
+        addressLocality
+        addressRegion
+        addressCountry
+      }
+    }
     categories {
       commitment
       location
@@ -1580,7 +1773,7 @@ export type GetJobLazyQueryHookResult = ReturnType<typeof useGetJobLazyQuery>;
 export type GetJobSuspenseQueryHookResult = ReturnType<typeof useGetJobSuspenseQuery>;
 export type GetJobQueryResult = Apollo.QueryResult<GetJobQuery, GetJobQueryVariables>;
 export const GetJobsDocument = gql`
-    query GetJobs($sourceType: String, $status: String, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!]) {
+    query GetJobs($sourceType: String, $status: JobStatus, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!]) {
   jobs(
     sourceType: $sourceType
     status: $status
@@ -1714,6 +1907,46 @@ export type GetUserSettingsQueryHookResult = ReturnType<typeof useGetUserSetting
 export type GetUserSettingsLazyQueryHookResult = ReturnType<typeof useGetUserSettingsLazyQuery>;
 export type GetUserSettingsSuspenseQueryHookResult = ReturnType<typeof useGetUserSettingsSuspenseQuery>;
 export type GetUserSettingsQueryResult = Apollo.QueryResult<GetUserSettingsQuery, GetUserSettingsQueryVariables>;
+export const ProcessAllJobsDocument = gql`
+    mutation ProcessAllJobs($limit: Int) {
+  processAllJobs(limit: $limit) {
+    success
+    message
+    enhanced
+    enhanceErrors
+    processed
+    euRemote
+    nonEuRemote
+    errors
+  }
+}
+    `;
+export type ProcessAllJobsMutationFn = Apollo.MutationFunction<ProcessAllJobsMutation, ProcessAllJobsMutationVariables>;
+
+/**
+ * __useProcessAllJobsMutation__
+ *
+ * To run a mutation, you first call `useProcessAllJobsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useProcessAllJobsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [processAllJobsMutation, { data, loading, error }] = useProcessAllJobsMutation({
+ *   variables: {
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useProcessAllJobsMutation(baseOptions?: Apollo.MutationHookOptions<ProcessAllJobsMutation, ProcessAllJobsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ProcessAllJobsMutation, ProcessAllJobsMutationVariables>(ProcessAllJobsDocument, options);
+      }
+export type ProcessAllJobsMutationHookResult = ReturnType<typeof useProcessAllJobsMutation>;
+export type ProcessAllJobsMutationResult = Apollo.MutationResult<ProcessAllJobsMutation>;
+export type ProcessAllJobsMutationOptions = Apollo.BaseMutationOptions<ProcessAllJobsMutation, ProcessAllJobsMutationVariables>;
 export const TextToSqlDocument = gql`
     query TextToSql($question: String!) {
   textToSql(question: $question) {

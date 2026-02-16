@@ -108,6 +108,59 @@ query GetJob($id: String!) {
       demographic_data_consent_applies
     }
 
+    # Ashby ATS fields
+    ashby_department
+    ashby_team
+    ashby_employment_type
+    ashby_is_remote
+    ashby_is_listed
+    ashby_published_at
+    ashby_job_url
+    ashby_apply_url
+    ashby_secondary_locations {
+      location
+      address {
+        addressLocality
+        addressRegion
+        addressCountry
+      }
+    }
+    ashby_compensation {
+      compensationTierSummary
+      scrapeableCompensationSalarySummary
+      compensationTiers {
+        id
+        tierSummary
+        title
+        additionalInformation
+        components {
+          id
+          summary
+          compensationType
+          interval
+          currencyCode
+          minValue
+          maxValue
+        }
+      }
+      summaryComponents {
+        id
+        summary
+        compensationType
+        interval
+        currencyCode
+        minValue
+        maxValue
+      }
+    }
+    ashby_address {
+      postalAddress {
+        addressLocality
+        addressRegion
+        addressCountry
+      }
+    }
+
     # Lever ATS fields
     categories {
       commitment

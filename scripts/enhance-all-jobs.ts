@@ -18,6 +18,10 @@ import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
 } from "../src/ingestion/greenhouse";
+import {
+  fetchAshbyJobPostFromUrl,
+  saveAshbyJobData,
+} from "../src/ingestion/ashby";
 
 // Load environment variables
 config({ path: ".env.local" });
@@ -49,6 +53,59 @@ interface Stats {
 // ============================================================================
 
 /**
+ * Enhance a single Ashby job
+ */
+async function enhanceAshbyJob(job: any): Promise<{
+  success: boolean;
+  error?: string;
+  skipped?: boolean;
+}> {
+  try {
+    console.log(`  📥 Fetching from Ashby API...`);
+    const ashbyData = await fetchAshbyJobPostFromUrl(job.url, {
+      includeCompensation: true,
+    });
+
+    console.log(`  💾 Saving to database...`);
+    await saveAshbyJobData(db, job.id, ashbyData, job.company_key);
+
+    console.log(`  ✅ Success`);
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    const is404 =
+      errorMessage.includes("404") || errorMessage.includes("not found");
+
+    const isMalformed = errorMessage.includes("Unsupported Ashby job URL");
+
+    if (is404) {
+      console.log(`  ⏭️  Skipped (job no longer exists) - marking as closed`);
+
+      try {
+        await db
+          .update(jobs)
+          .set({ status: "closed" })
+          .where(eq(jobs.id, job.id));
+        console.log(`  💾 Marked as closed in database`);
+      } catch (dbError) {
+        console.error(`  ⚠️  Failed to update status:`, dbError);
+      }
+
+      return { success: false, skipped: true, error: errorMessage };
+    }
+
+    if (isMalformed) {
+      console.log(`  ⏭️  Skipped (malformed URL)`);
+      return { success: false, skipped: true, error: errorMessage };
+    }
+
+    console.error(`  ❌ Failed: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Enhance a single Greenhouse job
  */
 async function enhanceGreenhouseJob(job: any): Promise<{
@@ -63,7 +120,7 @@ async function enhanceGreenhouseJob(job: any): Promise<{
     });
 
     console.log(`  💾 Saving to database...`);
-    await saveGreenhouseJobData(job.id, greenhouseData);
+    await saveGreenhouseJobData(db, job.id, greenhouseData);
 
     console.log(`  ✅ Success`);
     return { success: true };
@@ -121,6 +178,8 @@ async function enhanceJob(job: any): Promise<{
       return enhanceGreenhouseJob(job);
 
     case "ashby":
+      return enhanceAshbyJob(job);
+
     case "lever":
     case "workday":
       console.log(`  ⏭️  Skipped (${source} not yet implemented)`);

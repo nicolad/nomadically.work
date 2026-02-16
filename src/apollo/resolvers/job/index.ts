@@ -5,8 +5,18 @@ import { last, split } from "lodash";
 import { isAdminEmail } from "@/lib/admin";
 import { jobsQuery } from "./jobs-query";
 import { enhanceJobFromATS } from "./enhance-job";
+import { processAllJobs } from "./process-all-jobs";
 
 export const jobResolvers = {
+  // Map GraphQL enum names ↔ DB values (hyphens ↔ underscores)
+  JobStatus: {
+    new: "new",
+    enhanced: "enhanced",
+    eu_remote: "eu-remote",
+    non_eu: "non-eu",
+    error: "error",
+  },
+
   Job: {
     async skills(parent: any, _args: any, context: GraphQLContext) {
       try {
@@ -123,6 +133,76 @@ export const jobResolvers = {
         return JSON.parse(parent.data_compliance);
       } catch {
         return [];
+      }
+    },
+
+    // Ashby ATS field resolvers - read from individual columns
+    ashby_department(parent: any) {
+      return parent.ashby_department || null;
+    },
+    ashby_team(parent: any) {
+      return parent.ashby_team || null;
+    },
+    ashby_employment_type(parent: any) {
+      return parent.ashby_employment_type || null;
+    },
+    ashby_is_remote(parent: any) {
+      return parent.ashby_is_remote ?? null;
+    },
+    ashby_is_listed(parent: any) {
+      return parent.ashby_is_listed ?? null;
+    },
+    ashby_published_at(parent: any) {
+      return parent.ashby_published_at || null;
+    },
+    ashby_job_url(parent: any) {
+      return parent.ashby_job_url || null;
+    },
+    ashby_apply_url(parent: any) {
+      return parent.ashby_apply_url || null;
+    },
+    ashby_secondary_locations(parent: any) {
+      if (!parent.ashby_secondary_locations) return [];
+      try {
+        return typeof parent.ashby_secondary_locations === "string"
+          ? JSON.parse(parent.ashby_secondary_locations)
+          : parent.ashby_secondary_locations;
+      } catch {
+        return [];
+      }
+    },
+    ashby_compensation(parent: any) {
+      if (!parent.ashby_compensation) return null;
+      try {
+        const parsed =
+          typeof parent.ashby_compensation === "string"
+            ? JSON.parse(parent.ashby_compensation)
+            : parent.ashby_compensation;
+        // Return null if compensation data is empty/meaningless
+        if (
+          !parsed ||
+          (!parsed.compensationTierSummary &&
+            !parsed.scrapeableCompensationSalarySummary &&
+            (!parsed.compensationTiers ||
+              parsed.compensationTiers.length === 0) &&
+            (!parsed.summaryComponents ||
+              parsed.summaryComponents.length === 0))
+        ) {
+          return null;
+        }
+        return parsed;
+      } catch {
+        return null;
+      }
+    },
+    ashby_address(parent: any) {
+      if (!parent.ashby_address) return null;
+      try {
+        return typeof parent.ashby_address === "string"
+          ? JSON.parse(parent.ashby_address)
+          : parent.ashby_address;
+      } catch {
+        return null;
       }
     },
 
@@ -251,5 +331,7 @@ export const jobResolvers = {
     },
 
     enhanceJobFromATS,
+
+    processAllJobs,
   },
 };

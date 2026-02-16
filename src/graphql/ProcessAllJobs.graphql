@@ -1,0 +1,12 @@
+mutation ProcessAllJobs($limit: Int) {
+  processAllJobs(limit: $limit) {
+    success
+    message
+    enhanced
+    enhanceErrors
+    processed
+    euRemote
+    nonEuRemote
+    errors
+  }
+}

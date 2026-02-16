@@ -1,0 +1,20 @@
+[project]
+name = "nomadically-work-process-jobs"
+version = "0.1.0"
+description = "Cloudflare Python Worker for job ATS enhancement and DeepSeek classification"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "webtypy>=0.1.7",
+    "langchain-cloudflare",
+    "langchain-core>=0.3.81,<2.0.0",
+    "langgraph-checkpoint-cloudflare-d1",
+    # NOTE: Do NOT include pydantic — use Pyodide's built-in version.
+    # pydantic_core requires compiled Rust binaries unavailable for WebAssembly.
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]

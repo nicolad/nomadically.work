@@ -7,6 +7,7 @@ import {
   assertPromptAccess,
   compilePrompt,
   pickAbLabel,
+  isLangfuseConfigured,
 } from "@/langfuse";
 import { getRecentGenerationsForUser } from "@/langfuse/usage";
 import { createScore } from "@/langfuse/scores";
@@ -80,6 +81,13 @@ export const promptResolvers = {
     },
 
     prompts: async (_: any, __: any, context: GraphQLContext) => {
+      // If Langfuse is not configured, return empty array
+      if (!isLangfuseConfigured()) {
+        console.warn("⚠️ Langfuse is not configured. Prompts query returning empty array.");
+        console.warn("   Set LANGFUSE_* environment variables to enable prompt management.");
+        return [];
+      }
+
       try {
         const apiResponse = await listLangfusePrompts(context.userEmail);
 
@@ -104,8 +112,13 @@ export const promptResolvers = {
                 lastUsedBy: null,
               };
             } catch (err) {
-              // If fetching individual prompt fails, return metadata only
-              console.error(`Failed to fetch full prompt ${promptMeta.name}:`, err);
+              // Gracefully handle missing prompts (404) or other errors
+              // Just log as debug info, not error
+              const errorMessage = err instanceof Error ? err.message : String(err);
+              if (!errorMessage.includes('404')) {
+                console.error(`Failed to fetch full prompt ${promptMeta.name}:`, err);
+              }
+              // Return metadata only without content
               return {
                 ...promptMeta,
                 content: null,

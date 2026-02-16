@@ -55,7 +55,7 @@ async function enhanceSpecificJob() {
     console.log(`   Internal Job ID: ${greenhouseData.internal_job_id}`);
 
     console.log("\n💾 Saving to database...");
-    await saveGreenhouseJobData(job.id, greenhouseData);
+    await saveGreenhouseJobData(db, job.id, greenhouseData);
     console.log("✅ Saved successfully!");
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

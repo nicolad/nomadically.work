@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
         // Save enhanced data to database
         console.log("💾 Saving enhanced data to database...");
-        await saveGreenhouseJobData(job.id, greenhouseData);
+        await saveGreenhouseJobData(db, job.id, greenhouseData);
 
         console.log("✅ Successfully enhanced job");
         successCount++;

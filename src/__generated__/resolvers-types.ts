@@ -83,6 +83,52 @@ export type ApplicationInput = {
   resume?: InputMaybe<Scalars['Upload']['input']>;
 };
 
+export type AshbyAddress = {
+  __typename?: 'AshbyAddress';
+  postalAddress: Maybe<AshbyPostalAddress>;
+};
+
+export type AshbyCompensation = {
+  __typename?: 'AshbyCompensation';
+  compensationTierSummary: Maybe<Scalars['String']['output']>;
+  compensationTiers: Array<AshbyCompensationTier>;
+  scrapeableCompensationSalarySummary: Maybe<Scalars['String']['output']>;
+  summaryComponents: Array<AshbyCompensationComponent>;
+};
+
+export type AshbyCompensationComponent = {
+  __typename?: 'AshbyCompensationComponent';
+  compensationType: Scalars['String']['output'];
+  currencyCode: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  interval: Scalars['String']['output'];
+  maxValue: Maybe<Scalars['Float']['output']>;
+  minValue: Maybe<Scalars['Float']['output']>;
+  summary: Scalars['String']['output'];
+};
+
+export type AshbyCompensationTier = {
+  __typename?: 'AshbyCompensationTier';
+  additionalInformation: Maybe<Scalars['String']['output']>;
+  components: Array<AshbyCompensationComponent>;
+  id: Scalars['String']['output'];
+  tierSummary: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type AshbyPostalAddress = {
+  __typename?: 'AshbyPostalAddress';
+  addressCountry: Maybe<Scalars['String']['output']>;
+  addressLocality: Maybe<Scalars['String']['output']>;
+  addressRegion: Maybe<Scalars['String']['output']>;
+};
+
+export type AshbySecondaryLocation = {
+  __typename?: 'AshbySecondaryLocation';
+  address: Maybe<AshbyPostalAddress>;
+  location: Scalars['String']['output'];
+};
+
 export type ChatMessage = {
   __typename?: 'ChatMessage';
   content: Scalars['String']['output'];
@@ -397,6 +443,17 @@ export type Job = {
   absolute_url: Maybe<Scalars['String']['output']>;
   additional: Maybe<Scalars['String']['output']>;
   additional_plain: Maybe<Scalars['String']['output']>;
+  ashby_address: Maybe<AshbyAddress>;
+  ashby_apply_url: Maybe<Scalars['String']['output']>;
+  ashby_compensation: Maybe<AshbyCompensation>;
+  ashby_department: Maybe<Scalars['String']['output']>;
+  ashby_employment_type: Maybe<Scalars['String']['output']>;
+  ashby_is_listed: Maybe<Scalars['Boolean']['output']>;
+  ashby_is_remote: Maybe<Scalars['Boolean']['output']>;
+  ashby_job_url: Maybe<Scalars['String']['output']>;
+  ashby_published_at: Maybe<Scalars['String']['output']>;
+  ashby_secondary_locations: Maybe<Array<AshbySecondaryLocation>>;
+  ashby_team: Maybe<Scalars['String']['output']>;
   ats_created_at: Maybe<Scalars['String']['output']>;
   categories: Maybe<LeverCategories>;
   company: Maybe<Company>;
@@ -435,7 +492,7 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<Scalars['String']['output']>;
+  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -449,6 +506,15 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
+
+export type JobStatus =
+  | 'enhanced'
+  | 'error'
+  /** Classified as fully remote EU position */
+  | 'eu_remote'
+  | 'new'
+  /** Classified as NOT remote EU */
+  | 'non_eu';
 
 export type JobsResponse = {
   __typename?: 'JobsResponse';
@@ -509,6 +575,7 @@ export type Mutation = {
   createCompany: Company;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
+  deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
@@ -535,6 +602,12 @@ export type Mutation = {
    */
   enhanceJobFromATS: EnhanceJobResponse;
   ingest_company_snapshot: CompanySnapshot;
+  /**
+   * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
+   * Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
+   * for remote-EU eligibility on every unclassified job.
+   */
+  processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -615,6 +688,11 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationProcessAllJobsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
@@ -649,6 +727,25 @@ export type MutationUpdateUserSettingsArgs = {
 export type MutationUpsert_Company_Ats_BoardsArgs = {
   boards: Array<AtsBoardUpsertInput>;
   company_id: Scalars['Int']['input'];
+};
+
+/** Response from triggering the classify-jobs Cloudflare Worker */
+export type ProcessAllJobsResponse = {
+  __typename?: 'ProcessAllJobsResponse';
+  /** Number of errors during ATS enhancement */
+  enhanceErrors: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs enhanced with ATS data in this run */
+  enhanced: Maybe<Scalars['Int']['output']>;
+  /** Number of errors encountered during classification */
+  errors: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs classified as EU-remote */
+  euRemote: Maybe<Scalars['Int']['output']>;
+  message: Maybe<Scalars['String']['output']>;
+  /** Number of jobs classified as non-EU */
+  nonEuRemote: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs classified in this run */
+  processed: Maybe<Scalars['Int']['output']>;
+  success: Scalars['Boolean']['output'];
 };
 
 export type Prompt = {
@@ -777,7 +874,7 @@ export type QueryJobsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<JobStatus>;
 };
 
 
@@ -1010,6 +1107,12 @@ export type ResolversTypes = {
   ATSVendor: ResolverTypeWrapper<Partial<AtsVendor>>;
   Application: ResolverTypeWrapper<Partial<Application>>;
   ApplicationInput: ResolverTypeWrapper<Partial<ApplicationInput>>;
+  AshbyAddress: ResolverTypeWrapper<Partial<AshbyAddress>>;
+  AshbyCompensation: ResolverTypeWrapper<Partial<AshbyCompensation>>;
+  AshbyCompensationComponent: ResolverTypeWrapper<Partial<AshbyCompensationComponent>>;
+  AshbyCompensationTier: ResolverTypeWrapper<Partial<AshbyCompensationTier>>;
+  AshbyPostalAddress: ResolverTypeWrapper<Partial<AshbyPostalAddress>>;
+  AshbySecondaryLocation: ResolverTypeWrapper<Partial<AshbySecondaryLocation>>;
   Boolean: ResolverTypeWrapper<Partial<Scalars['Boolean']['output']>>;
   ChatMessage: ResolverTypeWrapper<Partial<ChatMessage>>;
   ChatMessageInput: ResolverTypeWrapper<Partial<ChatMessageInput>>;
@@ -1046,12 +1149,14 @@ export type ResolversTypes = {
   JSON: ResolverTypeWrapper<Partial<Scalars['JSON']['output']>>;
   Job: ResolverTypeWrapper<Partial<Job>>;
   JobSkill: ResolverTypeWrapper<Partial<JobSkill>>;
+  JobStatus: ResolverTypeWrapper<Partial<JobStatus>>;
   JobsResponse: ResolverTypeWrapper<Partial<JobsResponse>>;
   LangSmithPrompt: ResolverTypeWrapper<Partial<LangSmithPrompt>>;
   LangSmithPromptCommit: ResolverTypeWrapper<Partial<LangSmithPromptCommit>>;
   LeverCategories: ResolverTypeWrapper<Partial<LeverCategories>>;
   LeverList: ResolverTypeWrapper<Partial<LeverList>>;
   Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
+  ProcessAllJobsResponse: ResolverTypeWrapper<Partial<ProcessAllJobsResponse>>;
   Prompt: ResolverTypeWrapper<Partial<Prompt>>;
   PromptConfig: ResolverTypeWrapper<Partial<PromptConfig>>;
   PromptConfigInput: ResolverTypeWrapper<Partial<PromptConfigInput>>;
@@ -1081,6 +1186,12 @@ export type ResolversParentTypes = {
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
   Application: Partial<Application>;
   ApplicationInput: Partial<ApplicationInput>;
+  AshbyAddress: Partial<AshbyAddress>;
+  AshbyCompensation: Partial<AshbyCompensation>;
+  AshbyCompensationComponent: Partial<AshbyCompensationComponent>;
+  AshbyCompensationTier: Partial<AshbyCompensationTier>;
+  AshbyPostalAddress: Partial<AshbyPostalAddress>;
+  AshbySecondaryLocation: Partial<AshbySecondaryLocation>;
   Boolean: Partial<Scalars['Boolean']['output']>;
   ChatMessage: Partial<ChatMessage>;
   ChatMessageInput: Partial<ChatMessageInput>;
@@ -1120,6 +1231,7 @@ export type ResolversParentTypes = {
   LeverCategories: Partial<LeverCategories>;
   LeverList: Partial<LeverList>;
   Mutation: Record<PropertyKey, never>;
+  ProcessAllJobsResponse: Partial<ProcessAllJobsResponse>;
   Prompt: Partial<Prompt>;
   PromptConfig: Partial<PromptConfig>;
   PromptConfigInput: Partial<PromptConfigInput>;
@@ -1161,6 +1273,46 @@ export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extend
   jobId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   questions?: Resolver<Array<ResolversTypes['QuestionAnswer']>, ParentType, ContextType>;
   resume?: Resolver<Maybe<ResolversTypes['Upload']>, ParentType, ContextType>;
+};
+
+export type AshbyAddressResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyAddress'] = ResolversParentTypes['AshbyAddress']> = {
+  postalAddress?: Resolver<Maybe<ResolversTypes['AshbyPostalAddress']>, ParentType, ContextType>;
+};
+
+export type AshbyCompensationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyCompensation'] = ResolversParentTypes['AshbyCompensation']> = {
+  compensationTierSummary?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  compensationTiers?: Resolver<Array<ResolversTypes['AshbyCompensationTier']>, ParentType, ContextType>;
+  scrapeableCompensationSalarySummary?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  summaryComponents?: Resolver<Array<ResolversTypes['AshbyCompensationComponent']>, ParentType, ContextType>;
+};
+
+export type AshbyCompensationComponentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyCompensationComponent'] = ResolversParentTypes['AshbyCompensationComponent']> = {
+  compensationType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  currencyCode?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  interval?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  maxValue?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  minValue?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AshbyCompensationTierResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyCompensationTier'] = ResolversParentTypes['AshbyCompensationTier']> = {
+  additionalInformation?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  components?: Resolver<Array<ResolversTypes['AshbyCompensationComponent']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  tierSummary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AshbyPostalAddressResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyPostalAddress'] = ResolversParentTypes['AshbyPostalAddress']> = {
+  addressCountry?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  addressLocality?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  addressRegion?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
+export type AshbySecondaryLocationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbySecondaryLocation'] = ResolversParentTypes['AshbySecondaryLocation']> = {
+  address?: Resolver<Maybe<ResolversTypes['AshbyPostalAddress']>, ParentType, ContextType>;
+  location?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type ChatMessageResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ChatMessage'] = ResolversParentTypes['ChatMessage']> = {
@@ -1341,6 +1493,17 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   absolute_url?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   additional?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   additional_plain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ashby_address?: Resolver<Maybe<ResolversTypes['AshbyAddress']>, ParentType, ContextType>;
+  ashby_apply_url?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ashby_compensation?: Resolver<Maybe<ResolversTypes['AshbyCompensation']>, ParentType, ContextType>;
+  ashby_department?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ashby_employment_type?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ashby_is_listed?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
+  ashby_is_remote?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
+  ashby_job_url?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ashby_published_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ashby_secondary_locations?: Resolver<Maybe<Array<ResolversTypes['AshbySecondaryLocation']>>, ParentType, ContextType>;
+  ashby_team?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   ats_created_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   categories?: Resolver<Maybe<ResolversTypes['LeverCategories']>, ParentType, ContextType>;
   company?: Resolver<Maybe<ResolversTypes['Company']>, ParentType, ContextType>;
@@ -1379,7 +1542,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   skills?: Resolver<Maybe<Array<ResolversTypes['JobSkill']>>, ParentType, ContextType>;
   source_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   source_kind?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  status?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<Maybe<ResolversTypes['JobStatus']>, ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updated_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1446,18 +1609,31 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationCreateCompanyArgs, 'input'>>;
   createLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationCreateLangSmithPromptArgs, 'promptIdentifier'>>;
   createPrompt?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationCreatePromptArgs, 'input'>>;
+  deleteAllJobs?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType>;
   deleteCompany?: Resolver<ResolversTypes['DeleteCompanyResponse'], ParentType, ContextType, RequireFields<MutationDeleteCompanyArgs, 'id'>>;
   deleteJob?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType, RequireFields<MutationDeleteJobArgs, 'id'>>;
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
+  processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
   updateCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationUpdateCompanyArgs, 'id' | 'input'>>;
   updateLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationUpdateLangSmithPromptArgs, 'input' | 'promptIdentifier'>>;
   updatePromptLabel?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationUpdatePromptLabelArgs, 'label' | 'name' | 'version'>>;
   updateUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType, RequireFields<MutationUpdateUserSettingsArgs, 'settings' | 'userId'>>;
   upsert_company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<MutationUpsert_Company_Ats_BoardsArgs, 'boards' | 'company_id'>>;
+};
+
+export type ProcessAllJobsResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ProcessAllJobsResponse'] = ResolversParentTypes['ProcessAllJobsResponse']> = {
+  enhanceErrors?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  enhanced?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  errors?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  euRemote?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  nonEuRemote?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  processed?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
 };
 
 export type PromptResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Prompt'] = ResolversParentTypes['Prompt']> = {
@@ -1571,6 +1747,12 @@ export type WarcPointerResolvers<ContextType = GraphQLContext, ParentType extend
 export type Resolvers<ContextType = GraphQLContext> = {
   ATSBoard?: AtsBoardResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;
+  AshbyAddress?: AshbyAddressResolvers<ContextType>;
+  AshbyCompensation?: AshbyCompensationResolvers<ContextType>;
+  AshbyCompensationComponent?: AshbyCompensationComponentResolvers<ContextType>;
+  AshbyCompensationTier?: AshbyCompensationTierResolvers<ContextType>;
+  AshbyPostalAddress?: AshbyPostalAddressResolvers<ContextType>;
+  AshbySecondaryLocation?: AshbySecondaryLocationResolvers<ContextType>;
   ChatMessage?: ChatMessageResolvers<ContextType>;
   CompaniesResponse?: CompaniesResponseResolvers<ContextType>;
   Company?: CompanyResolvers<ContextType>;
@@ -1600,6 +1782,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   LeverCategories?: LeverCategoriesResolvers<ContextType>;
   LeverList?: LeverListResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  ProcessAllJobsResponse?: ProcessAllJobsResponseResolvers<ContextType>;
   Prompt?: PromptResolvers<ContextType>;
   PromptConfig?: PromptConfigResolvers<ContextType>;
   PromptUsage?: PromptUsageResolvers<ContextType>;

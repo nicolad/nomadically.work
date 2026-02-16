@@ -80,6 +80,52 @@ export type ApplicationInput = {
   resume?: InputMaybe<Scalars['Upload']['input']>;
 };
 
+export type AshbyAddress = {
+  __typename: 'AshbyAddress';
+  postalAddress: Maybe<AshbyPostalAddress>;
+};
+
+export type AshbyCompensation = {
+  __typename: 'AshbyCompensation';
+  compensationTierSummary: Maybe<Scalars['String']['output']>;
+  compensationTiers: Array<AshbyCompensationTier>;
+  scrapeableCompensationSalarySummary: Maybe<Scalars['String']['output']>;
+  summaryComponents: Array<AshbyCompensationComponent>;
+};
+
+export type AshbyCompensationComponent = {
+  __typename: 'AshbyCompensationComponent';
+  compensationType: Scalars['String']['output'];
+  currencyCode: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  interval: Scalars['String']['output'];
+  maxValue: Maybe<Scalars['Float']['output']>;
+  minValue: Maybe<Scalars['Float']['output']>;
+  summary: Scalars['String']['output'];
+};
+
+export type AshbyCompensationTier = {
+  __typename: 'AshbyCompensationTier';
+  additionalInformation: Maybe<Scalars['String']['output']>;
+  components: Array<AshbyCompensationComponent>;
+  id: Scalars['String']['output'];
+  tierSummary: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type AshbyPostalAddress = {
+  __typename: 'AshbyPostalAddress';
+  addressCountry: Maybe<Scalars['String']['output']>;
+  addressLocality: Maybe<Scalars['String']['output']>;
+  addressRegion: Maybe<Scalars['String']['output']>;
+};
+
+export type AshbySecondaryLocation = {
+  __typename: 'AshbySecondaryLocation';
+  address: Maybe<AshbyPostalAddress>;
+  location: Scalars['String']['output'];
+};
+
 export type ChatMessage = {
   __typename: 'ChatMessage';
   content: Scalars['String']['output'];
@@ -394,6 +440,17 @@ export type Job = {
   absolute_url: Maybe<Scalars['String']['output']>;
   additional: Maybe<Scalars['String']['output']>;
   additional_plain: Maybe<Scalars['String']['output']>;
+  ashby_address: Maybe<AshbyAddress>;
+  ashby_apply_url: Maybe<Scalars['String']['output']>;
+  ashby_compensation: Maybe<AshbyCompensation>;
+  ashby_department: Maybe<Scalars['String']['output']>;
+  ashby_employment_type: Maybe<Scalars['String']['output']>;
+  ashby_is_listed: Maybe<Scalars['Boolean']['output']>;
+  ashby_is_remote: Maybe<Scalars['Boolean']['output']>;
+  ashby_job_url: Maybe<Scalars['String']['output']>;
+  ashby_published_at: Maybe<Scalars['String']['output']>;
+  ashby_secondary_locations: Maybe<Array<AshbySecondaryLocation>>;
+  ashby_team: Maybe<Scalars['String']['output']>;
   ats_created_at: Maybe<Scalars['String']['output']>;
   categories: Maybe<LeverCategories>;
   company: Maybe<Company>;
@@ -432,7 +489,7 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<Scalars['String']['output']>;
+  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -446,6 +503,15 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
+
+export type JobStatus =
+  | 'enhanced'
+  | 'error'
+  /** Classified as fully remote EU position */
+  | 'eu_remote'
+  | 'new'
+  /** Classified as NOT remote EU */
+  | 'non_eu';
 
 export type JobsResponse = {
   __typename: 'JobsResponse';
@@ -506,6 +572,7 @@ export type Mutation = {
   createCompany: Company;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
+  deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
@@ -532,6 +599,12 @@ export type Mutation = {
    */
   enhanceJobFromATS: EnhanceJobResponse;
   ingest_company_snapshot: CompanySnapshot;
+  /**
+   * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
+   * Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
+   * for remote-EU eligibility on every unclassified job.
+   */
+  processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -612,6 +685,11 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationProcessAllJobsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
@@ -646,6 +724,25 @@ export type MutationUpdateUserSettingsArgs = {
 export type MutationUpsert_Company_Ats_BoardsArgs = {
   boards: Array<AtsBoardUpsertInput>;
   company_id: Scalars['Int']['input'];
+};
+
+/** Response from triggering the classify-jobs Cloudflare Worker */
+export type ProcessAllJobsResponse = {
+  __typename: 'ProcessAllJobsResponse';
+  /** Number of errors during ATS enhancement */
+  enhanceErrors: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs enhanced with ATS data in this run */
+  enhanced: Maybe<Scalars['Int']['output']>;
+  /** Number of errors encountered during classification */
+  errors: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs classified as EU-remote */
+  euRemote: Maybe<Scalars['Int']['output']>;
+  message: Maybe<Scalars['String']['output']>;
+  /** Number of jobs classified as non-EU */
+  nonEuRemote: Maybe<Scalars['Int']['output']>;
+  /** Number of jobs classified in this run */
+  processed: Maybe<Scalars['Int']['output']>;
+  success: Scalars['Boolean']['output'];
 };
 
 export type Prompt = {
@@ -774,7 +871,7 @@ export type QueryJobsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<JobStatus>;
 };
 
 

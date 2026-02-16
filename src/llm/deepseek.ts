@@ -1,7 +1,9 @@
 // src/llm/deepseek.ts
+// Note: @langfuse/openai removed due to zlib dependency (Edge Runtime incompatibility)
+// This file is only used in Node.js scripts/trigger tasks
 import OpenAI from "openai";
-import { observeOpenAI } from "@langfuse/openai";
-import { initOtel } from "@/otel/initOtel";
+// import { observeOpenAI } from "@langfuse/openai";
+// OTel removed - not needed without Langfuse tracing
 import {
   fetchLangfusePrompt,
   compilePrompt,
@@ -55,8 +57,8 @@ function getDeepSeekClient() {
 export async function generateDeepSeekWithLangfuse(
   input: GenerateInput,
 ): Promise<string> {
-  // Initialize OTel (safe to call multiple times)
-  await initOtel();
+  // OTel initialization removed - not needed without Langfuse tracing
+  // await initOtel();
 
   // Fetch prompt with caching
   const langfusePrompt = await fetchLangfusePrompt(input.promptName, {
@@ -86,14 +88,15 @@ export async function generateDeepSeekWithLangfuse(
   const temperature = input.temperature ?? cfg.temperature;
   const top_p = input.top_p ?? cfg.top_p;
 
-  // Wrap OpenAI SDK (configured to DeepSeek baseURL) with Langfuse tracing
-  const traced = observeOpenAI(getDeepSeekClient(), {
-    langfusePrompt, // <-- links generations to prompt version
-    generationName: "deepseek-chat", // optional: label the generation type
-    userId: input.userId,
-    sessionId: input.sessionId,
-    tags: input.tags,
-  });
+  // Langfuse tracing disabled - @langfuse/openai removed
+  // const traced = observeOpenAI(getDeepSeekClient(), {
+  //   langfusePrompt, // <-- links generations to prompt version
+  //   generationName: "deepseek-chat", // optional: label the generation type
+  //   userId: input.userId,
+  //   sessionId: input.sessionId,
+  //   tags: input.tags,
+  // });
+  const traced = getDeepSeekClient();
 
   if (langfusePrompt.type === "chat") {
     const messages = compiled as OpenAI.Chat.CompletionCreateParams["messages"];

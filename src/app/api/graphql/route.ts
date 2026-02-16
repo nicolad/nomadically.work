@@ -20,7 +20,18 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
         const { userId } = await auth();
         
         // Get D1 database instance from Cloudflare Workers context
-        const db = getDb(getRequestContext().env.DB);
+        // Note: This only works in production (Cloudflare deployment)
+        // For local development, deploy to Cloudflare preview or use wrangler dev
+        let db;
+        try {
+          db = getDb(getRequestContext().env.DB);
+        } catch (ctxError) {
+          console.error("Cloudflare context not available - this route requires deployment to Cloudflare");
+          throw new Error(
+            "GraphQL API requires Cloudflare D1 database. " +
+            "Deploy to Cloudflare or use 'wrangler pages dev' for local testing."
+          );
+        }
 
         if (!userId) {
           return { userId: null, userEmail: null, db };
@@ -31,9 +42,8 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
         return { userId, userEmail: null, db };
       } catch (error) {
         console.error("Error getting user context:", error);
-        // Still need to provide db even on auth error
-        const db = getDb(getRequestContext().env.DB);
-        return { userId: null, userEmail: null, db };
+        // Re-throw context errors (database not available)
+        throw error;
       }
     },
   },

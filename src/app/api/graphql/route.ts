@@ -1,11 +1,11 @@
 import { ApolloServer } from "@apollo/server";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { schema } from "@/apollo/schema";
 import { GraphQLContext } from "@/apollo/context";
 import { auth } from "@clerk/nextjs/server";
 import { getDb } from "@/db";
-import { getRequestContext } from "@cloudflare/next-on-pages";
+import { createD1HttpClient } from "@/db/d1-http";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -19,8 +19,9 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
       try {
         const { userId } = await auth();
         
-        // Get D1 database instance from Cloudflare Workers context
-        const db = getDb((getRequestContext().env as any).DB);
+        // Use D1 HTTP API - works in both development and production
+        const d1Client = createD1HttpClient();
+        const db = getDb(d1Client as any); // Cast to D1Database type
 
         if (!userId) {
           return { userId: null, userEmail: null, db };
@@ -39,29 +40,9 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
 );
 
 export async function GET(request: NextRequest) {
-  // GraphQL API requires Cloudflare D1 - not available in local dev
-  if (process.env.NODE_ENV === "development") {
-    return NextResponse.json(
-      {
-        error: "GraphQL API is not available in local development",
-        message: "Deploy to Cloudflare Pages or use 'wrangler pages dev .next' to test the GraphQL API",
-      },
-      { status: 503 }
-    );
-  }
   return handler(request);
 }
 
 export async function POST(request: NextRequest) {
-  // GraphQL API requires Cloudflare D1 - not available in local dev
-  if (process.env.NODE_ENV === "development") {
-    return NextResponse.json(
-      {
-        error: "GraphQL API is not available in local development",
-        message: "Deploy to Cloudflare Pages or use 'wrangler pages dev .next' to test the GraphQL API",
-      },
-      { status: 503 }
-    );
-  }
   return handler(request);
 }

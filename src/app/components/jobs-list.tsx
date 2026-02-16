@@ -81,18 +81,22 @@ export function JobsList() {
                     {job.status && (
                       <Badge
                         color={
-                          job.status === "eu-remote"
+                          job.status === "eu_remote"
                             ? "green"
-                            : job.status === "non-eu"
+                            : job.status === "non_eu"
                               ? "red"
-                              : "gray"
+                              : job.status === "enhanced"
+                                ? "blue"
+                                : "gray"
                         }
                       >
-                        {job.status === "eu-remote"
+                        {job.status === "eu_remote"
                           ? "✅ Remote EU"
-                          : job.status === "non-eu"
+                          : job.status === "non_eu"
                             ? "❌ Not Remote EU"
-                            : job.status}
+                            : job.status === "enhanced"
+                              ? "🔄 Enhanced"
+                              : job.status}
                       </Badge>
                     )}
                   </Flex>

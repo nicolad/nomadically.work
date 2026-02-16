@@ -51,6 +51,13 @@ next-env.d.ts
 .wrangler/
 .env*.local
 
+# python workers
+python_modules/
+*.pyc
+__pycache__/
+.venv/
+.venv-workers/
+
 # better-auth configuration (can include secrets)
 
 # script logs

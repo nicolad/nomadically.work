@@ -78,7 +78,7 @@
  * @see https://developers.greenhouse.io/harvest.html
  */
 
-import { db } from "@/db";
+import type { DbInstance } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { Job } from "@/db/schema";
@@ -147,6 +147,7 @@ export async function fetchGreenhouseJobPost(
  * @returns Promise resolving to the updated job record
  */
 export async function saveGreenhouseJobData(
+  db: DbInstance,
   jobId: number,
   greenhouseData: any,
 ) {

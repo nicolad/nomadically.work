@@ -17,7 +17,8 @@ export async function checkIsAdmin(): Promise<{
       return { isAdmin: false, userId: null, userEmail: null };
     }
 
-    const user = await clerkClient().users.getUser(userId);
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
     const userEmail = user.emailAddresses[0]?.emailAddress || null;
 
     return {

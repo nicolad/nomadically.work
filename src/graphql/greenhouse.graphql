@@ -78,7 +78,7 @@ query GetGreenhouseJobById($id: String!) {
   }
 }
 
-# Mutation to enhance a job with data from Greenhouse or Lever API
+# Mutation to enhance a job with data from Greenhouse, Lever, or Ashby API
 mutation EnhanceJobFromATS(
   $jobId: String!
   $company: String!

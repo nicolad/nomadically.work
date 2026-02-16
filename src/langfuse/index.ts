@@ -8,6 +8,25 @@ import {
   LANGFUSE_SECRET_KEY,
 } from "@/config/env";
 
+/**
+ * Check if Langfuse is configured
+ */
+export function isLangfuseConfigured(): boolean {
+  return !!(LANGFUSE_BASE_URL && LANGFUSE_PUBLIC_KEY && LANGFUSE_SECRET_KEY);
+}
+
+/**
+ * Throw error if Langfuse is not configured
+ */
+function requireLangfuse(): void {
+  if (!isLangfuseConfigured()) {
+    throw new Error(
+      "Langfuse is not configured. " +
+      "Set LANGFUSE_BASE_URL, LANGFUSE_PUBLIC_KEY, and LANGFUSE_SECRET_KEY in .env.local to enable observability."
+    );
+  }
+}
+
 // Deprecated: Use fetch-based API calls instead for Edge Runtime compatibility
 // let singleton: LangfuseClient | null = null;
 
@@ -230,8 +249,10 @@ export function extractPromptConfig(config: unknown): PromptConfig {
 }
 
 export async function listLangfusePrompts(userEmail?: string) {
+  requireLangfuse();
+
   const userTag = userEmail ? `user:${userEmail}` : null;
-  const url = new URL(`${LANGFUSE_BASE_URL}/api/public/v2/prompts`);
+  const url = new URL(`${LANGFUSE_BASE_URL!}/api/public/v2/prompts`);
 
   if (userTag) {
     url.searchParams.set("tag", userTag);
@@ -240,7 +261,7 @@ export async function listLangfusePrompts(userEmail?: string) {
   const response = await fetch(url.toString(), {
     headers: {
       Authorization: `Basic ${btoa(
-        `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`,
+        `${LANGFUSE_PUBLIC_KEY!}:${LANGFUSE_SECRET_KEY!}`,
       )}`,
     },
   });
@@ -253,7 +274,9 @@ export async function listLangfusePrompts(userEmail?: string) {
 }
 
 export async function createLangfusePrompt(promptData: any) {
-  const baseUrl = LANGFUSE_BASE_URL.replace(/\/+$/, "");
+  requireLangfuse();
+
+  const baseUrl = LANGFUSE_BASE_URL!.replace(/\/+$/, "");
   const url = new URL(`${baseUrl}/api/public/prompts`);
 
   // Create the prompt
@@ -262,7 +285,7 @@ export async function createLangfusePrompt(promptData: any) {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Basic ${btoa(
-        `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`,
+        `${LANGFUSE_PUBLIC_KEY!}:${LANGFUSE_SECRET_KEY!}`,
       )}`,
     },
     body: JSON.stringify(promptData),

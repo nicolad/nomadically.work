@@ -106,6 +106,19 @@ export const jobs = sqliteTable("jobs", {
   lists: text("lists"), // JSON array of { text, content }
   ats_created_at: text("ats_created_at"), // When the posting was created in the ATS
 
+  // Ashby ATS-specific fields
+  ashby_department: text("ashby_department"),
+  ashby_team: text("ashby_team"),
+  ashby_employment_type: text("ashby_employment_type"),
+  ashby_is_remote: integer("ashby_is_remote", { mode: "boolean" }),
+  ashby_is_listed: integer("ashby_is_listed", { mode: "boolean" }),
+  ashby_published_at: text("ashby_published_at"),
+  ashby_job_url: text("ashby_job_url"),
+  ashby_apply_url: text("ashby_apply_url"),
+  ashby_secondary_locations: text("ashby_secondary_locations"), // JSON array
+  ashby_compensation: text("ashby_compensation"), // JSON object
+  ashby_address: text("ashby_address"), // JSON object
+
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

@@ -44,11 +44,6 @@ export const LEVER_DOMAIN = "lever.co";
 export const LEVER_JOBS_DOMAIN = `jobs.${LEVER_DOMAIN}`;
 
 /**
- * Workday ATS domain
- */
-export const WORKDAY_DOMAIN = "myworkdayjobs.com";
-
-/**
  * Workable ATS domain
  */
 export const WORKABLE_DOMAIN = "workable.com";
@@ -70,7 +65,6 @@ export const ATS_SITES = [
   `site:${GREENHOUSE_BOARDS_DOMAIN}`,
   `site:${LEVER_JOBS_DOMAIN}`,
   `site:${ASHBY_JOBS_DOMAIN}`,
-  `site:${WORKDAY_DOMAIN}`,
   `site:${WORKABLE_APPLY_DOMAIN}`,
   `site:${BREEZY_DOMAIN}`,
 ];

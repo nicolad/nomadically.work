@@ -31,18 +31,17 @@ import { getSkillLabel } from "@/lib/skills/taxonomy";
 type Job = GetJobsQuery["jobs"]["jobs"][number];
 type BadgeColor = "green" | "orange" | "blue" | "gray";
 
-type JobStatus = "eu-remote" | "non-eu-remote" | "eu-onsite" | "non-eu" | "all";
+type JobStatus = "eu_remote" | "non_eu" | "enhanced" | "new" | "error" | "all";
 
 interface JobsListProps {
   searchFilter?: string;
-  searchTrigger?: number;
 }
 
 const getStatusBadgeColor = (status: Job["status"]): BadgeColor => {
   switch (status) {
-    case "eu-remote":
+    case "eu_remote":
       return "green";
-    case "uk-remote":
+    case "enhanced":
       return "blue";
     default:
       return "gray";
@@ -51,19 +50,18 @@ const getStatusBadgeColor = (status: Job["status"]): BadgeColor => {
 
 const getStatusLabel = (status: Job["status"]): string => {
   switch (status) {
-    case "eu-remote":
+    case "eu_remote":
       return "EU Remote";
-    case "uk-remote":
-      return "UK Remote";
+    case "non_eu":
+      return "Not Remote EU";
+    case "enhanced":
+      return "Enhanced";
     default:
       return status ?? "Unknown";
   }
 };
 
-export function JobsList({
-  searchFilter = "",
-  searchTrigger = 0,
-}: JobsListProps) {
+export function JobsList({ searchFilter = "" }: JobsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -107,7 +105,7 @@ export function JobsList({
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
     }),
-    [searchFilter, excludedCompanies, searchTrigger], // Include searchTrigger to force refetch
+    [searchFilter, excludedCompanies],
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({

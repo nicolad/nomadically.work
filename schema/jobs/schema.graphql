@@ -1,7 +1,7 @@
 extend type Query {
   jobs(
     sourceType: String
-    status: String
+    status: JobStatus
     search: String
     limit: Int
     offset: Int
@@ -9,9 +9,8 @@ extend type Query {
   ): JobsResponse!
   job(id: String!): Job
   userSettings(userId: String!): UserSettings
-  # TODO: Re-enable when migrated to Edge Runtime compatible implementation
-  # textToSql(question: String!): TextToSqlResult!
-  # executeSql(sql: String!): TextToSqlResult!
+  textToSql(question: String!): TextToSqlResult!
+  executeSql(sql: String!): TextToSqlResult!
 }
 
 extend type Mutation {
@@ -20,6 +19,13 @@ extend type Mutation {
     settings: UserSettingsInput!
   ): UserSettings!
   deleteJob(id: Int!): DeleteJobResponse!
+  deleteAllJobs: DeleteJobResponse!
+  """
+  Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
+  Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
+  for remote-EU eligibility on every unclassified job.
+  """
+  processAllJobs(limit: Int): ProcessAllJobsResponse!
   """
   Enhance a job posting by fetching detailed data from the ATS (Applicant Tracking System).
 
@@ -109,6 +115,48 @@ type GreenhouseDemographicQuestions {
   questions: [GreenhouseQuestion!]
 }
 
+# Ashby ATS types
+
+type AshbyPostalAddress {
+  addressLocality: String
+  addressRegion: String
+  addressCountry: String
+}
+
+type AshbyAddress {
+  postalAddress: AshbyPostalAddress
+}
+
+type AshbySecondaryLocation {
+  location: String!
+  address: AshbyPostalAddress
+}
+
+type AshbyCompensationComponent {
+  id: String!
+  summary: String!
+  compensationType: String!
+  interval: String!
+  currencyCode: String
+  minValue: Float
+  maxValue: Float
+}
+
+type AshbyCompensationTier {
+  id: String!
+  tierSummary: String!
+  title: String!
+  additionalInformation: String
+  components: [AshbyCompensationComponent!]!
+}
+
+type AshbyCompensation {
+  compensationTierSummary: String
+  scrapeableCompensationSalarySummary: String
+  compensationTiers: [AshbyCompensationTier!]!
+  summaryComponents: [AshbyCompensationComponent!]!
+}
+
 # Lever ATS types
 
 type LeverCategories {
@@ -122,6 +170,20 @@ type LeverCategories {
 type LeverList {
   text: String!
   content: String!
+}
+
+enum JobStatus {
+  new
+  enhanced
+  """
+  Classified as fully remote EU position
+  """
+  eu_remote
+  """
+  Classified as NOT remote EU
+  """
+  non_eu
+  error
 }
 
 type Job {
@@ -139,7 +201,7 @@ type Job {
   posted_at: String!
   score: Float
   score_reason: String
-  status: String
+  status: JobStatus
   is_remote_eu: Boolean
   remote_eu_confidence: String
   remote_eu_reason: String
@@ -160,6 +222,19 @@ type Job {
   compliance: [GreenhouseCompliance!]
   demographic_questions: GreenhouseDemographicQuestions
   data_compliance: [GreenhouseDataCompliance!]
+
+  # Ashby ATS fields
+  ashby_department: String
+  ashby_team: String
+  ashby_employment_type: String
+  ashby_is_remote: Boolean
+  ashby_is_listed: Boolean
+  ashby_published_at: String
+  ashby_job_url: String
+  ashby_apply_url: String
+  ashby_secondary_locations: [AshbySecondaryLocation!]
+  ashby_compensation: AshbyCompensation
+  ashby_address: AshbyAddress
 
   # Lever ATS fields (parsed from ats_data)
   categories: LeverCategories
@@ -219,6 +294,38 @@ type TextToSqlResult {
 type DeleteJobResponse {
   success: Boolean!
   message: String
+}
+
+"""
+Response from triggering the classify-jobs Cloudflare Worker
+"""
+type ProcessAllJobsResponse {
+  success: Boolean!
+  message: String
+  """
+  Number of jobs enhanced with ATS data in this run
+  """
+  enhanced: Int
+  """
+  Number of errors during ATS enhancement
+  """
+  enhanceErrors: Int
+  """
+  Number of jobs classified in this run
+  """
+  processed: Int
+  """
+  Number of jobs classified as EU-remote
+  """
+  euRemote: Int
+  """
+  Number of jobs classified as non-EU
+  """
+  nonEuRemote: Int
+  """
+  Number of errors encountered during classification
+  """
+  errors: Int
 }
 
 """

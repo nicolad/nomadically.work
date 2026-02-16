@@ -1,27 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { Container, Box, Text } from "@radix-ui/themes";
+import { useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Container, Box } from "@radix-ui/themes";
 import { SearchQueryBar } from "./SearchQueryBar";
 import { JobsList } from "./jobs-list";
 
 export function UnifiedJobsProvider() {
-  const [searchFilter, setSearchFilter] = useState("");
-  const [searchTrigger, setSearchTrigger] = useState(0);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchFilter = searchParams.get("q") ?? "";
 
-  const handleSearch = (query: string) => {
-    setSearchFilter(query);
-    // Increment trigger to force refetch even if query is the same
-    setSearchTrigger((prev) => prev + 1);
-  };
+  const handleSearch = useCallback(
+    (query: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (query.trim()) {
+        params.set("q", query.trim());
+      } else {
+        params.delete("q");
+      }
+      // Remove offset when search changes
+      params.delete("offset");
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
 
   return (
     <Container size="4" py="6">
       <Box mb="6">
-        <SearchQueryBar onSearchSubmit={handleSearch} />
+        <SearchQueryBar
+          onSearchSubmit={handleSearch}
+          initialQuery={searchFilter}
+        />
       </Box>
       <Box mt="4">
-        <JobsList searchFilter={searchFilter} searchTrigger={searchTrigger} />
+        <JobsList searchFilter={searchFilter} />
       </Box>
     </Container>
   );

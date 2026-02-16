@@ -13,8 +13,4 @@ CREATE TABLE `user_settings` (
 	`updated_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `user_settings_user_id_unique` ON `user_settings` (`user_id`);--> statement-breakpoint
-DROP INDEX "ashby_boards_board_name_unique";--> statement-breakpoint
-DROP INDEX "user_settings_user_id_unique";--> statement-breakpoint
-ALTER TABLE `ashby_boards` ALTER COLUMN "is_active" TO "is_active" integer NOT NULL DEFAULT 1;--> statement-breakpoint
-CREATE UNIQUE INDEX `ashby_boards_board_name_unique` ON `ashby_boards` (`board_name`);
+CREATE UNIQUE INDEX `user_settings_user_id_unique` ON `user_settings` (`user_id`);

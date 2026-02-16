@@ -2,12 +2,13 @@ name = "nomadically-work-insert-jobs"
 main = "workers/insert-jobs.ts"
 compatibility_date = "2026-02-01"
 
-# Environment variables
-[vars]
-TURSO_DB_URL = "libsql://nomadically-vad7ai.aws-eu-west-1.turso.io"
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "nomadically-work-db"
+database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME --name nomadically-work-insert-jobs)
-# - TURSO_DB_AUTH_TOKEN (required)
 # - API_SECRET (optional, for authentication)
 # - NEXT_WEBHOOK_URL (required, e.g., https://nomadically.work/api/jobs/process)
 # - WEBHOOK_SECRET (required, shared secret for Worker -> Next webhook)

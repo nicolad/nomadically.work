@@ -7,9 +7,13 @@ config({ path: ".env.local" });
 export default {
   schema: "./src/db/schema.ts",
   out: "./migrations",
-  dialect: "turso",
+  dialect: "sqlite",
+  driver: "d1-http",
   dbCredentials: {
-    url: process.env.TURSO_DB_URL!,
-    authToken: process.env.TURSO_DB_AUTH_TOKEN,
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    databaseId:
+      process.env.CLOUDFLARE_D1_DATABASE_ID ||
+      "632b9c57-8262-40bd-86c2-bc08beab713b",
+    token: process.env.CLOUDFLARE_API_TOKEN!,
   },
 } satisfies Config;

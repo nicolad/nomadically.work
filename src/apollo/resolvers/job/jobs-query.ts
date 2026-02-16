@@ -1,4 +1,3 @@
-import { db } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq, and, or, like, desc } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
@@ -14,7 +13,7 @@ export async function jobsQuery(
     offset?: number;
     excludedCompanies?: string[];
   },
-  _context: GraphQLContext,
+  context: GraphQLContext,
 ) {
   try {
     const conditions = [];
@@ -36,7 +35,7 @@ export async function jobsQuery(
     }
 
     // Query all jobs (without pagination yet)
-    let query = db.select().from(jobs);
+    let query = context.db.select().from(jobs);
 
     if (conditions.length > 0) {
       query = query.where(and(...conditions)!) as any;

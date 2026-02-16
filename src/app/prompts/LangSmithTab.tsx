@@ -25,7 +25,7 @@ import {
   CheckIcon,
   ExternalLinkIcon,
 } from "@radix-ui/react-icons";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   useGetLangSmithPromptsQuery,
   useCreateLangSmithPromptMutation,

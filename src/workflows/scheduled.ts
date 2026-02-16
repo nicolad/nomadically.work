@@ -1,6 +1,6 @@
 /**
  * Scheduled Inngest Workflows
- * 
+ *
  * Cron-triggered workflows for regular job platform maintenance:
  * - Hourly job ingestion
  * - Daily skill extraction
@@ -11,7 +11,8 @@
 import { z } from "zod";
 import { init } from "@mastra/inngest";
 import { inngest } from "../mastra/inngest";
-import { createClient } from "@libsql/client";
+// import { turso as db } from "@/db"; // Removed - migrated to D1
+// TODO: Update to use D1 database
 
 const { createWorkflow, createStep } = init(inngest);
 
@@ -30,13 +31,15 @@ const fetchNewJobsStep = createStep({
     count: z.number(),
   }),
   execute: async ({ inputData }) => {
-    console.log(`Fetching new jobs from sources: ${inputData.sources.join(", ")}`);
-    
+    console.log(
+      `Fetching new jobs from sources: ${inputData.sources.join(", ")}`,
+    );
+
     // TODO: Implement actual job fetching logic
     // This would call your existing job ingestion system
-    
+
     const jobIds: number[] = [];
-    
+
     return {
       jobIds,
       source: inputData.sources[0] || "unknown",
@@ -65,10 +68,10 @@ const notifyNewJobsStep = createStep({
           source: inputData.source,
         },
       });
-      
+
       console.log(`Notified about ${inputData.count} new jobs`);
     }
-    
+
     return {
       notified: inputData.count > 0,
     };
@@ -115,12 +118,16 @@ const getUnprocessedJobsStep = createStep({
     count: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-    
     // Get jobs without skill tags
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] getUnprocessedJobsStep disabled - returning empty list');
+    
+    return {
+      jobIds: [],
+      count: 0,
+    };
+    
+    /* D1 Implementation needed:
     const result = await db.execute({
       sql: `
         SELECT j.id
@@ -133,15 +140,16 @@ const getUnprocessedJobsStep = createStep({
       `,
       args: [inputData.batchSize],
     });
-    
+
     const jobIds = result.rows.map((row) => row.id as number);
-    
+
     console.log(`Found ${jobIds.length} jobs needing skill extraction`);
-    
+
     return {
       jobIds,
       count: jobIds.length,
     };
+    */
   },
 });
 
@@ -158,7 +166,7 @@ const extractSkillsStep = createStep({
   execute: async ({ inputData }) => {
     let processed = 0;
     let failed = 0;
-    
+
     // Trigger skill extraction workflow for each job
     for (const jobId of inputData.jobIds) {
       try {
@@ -170,7 +178,7 @@ const extractSkillsStep = createStep({
         failed++;
       }
     }
-    
+
     return {
       processed,
       failed,
@@ -220,9 +228,9 @@ const discoverNewCompaniesStep = createStep({
   }),
   execute: async ({ inputData }) => {
     console.log("Starting company discovery from Common Crawl");
-    
+
     // TODO: Trigger your discoverConsultanciesCommonCrawlWorkflow
-    
+
     return {
       companiesFound: 0,
       crawlId: inputData.crawlId || "CC-MAIN-2026-10",
@@ -241,9 +249,9 @@ const updateCompanyDataStep = createStep({
   }),
   execute: async ({ inputData }) => {
     console.log(`Processing ${inputData.companiesFound} discovered companies`);
-    
+
     // TODO: Update company metadata, fetch ATS boards, etc.
-    
+
     return {
       updated: inputData.companiesFound,
     };
@@ -287,12 +295,15 @@ const cleanupExpiredJobsStep = createStep({
     deleted: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-    
     // Delete jobs older than X days with status "closed" or "expired"
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] cleanupExpiredJobsStep disabled');
+    
+    return {
+      deleted: 0,
+    };
+    
+    /* D1 Implementation needed:
     const result = await db.execute({
       sql: `
         DELETE FROM jobs
@@ -301,13 +312,14 @@ const cleanupExpiredJobsStep = createStep({
       `,
       args: [inputData.daysOld],
     });
-    
+
     const deleted = result.rowsAffected || 0;
     console.log(`Deleted ${deleted} expired jobs`);
-    
+
     return {
       deleted,
     };
+    */
   },
 });
 
@@ -321,12 +333,16 @@ const cleanupOldPreferencesStep = createStep({
     preferencesDeleted: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-    
     // Delete low-confidence preferences older than 90 days
+    // TODO: Re-implement with D1 database
+    console.log('[D1 Migration] cleanupOldPreferencesStep disabled');
+    
+    return {
+      jobsDeleted: inputData.deleted,
+      preferencesDeleted: 0,
+    };
+    
+    /* D1 Implementation needed:
     const result = await db.execute({
       sql: `
         DELETE FROM user_preferences
@@ -335,14 +351,15 @@ const cleanupOldPreferencesStep = createStep({
       `,
       args: [],
     });
-    
+
     const preferencesDeleted = result.rowsAffected || 0;
     console.log(`Deleted ${preferencesDeleted} old low-confidence preferences`);
-    
+
     return {
       jobsDeleted: inputData.deleted,
       preferencesDeleted,
     };
+    */
   },
 });
 
@@ -383,14 +400,14 @@ const triggerDailyDigestStep = createStep({
   }),
   execute: async ({ inputData }) => {
     console.log(`Triggering daily digest at ${inputData.time}`);
-    
+
     await inngest.send({
       name: "cron/daily-digest",
       data: {
         timestamp: new Date().toISOString(),
       },
     });
-    
+
     return {
       triggered: true,
     };

@@ -11,7 +11,7 @@ import {
 } from "@radix-ui/themes";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   useCreateApplicationMutation,
   useGetApplicationsQuery,

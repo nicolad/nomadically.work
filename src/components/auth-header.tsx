@@ -3,15 +3,13 @@
 import { Button, Flex } from "@radix-ui/themes";
 import { GearIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
-import { useSession } from "@/lib/auth-client";
-import { useSignOut } from "@/auth/hooks";
+import { useUser, useClerk } from "@clerk/nextjs";
 
 export function AuthHeader() {
-  const { data: session, isPending: loading } = useSession();
-  const user = session?.user;
-  const { signOut } = useSignOut();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { signOut } = useClerk();
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <Flex gap="4" align="center">
         <Button disabled>Loading...</Button>
@@ -19,7 +17,7 @@ export function AuthHeader() {
     );
   }
 
-  if (!user) {
+  if (!isSignedIn) {
     return (
       <Flex gap="4" align="center">
         <Link href="/sign-in">
@@ -35,14 +33,14 @@ export function AuthHeader() {
   return (
     <Flex gap="4" align="center">
       <span style={{ color: "#888888", fontSize: "14px" }}>
-        {user.name || user.email}
+        {user.fullName || user.primaryEmailAddress?.emailAddress || user.username}
       </span>
       <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
         <GearIcon width={32} height={32} style={{ color: "#888888" }} />
       </Link>
       <Button
         variant="soft"
-        onClick={() => signOut()}
+        onClick={() => signOut({ redirectUrl: "/" })}
         style={{ cursor: "pointer" }}
       >
         Sign Out

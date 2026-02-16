@@ -1,4 +1,3 @@
-import { db } from "@/db";
 import { jobs, jobSkillTags, companies } from "@/db/schema";
 import { eq, like } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
@@ -9,9 +8,9 @@ import { enhanceJobFromATS } from "./enhance-job";
 
 export const jobResolvers = {
   Job: {
-    async skills(parent: any) {
+    async skills(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const skills = await db
+        const skills = await context.db
           .select()
           .from(jobSkillTags)
           .where(eq(jobSkillTags.job_id, parent.id));
@@ -21,12 +20,12 @@ export const jobResolvers = {
         return [];
       }
     },
-    async company(parent: any) {
+    async company(parent: any, _args: any, context: GraphQLContext) {
       try {
         if (!parent.company_id) {
           return null;
         }
-        const [company] = await db
+        const [company] = await context.db
           .select()
           .from(companies)
           .where(eq(companies.id, parent.company_id))
@@ -180,14 +179,14 @@ export const jobResolvers = {
   Query: {
     jobs: jobsQuery,
 
-    async job(_parent: any, args: { id: string }, _context: GraphQLContext) {
+    async job(_parent: any, args: { id: string }, context: GraphQLContext) {
       try {
         // Try to find the job by matching external_id pattern
         // external_id typically contains the full URL like:
         // https://job-boards.greenhouse.io/databricks/jobs/7434532002
         // We need to match jobs where external_id ends with the provided id
 
-        const results = await db
+        const results = await context.db
           .select()
           .from(jobs)
           .where(like(jobs.external_id, `%/${args.id}`));
@@ -198,7 +197,7 @@ export const jobResolvers = {
 
         // If no match found with trailing slash, try without it
         // (in case it's a direct match or different format)
-        const directResults = await db
+        const directResults = await context.db
           .select()
           .from(jobs)
           .where(like(jobs.external_id, `%${args.id}%`));
@@ -239,7 +238,7 @@ export const jobResolvers = {
         }
 
         // Delete the job
-        await db.delete(jobs).where(eq(jobs.id, args.id));
+        await context.db.delete(jobs).where(eq(jobs.id, args.id));
 
         return {
           success: true,

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { createWorkflow, createStep } from "@/mastra/workflows";
 import { Agent } from "@mastra/core/agent";
-import { createClient } from "@libsql/client";
+import { db } from "@/db";
+import { jobSkillTags } from "@/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 import { getSkillTaxonomyQueryTool } from "./taxonomy-tool";
 import { jobSkillsOutputSchema } from "./schema";
@@ -155,19 +157,13 @@ const persistStep = createStep({
   }),
   outputSchema: z.object({ ok: z.boolean(), count: z.number() }),
   execute: async ({ inputData }) => {
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-
     const extractedAt = new Date().toISOString();
     const skillCount = inputData.skills.skills.length;
 
     // Replace existing skills for this job
-    await db.execute({
-      sql: `DELETE FROM job_skill_tags WHERE job_id = ?`,
-      args: [inputData.jobId],
-    });
+    await db
+      .delete(jobSkillTags)
+      .where(eq(jobSkillTags.job_id, inputData.jobId));
 
     // ✅ Handle 0 skills gracefully (just logs, no inserts)
     if (skillCount === 0) {
@@ -178,20 +174,14 @@ const persistStep = createStep({
     }
 
     for (const s of inputData.skills.skills) {
-      await db.execute({
-        sql: `
-          INSERT INTO job_skill_tags(job_id, tag, level, confidence, evidence, extracted_at, version)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `,
-        args: [
-          inputData.jobId,
-          s.tag,
-          s.level,
-          s.confidence ?? null,
-          s.evidence,
-          extractedAt,
-          inputData.version,
-        ],
+      await db.insert(jobSkillTags).values({
+        job_id: inputData.jobId,
+        tag: s.tag,
+        level: s.level,
+        confidence: s.confidence ?? null,
+        evidence: s.evidence,
+        extracted_at: extractedAt,
+        version: inputData.version,
       });
     }
 

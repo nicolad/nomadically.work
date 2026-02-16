@@ -1,4 +1,3 @@
-import { db } from "@/db";
 import {
   companies,
   companyFacts,
@@ -34,9 +33,9 @@ export const companyResolvers = {
     score_reasons(parent: any) {
       return parent.score_reasons ? JSON.parse(parent.score_reasons) : [];
     },
-    async ats_boards(parent: any) {
+    async ats_boards(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const boards = await db
+        const boards = await context.db
           .select()
           .from(atsBoards)
           .where(eq(atsBoards.company_id, parent.id));
@@ -49,6 +48,7 @@ export const companyResolvers = {
     async facts(
       parent: any,
       args: { limit?: number; offset?: number; field?: string },
+      context: GraphQLContext,
     ) {
       try {
         const limit = args.limit ?? 200;
@@ -59,7 +59,7 @@ export const companyResolvers = {
           conditions.push(eq(companyFacts.field, args.field));
         }
 
-        const facts = await db
+        const facts = await context.db
           .select()
           .from(companyFacts)
           .where(and(...conditions)!)
@@ -71,9 +71,9 @@ export const companyResolvers = {
         return [];
       }
     },
-    async facts_count(parent: any) {
+    async facts_count(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const result = await db
+        const result = await context.db
           .select({ count: count() })
           .from(companyFacts)
           .where(eq(companyFacts.company_id, parent.id));
@@ -83,12 +83,12 @@ export const companyResolvers = {
         return 0;
       }
     },
-    async snapshots(parent: any, args: { limit?: number; offset?: number }) {
+    async snapshots(parent: any, args: { limit?: number; offset?: number }, context: GraphQLContext) {
       try {
         const limit = args.limit ?? 50;
         const offset = args.offset ?? 0;
 
-        const snapshots = await db
+        const snapshots = await context.db
           .select()
           .from(companySnapshots)
           .where(eq(companySnapshots.company_id, parent.id))
@@ -100,9 +100,9 @@ export const companyResolvers = {
         return [];
       }
     },
-    async snapshots_count(parent: any) {
+    async snapshots_count(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const result = await db
+        const result = await context.db
           .select({ count: count() })
           .from(companySnapshots)
           .where(eq(companySnapshots.company_id, parent.id));
@@ -219,7 +219,7 @@ export const companyResolvers = {
         limit?: number;
         offset?: number;
       },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
         const conditions = [];
@@ -258,8 +258,7 @@ export const companyResolvers = {
             );
           }
         }
-
-        let query = db.select().from(companies);
+        let query = context.db.select().from(companies);
 
         if (conditions.length > 0) {
           query = query.where(and(...conditions)!) as any;
@@ -279,7 +278,7 @@ export const companyResolvers = {
 
         // Post-filter for has_ats_boards and service_taxonomy_any
         if (args.filter?.has_ats_boards) {
-          const companyIdsWithBoards = await db
+          const companyIdsWithBoards = await context.db
             .select({ company_id: atsBoards.company_id })
             .from(atsBoards)
             .where(eq(atsBoards.is_active, true));
@@ -320,14 +319,14 @@ export const companyResolvers = {
     async company(
       _parent: any,
       args: { id?: number; key?: string },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
         if (!args.id && !args.key) {
           return null;
         }
 
-        let query = db.select().from(companies);
+        let query = context.db.select().from(companies);
 
         if (args.id) {
           query = query.where(eq(companies.id, args.id)) as any;
@@ -351,7 +350,7 @@ export const companyResolvers = {
         limit?: number;
         offset?: number;
       },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
         const limit = args.limit ?? 200;
@@ -362,7 +361,7 @@ export const companyResolvers = {
           conditions.push(eq(companyFacts.field, args.field));
         }
 
-        const facts = await db
+        const facts = await context.db
           .select()
           .from(companyFacts)
           .where(and(...conditions)!)
@@ -382,13 +381,13 @@ export const companyResolvers = {
         limit?: number;
         offset?: number;
       },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
         const limit = args.limit ?? 50;
         const offset = args.offset ?? 0;
 
-        const snapshots = await db
+        const snapshots = await context.db
           .select()
           .from(companySnapshots)
           .where(eq(companySnapshots.company_id, args.company_id))
@@ -404,10 +403,10 @@ export const companyResolvers = {
     async company_ats_boards(
       _parent: any,
       args: { company_id: number },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
-        const boards = await db
+        const boards = await context.db
           .select()
           .from(atsBoards)
           .where(eq(atsBoards.company_id, args.company_id));
@@ -476,7 +475,7 @@ export const companyResolvers = {
           insertData.industries = JSON.stringify(args.input.industries);
         }
 
-        const [newCompany] = await db
+        const [newCompany] = await context.db
           .insert(companies)
           .values(insertData)
           .returning();
@@ -552,7 +551,7 @@ export const companyResolvers = {
 
         updateData.updated_at = new Date().toISOString();
 
-        const [updatedCompany] = await db
+        const [updatedCompany] = await context.db
           .update(companies)
           .set(updateData)
           .where(eq(companies.id, args.id))
@@ -583,7 +582,7 @@ export const companyResolvers = {
           throw new Error("Forbidden - Admin access required");
         }
 
-        await db.delete(companies).where(eq(companies.id, args.id));
+        await context.db.delete(companies).where(eq(companies.id, args.id));
 
         return {
           success: true,
@@ -653,7 +652,7 @@ export const companyResolvers = {
             insertData.normalized_value = JSON.stringify(fact.normalized_value);
           }
 
-          const [inserted] = await db
+          const [inserted] = await context.db
             .insert(companyFacts)
             .values(insertData)
             .returning();
@@ -696,7 +695,7 @@ export const companyResolvers = {
 
         for (const board of args.boards) {
           // Check if board exists
-          const [existing] = await db
+          const [existing] = await context.db
             .select()
             .from(atsBoards)
             .where(
@@ -732,7 +731,7 @@ export const companyResolvers = {
           if (existing) {
             // Update
             boardData.updated_at = new Date().toISOString();
-            const [updated] = await db
+            const [updated] = await context.db
               .update(atsBoards)
               .set(boardData)
               .where(eq(atsBoards.id, existing.id))
@@ -741,7 +740,7 @@ export const companyResolvers = {
           } else {
             // Insert
             boardData.first_seen_at = board.last_seen_at;
-            const [inserted] = await db
+            const [inserted] = await context.db
               .insert(atsBoards)
               .values(boardData)
               .returning();
@@ -810,7 +809,7 @@ export const companyResolvers = {
           insertData.extracted = JSON.stringify(args.extracted);
         }
 
-        const [snapshot] = await db
+        const [snapshot] = await context.db
           .insert(companySnapshots)
           .values(insertData)
           .returning();

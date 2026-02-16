@@ -6,7 +6,7 @@ import {
   useGetCompanyQuery,
   useEnhanceCompanyMutation,
 } from "@/__generated__/hooks";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import {
   Avatar,

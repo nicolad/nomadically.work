@@ -1,15 +1,14 @@
 import { Mastra } from "@mastra/core";
-import { MastraCompositeStore } from "@mastra/core/storage";
-import {
-  MemoryLibSQL,
-  ScoresLibSQL,
-  WorkflowsLibSQL,
-  ObservabilityLibSQL,
-} from "@mastra/libsql";
 import { serve } from "@mastra/inngest";
 
 import { observability } from "@/observability";
-import { jobClassifierAgent, sqlAgent, adminAssistantAgent, postgresAgent, sqlGenerationAgent } from "@/agents";
+import {
+  jobClassifierAgent,
+  sqlAgent,
+  adminAssistantAgent,
+  postgresAgent,
+  sqlGenerationAgent,
+} from "@/agents";
 import { personalizationAgent, recommendationAgent } from "@/memory";
 import {
   skillsVector,
@@ -29,7 +28,6 @@ import {
   rerunJobClassifierTool,
   diffSnapshotsTool,
 } from "@/workspace/ops-skills";
-import { mastraAuth } from "./auth";
 
 // Import scheduled workflows
 import {
@@ -70,59 +68,12 @@ import {
 } from "@/inngest/custom-functions";
 
 /**
- * Storage Configuration
+ * Mastra Configuration
  *
- * Using composite storage with LibSQL (Turso) for all domains.
- * Turso provides edge-replicated SQLite with global low latency.
- *
- * Benefits of LibSQL/Turso:
- * - No separate database server required
- * - Edge replication for global performance
- * - SQLite compatibility with distributed features
- * - Automatic schema migration on first interaction
- *
- * Storage domains:
- * - memory: Agent conversations, threads, and message history
- * - scores: Evaluation scores from evals and scorers
- * - workflows: Workflow execution state and traces
- * - observability: Langfuse traces, spans, and generations
- *
- * For local development, you can use file:./mastra.db instead of Turso.
- * Use absolute paths when running mastra dev alongside Next.js:
- * url: `file:${process.cwd()}/mastra.db`
+ * Storage and vectors are now managed separately via D1.
+ * Mastra will use in-memory storage for development.
+ * For production persistence, configure external storage separately.
  */
-const storage = new MastraCompositeStore({
-  id: "turso-storage",
-  domains: {
-    // Memory domain: Agent conversations with automatic thread management
-    // Includes: messages, threads, resources, and working memory
-    memory: new MemoryLibSQL({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    }),
-
-    // Scores domain: Evaluation results from evals and live scorers
-    // Includes: evaluation datasets, scores, and metrics
-    scores: new ScoresLibSQL({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    }),
-
-    // Workflows domain: Workflow execution state and history
-    // Includes: workflow runs, step results, and execution traces
-    workflows: new WorkflowsLibSQL({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    }),
-
-    // Observability domain: Langfuse integration for tracing
-    // Includes: traces, spans, generations, and prompt versions
-    observability: new ObservabilityLibSQL({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    }),
-  },
-});
 
 export const mastra = new Mastra({
   agents: {
@@ -134,10 +85,8 @@ export const mastra = new Mastra({
     postgresAgent,
     sqlGenerationAgent,
   },
-  storage,
-  vectors: {
-    [SKILLS_VECTOR_STORE_NAME]: skillsVector,
-  },
+  // Storage is optional - using in-memory for simplicity
+  // For production, configure external storage as needed
   workflows: {
     // Production workflows
     extractJobSkillsWorkflow,
@@ -180,7 +129,7 @@ export const mastra = new Mastra({
   },
   server: {
     host: "0.0.0.0",
-    auth: mastraAuth,
+    // Auth is now handled by Clerk middleware at the Next.js level
     apiRoutes: [
       {
         path: "/api/inngest",

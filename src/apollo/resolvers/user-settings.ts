@@ -1,4 +1,3 @@
-import { db } from "@/db";
 import { userSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { GraphQLContext } from "../context";
@@ -8,10 +7,10 @@ export const userSettingsResolvers = {
     async userSettings(
       _parent: any,
       args: { userId: string },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
-        const [settings] = await db
+        const [settings] = await context.db
           .select()
           .from(userSettings)
           .where(eq(userSettings.user_id, args.userId));
@@ -56,13 +55,13 @@ export const userSettingsResolvers = {
           jobs_per_page?: number;
         };
       },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
       try {
         const { userId, settings: settingsInput } = args;
 
         // Check if settings exist
-        const [existingSettings] = await db
+        const [existingSettings] = await context.db
           .select()
           .from(userSettings)
           .where(eq(userSettings.user_id, userId));
@@ -103,14 +102,14 @@ export const userSettingsResolvers = {
         let result;
         if (existingSettings) {
           // Update existing settings
-          [result] = await db
+          [result] = await context.db
             .update(userSettings)
             .set(settingsData)
             .where(eq(userSettings.user_id, userId))
             .returning();
         } else {
           // Insert new settings
-          [result] = await db
+          [result] = await context.db
             .insert(userSettings)
             .values(settingsData)
             .returning();

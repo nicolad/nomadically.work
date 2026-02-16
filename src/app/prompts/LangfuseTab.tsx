@@ -31,7 +31,7 @@ import {
   CheckIcon,
   CopyIcon,
 } from "@radix-ui/react-icons";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   useGetPromptsQuery,
   useGetMyPromptUsageQuery,

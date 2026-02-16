@@ -28,7 +28,7 @@ import {
   LockClosedIcon,
 } from "@radix-ui/react-icons";
 import Link from "next/link";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   useTextToSqlLazyQuery,
   useExecuteSqlLazyQuery,

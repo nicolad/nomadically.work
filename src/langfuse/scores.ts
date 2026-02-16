@@ -1,5 +1,9 @@
 // src/langfuse/scores.ts
-import { getLangfuseClient } from "./index";
+import {
+  LANGFUSE_BASE_URL,
+  LANGFUSE_PUBLIC_KEY,
+  LANGFUSE_SECRET_KEY,
+} from "@/config/env";
 
 export type ScoreDataType = "NUMERIC" | "CATEGORICAL" | "BOOLEAN";
 
@@ -17,20 +21,33 @@ export async function createScore(input: {
   id?: string;
   configId?: string;
 }) {
-  const langfuse = getLangfuseClient();
+  const baseUrl = LANGFUSE_BASE_URL.replace(/\/+$/, "");
+  const url = new URL(`${baseUrl}/api/public/scores`);
 
-  langfuse.score.create({
-    traceId: input.traceId,
-    observationId: input.observationId,
-    sessionId: input.sessionId,
-    name: input.name,
-    value: input.value as any,
-    dataType: input.dataType,
-    comment: input.comment,
-    id: input.id,
-    configId: input.configId,
+  const response = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${btoa(
+        `${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`,
+      )}`,
+    },
+    body: JSON.stringify({
+      traceId: input.traceId,
+      observationId: input.observationId,
+      sessionId: input.sessionId,
+      name: input.name,
+      value: input.value,
+      dataType: input.dataType,
+      comment: input.comment,
+      id: input.id,
+      configId: input.configId,
+    }),
   });
 
-  // Important for short-lived runtimes (serverless/edge)
-  await langfuse.flush();
+  if (!response.ok) {
+    throw new Error(`Langfuse API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }

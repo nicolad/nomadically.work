@@ -1,5 +1,4 @@
 import type { GraphQLContext } from "../context";
-import { getDb } from "@/db";
 import { applications } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -12,8 +11,7 @@ export const applicationResolvers = {
           throw new Error("User must be authenticated to view applications");
         }
 
-        const db = getDb();
-        const userApplications = await db
+        const userApplications = await context.db
           .select()
           .from(applications)
           .where(eq(applications.user_email, context.userEmail))
@@ -55,14 +53,12 @@ export const applicationResolvers = {
           );
         }
 
-        const db = getDb();
-
         // TODO: Handle resume upload to cloud storage
         // For now, store resume as-is (it's an Upload scalar)
         const resumeUrl = args.input.resume ? null : null;
 
         // Insert application into database
-        const [newApplication] = await db
+        const [newApplication] = await context.db
           .insert(applications)
           .values({
             user_email: context.userEmail,

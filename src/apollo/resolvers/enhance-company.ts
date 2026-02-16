@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+
 import { companies, atsBoards, companySnapshots } from "@/db/schema";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
@@ -37,11 +37,11 @@ export async function enhanceCompany(
     // Fetch current company data
     let company;
     if (args.id) {
-      company = await db.query.companies.findFirst({
+      company = await context.db.query.companies.findFirst({
         where: eq(companies.id, args.id),
       });
     } else if (args.key) {
-      company = await db.query.companies.findFirst({
+      company = await context.db.query.companies.findFirst({
         where: eq(companies.key, args.key),
       });
     }
@@ -133,7 +133,7 @@ export async function enhanceCompany(
         extractedData.evidence.capture_timestamp || new Date().toISOString();
     }
 
-    await db.update(companies).set(updateData).where(eq(companies.id, company.id));
+    await context.db.update(companies).set(updateData).where(eq(companies.id, company.id));
 
     // Update or insert ATS boards
     if (extractedData.ats_boards && extractedData.ats_boards.length > 0) {
@@ -192,13 +192,13 @@ export async function enhanceCompany(
         };
 
         // Check if ATS board already exists
-        const existing = await db.query.atsBoards.findFirst({
+        const existing = await context.db.query.atsBoards.findFirst({
           where: eq(atsBoards.url, board.url),
         });
 
         if (existing) {
           // Update existing board
-          await db
+          await context.db
             .update(atsBoards)
             .set({
               ...boardData,
@@ -208,7 +208,7 @@ export async function enhanceCompany(
             .where(eq(atsBoards.id, existing.id));
         } else {
           // Insert new board
-          await db.insert(atsBoards).values(boardData);
+          await context.db.insert(atsBoards).values(boardData);
         }
       }
     }
@@ -235,7 +235,7 @@ export async function enhanceCompany(
       warc_digest: extractedData.evidence.warc?.digest || null,
     };
 
-    await db.insert(companySnapshots).values(snapshotData);
+    await context.db.insert(companySnapshots).values(snapshotData);
 
     return {
       success: true,

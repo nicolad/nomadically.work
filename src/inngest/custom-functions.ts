@@ -1,6 +1,6 @@
 /**
  * Custom Inngest Functions
- * 
+ *
  * Event-driven functions for job platform events:
  * - User registration
  * - Job application tracking
@@ -9,8 +9,13 @@
  */
 
 import { inngest } from "../mastra/inngest";
-import { preferenceManager, PREFERENCE_FIELDS, PREFERENCE_SOURCES } from "@/memory";
-import { createClient } from "@libsql/client";
+import {
+  preferenceManager,
+  PREFERENCE_FIELDS,
+  PREFERENCE_SOURCES,
+} from "@/memory";
+// import { turso as db } from "@/db"; // Removed - migrated to D1
+// TODO: Update to use D1 database
 
 // ============================================================================
 // User Registration Function
@@ -21,9 +26,9 @@ export const userRegistrationFunction = inngest.createFunction(
   { event: "user/registered" },
   async ({ event }) => {
     const { userId, email, name } = event.data;
-    
+
     console.log(`Processing user registration: ${email}`);
-    
+
     // Initialize default preferences for new user
     await preferenceManager.setPreference({
       userId,
@@ -33,8 +38,8 @@ export const userRegistrationFunction = inngest.createFunction(
       source: PREFERENCE_SOURCES.IMPLICIT,
       context: { reason: "Default for remote job platform" },
     });
-    
-    return { 
+
+    return {
       status: "registered",
       userId,
       email,
@@ -52,14 +57,18 @@ export const jobApplicationFunction = inngest.createFunction(
   { event: "job/applied" },
   async ({ event }) => {
     const { userId, jobId, companyId, timestamp } = event.data;
+
+    console.log(`[D1 Migration] Job application tracking disabled - User ${userId} applied to job ${jobId}`);
     
-    console.log(`User ${userId} applied to job ${jobId}`);
-    
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-    
+    // TODO: Re-implement with D1 database access
+    return {
+      status: "disabled_pending_d1_migration",
+      userId,
+      jobId,
+      preferencesUpdated: false,
+    };
+
+    /* D1 Implementation needed:
     // Record application in database
     await db.execute({
       sql: `
@@ -68,7 +77,7 @@ export const jobApplicationFunction = inngest.createFunction(
       `,
       args: [userId, jobId, companyId, timestamp],
     });
-    
+
     // Update preferences based on application
     const jobResult = await db.execute({
       sql: `
@@ -79,10 +88,10 @@ export const jobApplicationFunction = inngest.createFunction(
       `,
       args: [jobId],
     });
-    
+
     if (jobResult.rows.length > 0) {
       const job = jobResult.rows[0];
-      
+
       // Infer company preference
       if (job.company_key) {
         await preferenceManager.setPreference({
@@ -94,9 +103,12 @@ export const jobApplicationFunction = inngest.createFunction(
           context: { action: "job_application", jobId, timestamp },
         });
       }
-      
+
       // Infer company type preferences
-      if (job.category && ["CONSULTANCY", "PRODUCT"].includes(job.category as string)) {
+      if (
+        job.category &&
+        ["CONSULTANCY", "PRODUCT"].includes(job.category as string)
+      ) {
         await preferenceManager.setPreference({
           userId,
           field: PREFERENCE_FIELDS.EXCLUDED_COMPANY_TYPES,
@@ -107,13 +119,14 @@ export const jobApplicationFunction = inngest.createFunction(
         });
       }
     }
-    
+
     return {
       status: "tracked",
       userId,
       jobId,
       preferencesUpdated: true,
     };
+    */
   },
 );
 
@@ -126,14 +139,14 @@ export const jobViewFunction = inngest.createFunction(
   { event: "job/viewed" },
   async ({ event }) => {
     const { userId, jobId, duration } = event.data;
-    
+
     // Only track significant views (> 10 seconds)
     if (duration && duration < 10) {
       return { status: "skipped", reason: "view_too_short" };
     }
-    
+
     console.log(`User ${userId} viewed job ${jobId} for ${duration}s`);
-    
+
     // Infer interest from view
     await preferenceManager.inferFromAction({
       userId,
@@ -141,7 +154,7 @@ export const jobViewFunction = inngest.createFunction(
       jobId,
       confidence: 0.4, // Low confidence for views
     });
-    
+
     return {
       status: "tracked",
       userId,
@@ -160,18 +173,18 @@ export const jobFeedbackFunction = inngest.createFunction(
   { event: "job/feedback" },
   async ({ event }) => {
     const { userId, jobId, feedback } = event.data; // feedback: "like" | "dislike"
-    
+
     console.log(`User ${userId} ${feedback}d job ${jobId}`);
-    
+
     const action = feedback === "like" ? "like" : "dislike";
-    
+
     await preferenceManager.inferFromAction({
       userId,
       action,
       jobId,
       confidence: 0.8, // High confidence for explicit feedback
     });
-    
+
     return {
       status: "processed",
       userId,
@@ -191,9 +204,9 @@ export const preferenceUpdateFunction = inngest.createFunction(
   { event: "preference/updated" },
   async ({ event }) => {
     const { userId, field, value } = event.data;
-    
+
     console.log(`Updating preference ${field} for user ${userId}`);
-    
+
     await preferenceManager.setPreference({
       userId,
       field,
@@ -202,13 +215,13 @@ export const preferenceUpdateFunction = inngest.createFunction(
       source: PREFERENCE_SOURCES.EXPLICIT_SETTING,
       context: { updatedVia: "settings_page" },
     });
-    
+
     // Trigger re-ranking of saved jobs
     await inngest.send({
       name: "jobs/rerank",
       data: { userId },
     });
-    
+
     return {
       status: "updated",
       userId,
@@ -226,12 +239,12 @@ export const emailNotificationFunction = inngest.createFunction(
   { event: "notification/email" },
   async ({ event }) => {
     const { userId, email, type, data } = event.data;
-    
+
     console.log(`Sending ${type} email to ${email}`);
-    
+
     // TODO: Integrate with email service (SendGrid, Resend, etc.)
     // For now, just log
-    
+
     return {
       status: "sent",
       userId,
@@ -251,14 +264,18 @@ export const newJobsAlertFunction = inngest.createFunction(
   { event: "jobs/new-batch" },
   async ({ event }) => {
     const { jobIds, source } = event.data;
+
+    console.log(`[D1 Migration] New jobs alert disabled - ${jobIds.length} jobs from ${source}`);
     
-    console.log(`Processing ${jobIds.length} new jobs from ${source}`);
-    
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-    
+    // TODO: Re-implement with D1 database access
+    return {
+      status: "disabled_pending_d1_migration",
+      jobsProcessed: jobIds.length,
+      source,
+      notificationsSent: 0,
+    };
+
+    /* D1 Implementation needed:
     // Get users with notification preferences enabled
     const usersResult = await db.execute({
       sql: `
@@ -268,7 +285,7 @@ export const newJobsAlertFunction = inngest.createFunction(
       `,
       args: [],
     });
-    
+
     // Send notifications to matching users
     for (const user of usersResult.rows) {
       await inngest.send({
@@ -281,12 +298,13 @@ export const newJobsAlertFunction = inngest.createFunction(
         },
       });
     }
-    
+
     return {
       status: "processed",
       jobCount: jobIds.length,
       notificationsSent: usersResult.rows.length,
     };
+    */
   },
 );
 
@@ -298,13 +316,15 @@ export const dailyDigestFunction = inngest.createFunction(
   { id: "daily-digest" },
   { event: "cron/daily-digest" },
   async ({ event }) => {
-    console.log("Generating daily digest for all users");
-    
-    const db = createClient({
-      url: process.env.TURSO_DB_URL!,
-      authToken: process.env.TURSO_DB_AUTH_TOKEN!,
-    });
-    
+    console.log("[D1 Migration] Daily digest generation disabled");
+
+    // TODO: Re-implement with D1 database access
+    return {
+      status: "disabled_pending_d1_migration",
+      digestsSent: 0,
+    };
+
+    /* D1 Implementation needed:
     // Get users with daily digest enabled
     const usersResult = await db.execute({
       sql: `
@@ -314,16 +334,16 @@ export const dailyDigestFunction = inngest.createFunction(
       `,
       args: [],
     });
-    
+
     for (const user of usersResult.rows) {
       // Get personalized job recommendations
       const prefs = await preferenceManager.getMergedPreferences({
         userId: user.user_id as string,
       });
-      
+
       // TODO: Query matching jobs based on preferences
       // TODO: Generate email with personalized content
-      
+
       await inngest.send({
         name: "notification/email",
         data: {
@@ -334,10 +354,11 @@ export const dailyDigestFunction = inngest.createFunction(
         },
       });
     }
-    
+
     return {
       status: "completed",
       digestsSent: usersResult.rows.length,
     };
+    */
   },
 );

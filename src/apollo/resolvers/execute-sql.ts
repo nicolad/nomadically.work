@@ -1,5 +1,8 @@
-import { getTursoClient } from "@/lib/turso";
+// import { getTursoClient } from "@/db"; // Removed - migrated to D1
 import type { GraphQLContext } from "../context";
+
+// TODO: Re-implement with D1 database access
+// This resolver is currently disabled pending D1 integration
 
 export const executeSqlResolvers = {
   Query: {
@@ -8,6 +11,17 @@ export const executeSqlResolvers = {
       args: { sql: string },
       _context: GraphQLContext,
     ) {
+      // Temporarily return empty results until D1 integration is complete
+      return {
+        sql: args.sql,
+        explanation:
+          "SQL execution temporarily disabled - D1 migration in progress",
+        columns: [],
+        rows: [],
+        drilldownSearchQuery: null,
+      };
+
+      /* D1 Implementation needed:
       try {
         const { sql } = args;
 
@@ -27,41 +41,15 @@ export const executeSqlResolvers = {
           );
         }
 
-        // Execute the raw SQL query
-        const client = getTursoClient();
-        const result = await client.execute(sql);
-
-        // Extract columns from result
-        let columns: string[] = [];
-        let rows: Array<Array<string | number | boolean | null>> = [];
-
-        if (result.rows && result.rows.length > 0) {
-          // Get columns from the column info
-          if (result.columns && result.columns.length > 0) {
-            columns = result.columns;
-          } else {
-            // Fallback: get columns from the first row
-            columns = Object.keys(result.rows[0] as Record<string, any>);
-          }
-
-          // Convert rows to array format
-          rows = result.rows.map((row: any) =>
-            columns.map((col) => {
-              const value =
-                typeof row === "object" && row !== null
-                  ? row[col]
-                  : row[columns.indexOf(col)];
-              if (value === null || value === undefined) return null;
-              return value as string | number | boolean | null;
-            }),
-          );
-        }
+        // Execute the raw SQL query using D1
+        // const db = getDb(getRequestContext().env.DB);
+        // const result = await db.execute(sql);
 
         return {
           sql,
           explanation: null,
-          columns,
-          rows,
+          columns: [],
+          rows: [],
           drilldownSearchQuery: null,
         };
       } catch (error) {
@@ -72,6 +60,7 @@ export const executeSqlResolvers = {
             : "Failed to execute SQL query",
         );
       }
+      */
     },
   },
 };

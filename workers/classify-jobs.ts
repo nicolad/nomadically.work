@@ -35,8 +35,7 @@ const jobs = sqliteTable("jobs", {
 });
 
 interface Env {
-  TURSO_DB_URL: string;
-  TURSO_DB_AUTH_TOKEN: string;
+  DB: D1Database;
 
   // Preferred
   DEEPSEEK_API_KEY?: string;
@@ -294,12 +293,7 @@ Respond ONLY with a JSON object in this exact format:
 }
 
 async function classifyUnclassifiedJobs(env: Env, limit = 50) {
-  const client = createClient({
-    url: env.TURSO_DB_URL,
-    authToken: env.TURSO_DB_AUTH_TOKEN,
-  });
-
-  const db = drizzle(client);
+  const db = drizzle(env.DB);
 
   const apiKey = getApiKey(env);
 

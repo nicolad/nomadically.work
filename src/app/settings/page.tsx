@@ -23,7 +23,7 @@ import {
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/auth/hooks";
+import { useAuth } from "@/lib/auth-hooks";
 import {
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,

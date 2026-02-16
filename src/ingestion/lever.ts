@@ -21,7 +21,6 @@
  * @see https://github.com/lever/postings-api
  */
 
-import crypto from "node:crypto";
 import { db } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -168,7 +167,8 @@ function buildLeverHeaders(auth: LeverAuth): Record<string, string> {
   if ("accessToken" in auth) {
     return { Authorization: `Bearer ${auth.accessToken}` };
   }
-  const basic = Buffer.from(`${auth.apiKey}:`).toString("base64");
+  // Use btoa for Edge Runtime compatibility (instead of Buffer)
+  const basic = btoa(`${auth.apiKey}:`);
   return { Authorization: `Basic ${basic}` };
 }
 
@@ -322,12 +322,22 @@ export function validateLeverWebhook(args: {
   return timingSafeEqualHex(body.signature, computed);
 }
 
-function timingSafeEqualHex(a: string, b: string): boolean {
+function timingSafeEqualHex(a: string, b: string): boolean{
   // Avoid leaking timing info
-  const aBuf = Buffer.from(a, "hex");
-  const bBuf = Buffer.from(b, "hex");
+  if (a.length !== b.length) return false;
+  
+  // Convert hex strings to byte arrays (Edge Runtime compatible)
+  const aBuf = new Uint8Array(a.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
+  const bBuf = new Uint8Array(b.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
+  
   if (aBuf.length !== bBuf.length) return false;
-  return crypto.timingSafeEqual(aBuf, bBuf);
+  
+  // Timing-safe comparison
+  let result = 0;
+  for (let i = 0; i < aBuf.length; i++) {
+    result |= aBuf[i] ^ bBuf[i];
+  }
+  return result === 0;
 }
 
 /**

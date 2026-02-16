@@ -14,10 +14,11 @@ import {
   createEvidenceBundle,
   JobClassificationBundle,
 } from "./evidence-bundles";
-import { db, turso } from "@/db";
-import { jobs } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+// import { db, turso } from "@/db"; // Removed - migrated to D1
+// import { jobs } from "@/db/schema"; // Removed - migrated to D1
+// import { eq, sql } from "drizzle-orm"; // Removed - migrated to D1
 import { randomUUID } from "crypto";
+// TODO: Update to use D1 database
 
 // ============================================================================
 // Skill 1: Inspect Job Decision
@@ -63,6 +64,8 @@ export const inspectJobDecisionTool = createTool({
     traceUrl: z.string().optional(),
   }),
   execute: async ({ jobId }) => {
+    throw new Error("Inspect job decision temporarily disabled - D1 migration in progress");
+    /* D1 Implementation needed:
     // 1. Fetch job from database
     const jobRows = await db.select().from(jobs).where(eq(jobs.id, jobId));
 
@@ -135,6 +138,7 @@ export const inspectJobDecisionTool = createTool({
       bundleId,
       traceUrl: metadata.trace_url || classificationBundle.metadata?.traceUrl,
     };
+    */
   },
 });
 
@@ -177,6 +181,8 @@ export const rerunJobClassifierTool = createTool({
     message: z.string(),
   }),
   execute: async ({ jobIds, promptVersion, model, dryRun }) => {
+    throw new Error("Rerun job classifier temporarily disabled - D1 migration in progress");
+    /* D1 Implementation needed:
     // 1. Estimate cost
     const avgTokensPerJob = 1500; // title + location + description
     const estimatedTokens = jobIds.length * avgTokensPerJob;
@@ -227,6 +233,7 @@ export const rerunJobClassifierTool = createTool({
       estimatedDuration,
       message: `Created reprocessing run ${runId} for ${jobIds.length} jobs. Status: queued (requires approval)`,
     };
+    */
   },
 });
 
@@ -284,6 +291,8 @@ export const diffSnapshotsTool = createTool({
     summary: z.string(),
   }),
   execute: async ({ companyId, snapshotIdA, snapshotIdB }) => {
+    throw new Error("Diff snapshots temporarily disabled - D1 migration in progress");
+    /* D1 Implementation needed:
     // If no snapshot IDs provided, get latest and previous
     let bundleA, bundleB;
 
@@ -381,6 +390,7 @@ export const diffSnapshotsTool = createTool({
       },
       summary,
     };
+    */
   },
 });
 

@@ -10,8 +10,9 @@ import { z } from "zod";
 import { createHash } from "crypto";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { join, dirname } from "path";
-import { db, turso } from "@/db";
-import { sql } from "drizzle-orm";
+// import { db, turso } from "@/db"; // Removed - migrated to D1
+// import { sql } from "drizzle-orm"; // Removed - migrated to D1
+// TODO: Update to use D1 database
 
 // ============================================================================
 // Schemas
@@ -142,6 +143,8 @@ export async function createEvidenceBundle(params: {
   traceUrl?: string;
   runId?: string;
 }): Promise<{ bundleId: number; bundlePath: string }> {
+  throw new Error("Evidence bundle creation temporarily disabled - D1 migration in progress");
+  /* D1 Implementation needed:
   const timestamp = new Date().toISOString();
   const bundlePath = getBundlePath(
     params.bundleType,
@@ -179,6 +182,7 @@ export async function createEvidenceBundle(params: {
   const bundleId = Number(result.lastInsertRowid);
 
   return { bundleId, bundlePath };
+  */
 }
 
 /**
@@ -187,6 +191,8 @@ export async function createEvidenceBundle(params: {
 export async function getEvidenceBundle(
   bundleId: number,
 ): Promise<{ bundle: unknown; metadata: any } | null> {
+  throw new Error("Evidence bundle retrieval temporarily disabled - D1 migration in progress");
+  /* D1 Implementation needed:
   const rows = await db.all(sql`
     SELECT * FROM evidence_bundles WHERE id = ${bundleId}
   `);
@@ -204,6 +210,7 @@ export async function getEvidenceBundle(
     console.error(`Failed to read bundle ${bundleId}:`, error);
     return null;
   }
+  */
 }
 
 /**
@@ -214,6 +221,8 @@ export async function getLatestBundle(
   entityId: number,
   bundleType?: string,
 ): Promise<{ bundleId: number; bundle: unknown; metadata: any } | null> {
+  throw new Error("Evidence bundle retrieval temporarily disabled - D1 migration in progress");
+  /* D1 Implementation needed:
   const typeFilter = bundleType ? sql`AND bundle_type = ${bundleType}` : sql``;
 
   const rows = await db.all(sql`
@@ -235,6 +244,7 @@ export async function getLatestBundle(
   if (!result) return null;
 
   return { bundleId, ...result };
+  */
 }
 
 /**
@@ -244,11 +254,14 @@ export async function supersedeBun(
   oldBundleId: number,
   newBundleId: number,
 ): Promise<void> {
+  throw new Error("Evidence bundle superseding temporarily disabled - D1 migration in progress");
+  /* D1 Implementation needed:
   await db.run(sql`
     UPDATE evidence_bundles 
     SET status = 'superseded', superseded_by = ${newBundleId}
     WHERE id = ${oldBundleId}
   `);
+  */
 }
 
 // ============================================================================

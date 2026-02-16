@@ -2,8 +2,8 @@
 
 declare module "@prisma/nextjs-monorepo-workaround-plugin";
 
-// Cloudflare D1 binding types
-declare module "@cloudflare/next-on-pages" {
+// Extend Cloudflare environment with D1 binding
+declare global {
   interface CloudflareEnv {
     DB: D1Database;
   }

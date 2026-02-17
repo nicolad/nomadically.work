@@ -218,7 +218,6 @@ a:hover svg {
   margin-top: 2px;
 }
 .job-row-meta-item {
-  font-family: var(--yc-font-mono);
   font-size: 11px;
   color: var(--gray-10);
   display: inline-flex;
@@ -226,7 +225,6 @@ a:hover svg {
   gap: 4px;
 }
 .job-row-meta-badge {
-  font-family: var(--yc-font-mono);
   font-size: 10px;
   padding: 2px 6px;
   border: 1px solid var(--gray-6);
@@ -252,8 +250,6 @@ a:hover svg {
   background: var(--accent-9);
   color: var(--accent-contrast);
   border: none;
-  font-family: var(--yc-font-body);
-  font-size: var(--yc-font-size-body);
   font-weight: 700;
   text-transform: lowercase;
   padding: 4px 12px;
@@ -274,8 +270,6 @@ a:hover svg {
   border: 1px solid var(--gray-6);
   text-transform: lowercase;
   padding: 4px 12px;
-  font-family: var(--yc-font-body);
-  font-size: var(--yc-font-size-body);
   cursor: pointer;
   border-radius: 0;
   box-shadow: none;
@@ -290,7 +284,6 @@ a:hover svg {
 
 /* ---------- badges (skill tags, status) ---------- */
 .yc-badge {
-  font-family: var(--yc-font-mono);
   font-size: 11px;
   padding: 1px 6px;
   border: 1px solid var(--gray-6);
@@ -318,8 +311,6 @@ a:hover svg {
 
 /* ---------- search input ---------- */
 .yc-search input {
-  font-family: var(--yc-font-body);
-  font-size: var(--yc-font-size-body);
   background: var(--gray-2);
   border: 1px solid var(--gray-6);
   color: var(--gray-12);
@@ -353,7 +344,6 @@ a:hover svg {
   border-radius: 0 !important;
   box-shadow: none !important;
   text-transform: lowercase !important;
-  font-family: var(--yc-font-body) !important;
 }
 
 /* primary variant → accent */
@@ -381,7 +371,6 @@ a:hover svg {
 /* flatten badges */
 .rt-Badge {
   border-radius: 0 !important;
-  font-family: var(--yc-font-mono) !important;
   font-size: 11px !important;
 }
 

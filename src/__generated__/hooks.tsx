@@ -1064,7 +1064,7 @@ export type GetJobsQueryVariables = Exact<{
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_id: string | null, source_kind: string, company_id: number | null, company_key: string, title: string, location: string | null, url: string, description: string | null, posted_at: string, score: number | null, score_reason: string | null, status: JobStatus | null, workplace_type: string | null, country: string | null, created_at: string, updated_at: string, company: { __typename?: 'Company', id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, ats_boards: Array<{ __typename?: 'ATSBoard', id: number, url: string, vendor: AtsVendor, board_type: AtsBoardType, confidence: number, is_active: boolean, first_seen_at: string, last_seen_at: string }> } | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null, categories: { __typename?: 'LeverCategories', commitment: string | null, location: string | null, team: string | null, department: string | null } | null }> } };
+export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_kind: string, company_key: string, title: string, location: string | null, url: string, posted_at: string, status: JobStatus | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null }> } };
 
 export type GetUserSettingsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -1785,40 +1785,22 @@ export const GetJobsDocument = gql`
     jobs {
       id
       external_id
-      source_id
       source_kind
-      company_id
       company_key
-      company {
-        ...CompanyFields
-      }
       title
       location
       url
-      description
       posted_at
-      score
-      score_reason
       status
       skills {
         tag
         level
       }
-      categories {
-        commitment
-        location
-        team
-        department
-      }
-      workplace_type
-      country
-      created_at
-      updated_at
     }
     totalCount
   }
 }
-    ${CompanyFieldsFragmentDoc}`;
+    `;
 
 /**
  * __useGetJobsQuery__

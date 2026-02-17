@@ -24,7 +24,6 @@ export function AdminBar({ userEmail }: AdminBarProps) {
     >
       <span
         style={{
-          fontFamily: "var(--yc-font-mono)",
           fontSize: 10,
           padding: "0 4px",
           border: "1px solid var(--accent-9)",

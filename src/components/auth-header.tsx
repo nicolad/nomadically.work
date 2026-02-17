@@ -33,8 +33,6 @@ export function AuthHeader() {
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
         style={{
-          fontFamily: "var(--yc-font-mono)",
-          fontSize: "var(--yc-font-size-mono)",
           color: "var(--gray-9)",
         }}
       >

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   useGetJobsQuery,
   useDeleteJobMutation,
@@ -20,7 +20,7 @@ import {
   Spinner,
   IconButton,
 } from "@radix-ui/themes";
-import { TrashIcon, HeartIcon, HeartFilledIcon } from "@radix-ui/react-icons";
+import { TrashIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSkillLabel } from "@/lib/skills/taxonomy";
 
@@ -56,11 +56,9 @@ function companyInitials(key: string): string {
 
 export function JobsList({ searchFilter = "" }: JobsListProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteJobMutation] = useDeleteJobMutation();
-  const [saved, setSaved] = useState<Set<number>>(new Set());
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -86,17 +84,6 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
     }
   };
 
-  const toggleSave = (jobId: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSaved((prev) => {
-      const next = new Set(prev);
-      if (next.has(jobId)) next.delete(jobId);
-      else next.add(jobId);
-      return next;
-    });
-  };
-
   const queryVariables = useMemo(
     () => ({
       search: searchFilter || undefined,
@@ -111,7 +98,7 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
     variables: queryVariables,
     notifyOnNetworkStatusChange: true,
-    fetchPolicy: "network-only",
+    fetchPolicy: "cache-and-network",
   });
 
   const jobs = data?.jobs.jobs || [];
@@ -167,7 +154,7 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
         </Text>
         <Text
           size="1"
-          style={{ fontFamily: "var(--yc-font-mono)", color: "var(--gray-9)" }}
+          style={{ color: "var(--gray-9)" }}
         >
           {jobs.length}/{totalCount}
         </Text>
@@ -177,7 +164,6 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       <div className="job-list-card">
         {jobs.map((job, idx) => {
           const jobId = last(split(job.external_id, "/")) || job.external_id;
-          const isSaved = saved.has(job.id);
 
           return (
             <Link
@@ -277,24 +263,6 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
 
               {/* right actions */}
               <div className="job-row-actions">
-                <IconButton
-                  size="1"
-                  variant="ghost"
-                  color="gray"
-                  onClick={(e) => toggleSave(job.id, e)}
-                  style={{ cursor: "pointer" }}
-                >
-                  {isSaved ? (
-                    <HeartFilledIcon
-                      width={14}
-                      height={14}
-                      style={{ color: "var(--red-9)" }}
-                    />
-                  ) : (
-                    <HeartIcon width={14} height={14} />
-                  )}
-                </IconButton>
-
                 {job.url && (
                   <span
                     className="yc-cta"
@@ -342,7 +310,6 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
               <Text
                 size="1"
                 style={{
-                  fontFamily: "var(--yc-font-mono)",
                   color: "var(--gray-9)",
                 }}
               >
@@ -359,7 +326,6 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
             <Text
               size="1"
               style={{
-                fontFamily: "var(--yc-font-mono)",
                 color: "var(--gray-9)",
               }}
             >

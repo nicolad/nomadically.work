@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
-import { Theme, Flex, Container, Button } from "@radix-ui/themes";
+import { Theme, Container } from "@radix-ui/themes";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,52 +22,60 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" style={{ fontFamily: "var(--font-geist-sans)" }}>
+      <html lang="en" style={{ fontFamily: "var(--yc-font-body)" }}>
         <body>
-          <Theme appearance="dark">
+          <Theme appearance="dark" accentColor="orange">
             <Providers>
-              <header>
-                <Container size="4">
-                  <Flex justify="between" align="center" py="4">
-                    <Link href="/" style={{ display: "flex" }}>
-                      <Image
-                        src="/logo.svg"
-                        alt="Nomadically Logo"
-                        width={600}
-                        height={100}
-                        priority
-                      />
-                    </Link>
-                    <Flex gap="4" align="center">
-                      <Link href="/applications">
-                        <Button variant="soft">Applications</Button>
-                      </Link>
-                      <Link href="/companies">
-                        <Button variant="soft">Companies</Button>
-                      </Link>
-                      <Link href="/prompts">
-                        <Button variant="soft">Prompts</Button>
-                      </Link>
-                      <Link href="/chats">
-                        <Button variant="soft">Query</Button>
-                      </Link>
-                      <AuthHeader />
-                      <Link
-                        href="https://github.com/nicolad/nomadically.work"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: "flex", alignItems: "center" }}
-                      >
-                        <GitHubLogoIcon
-                          width={32}
-                          height={32}
-                          style={{ color: "#888888" }}
-                        />
-                      </Link>
-                    </Flex>
-                  </Flex>
-                </Container>
-              </header>
+              {/* ── YC orange topbar ── */}
+              <div className="yc-topbar">
+                <Link
+                  href="/"
+                  style={{ display: "flex", alignItems: "center" }}
+                >
+                  <Image
+                    src="/logo.svg"
+                    alt="Nomadically"
+                    width={120}
+                    height={18}
+                    priority
+                    style={{ marginRight: 12 }}
+                  />
+                </Link>
+                <span style={{ flex: 1 }} />
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--orange-contrast)",
+                  }}
+                >
+                  remote eu jobs
+                </span>
+              </div>
+
+              {/* ── flat nav strip ── */}
+              <nav className="yc-nav">
+                <Link href="/">jobs</Link>
+                <Link href="/applications">applications</Link>
+                <Link href="/companies">companies</Link>
+                <Link href="/prompts">prompts</Link>
+                <Link href="/chats">query</Link>
+                <span style={{ flex: 1 }} />
+                <AuthHeader />
+                <Link
+                  href="https://github.com/nicolad/nomadically.work"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center" }}
+                >
+                  <GitHubLogoIcon
+                    width={18}
+                    height={18}
+                    style={{ color: "var(--gray-9)" }}
+                  />
+                </Link>
+              </nav>
+
               {children}
             </Providers>
           </Theme>

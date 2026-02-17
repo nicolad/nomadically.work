@@ -1,7 +1,6 @@
 "use client";
 
-import { Flex, Button, Badge, Text } from "@radix-ui/themes";
-import Link from "next/link";
+import { Flex } from "@radix-ui/themes";
 import { DeleteAllJobsButton } from "./delete-all-jobs-button";
 import { ProcessAllJobsButton } from "./process-all-jobs-button";
 
@@ -11,28 +10,36 @@ interface AdminBarProps {
 
 export function AdminBar({ userEmail }: AdminBarProps) {
   return (
-    <Flex
-      gap="3"
-      mb="4"
-      p="3"
+    <div
       style={{
-        background: "var(--accent-2)",
-        borderRadius: "var(--radius-3)",
-        border: "1px solid var(--accent-6)",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 12px",
+        marginBottom: 8,
+        background: "var(--gray-2)",
+        border: "1px solid var(--gray-6)",
+        borderRadius: 0,
       }}
-      wrap="wrap"
-      align="center"
     >
-      <Badge color="orange" size="2">
-        Admin
-      </Badge>
+      <span
+        style={{
+          fontFamily: "var(--yc-font-mono)",
+          fontSize: 10,
+          padding: "0 4px",
+          border: "1px solid var(--orange-9)",
+          color: "var(--orange-9)",
+          lineHeight: "16px",
+          textTransform: "lowercase",
+        }}
+      >
+        admin
+      </span>
       <Flex gap="2" flexGrow="1" wrap="wrap">
         <DeleteAllJobsButton />
         <ProcessAllJobsButton />
       </Flex>
-      <Text size="1" color="gray">
-        {userEmail}
-      </Text>
-    </Flex>
+      <span className="yc-row-meta">{userEmail}</span>
+    </div>
   );
 }

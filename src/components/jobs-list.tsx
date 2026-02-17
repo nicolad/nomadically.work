@@ -14,13 +14,8 @@ import { useAuth } from "@/lib/auth-hooks";
 import {
   Box,
   Container,
-  Heading,
   Text,
   Flex,
-  Card,
-  Badge,
-  Button,
-  TextField,
   Spinner,
   IconButton,
 } from "@radix-ui/themes";
@@ -157,63 +152,94 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
     return (
       <Container size="4" p="8">
         <Text color="red">Error loading jobs: {error.message}</Text>
-        <Button onClick={() => refetch()} mt="4">
-          Retry
-        </Button>
+        <button
+          className="yc-cta"
+          onClick={() => refetch()}
+          style={{ marginTop: 12 }}
+        >
+          retry
+        </button>
       </Container>
     );
   }
 
   return (
     <Box>
-      <Flex justify="between" align="center" mb="4">
-        <Heading size="6">Jobs</Heading>
-        <Text size="2" color="gray">
-          {jobs.length} of {totalCount} jobs
-        </Text>
+      {/* header row */}
+      <Flex
+        justify="between"
+        align="center"
+        py="2"
+        px="3"
+        style={{ borderBottom: "1px solid var(--gray-6)" }}
+      >
+        <span className="yc-row-title" style={{ fontSize: 14 }}>
+          jobs
+        </span>
+        <span className="yc-row-meta">
+          {jobs.length}/{totalCount}
+        </span>
       </Flex>
 
-      <Flex direction="column" gap="4">
+      {/* dense ruled list */}
+      <div style={{ borderTop: "1px solid var(--gray-6)" }}>
         {jobs.map((job) => {
-          // Extract the Ashby UUID from external_id (which might be a full URL)
           const jobId = last(split(job.external_id, "/")) || job.external_id;
 
           return (
-            <Card key={job.id} size="3" asChild>
-              <Link
-                href={`/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`}
-                target="_blank"
+            <Link
+              key={job.id}
+              href={`/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`}
+              target="_blank"
+              className="yc-row"
+            >
+              {/* left: title + inline meta */}
+              <div
                 style={{
-                  textDecoration: "none",
-                  color: "inherit",
-                  cursor: "pointer",
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
                 }}
               >
-                <Flex justify="between" align="start" mb="2">
-                  <Heading size="5">{job.title}</Heading>
-                  <Flex gap="2" align="center">
-                    {job.status && (
-                      <Badge color={getStatusBadgeColor(job.status)}>
-                        {getStatusLabel(job.status)}
-                      </Badge>
-                    )}
-                    {isAdmin && (
-                      <IconButton
-                        size="2"
-                        color="red"
-                        variant="soft"
-                        onClick={(e) => handleDeleteJob(job.id, e)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <TrashIcon />
-                      </IconButton>
-                    )}
-                  </Flex>
-                </Flex>
-                <Flex gap="2" mb="2" wrap="wrap" align="center">
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="yc-row-title">{job.title}</span>
+
+                  {/* micro-pill status */}
+                  {job.status && (
+                    <span
+                      style={{
+                        fontFamily: "var(--yc-font-mono)",
+                        fontSize: 10,
+                        padding: "0 4px",
+                        border: `1px solid ${
+                          job.status === "eu_remote"
+                            ? "var(--green-9)"
+                            : job.status === "non_eu"
+                              ? "var(--orange-9)"
+                              : "var(--gray-6)"
+                        }`,
+                        color:
+                          job.status === "eu_remote"
+                            ? "var(--green-9)"
+                            : job.status === "non_eu"
+                              ? "var(--orange-9)"
+                              : "var(--gray-9)",
+                        lineHeight: "16px",
+                        whiteSpace: "nowrap",
+                        textTransform: "lowercase",
+                      }}
+                    >
+                      {getStatusLabel(job.status)}
+                    </span>
+                  )}
+                </div>
+
+                {/* inline metadata line */}
+                <span className="yc-row-meta">
                   {job.company_key && (
-                    <Text
-                      weight="medium"
+                    <span
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -222,105 +248,89 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
                       style={{
                         cursor: "pointer",
                         textDecoration: "underline",
-                        textUnderlineOffset: "2px",
+                        textUnderlineOffset: 2,
                       }}
                     >
                       {job.company_key}
-                    </Text>
+                    </span>
                   )}
-                  {job.location && <Text color="gray">• {job.location}</Text>}
-                </Flex>
-                {job.source_kind && (
-                  <Text size="2" color="gray" mb="2">
-                    {job.source_kind}
-                  </Text>
-                )}
-                {job.description && (
-                  <Text
-                    size="2"
-                    color="gray"
-                    mb="3"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {job.description}
-                  </Text>
-                )}
-                {/* Skills */}
-                {job.skills && job.skills.length > 0 && (
-                  <Flex gap="1" wrap="wrap" mb="3">
-                    {sortBy(job.skills, [(skill) => skill.level !== "required"])
-                      .slice(0, 8)
-                      .map((skill) => (
-                        <Badge
-                          key={skill.tag}
-                          size="1"
-                          color={
-                            skill.level === "required"
-                              ? "red"
-                              : skill.level === "preferred"
-                                ? "blue"
-                                : "gray"
-                          }
-                          variant="soft"
-                        >
-                          {getSkillLabel(skill.tag)}
-                        </Badge>
-                      ))}
-                    {job.skills.length > 8 && (
-                      <Badge size="1" variant="soft" color="gray">
-                        +{job.skills.length - 8} more
-                      </Badge>
-                    )}
-                  </Flex>
-                )}
-                <Flex justify="between" align="center" mt="4">
-                  <Text size="1" color="gray">
-                    {job.source_kind && <span>Source: {job.source_kind}</span>}
-                    {job.posted_at && (
-                      <span style={{ marginLeft: "12px" }}>
-                        Posted: {new Date(job.posted_at).toLocaleDateString()}
-                      </span>
-                    )}
-                  </Text>
+                  {job.location && <span> · {job.location}</span>}
+                  {job.source_kind && <span> · {job.source_kind}</span>}
+                  {job.posted_at && (
+                    <span>
+                      {" "}
+                      · {new Date(job.posted_at).toLocaleDateString()}
+                    </span>
+                  )}
+                  {job.skills && job.skills.length > 0 && (
+                    <span>
+                      {" · "}
+                      {sortBy(job.skills, [(s) => s.level !== "required"])
+                        .slice(0, 4)
+                        .map((s) => getSkillLabel(s.tag))
+                        .join(", ")}
+                      {job.skills.length > 4 && ` +${job.skills.length - 4}`}
+                    </span>
+                  )}
+                </span>
+              </div>
 
-                  {job.url && <Button size="2">View Job</Button>}
-                </Flex>
-              </Link>
-            </Card>
+              {/* right: CTA + admin */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginLeft: 12,
+                }}
+              >
+                {job.url && (
+                  <span
+                    className="yc-cta"
+                    style={{ fontSize: 11, padding: "2px 8px" }}
+                  >
+                    apply
+                  </span>
+                )}
+                {isAdmin && (
+                  <IconButton
+                    size="1"
+                    color="red"
+                    variant="ghost"
+                    onClick={(e) => handleDeleteJob(job.id, e)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <TrashIcon width={12} height={12} />
+                  </IconButton>
+                )}
+              </div>
+            </Link>
           );
         })}
-      </Flex>
+      </div>
 
-      {/* Infinite scroll trigger - only render when there's more to load */}
+      {/* infinite scroll trigger */}
       {hasMore && (
-        <Box ref={loadMoreRefCallback} py="6">
+        <Box ref={loadMoreRefCallback} py="4">
           {loading && (
             <Flex justify="center" align="center">
-              <Spinner size="3" />
+              <Spinner size="2" />
             </Flex>
           )}
           {!loading && (
             <Flex justify="center">
-              <Text size="2" color="gray">
-                Scroll for more...
-              </Text>
+              <span className="yc-row-meta">scroll for more…</span>
             </Flex>
           )}
         </Box>
       )}
 
-      {/* End of list message */}
       {!hasMore && jobs.length > 0 && (
-        <Box py="6">
+        <Box py="4">
           <Flex justify="center">
-            <Text size="2" color="gray">
-              No more jobs to load ({jobs.length} of {totalCount})
-            </Text>
+            <span className="yc-row-meta">
+              {jobs.length}/{totalCount} loaded
+            </span>
           </Flex>
         </Box>
       )}

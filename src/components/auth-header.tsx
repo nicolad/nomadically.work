@@ -1,6 +1,5 @@
 "use client";
 
-import { Button, Flex } from "@radix-ui/themes";
 import { GearIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
@@ -11,40 +10,47 @@ export function AuthHeader() {
 
   if (!isLoaded) {
     return (
-      <Flex gap="4" align="center">
-        <Button disabled>Loading...</Button>
-      </Flex>
+      <span className="yc-row-meta" style={{ padding: "0 4px" }}>
+        …
+      </span>
     );
   }
 
   if (!isSignedIn) {
     return (
-      <Flex gap="4" align="center">
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Link href="/sign-in">
-          <Button variant="ghost">Sign In</Button>
+          <button className="yc-cta-ghost">sign in</button>
         </Link>
         <Link href="/sign-up">
-          <Button>Sign Up</Button>
+          <button className="yc-cta">sign up</button>
         </Link>
-      </Flex>
+      </div>
     );
   }
 
   return (
-    <Flex gap="4" align="center">
-      <span style={{ color: "#888888", fontSize: "14px" }}>
-        {user.fullName || user.primaryEmailAddress?.emailAddress || user.username}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span
+        style={{
+          fontFamily: "var(--yc-font-mono)",
+          fontSize: "var(--yc-font-size-mono)",
+          color: "var(--gray-9)",
+        }}
+      >
+        {user.fullName ||
+          user.primaryEmailAddress?.emailAddress ||
+          user.username}
       </span>
       <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
-        <GearIcon width={32} height={32} style={{ color: "#888888" }} />
+        <GearIcon width={14} height={14} style={{ color: "var(--gray-9)" }} />
       </Link>
-      <Button
-        variant="soft"
+      <button
+        className="yc-cta-ghost"
         onClick={() => signOut({ redirectUrl: "/" })}
-        style={{ cursor: "pointer" }}
       >
-        Sign Out
-      </Button>
-    </Flex>
+        sign out
+      </button>
+    </div>
   );
 }

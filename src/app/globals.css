@@ -1,30 +1,302 @@
+/* ============================================================
+   Nomadically.Work — Dark-mode YC design system
+   ============================================================
+   Uses ONLY Radix Themes built-in color tokens.
+   Set <Theme accentColor="orange"> so --accent-* = orange.
+
+   Radix color mapping:
+     --orange-9 / --accent-9    primary action / topbar
+     --orange-10 / --accent-10  hover state for orange CTAs
+     --color-background         page background
+     --gray-2                   card / row surface
+     --gray-3                   hover tint on interactive rows
+     --gray-6                   hairline borders (1px)
+     --gray-12                  body text
+     --gray-11                  meta / secondary text
+     --gray-9                   tertiary / timestamps
+     --green-9                  positive status
+
+   Typography
+   ----------
+   Body:  Verdana, Geneva, sans-serif @ 13px/1.5
+   Mono:  "Courier New", Courier, monospace @ 12px
+   CTAs:  lowercase, no "!" or "Now"
+
+   Density
+   -------
+   Job rows: 60–70px total height
+   All metadata inline on one line; descriptions hidden behind click
+   ============================================================ */
+
 :root {
-  --font-geist-sans: system-ui, -apple-system, sans-serif;
-  --font-geist-mono: "Courier New", monospace;
+  /* ---------- typography tokens ---------- */
+  --yc-font-body: Verdana, Geneva, sans-serif;
+  --yc-font-mono: "Courier New", Courier, monospace;
+  --yc-font-size-body: 13px;
+  --yc-font-size-mono: 12px;
+  --yc-line-height: 1.5;
+
+  /* ---------- spacing ---------- */
+  --yc-row-height: 64px; /* target 60-70px per row          */
+  --yc-topbar-height: 28px; /* the iconic orange strip         */
+
+  /* ---------- legacy aliases (drop later) ---------- */
+  --font-geist-sans: var(--yc-font-body);
+  --font-geist-mono: var(--yc-font-mono);
 }
 
+/* ---------- base resets ---------- */
 body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--yc-font-body);
+  font-size: var(--yc-font-size-body);
+  line-height: var(--yc-line-height);
+  color: var(--gray-12);
+  background: var(--color-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---------- links ---------- */
 a img {
-  transition: opacity 0.2s;
+  transition: opacity 0.15s;
 }
-
 a:hover img {
-  opacity: 0.9;
+  opacity: 0.85;
 }
-
 a svg {
-  transition: color 0.2s;
+  transition: color 0.15s;
 }
-
 a:hover svg {
-  color: #ffffff !important;
+  color: var(--gray-12) !important;
 }
 
+/* ---------- YC topbar ---------- */
+.yc-topbar {
+  height: var(--yc-topbar-height);
+  background: var(--orange-9);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-family: var(--yc-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orange-contrast);
+  letter-spacing: 0.02em;
+}
+.yc-topbar a {
+  color: var(--orange-contrast);
+  text-decoration: none;
+  margin-right: 14px;
+}
+.yc-topbar a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- site nav (below topbar) ---------- */
+.yc-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--gray-6);
+  background: var(--gray-2);
+}
+.yc-nav a {
+  font-family: var(--yc-font-body);
+  font-size: var(--yc-font-size-body);
+  color: var(--gray-11);
+  text-decoration: none;
+  text-transform: lowercase;
+  transition: color 0.15s;
+}
+.yc-nav a:hover {
+  color: var(--orange-9);
+}
+
+/* ---------- flat rows (jobs, companies) ---------- */
+.yc-row {
+  display: flex;
+  align-items: center;
+  min-height: var(--yc-row-height);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gray-6);
+  background: var(--gray-2);
+  transition: background 0.1s;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.yc-row:hover {
+  background: var(--gray-3);
+}
+.yc-row-title {
+  font-size: var(--yc-font-size-body);
+  font-weight: 600;
+  color: var(--gray-12);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.yc-row-meta {
+  font-family: var(--yc-font-mono);
+  font-size: var(--yc-font-size-mono);
+  color: var(--gray-9);
+  white-space: nowrap;
+}
+
+/* ---------- CTA buttons ---------- */
+.yc-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--orange-9);
+  color: var(--orange-contrast);
+  border: none;
+  font-family: var(--yc-font-body);
+  font-size: var(--yc-font-size-body);
+  font-weight: 700;
+  text-transform: lowercase;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  /* flat — no border-radius, no shadow */
+  border-radius: 0;
+  box-shadow: none;
+}
+.yc-cta:hover {
+  background: var(--orange-10);
+}
+
+/* secondary action — ghost style */
+.yc-cta-ghost {
+  background: transparent;
+  color: var(--gray-11);
+  border: 1px solid var(--gray-6);
+  text-transform: lowercase;
+  padding: 4px 12px;
+  font-family: var(--yc-font-body);
+  font-size: var(--yc-font-size-body);
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.yc-cta-ghost:hover {
+  background: var(--gray-3);
+  color: var(--gray-12);
+}
+
+/* ---------- badges (skill tags, status) ---------- */
+.yc-badge {
+  font-family: var(--yc-font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--gray-6);
+  background: transparent;
+  color: var(--gray-11);
+  border-radius: 0;
+}
+.yc-badge--orange {
+  border-color: var(--orange-9);
+  color: var(--orange-9);
+}
+.yc-badge--green {
+  border-color: var(--green-9);
+  color: var(--green-9);
+}
+
+/* ---------- cards → flat panels ---------- */
+.yc-panel {
+  background: var(--gray-2);
+  border: 1px solid var(--gray-6);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 12px;
+}
+
+/* ---------- search input ---------- */
+.yc-search input {
+  font-family: var(--yc-font-body);
+  font-size: var(--yc-font-size-body);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-6);
+  color: var(--gray-12);
+  padding: 6px 10px;
+  border-radius: 0;
+  outline: none;
+  width: 100%;
+}
+.yc-search input::placeholder {
+  color: var(--gray-9);
+}
+.yc-search input:focus {
+  border-color: var(--orange-9);
+}
+
+/* ---------- Radix theme overrides (flatten everything) ---------- */
+
+/* kill rounded corners on all Radix cards */
+.rt-Card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: 1px solid var(--gray-6) !important;
+  background: var(--gray-2) !important;
+}
+.rt-Card:hover {
+  background: var(--gray-3) !important;
+}
+
+/* kill rounded corners on buttons */
+.rt-Button {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-transform: lowercase !important;
+  font-family: var(--yc-font-body) !important;
+}
+
+/* primary variant → orange */
+.rt-Button:where(.rt-variant-solid) {
+  background: var(--orange-9) !important;
+  color: var(--orange-contrast) !important;
+}
+.rt-Button:where(.rt-variant-solid):hover {
+  background: var(--orange-10) !important;
+}
+
+/* soft / ghost variant → flat borders */
+.rt-Button:where(.rt-variant-soft),
+.rt-Button:where(.rt-variant-ghost) {
+  background: transparent !important;
+  color: var(--gray-11) !important;
+  border: 1px solid var(--gray-6) !important;
+}
+.rt-Button:where(.rt-variant-soft):hover,
+.rt-Button:where(.rt-variant-ghost):hover {
+  background: var(--gray-3) !important;
+  color: var(--gray-12) !important;
+}
+
+/* flatten badges */
+.rt-Badge {
+  border-radius: 0 !important;
+  font-family: var(--yc-font-mono) !important;
+  font-size: 11px !important;
+}
+
+/* flatten text fields */
+.rt-TextFieldRoot,
+.rt-TextFieldInput {
+  border-radius: 0 !important;
+}
+.rt-TextFieldInput:focus {
+  box-shadow: none !important;
+  border-color: var(--orange-9) !important;
+}
+
+/* ---------- shimmer animation (loading) ---------- */
 .animate-mask {
   animation: mask 3.4s cubic-bezier(0.33, 1, 0.68, 1) infinite both;
 }
@@ -40,7 +312,6 @@ a:hover svg {
     mask-size: 400%;
     mask-position: 100%;
   }
-
   70%,
   100% {
     mask-image: linear-gradient(
@@ -54,9 +325,18 @@ a:hover svg {
   }
 }
 
-/* Responsive grid for job detail page */
+/* ---------- responsive ---------- */
 @media (max-width: 968px) {
   .job-detail-grid {
     grid-template-columns: 1fr !important;
+  }
+  .yc-topbar {
+    font-size: 10px;
+    padding: 0 8px;
+  }
+  .yc-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
   }
 }

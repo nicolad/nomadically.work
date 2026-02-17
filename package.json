@@ -46,6 +46,7 @@
     "@ai-sdk/anthropic": "latest",
     "@ai-sdk/deepseek": "^2.0.17",
     "@ai-sdk/openai": "^3.0.26",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.44",
     "@apollo/client": "^3.14.0",
     "@apollo/server": "^5.3.0",
     "@as-integrations/next": "^4.1.0",

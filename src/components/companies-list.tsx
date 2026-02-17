@@ -11,15 +11,9 @@ import { useAuth } from "@/lib/auth-hooks";
 import {
   Box,
   Container,
-  Heading,
   Text,
   Flex,
-  Card,
-  Badge,
-  Button,
-  TextField,
   Spinner,
-  Avatar,
   IconButton,
 } from "@radix-ui/themes";
 import { TrashIcon } from "@radix-ui/react-icons";
@@ -120,187 +114,160 @@ export function CompaniesList() {
     return (
       <Container size="4" p="8">
         <Text color="red">Error loading companies: {error.message}</Text>
-        <Button onClick={() => refetch()} mt="4">
-          Retry
-        </Button>
+        <button
+          className="yc-cta"
+          onClick={() => refetch()}
+          style={{ marginTop: 12 }}
+        >
+          retry
+        </button>
       </Container>
     );
   }
 
   return (
     <Container size="4" px="8">
-      <Flex justify="between" align="center" mb="6">
-        <Heading size="8">Companies</Heading>
-        <Text size="2" color="gray">
-          {companies.length} of {totalCount} companies
-        </Text>
+      {/* header */}
+      <Flex justify="between" align="center" py="2" mb="3">
+        <span className="yc-row-title" style={{ fontSize: 14 }}>
+          companies
+        </span>
+        <span className="yc-row-meta">
+          {companies.length}/{totalCount}
+        </span>
       </Flex>
 
-      <Box mb="4">
-        <TextField.Root
-          placeholder="Search companies by name, description, or industry..."
+      {/* search */}
+      <div className="yc-search" style={{ marginBottom: 12 }}>
+        <input
+          placeholder="search companies…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          size="3"
         />
-      </Box>
+      </div>
 
-      <Flex direction="column" gap="4">
-        {companies.map((company) => {
-          return (
-            <Card key={company.id} size="3" asChild>
-              <Link
-                href={`/companies/${company.key}`}
-                target="_blank"
-                rel="noopener noreferrer"
+      {/* dense ruled list */}
+      <div style={{ borderTop: "1px solid var(--gray-6)" }}>
+        {companies.map((company) => (
+          <Link
+            key={company.id}
+            href={`/companies/${company.key}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="yc-row"
+          >
+            {/* logo thumbnail */}
+            {company.logo_url && (
+              <img
+                src={company.logo_url}
+                alt=""
                 style={{
-                  textDecoration: "none",
-                  color: "inherit",
-                  cursor: "pointer",
+                  width: 24,
+                  height: 24,
+                  objectFit: "contain",
+                  marginRight: 10,
+                  borderRadius: 0,
+                  flexShrink: 0,
                 }}
-              >
-                <Flex gap="4" align="start">
-                  {/* Company Logo */}
-                  {company.logo_url && (
-                    <Avatar
-                      src={company.logo_url}
-                      fallback={company.name?.charAt(0) || "C"}
-                      size="5"
-                      radius="small"
-                    />
-                  )}
+              />
+            )}
 
-                  <Flex direction="column" gap="2" style={{ flex: 1 }}>
-                    {/* Company Name and Website */}
-                    <Flex justify="between" align="start">
-                      <Heading size="5">{company.name}</Heading>
-                      <Flex gap="2" align="center">
-                        {company.website && (
-                          <Button size="2" variant="soft">
-                            Visit Website
-                          </Button>
-                        )}
-                        {isAdmin && (
-                          <IconButton
-                            size="2"
-                            color="red"
-                            variant="soft"
-                            onClick={(e) => handleDeleteCompany(company.id, e)}
-                            style={{ cursor: "pointer" }}
-                          >
-                            <TrashIcon />
-                          </IconButton>
-                        )}
-                      </Flex>
-                    </Flex>
+            {/* left: name + inline meta */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="yc-row-title">{company.name}</span>
+                {company.industry && (
+                  <span
+                    style={{
+                      fontFamily: "var(--yc-font-mono)",
+                      fontSize: 10,
+                      color: "var(--gray-9)",
+                      padding: "0 4px",
+                      border: "1px solid var(--gray-6)",
+                      lineHeight: "16px",
+                      textTransform: "lowercase",
+                    }}
+                  >
+                    {company.industry}
+                  </span>
+                )}
+              </div>
+              <span className="yc-row-meta">
+                {company.key && <span>{company.key}</span>}
+                {company.location && <span> · {company.location}</span>}
+                {company.size && <span> · {company.size}</span>}
+                {company.ats_boards && company.ats_boards.length > 0 && (
+                  <span>
+                    {" · "}
+                    {company.ats_boards.map((b) => b.vendor).join(", ")}
+                  </span>
+                )}
+                {company.tags && company.tags.length > 0 && (
+                  <span>
+                    {" · "}
+                    {company.tags.slice(0, 3).join(", ")}
+                    {company.tags.length > 3 && ` +${company.tags.length - 3}`}
+                  </span>
+                )}
+              </span>
+            </div>
 
-                    {/* Company Key */}
-                    {company.key && (
-                      <Text size="2" color="gray" weight="medium">
-                        {company.key}
-                      </Text>
-                    )}
+            {/* right: website + admin */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginLeft: 12,
+              }}
+            >
+              {company.website && (
+                <span
+                  className="yc-cta"
+                  style={{ fontSize: 11, padding: "2px 8px" }}
+                >
+                  website
+                </span>
+              )}
+              {isAdmin && (
+                <IconButton
+                  size="1"
+                  color="red"
+                  variant="ghost"
+                  onClick={(e) => handleDeleteCompany(company.id, e)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <TrashIcon width={12} height={12} />
+                </IconButton>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
 
-                    {/* Industry, Size, Location */}
-                    <Flex gap="2" wrap="wrap">
-                      {company.industry && (
-                        <Badge color="blue" variant="soft">
-                          {company.industry}
-                        </Badge>
-                      )}
-                      {company.size && (
-                        <Badge color="green" variant="soft">
-                          {company.size}
-                        </Badge>
-                      )}
-                      {company.location && (
-                        <Badge color="orange" variant="soft">
-                          {company.location}
-                        </Badge>
-                      )}
-                    </Flex>
-
-                    {/* Description */}
-                    {company.description && (
-                      <Text
-                        size="2"
-                        color="gray"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {company.description}
-                      </Text>
-                    )}
-
-                    {/* Tags */}
-                    {company.tags && company.tags.length > 0 && (
-                      <Flex gap="1" wrap="wrap">
-                        {company.tags.slice(0, 5).map((tag, index) => (
-                          <Badge
-                            key={index}
-                            size="1"
-                            variant="soft"
-                            color="gray"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
-                        {company.tags.length > 5 && (
-                          <Badge size="1" variant="soft" color="gray">
-                            +{company.tags.length - 5} more
-                          </Badge>
-                        )}
-                      </Flex>
-                    )}
-
-                    {/* ATS Boards */}
-                    {company.ats_boards && company.ats_boards.length > 0 && (
-                      <Flex gap="2" wrap="wrap" mt="2">
-                        <Text size="2" color="gray">
-                          Job Boards:
-                        </Text>
-                        {company.ats_boards.map((board) => (
-                          <Badge
-                            key={board.id}
-                            size="1"
-                            color={board.is_active ? "green" : "gray"}
-                          >
-                            {board.vendor}
-                          </Badge>
-                        ))}
-                      </Flex>
-                    )}
-                  </Flex>
-                </Flex>
-              </Link>
-            </Card>
-          );
-        })}
-      </Flex>
-
-      {/* Infinite scroll trigger */}
-      <Box ref={loadMoreRefCallback} py="6">
+      {/* infinite scroll */}
+      <Box ref={loadMoreRefCallback} py="4">
         {loading && (
           <Flex justify="center" align="center">
-            <Spinner size="3" />
+            <Spinner size="2" />
           </Flex>
         )}
         {!loading && hasMore && (
           <Flex justify="center">
-            <Text size="2" color="gray">
-              Scroll for more...
-            </Text>
+            <span className="yc-row-meta">scroll for more…</span>
           </Flex>
         )}
         {!loading && !hasMore && companies.length > 0 && (
           <Flex justify="center">
-            <Text size="2" color="gray">
-              No more companies to load
-            </Text>
+            <span className="yc-row-meta">all companies loaded</span>
           </Flex>
         )}
       </Box>

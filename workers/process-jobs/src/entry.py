@@ -1,20 +1,32 @@
 """Process Jobs — Cloudflare Python Worker.
 
-Two-phase pipeline that runs on D1 directly:
-  Phase 1 — ATS Enhancement: Fetch rich data from Greenhouse / Lever / Ashby APIs
-  Phase 2 — Classification: Workers AI structured-output classification
-             via langchain-cloudflare, with DeepSeek API fallback
+Three-phase pipeline that runs on D1 directly:
+  Phase 1 — ATS Enhancement : Fetch rich data from Greenhouse / Lever / Ashby APIs
+  Phase 2 — Role Tagging    : Detect Frontend/React and AI Engineer roles
+                               (keyword heuristic → Workers AI → DeepSeek)
+  Phase 3 — Classification  : EU-remote classification via Workers AI + DeepSeek
 
 Based on the langchain-cloudflare Python Worker pattern
 (see langchain-cloudflare/libs/langchain-cloudflare/examples/workers/src/entry.py).
 
 Langchain features used:
-  - ChatCloudflareWorkersAI — Workers AI binding for free classification
+  - ChatCloudflareWorkersAI — Workers AI binding for free tagging & classification
   - ChatPromptTemplate — reusable, parameterised prompt templates
   - LCEL chain (prompt | model) — composable pipeline
-  - Pydantic JobClassification model — validated structured output
+  - Pydantic JobClassification / JobRoleTags — validated structured output
   - langgraph-checkpoint-cloudflare-d1 — CloudflareD1Saver for run checkpointing
-  - DeepSeek API — fallback classification when Workers AI is uncertain
+  - DeepSeek API — fallback when Workers AI is uncertain or unavailable
+
+Pipeline status lifecycle:
+  new → enhanced → role-match ──→ eu-remote
+                └→ role-nomatch   non-eu
+
+D1 migration (run once before deploying):
+  ALTER TABLE jobs ADD COLUMN role_frontend_react INTEGER;
+  ALTER TABLE jobs ADD COLUMN role_ai_engineer    INTEGER;
+  ALTER TABLE jobs ADD COLUMN role_confidence     TEXT;
+  ALTER TABLE jobs ADD COLUMN role_reason         TEXT;
+  ALTER TABLE jobs ADD COLUMN role_source         TEXT;
 """
 
 import asyncio
@@ -26,12 +38,11 @@ from typing import Literal
 from urllib.parse import quote
 
 from js import JSON, fetch
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from workers import Response, WorkerEntrypoint
 
 # langchain-cloudflare — Workers AI binding integration (PyPI)
 from langchain_cloudflare import ChatCloudflareWorkersAI
-from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 # langgraph-checkpoint-cloudflare-d1 — pipeline run checkpointing (PyPI)
@@ -43,30 +54,49 @@ from langgraph_checkpoint_cloudflare_d1 import CloudflareD1Saver
 # ---------------------------------------------------------------------------
 
 class JobStatus(str, Enum):
-    """Status values for the job processing pipeline.
+    """Status values for the three-phase job processing pipeline.
 
-    Lifecycle: new → enhanced → eu_remote | non_eu | error
-    Each status determines which phase of processing runs next.
+    Lifecycle:
+      new → enhanced → role-match → eu-remote | non-eu
+                    └→ role-nomatch  (terminal — skips EU classification)
     """
-    NEW = "new"                # Just ingested, needs ATS enhancement
-    ENHANCED = "enhanced"      # ATS data fetched, ready for classification
-    EU_REMOTE = "eu-remote"    # Classified as fully remote EU position
-    NON_EU = "non-eu"          # Classified as NOT remote EU
-    ERROR = "error"            # Processing failed
+    NEW          = "new"           # Ingested, needs ATS enhancement
+    ENHANCED     = "enhanced"      # ATS data fetched, ready for role tagging
+    ROLE_MATCH   = "role-match"    # Target role confirmed — proceed to Phase 3
+    ROLE_NOMATCH = "role-nomatch"  # Not a target role — terminal, skip Phase 3
+    EU_REMOTE    = "eu-remote"     # Classified as fully remote EU position
+    NON_EU       = "non-eu"        # Classified as NOT remote EU
+    ERROR        = "error"         # Processing failed
 
 
 # ---------------------------------------------------------------------------
 # Pydantic models for structured output
 # ---------------------------------------------------------------------------
 
-class JobClassification(BaseModel):
-    """Classification result for a job posting.
+class JobRoleTags(BaseModel):
+    """Role tagging result from Phase 2.
 
-    Used with ChatCloudflareWorkersAI.with_structured_output() to get
-    validated, typed responses from the LLM without manual JSON parsing.
-    Accepts both camelCase and snake_case keys from different LLMs.
+    isFrontendReact: True if the job is primarily a Frontend / React role.
+    isAIEngineer:    True if the job is primarily an AI / ML / LLM role.
+    Both can be True (e.g. AI-powered React app engineer).
     """
+    isFrontendReact: bool = Field(default=False)
+    isAIEngineer:    bool = Field(default=False)
+    confidence:      Literal["high", "medium", "low"] = Field(default="low")
+    reason:          str = Field(default="")
 
+    @validator("reason", pre=True, always=True)
+    def truncate_reason(cls, v):
+        # Guard D1 TEXT column against oversized LLM explanations
+        return str(v)[:500] if v else ""
+
+
+class JobClassification(BaseModel):
+    """EU-remote classification result from Phase 3.
+
+    Accepts both camelCase (isRemoteEU) and snake_case (is_remote_eu) keys
+    from different LLMs via populate_by_name + alias.
+    """
     model_config = {"populate_by_name": True}
 
     isRemoteEU: bool = Field(
@@ -85,6 +115,40 @@ class JobClassification(BaseModel):
 # Prompt templates (langchain ChatPromptTemplate)
 # ---------------------------------------------------------------------------
 
+# Phase 2 — Role Tagging
+ROLE_TAGGING_PROMPT = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "You are a job-classification assistant. "
+        "Analyse the job posting and determine whether it is a Frontend/React engineer "
+        "role and/or an AI/ML/LLM engineer role. "
+        "Return ONLY a JSON object — no markdown, no explanation, no preamble.",
+    ),
+    (
+        "human",
+        """Classify this job posting.
+
+Title:       {title}
+Location:    {location}
+Description: {description}
+
+Return exactly this JSON (no extra keys):
+{{
+  "isFrontendReact": true|false,
+  "isAIEngineer": true|false,
+  "confidence": "high" | "medium" | "low",
+  "reason": "one sentence explanation"
+}}
+
+Guidelines:
+- isFrontendReact = true if the primary stack is React / Next.js / frontend UI
+- isAIEngineer    = true if ML / LLM / RAG / embeddings / AI infra is primary
+- Both can be true (e.g. AI-powered React product engineer)
+- confidence = high only when signals are unambiguous""",
+    ),
+])
+
+# Phase 3 — EU Remote Classification
 CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages([
     (
         "system",
@@ -140,8 +204,7 @@ async def d1_all(db, sql: str, params: list | None = None) -> list[dict]:
     """Execute a D1 SELECT and return rows as Python list of dicts."""
     stmt = db.prepare(sql)
     if params:
-        js_params = JSON.parse(json.dumps(params))
-        stmt = stmt.bind(*js_params)
+        stmt = stmt.bind(*JSON.parse(json.dumps(params)))
     result = await stmt.all()
     return to_py(result.results)
 
@@ -150,8 +213,7 @@ async def d1_run(db, sql: str, params: list | None = None):
     """Execute a D1 write statement (INSERT/UPDATE/DELETE)."""
     stmt = db.prepare(sql)
     if params:
-        js_params = JSON.parse(json.dumps(params))
-        stmt = stmt.bind(*js_params)
+        stmt = stmt.bind(*JSON.parse(json.dumps(params)))
     await stmt.run()
 
 
@@ -210,11 +272,52 @@ async def fetch_json(
     raise last_err or Exception("Unknown network error in fetch_json")
 
 
+# ---------------------------------------------------------------------------
+# Shared LLM utilities
+# ---------------------------------------------------------------------------
+
+def _extract_json_object(raw: str) -> str:
+    """Extract the first valid JSON object from an LLM response string.
+
+    Handles:
+      - Markdown fences: ```json ... ```
+      - Leading preamble text before the opening brace
+      - Trailing text or explanation after the closing brace
+
+    Raises ValueError if no JSON object can be found.
+    """
+    # Strip markdown fences
+    raw = re.sub(r"```(?:json)?", "", raw).strip()
+    start = raw.find("{")
+    end   = raw.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError(f"No JSON object found in LLM output: {raw[:200]!r}")
+    return raw[start : end + 1]
+
+
+def _guard_content(content) -> str | None:
+    """Normalise Workers AI content, guarding against JsNull / JsProxy.
+
+    Workers AI can return JsNull as the AIMessage.content field in the
+    Pyodide environment. This helper converts the value to a clean Python
+    string or returns None to signal the caller to escalate.
+    """
+    if content is None:
+        return None
+    # Detect JsProxy (pyodide.ffi) at runtime without importing pyodide
+    if str(type(content)) == "<class 'pyodide.ffi.JsProxy'>":
+        s = str(content)
+        if not s or s.lower() in ("jsnull", "undefined", "null"):
+            return None
+        return s
+    s = str(content).strip()
+    return s if s else None
+
+
 # =========================================================================
 # Phase 1 — ATS Enhancement
-# Fetch rich data from Greenhouse / Lever / Ashby public APIs and
-# persist directly into D1.  Mirrors the logic in src/ingestion/*.ts
-# but fully self-contained so it runs on the CF Workers runtime.
+# Fetch rich data from Greenhouse / Lever / Ashby public APIs and persist
+# into D1. Mirrors ingestion logic but fully self-contained for CF Workers.
 # =========================================================================
 
 # --- URL Parsers ----------------------------------------------------------
@@ -514,13 +617,10 @@ async def enhance_job(db, job: dict) -> dict:
             return {"enhanced": False, "error": f"Unsupported source_kind: {kind}"}
 
         if cols:
-            # Always mark updated_at and advance status to 'enhanced'
             set_parts = [f"{c} = ?" for c in cols]
-            set_parts.append(f"status = ?")
+            set_parts += ["status = ?", "updated_at = datetime('now')"]
             vals.append(JobStatus.ENHANCED.value)
-            set_parts.append("updated_at = datetime('now')")
-            set_clause = ", ".join(set_parts)
-            sql = f"UPDATE jobs SET {set_clause} WHERE id = ?"
+            sql = f"UPDATE jobs SET {', '.join(set_parts)} WHERE id = ?"
             vals.append(job["id"])
             await d1_run(db, sql, vals)
 
@@ -554,29 +654,26 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
 
     print(f"📋 Found {len(rows)} jobs to enhance")
 
-    stats = {"enhanced": 0, "skipped": 0, "errors": 0}
+    stats = {"enhanced": 0, "errors": 0}
 
     for job in rows:
         print(f"🔄 Enhancing {job.get('source_kind')} job {job['id']}: {job.get('title')}")
         result = await enhance_job(db, job)
+
         if result["enhanced"]:
             stats["enhanced"] += 1
             print("   ✅ Enhanced")
         else:
             stats["errors"] += 1
-            error_msg = result.get("error", "unknown")
-            print(f"   ❌ {error_msg}")
-            # Advance to 'enhanced' even on ATS error so the job proceeds
-            # to classification with whatever data it has from ingestion.
-            # This prevents infinite retries for jobs whose ATS postings
-            # have been taken down.
+            print(f"   ❌ {result.get('error', 'unknown')}")
+            # Advance status anyway so the job is not stuck in Phase 1
             try:
                 await d1_run(
                     db,
                     "UPDATE jobs SET status = ?, updated_at = datetime('now') WHERE id = ?",
                     [JobStatus.ENHANCED.value, job["id"]],
                 )
-                print(f"   ⏩ Advanced to 'enhanced' despite ATS error")
+                print("   ⏩ Advanced to 'enhanced' despite ATS error")
             except Exception as advance_err:
                 print(f"   ⚠️  Could not advance status: {advance_err}")
         # Pace to avoid ATS rate-limits
@@ -590,21 +687,103 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
 
 
 # =========================================================================
-# Phase 2 — Classification
-#   Primary: Workers AI via langchain with_structured_output (free, fast)
-#   Fallback: DeepSeek API for uncertain or failed Workers AI results
+# Phase 2 — Role Tagging
+#   Detects whether each job is a target role (Frontend/React or AI Engineer).
+#   Non-target roles are marked terminal (role-nomatch) and never reach
+#   Phase 3, saving EU-classification API costs.
+#
+#   Three-tier strategy (cheapest first):
+#     Tier 1 — Keyword heuristic  (free, CPU-only)
+#     Tier 2 — Workers AI via langchain  (free, Cloudflare quota)
+#     Tier 3 — DeepSeek API  (paid, fallback only)
 # =========================================================================
 
-# Workers AI model (free, no API key needed)
+# Workers AI model shared by Phase 2 and Phase 3
 WORKERS_AI_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8"
+
+# Keywords that signal a hard non-target role — prevents false positives
+# when backend job descriptions incidentally mention ML tooling.
+_NON_TARGET_PATTERN = re.compile(
+    r"\b(backend engineer|java developer|\.net developer|devops engineer"
+    r"|data analyst|data scientist|platform engineer|sre|site reliability)\b"
+)
+
+
+def _keyword_role_tag(job: dict) -> JobRoleTags | None:
+    """Tier 1: fast keyword heuristic — no LLM calls.
+
+    Returns a high-confidence JobRoleTags when signals are clear, or None
+    to indicate the caller should escalate to Tier 2 (Workers AI).
+
+    The heuristic errs on the side of returning None when uncertain so that
+    ambiguous jobs get a proper LLM review rather than being silently dropped.
+    """
+    title = (job.get("title") or "").lower()
+    # Truncate description to avoid re scanning huge strings for simple patterns
+    desc  = (job.get("description") or "")[:5000].lower()
+    text  = f"{title}\n{desc}"
+
+    # Hard exclusion — explicit non-target backend/infra roles (title only
+    # to avoid false drops from incidental mentions in descriptions)
+    if _NON_TARGET_PATTERN.search(title):
+        return JobRoleTags(
+            isFrontendReact=False,
+            isAIEngineer=False,
+            confidence="high",
+            reason="Heuristic: explicit non-target role",
+        )
+
+    # Frontend / React signals (need both tech + role signal to be high-confidence)
+    has_react    = bool(re.search(r"\breact(\.js)?\b", text)) or "next.js" in text
+    has_frontend = bool(re.search(r"\b(frontend|ui engineer|web ui)\b", text))
+
+    # AI Engineer signals
+    has_ai_title = bool(re.search(r"\b(ai engineer|ml engineer|llm engineer|ai/ml)\b", text))
+    has_ai_stack = any(
+        x in text for x in
+        ["machine learning", "llm", "rag", "embedding", "vector db", "fine-tun"]
+    )
+
+    if has_react and has_frontend:
+        return JobRoleTags(
+            isFrontendReact=True,
+            isAIEngineer=bool(has_ai_title and has_ai_stack),  # dual-role allowed
+            confidence="high",
+            reason="Heuristic: React + frontend keywords",
+        )
+
+    if has_ai_title and has_ai_stack:
+        return JobRoleTags(
+            isFrontendReact=False,
+            isAIEngineer=True,
+            confidence="high",
+            reason="Heuristic: AI engineer title + stack keywords",
+        )
+
+    return None  # Ambiguous — escalate to LLM
+
+
+def _normalise_role_keys(raw: dict) -> dict:
+    """Map alternate key spellings from different LLMs into the JobRoleTags schema.
+
+    Some models return snake_case, others return camelCase, and some add
+    extra underscores or drop the 'is' prefix. This covers the common variants.
+    """
+    KEY_MAP = {
+        "frontend_react":    "isFrontendReact",
+        "is_frontend_react": "isFrontendReact",
+        "frontend":          "isFrontendReact",
+        "react":             "isFrontendReact",
+        "ai_engineer":       "isAIEngineer",
+        "is_ai_engineer":    "isAIEngineer",
+        "ai":                "isAIEngineer",
+        "ml_engineer":       "isAIEngineer",
+    }
+    return {KEY_MAP.get(k, k): v for k, v in raw.items()}
 
 
 def _normalise_classification_keys(raw: dict) -> dict:
-    """Normalise arbitrary key names from LLMs into JobClassification schema.
-
-    Handles both camelCase (isRemoteEU) and snake_case (is_remote_eu_position)
-    variants that different models may emit.
-    """
+    """Normalise LLM key variants into the JobClassification schema."""
     normalised = {}
     for k, v in raw.items():
         lk = k.lower().replace("_", "").replace("-", "")
@@ -619,16 +798,278 @@ def _normalise_classification_keys(raw: dict) -> dict:
     return normalised
 
 
-def _build_chain(ai_binding):
-    """Build the langchain LCEL classification chain.
+async def _tag_with_workers_ai(job: dict, ai_binding) -> JobRoleTags | None:
+    """Tier 2: Workers AI role tagging via langchain LCEL chain.
 
-    Returns: CLASSIFICATION_PROMPT | llm
+    Returns a validated JobRoleTags or None on any failure.
+    None signals the caller to escalate to Tier 3 (DeepSeek).
 
-    NOTE: We intentionally skip with_structured_output() because in the
-    Pyodide/Workers environment, Workers AI can return JsNull as the
-    AIMessage.content field, which breaks langchain's AIMessage validator.
-    Instead we parse the raw text response ourselves.
+    We do NOT use with_structured_output() because in the Pyodide Workers
+    environment the AI binding can return JsNull as AIMessage.content,
+    which crashes langchain's Pydantic validator. We parse raw text instead.
     """
+    if ai_binding is None:
+        return None
+
+    try:
+        llm   = ChatCloudflareWorkersAI(
+            model_name=WORKERS_AI_MODEL,
+            binding=ai_binding,
+            temperature=0.2,
+        )
+        chain = ROLE_TAGGING_PROMPT | llm
+
+        response = await chain.ainvoke({
+            "title":       job.get("title", "N/A"),
+            "location":    job.get("location") or "Not specified",
+            "description": (job.get("description") or "")[:3000],
+        })
+
+        content_str = _guard_content(response.content)
+        if not content_str:
+            print("   ⚠️  Workers AI (role tag) returned null content")
+            return None
+
+        json_str   = _extract_json_object(content_str)
+        raw        = json.loads(json_str)
+        normalised = _normalise_role_keys(raw)
+        return JobRoleTags.model_validate(normalised)
+
+    except Exception as e:
+        print(f"   ⚠️  Workers AI role tag failed: {e}")
+        return None
+
+
+async def _tag_with_deepseek(
+    job: dict, api_key: str, base_url: str, model: str
+) -> JobRoleTags | None:
+    """Tier 3: DeepSeek role tagging fallback.
+
+    Uses fetch_json (JS fetch wrapper) — no httpx needed in CF Workers.
+    response_format=json_object eliminates the need for _extract_json_object.
+    Returns None on any failure so the caller can apply a safe default.
+    """
+    prompt_msgs = ROLE_TAGGING_PROMPT.format_messages(
+        title       = job.get("title", "N/A"),
+        location    = job.get("location") or "Not specified",
+        description = (job.get("description") or "")[:3000],
+    )
+    role_map = {"system": "system", "human": "user", "ai": "assistant"}
+    messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt_msgs]
+
+    try:
+        url     = f"{base_url.rstrip('/')}/chat/completions"
+        payload = json.dumps({
+            "model":           model,
+            "temperature":     0.1,
+            "max_tokens":      300,
+            "response_format": {"type": "json_object"},
+            "messages":        messages,
+        })
+
+        data = await fetch_json(
+            url,
+            method  = "POST",
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type":  "application/json",
+            },
+            body    = payload,
+            retries = 2,
+        )
+
+        content = (
+            (data.get("choices") or [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        if not content.strip():
+            raise ValueError("Empty content in DeepSeek response")
+
+        raw        = json.loads(content)
+        normalised = _normalise_role_keys(raw)
+        return JobRoleTags.model_validate(normalised)
+
+    except Exception as e:
+        print(f"   ⚠️  DeepSeek role tag failed: {e}")
+        return None
+
+
+async def _run_role_tier_pipeline(
+    job: dict,
+    ai_binding,
+    api_key: str | None,
+    base_url: str,
+    model: str,
+    stats: dict,
+) -> tuple[JobRoleTags, str]:
+    """Run the three-tier role tagging pipeline for a single job.
+
+    Returns (tags, source_label) where source_label is one of:
+      'heuristic', 'workers-ai', 'deepseek', 'none'
+    """
+    # Tier 1 — Keyword heuristic
+    tags = _keyword_role_tag(job)
+    if tags and tags.confidence == "high":
+        return tags, "heuristic"
+
+    # Tier 2 — Workers AI
+    wa_tags = None
+    if ai_binding:
+        wa_tags = await _tag_with_workers_ai(job, ai_binding)
+        if wa_tags and wa_tags.confidence == "high":
+            stats["workersAI"] += 1
+            return wa_tags, "workers-ai"
+
+    # Tier 3 — DeepSeek fallback (only if key provided and tier 2 didn't give high confidence)
+    if api_key:
+        ds_tags = await _tag_with_deepseek(job, api_key, base_url, model)
+        if ds_tags:
+            stats["deepseek"] += 1
+            return ds_tags, "deepseek"
+
+    # Accept whatever Workers AI returned (medium/low or None)
+    if wa_tags:
+        stats["workersAI"] += 1
+        return wa_tags, "workers-ai"
+
+    return JobRoleTags(
+        isFrontendReact=False,
+        isAIEngineer=False,
+        confidence="low",
+        reason="All tagging tiers failed or returned no result",
+    ), "none"
+
+
+async def _persist_role_tags(
+    db,
+    job_id,
+    tags: JobRoleTags,
+    source: str,
+    next_status: JobStatus,
+) -> None:
+    """Write role tag columns + new status to D1.
+
+    Falls back to a status-only update if the schema migration hasn't been
+    run yet so that the pipeline continues even in partially migrated envs.
+    """
+    sql = """
+        UPDATE jobs
+        SET role_frontend_react = ?,
+            role_ai_engineer    = ?,
+            role_confidence     = ?,
+            role_reason         = ?,
+            role_source         = ?,
+            status              = ?,
+            updated_at          = datetime('now')
+        WHERE id = ?
+    """
+    params = [
+        int(tags.isFrontendReact),
+        int(tags.isAIEngineer),
+        tags.confidence,
+        tags.reason,
+        source,
+        next_status.value,
+        job_id,
+    ]
+    try:
+        await d1_run(db, sql, params)
+    except Exception as e:
+        # Schema migration may not have run — degrade gracefully
+        print(f"   ⚠️  Full role tag persist failed ({e}). Falling back to status-only update.")
+        await d1_run(
+            db,
+            "UPDATE jobs SET status = ?, updated_at = datetime('now') WHERE id = ?",
+            [next_status.value, job_id],
+        )
+
+
+async def tag_roles_for_enhanced_jobs(
+    db,
+    ai_binding,
+    deepseek_api_key: str | None = None,
+    deepseek_base_url: str       = "https://api.deepseek.com/beta",
+    deepseek_model: str          = "deepseek-chat",
+    limit: int                   = 50,
+) -> dict:
+    """Phase 2: Tag target roles for all jobs with status='enhanced'.
+
+    Decision logic for next_status:
+      - High-confidence non-match → ROLE_NOMATCH (terminal, skips Phase 3)
+      - Target role found OR uncertain result → ROLE_MATCH (proceeds to Phase 3)
+
+    Uncertain jobs become ROLE_MATCH (fail-open): a false positive costs one
+    extra EU-classification call, but a false negative permanently discards
+    a valid job. The asymmetry favours keeping the job in the pipeline.
+    """
+    print("🔍 Phase 2 — Finding jobs with status='enhanced'...")
+
+    rows = await d1_all(
+        db,
+        "SELECT id, title, location, description FROM jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?",
+        [JobStatus.ENHANCED.value, limit],
+    )
+
+    print(f"📋 Found {len(rows)} jobs to role-tag")
+
+    stats = {
+        "processed": 0, "targetRole": 0, "irrelevant": 0,
+        "errors": 0, "workersAI": 0, "deepseek": 0,
+    }
+
+    for job in rows:
+        job_id = job.get("id", "unknown")
+        try:
+            print(f"🏷️  Role-tagging job {job_id}: {job.get('title')}")
+
+            tags, source = await _run_role_tier_pipeline(
+                job, ai_binding, deepseek_api_key, deepseek_base_url, deepseek_model, stats
+            )
+
+            is_target   = tags.isFrontendReact or tags.isAIEngineer
+            next_status = (
+                JobStatus.ROLE_NOMATCH
+                if (not is_target and tags.confidence == "high")
+                else JobStatus.ROLE_MATCH
+            )
+
+            label = "🎯 Match" if next_status == JobStatus.ROLE_MATCH else "⏭️  No-match"
+            print(f"   {label} [{source}] ({tags.confidence}) — {tags.reason}")
+
+            await _persist_role_tags(db, job_id, tags, source, next_status)
+
+            stats["processed"] += 1
+            if next_status == JobStatus.ROLE_NOMATCH:
+                stats["irrelevant"] += 1
+            elif is_target:
+                stats["targetRole"] += 1
+
+        except Exception as e:
+            # Per-job exception: log and continue so one bad job doesn't block the batch
+            print(f"   ❌ Unhandled error tagging job {job_id}: {e}")
+            stats["errors"] += 1
+
+        await sleep_ms(500)
+
+    print(
+        f"✅ Role tagging complete: {stats['targetRole']} target, "
+        f"{stats['irrelevant']} irrelevant, {stats['errors']} errors"
+    )
+    return stats
+
+
+# =========================================================================
+# Phase 3 — EU Remote Classification
+#   Primary: Workers AI via langchain LCEL chain (free, fast)
+#   Fallback: DeepSeek API for uncertain or failed Workers AI results
+#
+#   Only runs on jobs at status='role-match' — irrelevant jobs never
+#   reach this phase, which is the primary cost-saving mechanism.
+# =========================================================================
+
+def _build_classification_chain(ai_binding):
+    """Build the langchain LCEL EU-classification chain."""
     llm = ChatCloudflareWorkersAI(
         model_name=WORKERS_AI_MODEL,
         binding=ai_binding,
@@ -637,54 +1078,30 @@ def _build_chain(ai_binding):
     return CLASSIFICATION_PROMPT | llm
 
 
-async def classify_with_workers_ai(
-    job: dict, ai_binding
-) -> JobClassification | None:
-    """Classify a job using Workers AI + langchain LCEL chain.
+async def classify_with_workers_ai(job: dict, ai_binding) -> JobClassification | None:
+    """Phase 3 Tier 1: EU classification via Workers AI + langchain LCEL chain.
 
     Returns a validated JobClassification or None if unavailable/failed.
-    Uses the LCEL chain (CLASSIFICATION_PROMPT | llm) for prompt formatting
-    and LLM invocation, then parses the raw text into a Pydantic model.
-
-    NOTE: We do NOT use with_structured_output() because in the Pyodide
-    Workers environment, the AI binding can return JsNull as the AIMessage
-    content field, which crashes langchain's AIMessage pydantic validator.
+    Does NOT use with_structured_output() — see _guard_content() docstring.
     """
     if ai_binding is None:
         return None
 
     try:
-        chain = _build_chain(ai_binding)
+        chain    = _build_classification_chain(ai_binding)
         response = await chain.ainvoke({
-            "title": job.get("title", "N/A"),
-            "location": job.get("location") or "Not specified",
-            "description": job.get("description") or "Not specified",
+            "title":       job.get("title", "N/A"),
+            "location":    job.get("location") or "Not specified",
+            "description": (job.get("description") or "")[:3000],
         })
 
-        # Guard against JsNull content from Workers AI binding
-        content = response.content
-        if content is None or str(type(content)) == "<class 'pyodide.ffi.JsProxy'>":
-            raw_str = str(content) if content else ""
-            if not raw_str or raw_str == "jsnull" or raw_str == "undefined":
-                print("   ⚠️  Workers AI returned null content")
-                return None
-            content = raw_str
-
-        content_str = str(content).strip()
+        content_str = _guard_content(response.content)
         if not content_str:
+            print("   ⚠️  Workers AI (classify) returned null content")
             return None
 
-        # Strip markdown code fences if the model wraps output
-        if content_str.startswith("```"):
-            content_str = re.sub(r"^```(?:json)?\s*", "", content_str)
-            content_str = re.sub(r"\s*```$", "", content_str)
-
-        # Extract JSON if embedded in surrounding text
-        json_match = re.search(r"\{[^{}]*\}", content_str, re.DOTALL)
-        if json_match:
-            content_str = json_match.group(0)
-
-        raw = json.loads(content_str)
+        json_str   = _extract_json_object(content_str)
+        raw        = json.loads(json_str)
         normalised = _normalise_classification_keys(raw)
         return JobClassification.model_validate(normalised)
 
@@ -696,41 +1113,38 @@ async def classify_with_workers_ai(
 async def classify_with_deepseek(
     job: dict, api_key: str, base_url: str, model: str
 ) -> JobClassification:
-    """Fallback: classify using DeepSeek API (OpenAI-compatible).
+    """Phase 3 Tier 2: EU classification via DeepSeek API.
 
     Called only when Workers AI fails or returns low/medium confidence.
-    Uses raw HTTP since langchain-openai is not available in Pyodide.
-    Response is parsed into a JobClassification Pydantic model for validation.
+    Uses fetch_json (JS fetch) — no httpx needed in CF Workers.
+    Never raises — returns a low-confidence default on any error.
     """
-    prompt = CLASSIFICATION_PROMPT.format_messages(
-        title=job.get("title", "N/A"),
-        location=job.get("location") or "Not specified",
-        description=job.get("description") or "Not specified",
+    prompt_msgs = CLASSIFICATION_PROMPT.format_messages(
+        title       = job.get("title", "N/A"),
+        location    = job.get("location") or "Not specified",
+        description = (job.get("description") or "")[:3000],
     )
-
-    # Convert langchain messages to OpenAI-compatible format
-    # langchain uses "human"/"ai" but OpenAI API expects "user"/"assistant"
     role_map = {"system": "system", "human": "user", "ai": "assistant"}
-    messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt]
+    messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt_msgs]
 
     try:
-        url = f"{base_url.rstrip('/')}/chat/completions"
+        url     = f"{base_url.rstrip('/')}/chat/completions"
         payload = json.dumps({
-            "model": model,
-            "temperature": 0.3,
+            "model":           model,
+            "temperature":     0.3,
             "response_format": {"type": "json_object"},
-            "messages": messages,
+            "messages":        messages,
         })
 
         data = await fetch_json(
             url,
-            method="POST",
-            headers={
+            method  = "POST",
+            headers = {
                 "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
+                "Content-Type":  "application/json",
             },
-            body=payload,
-            retries=3,
+            body    = payload,
+            retries = 3,
         )
 
         content = (
@@ -738,12 +1152,10 @@ async def classify_with_deepseek(
             .get("message", {})
             .get("content", "")
         )
-
         if not content.strip():
-            raise Exception("No content in DeepSeek response")
+            raise ValueError("Empty content in DeepSeek classify response")
 
-        # Normalise arbitrary key names from DeepSeek into expected schema
-        raw = json.loads(content)
+        raw        = json.loads(content)
         normalised = _normalise_classification_keys(raw)
         return JobClassification.model_validate(normalised)
 
@@ -757,58 +1169,37 @@ async def classify_with_deepseek(
 
 
 async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
-    """Phase 2: Classify unclassified jobs.
+    """Phase 3: EU-remote classify all jobs at status='role-match'.
 
-    Strategy (inverted from the original — Workers AI is now primary):
-      1. Try Workers AI via langchain structured output chain (free, fast).
-         If it returns a high-confidence result, use it directly.
-      2. If Workers AI fails or returns low/medium confidence,
-         fall back to DeepSeek API for a second opinion.
-
-    This saves DeepSeek API costs by using the free Workers AI model
-    for the majority of classifications.
+    Strategy:
+      1. Workers AI via langchain LCEL (free) — use directly if high confidence.
+      2. DeepSeek fallback (paid) — if Workers AI fails or is uncertain.
+      3. Accept Workers AI as-is if no DeepSeek key is configured.
     """
-    # DeepSeek config — only needed as fallback
-    api_key = getattr(env, "DEEPSEEK_API_KEY", None) or getattr(
-        env, "OPENAI_API_KEY", None
-    )
-    base_url = (
-        getattr(env, "DEEPSEEK_BASE_URL", None) or "https://api.deepseek.com/beta"
-    )
-    model = getattr(env, "DEEPSEEK_MODEL", None) or "deepseek-chat"
-
-    # Workers AI binding for langchain chain
+    api_key  = getattr(env, "DEEPSEEK_API_KEY", None) or getattr(env, "OPENAI_API_KEY", None)
+    base_url = getattr(env, "DEEPSEEK_BASE_URL", None) or "https://api.deepseek.com/beta"
+    model    = getattr(env, "DEEPSEEK_MODEL", None) or "deepseek-chat"
     ai_binding = getattr(env, "AI", None)
 
     if not ai_binding and not api_key:
         raise Exception(
             "No classification backend available. "
-            "Need either AI binding (Workers AI) or DEEPSEEK_API_KEY."
+            "Provide either the AI binding (Workers AI) or DEEPSEEK_API_KEY."
         )
 
-    print("🔍 Phase 2 — Fetching unclassified jobs...")
+    print("🔍 Phase 3 — Fetching jobs with status='role-match'...")
 
     rows = await d1_all(
         db,
-        """
-        SELECT id, title, location, description, status, score
-        FROM jobs
-        WHERE status = ?
-        ORDER BY created_at DESC
-        LIMIT ?
-        """,
-        [JobStatus.ENHANCED.value, limit],
+        "SELECT id, title, location, description FROM jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?",
+        [JobStatus.ROLE_MATCH.value, limit],
     )
 
     print(f"📋 Found {len(rows)} jobs to classify")
 
     stats = {
-        "processed": 0,
-        "euRemote": 0,
-        "nonEuRemote": 0,
-        "errors": 0,
-        "workersAI": 0,
-        "deepseek": 0,
+        "processed": 0, "euRemote": 0, "nonEuRemote": 0,
+        "errors": 0, "workersAI": 0, "deepseek": 0,
     }
 
     for job in rows:
@@ -816,47 +1207,42 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
             print(f"\n🤖 Classifying job {job['id']}: {job.get('title')}")
 
             classification: JobClassification | None = None
-            result: JobClassification | None = None
+            wa_result:      JobClassification | None = None
             source = "workers-ai"
 
-            # Step 1 — Workers AI via langchain LCEL chain (primary)
+            # Step 1 — Workers AI (primary, free)
             if ai_binding:
-                result = await classify_with_workers_ai(job, ai_binding)
-                if result and result.confidence == "high":
-                    classification = result
+                wa_result = await classify_with_workers_ai(job, ai_binding)
+                if wa_result and wa_result.confidence == "high":
+                    classification = wa_result
                     stats["workersAI"] += 1
-                    print(f"   ⚡ Workers AI (high confidence)")
+                    print("   ⚡ Workers AI (high confidence)")
 
-            # Step 2 — DeepSeek fallback (low/medium confidence or failure)
+            # Step 2 — DeepSeek fallback
             if classification is None and api_key:
-                classification = await classify_with_deepseek(
-                    job, api_key, base_url, model
-                )
+                classification = await classify_with_deepseek(job, api_key, base_url, model)
                 source = "deepseek"
                 stats["deepseek"] += 1
-                print(f"   🔄 DeepSeek fallback")
+                print("   🔄 DeepSeek fallback")
 
-            # Step 3 — If no DeepSeek key, accept Workers AI result as-is
-            if classification is None and result is not None:
-                classification = result
+            # Step 3 — Accept Workers AI as-is when no DeepSeek key
+            if classification is None and wa_result is not None:
+                classification = wa_result
                 stats["workersAI"] += 1
-                print(f"   ⚡ Workers AI (accepted, no DeepSeek fallback)")
+                print("   ⚡ Workers AI (accepted, no DeepSeek fallback)")
 
             if classification is None:
-                print(f"   ❌ No classification produced")
+                print("   ❌ No classification produced")
                 stats["errors"] += 1
                 continue
 
-            is_eu = classification.isRemoteEU
-            confidence = classification.confidence
-            reason = f"[{source}] {classification.reason}"
+            is_eu       = classification.isRemoteEU
+            confidence  = classification.confidence
+            reason      = f"[{source}] {classification.reason}"
+            score       = {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence, 0.3)
+            job_status  = JobStatus.EU_REMOTE.value if is_eu else JobStatus.NON_EU.value
 
-            label = "✅ EU Remote" if is_eu else "❌ Non-EU"
-            print(f"   Result: {label} ({confidence})")
-            print(f"   Reason: {reason}")
-
-            score = {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence, 0.3)
-            job_status = JobStatus.EU_REMOTE.value if is_eu else JobStatus.NON_EU.value
+            print(f"   {'✅ EU Remote' if is_eu else '❌ Non-EU'} ({confidence}): {reason}")
 
             await d1_run(
                 db,
@@ -875,25 +1261,26 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
             else:
                 stats["nonEuRemote"] += 1
 
-            # Pacing
             await sleep_ms(1000)
 
         except Exception as e:
-            print(f"❌ Error classifying job {job['id']}: {e}")
+            print(f"   ❌ Error classifying job {job['id']}: {e}")
             stats["errors"] += 1
 
     return stats
 
 
 # =========================================================================
-# Worker Entrypoint — follows langchain-cloudflare pattern
+# Worker Entrypoint
 # =========================================================================
 
 class Default(WorkerEntrypoint):
-    """Main Worker entrypoint for job processing pipeline.
+    """Main Worker entrypoint for the three-phase job processing pipeline.
 
-    Based on langchain-cloudflare/libs/langchain-cloudflare/examples/workers/src/entry.py.
-    Uses the same WorkerEntrypoint + D1 binding pattern.
+    Phases:
+      1. enhance  — ATS data enrichment (new → enhanced)
+      2. tag      — Role tagging (enhanced → role-match | role-nomatch)
+      3. classify — EU-remote classification (role-match → eu-remote | non-eu)
     """
 
     # MARK: - Request Routing
@@ -901,7 +1288,7 @@ class Default(WorkerEntrypoint):
     async def fetch(self, request, env):
         """Handle incoming HTTP requests."""
         cors_headers = {
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin":  "*",
             "Access-Control-Allow-Methods": "POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
         }
@@ -910,8 +1297,7 @@ class Default(WorkerEntrypoint):
             if request.method == "OPTIONS":
                 return Response.json({}, status=200, headers=cors_headers)
 
-            # Route based on path
-            url = request.url
+            url  = request.url
             path = url.split("/")[-1].split("?")[0] if "/" in url else ""
 
             if path == "health":
@@ -919,23 +1305,16 @@ class Default(WorkerEntrypoint):
 
             if request.method != "POST":
                 return Response.json(
-                    {
-                        "success": False,
-                        "error": (
-                            "Method not allowed. Use POST to trigger "
-                            "enhancement & classification."
-                        ),
-                    },
+                    {"success": False, "error": "Method not allowed. Use POST."},
                     status=405,
                     headers=cors_headers,
                 )
 
-            # Authentication
+            # Optional auth
             cron_secret = getattr(self.env, "CRON_SECRET", None)
             if cron_secret:
                 auth_header = request.headers.get("Authorization") or ""
-                provided = auth_header.replace("Bearer ", "", 1)
-                if provided != cron_secret:
+                if auth_header.replace("Bearer ", "", 1) != cron_secret:
                     return Response.json(
                         {"success": False, "error": "Unauthorized"},
                         status=401,
@@ -944,10 +1323,11 @@ class Default(WorkerEntrypoint):
 
             if path == "enhance":
                 return await self.handle_enhance(request, cors_headers)
+            elif path == "tag":
+                return await self.handle_tag(request, cors_headers)
             elif path == "classify":
                 return await self.handle_classify(request, cors_headers)
             elif path == "process-sync":
-                # Synchronous — runs full pipeline inline (for debugging)
                 return await self.handle_process(request, cors_headers)
             else:
                 # Default: enqueue via CF Queue for async processing
@@ -964,35 +1344,28 @@ class Default(WorkerEntrypoint):
     # MARK: - Scheduled (Cron) Handler
 
     async def scheduled(self, event, env, ctx):
-        """Cron trigger — runs full pipeline (enhance + classify).
+        """Cron trigger — runs all three phases (enhance → tag → classify).
 
         Configured via [triggers].crons in wrangler.jsonc.
-        Runs every 6 hours with a limit of 20 jobs per run.
+        Runs every 6 hours with a conservative limit of 20 jobs per phase.
         """
-        print("🔄 Cloudflare Cron: Starting job enhancement & classification...")
+        print("🔄 Cron: Starting three-phase pipeline...")
         try:
-            db = self.env.DB
+            db    = self.env.DB
+            limit = 20
 
-            # Phase 1 — ATS Enhancement
-            enhance_stats = await enhance_unenhanced_jobs(db, 20)
+            enhance_stats  = await enhance_unenhanced_jobs(db, limit)
+            tag_stats      = await tag_roles_for_enhanced_jobs(
+                db, getattr(self.env, "AI", None),
+                deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+                deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+                deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+                limit             = limit,
+            )
+            classify_stats = await classify_unclassified_jobs(db, self.env, limit)
 
-            # Phase 2 — Classification (Workers AI + DeepSeek)
-            classify_stats = await classify_unclassified_jobs(db, self.env, 20)
-
-            stats = {
-                "enhanced": enhance_stats["enhanced"],
-                "enhanceErrors": enhance_stats["errors"],
-                "processed": classify_stats["processed"],
-                "euRemote": classify_stats["euRemote"],
-                "nonEuRemote": classify_stats["nonEuRemote"],
-                "errors": classify_stats["errors"],
-                "workersAI": classify_stats.get("workersAI", 0),
-                "deepseek": classify_stats.get("deepseek", 0),
-            }
-
-            print(f"✅ Cron complete: Enhanced {stats['enhanced']}, classified {stats['processed']} jobs")
-
-            # Checkpoint the run
+            stats = self._merge_stats(enhance_stats, tag_stats, classify_stats)
+            print(f"✅ Cron complete — {self._stats_summary(stats)}")
             self._save_run_checkpoint(stats)
 
         except Exception as e:
@@ -1003,15 +1376,18 @@ class Default(WorkerEntrypoint):
     async def queue(self, batch, env, ctx):
         """Consume messages from the process-jobs queue.
 
-        Each message triggers the full pipeline (enhance → classify).
-        Message body: {"action": "process"|"enhance"|"classify", "limit": int}
+        Supported actions:
+          enhance  — Phase 1 only
+          tag      — Phase 2 only
+          classify — Phase 3 only
+          process  — All three phases (default)
         """
         for message in batch.messages:
             try:
-                body = to_py(message.body)
+                body   = to_py(message.body)
                 action = body.get("action", "process")
-                limit = body.get("limit", 50)
-                db = self.env.DB
+                limit  = body.get("limit", 50)
+                db     = self.env.DB
 
                 print(f"📨 Queue message: action={action}, limit={limit}")
 
@@ -1019,36 +1395,32 @@ class Default(WorkerEntrypoint):
                     stats = await enhance_unenhanced_jobs(db, limit)
                     print(f"   Enhanced: {stats['enhanced']}, Errors: {stats['errors']}")
 
+                elif action == "tag":
+                    stats = await tag_roles_for_enhanced_jobs(
+                        db, getattr(self.env, "AI", None),
+                        deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+                        deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+                        deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+                        limit             = limit,
+                    )
+                    print(f"   Tagged: {stats['processed']}, Target: {stats['targetRole']}, Skip: {stats['irrelevant']}")
+
                 elif action == "classify":
                     stats = await classify_unclassified_jobs(db, self.env, limit)
                     print(f"   Classified: {stats['processed']}, EU: {stats['euRemote']}")
 
-                else:
-                    # Full pipeline
-                    enhance_stats = await enhance_unenhanced_jobs(db, limit)
+                else:  # "process" — full pipeline
+                    enhance_stats  = await enhance_unenhanced_jobs(db, limit)
+                    tag_stats      = await tag_roles_for_enhanced_jobs(
+                        db, getattr(self.env, "AI", None),
+                        deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+                        deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+                        deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+                        limit             = limit,
+                    )
                     classify_stats = await classify_unclassified_jobs(db, self.env, limit)
-
-                    stats = {
-                        "enhanced": enhance_stats["enhanced"],
-                        "enhanceErrors": enhance_stats["errors"],
-                        "processed": classify_stats["processed"],
-                        "euRemote": classify_stats["euRemote"],
-                        "nonEuRemote": classify_stats["nonEuRemote"],
-                        "errors": classify_stats["errors"],
-                        "workersAI": classify_stats.get("workersAI", 0),
-                        "deepseek": classify_stats.get("deepseek", 0),
-                    }
-
-                    print(f"\n✅ Queue pipeline complete!")
-                    print(f"   Enhanced: {stats['enhanced']}")
-                    print(f"   Workers AI: {stats['workersAI']}")
-                    print(f"   DeepSeek fallback: {stats['deepseek']}")
-                    print(f"   Classified: {stats['processed']}")
-                    print(f"   EU Remote: {stats['euRemote']}")
-                    print(f"   Non-EU: {stats['nonEuRemote']}")
-                    print(f"   Errors: {stats['errors'] + stats['enhanceErrors']}")
-
-                    # Checkpoint the run
+                    stats = self._merge_stats(enhance_stats, tag_stats, classify_stats)
+                    print(f"\n✅ Queue pipeline complete — {self._stats_summary(stats)}")
                     self._save_run_checkpoint(stats)
 
                 message.ack()
@@ -1057,43 +1429,36 @@ class Default(WorkerEntrypoint):
                 print(f"❌ Queue message failed: {e}")
                 message.retry()
 
-    # MARK: - Handlers
+    # MARK: - HTTP Handlers
 
     async def handle_health(self):
-        """Health check — verifies D1 binding is available."""
+        """Health check — verifies D1 and optional bindings are available."""
         if not hasattr(self.env, "DB"):
-            return Response.json(
-                {"error": "D1 binding not configured"}, status=400
-            )
+            return Response.json({"error": "D1 binding not configured"}, status=400)
 
         try:
             rows = await d1_all(self.env.DB, "SELECT 1 as value")
-            return Response.json(
-                {
-                    "status": "healthy",
-                    "database": "connected",
-                    "queue": hasattr(self.env, "PROCESS_JOBS_QUEUE"),
-                    "workersAI": hasattr(self.env, "AI"),
-                    "value": rows[0]["value"] if rows else None,
-                }
-            )
+            return Response.json({
+                "status":     "healthy",
+                "database":   "connected",
+                "queue":      hasattr(self.env, "PROCESS_JOBS_QUEUE"),
+                "workersAI":  hasattr(self.env, "AI"),
+                "deepseek":   bool(getattr(self.env, "DEEPSEEK_API_KEY", None)),
+                "value":      rows[0]["value"] if rows else None,
+            })
         except Exception as e:
-            return Response.json(
-                {"status": "unhealthy", "error": str(e)}, status=500
-            )
+            return Response.json({"status": "unhealthy", "error": str(e)}, status=500)
 
     async def handle_enqueue(self, request, cors_headers: dict):
         """Enqueue a processing job to the CF Queue — returns immediately."""
-        # Parse body once (request.json() can only be consumed once)
         action = "process"
-        limit = 50
+        limit  = 50
         try:
-            data = await request.json()
-            body = to_py(data)
+            body   = to_py(await request.json())
             action = body.get("action", "process")
-            raw_limit = body.get("limit")
-            if isinstance(raw_limit, (int, float)) and raw_limit > 0:
-                limit = int(raw_limit)
+            raw    = body.get("limit")
+            if isinstance(raw, (int, float)) and raw > 0:
+                limit = int(raw)
         except Exception:
             pass
 
@@ -1105,90 +1470,75 @@ class Default(WorkerEntrypoint):
                 headers=cors_headers,
             )
 
-        message = {"action": action, "limit": limit}
-        await queue.send(to_js_obj(message))
-
+        await queue.send(to_js_obj({"action": action, "limit": limit}))
         print(f"📤 Enqueued: action={action}, limit={limit}")
 
         return Response.json(
-            {
-                "success": True,
-                "message": f"Queued '{action}' for up to {limit} jobs",
-                "queued": True,
-                "stats": None,
-            },
+            {"success": True, "message": f"Queued '{action}' for up to {limit} jobs", "queued": True},
             headers=cors_headers,
         )
 
     async def handle_enhance(self, request, cors_headers: dict):
-        """Run Phase 1 only — ATS enhancement."""
+        """Run Phase 1 only — ATS enhancement (new → enhanced)."""
         limit = await self._parse_limit(request)
-        db = self.env.DB
-        stats = await enhance_unenhanced_jobs(db, limit)
+        stats = await enhance_unenhanced_jobs(self.env.DB, limit)
+        return Response.json(
+            {"success": True, "message": f"Enhanced {stats['enhanced']} jobs", "stats": stats},
+            headers=cors_headers,
+        )
+
+    async def handle_tag(self, request, cors_headers: dict):
+        """Run Phase 2 only — role tagging (enhanced → role-match | role-nomatch)."""
+        limit = await self._parse_limit(request)
+        stats = await tag_roles_for_enhanced_jobs(
+            self.env.DB,
+            getattr(self.env, "AI", None),
+            deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+            deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+            deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+            limit             = limit,
+        )
         return Response.json(
             {
                 "success": True,
-                "message": f"Enhanced {stats['enhanced']} jobs",
-                "stats": stats,
+                "message": f"Tagged {stats['processed']} jobs ({stats['targetRole']} target, {stats['irrelevant']} skipped)",
+                "stats":   stats,
             },
             headers=cors_headers,
         )
 
     async def handle_classify(self, request, cors_headers: dict):
-        """Run Phase 2 only — DeepSeek classification."""
+        """Run Phase 3 only — EU-remote classification (role-match → eu-remote | non-eu)."""
         limit = await self._parse_limit(request)
-        db = self.env.DB
-        stats = await classify_unclassified_jobs(db, self.env, limit)
+        stats = await classify_unclassified_jobs(self.env.DB, self.env, limit)
         return Response.json(
-            {
-                "success": True,
-                "message": f"Classified {stats['processed']} jobs",
-                "stats": stats,
-            },
+            {"success": True, "message": f"Classified {stats['processed']} jobs", "stats": stats},
             headers=cors_headers,
         )
 
     async def handle_process(self, request, cors_headers: dict):
-        """Run full pipeline — Phase 1 (enhance) then Phase 2 (classify).
+        """Run the full three-phase pipeline synchronously (useful for debugging).
 
-        After completion, saves a lightweight checkpoint of the run stats
-        via langgraph-checkpoint-cloudflare-d1 (CloudflareD1Saver).
+        For production use the queue endpoint instead to avoid hitting
+        CF Worker CPU/wall-clock limits on large batches.
         """
         limit = await self._parse_limit(request)
-        db = self.env.DB
+        db    = self.env.DB
 
-        # Phase 1
-        enhance_stats = await enhance_unenhanced_jobs(db, limit)
-
-        # Phase 2
+        enhance_stats  = await enhance_unenhanced_jobs(db, limit)
+        tag_stats      = await tag_roles_for_enhanced_jobs(
+            db, getattr(self.env, "AI", None),
+            deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+            deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+            deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+            limit             = limit,
+        )
         classify_stats = await classify_unclassified_jobs(db, self.env, limit)
 
-        stats = {
-            "enhanced": enhance_stats["enhanced"],
-            "enhanceErrors": enhance_stats["errors"],
-            "processed": classify_stats["processed"],
-            "euRemote": classify_stats["euRemote"],
-            "nonEuRemote": classify_stats["nonEuRemote"],
-            "errors": classify_stats["errors"],
-            "workersAI": classify_stats.get("workersAI", 0),
-            "deepseek": classify_stats.get("deepseek", 0),
-        }
+        stats   = self._merge_stats(enhance_stats, tag_stats, classify_stats)
+        message = self._stats_summary(stats)
 
-        message = (
-            f"Enhanced {stats['enhanced']}, "
-            f"classified {stats['processed']} jobs"
-        )
-
-        print(f"\n✅ Pipeline complete!")
-        print(f"   Enhanced: {stats['enhanced']}")
-        print(f"   Workers AI: {stats['workersAI']}")
-        print(f"   DeepSeek fallback: {stats['deepseek']}")
-        print(f"   Classified: {stats['processed']}")
-        print(f"   EU Remote: {stats['euRemote']}")
-        print(f"   Non-EU: {stats['nonEuRemote']}")
-        print(f"   Errors: {stats['errors'] + stats['enhanceErrors']}")
-
-        # Checkpoint the run via langgraph-checkpoint-cloudflare-d1
+        print(f"\n✅ Pipeline complete — {message}")
         self._save_run_checkpoint(stats)
 
         return Response.json(
@@ -1198,20 +1548,46 @@ class Default(WorkerEntrypoint):
 
     # MARK: - Utilities
 
-    def _save_run_checkpoint(self, stats: dict):
-        """Save a pipeline run checkpoint via langgraph-checkpoint-cloudflare-d1.
+    def _merge_stats(self, enhance: dict, tag: dict, classify: dict) -> dict:
+        """Merge per-phase stats dicts into a single flat summary dict."""
+        return {
+            "enhanced":       enhance.get("enhanced", 0),
+            "enhanceErrors":  enhance.get("errors", 0),
+            "tagged":         tag.get("processed", 0),
+            "targetRole":     tag.get("targetRole", 0),
+            "irrelevant":     tag.get("irrelevant", 0),
+            "tagErrors":      tag.get("errors", 0),
+            "processed":      classify.get("processed", 0),
+            "euRemote":       classify.get("euRemote", 0),
+            "nonEuRemote":    classify.get("nonEuRemote", 0),
+            "classifyErrors": classify.get("errors", 0),
+            "workersAI":      tag.get("workersAI", 0) + classify.get("workersAI", 0),
+            "deepseek":       tag.get("deepseek", 0)  + classify.get("deepseek", 0),
+        }
 
-        Uses CloudflareD1Saver (sync, REST API) to persist a lightweight record
-        of each pipeline run. This lets us track run history and resume from
-        known-good states.
+    def _stats_summary(self, stats: dict) -> str:
+        """One-line human-readable summary of a merged stats dict."""
+        return (
+            f"enhanced={stats['enhanced']} "
+            f"tagged={stats['tagged']} (skip={stats['irrelevant']}) "
+            f"classified={stats['processed']} "
+            f"eu={stats['euRemote']} "
+            f"workersAI={stats['workersAI']} deepseek={stats['deepseek']}"
+        )
+
+    def _save_run_checkpoint(self, stats: dict):
+        """Best-effort checkpoint via langgraph-checkpoint-cloudflare-d1.
+
+        Persists a lightweight record of each pipeline run for history
+        and resume-from-known-good-state functionality.
 
         Requires CF_ACCOUNT_ID, CF_D1_DATABASE_ID, CF_D1_API_TOKEN env vars
-        (or the corresponding wrangler secrets).
+        (set via wrangler secret to avoid committing credentials).
         """
         try:
-            account_id = getattr(self.env, "CF_ACCOUNT_ID", None)
+            account_id  = getattr(self.env, "CF_ACCOUNT_ID", None)
             database_id = getattr(self.env, "CF_D1_DATABASE_ID", None)
-            api_token = getattr(self.env, "CF_D1_API_TOKEN", None)
+            api_token   = getattr(self.env, "CF_D1_API_TOKEN", None)
 
             if not all([account_id, database_id, api_token]):
                 print("   ℹ️  Checkpoint skipped (CF_ACCOUNT_ID/CF_D1_DATABASE_ID/CF_D1_API_TOKEN not set)")
@@ -1224,38 +1600,32 @@ class Default(WorkerEntrypoint):
             )
             saver.setup()
 
-            # Build a minimal checkpoint payload
             from langgraph.checkpoint.base import create_checkpoint, empty_checkpoint
 
             checkpoint = create_checkpoint(empty_checkpoint(), None, 1)
-            run_ts = datetime.now(timezone.utc).isoformat()
-            metadata = {
-                "source": "process-jobs-worker",
-                "step": 1,
-                "writes": None,
-                "run_ts": run_ts,
-                **stats,
-            }
-
-            config = {
+            run_ts     = datetime.now(timezone.utc).isoformat()
+            config     = {
                 "configurable": {
-                    "thread_id": f"process-jobs-{run_ts[:10]}",
+                    "thread_id":     f"process-jobs-{run_ts[:10]}",
                     "checkpoint_ns": "",
                 }
             }
-
-            saver.put(config, checkpoint, metadata, {})
+            saver.put(
+                config,
+                checkpoint,
+                {"source": "process-jobs-worker", "step": 1, "writes": None, "run_ts": run_ts, **stats},
+                {},
+            )
             print(f"   💾 Checkpoint saved (thread: {config['configurable']['thread_id']})")
 
         except Exception as e:
-            # Checkpoint is best-effort — never fail the pipeline
+            # Checkpoint is best-effort — never block the pipeline
             print(f"   ⚠️  Checkpoint save failed: {e}")
 
     async def _parse_limit(self, request) -> int:
-        """Parse optional limit from request body JSON."""
+        """Parse optional limit from request body JSON, defaulting to 50."""
         try:
-            data = await request.json()
-            body = to_py(data)
+            body  = to_py(await request.json())
             limit = body.get("limit")
             if isinstance(limit, (int, float)) and limit > 0:
                 return int(limit)

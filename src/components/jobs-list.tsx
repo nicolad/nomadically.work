@@ -16,45 +16,43 @@ import {
   Container,
   Text,
   Flex,
+  Badge,
   Spinner,
   IconButton,
 } from "@radix-ui/themes";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon, HeartIcon, HeartFilledIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSkillLabel } from "@/lib/skills/taxonomy";
 
 type Job = GetJobsQuery["jobs"]["jobs"][number];
-type BadgeColor = "green" | "orange" | "blue" | "gray";
-
-type JobStatus = "eu_remote" | "non_eu" | "enhanced" | "new" | "error" | "all";
 
 interface JobsListProps {
   searchFilter?: string;
 }
 
-const getStatusBadgeColor = (status: Job["status"]): BadgeColor => {
-  switch (status) {
-    case "eu_remote":
-      return "green";
-    case "enhanced":
-      return "blue";
-    default:
-      return "gray";
-  }
-};
-
 const getStatusLabel = (status: Job["status"]): string => {
   switch (status) {
     case "eu_remote":
-      return "EU Remote";
+      return "eu remote";
     case "non_eu":
-      return "Not Remote EU";
+      return "not remote eu";
     case "enhanced":
-      return "Enhanced";
+      return "enhanced";
     default:
-      return status ?? "Unknown";
+      return status ?? "unknown";
   }
 };
+
+/** First letter of each word in company_key, max 2 chars */
+function companyInitials(key: string): string {
+  return key
+    .split(/[-_.]/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export function JobsList({ searchFilter = "" }: JobsListProps) {
   const router = useRouter();
@@ -62,11 +60,10 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteJobMutation] = useDeleteJobMutation();
+  const [saved, setSaved] = useState<Set<number>>(new Set());
 
-  // Check if current user is admin
   const isAdmin = user?.email === ADMIN_EMAIL;
 
-  // Fetch user settings to get excluded companies
   const { data: userSettingsData } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
     skip: !user?.id,
@@ -75,11 +72,9 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
   const excludedCompanies =
     userSettingsData?.userSettings?.excluded_companies || [];
 
-  // Handle delete job
   const handleDeleteJob = async (jobId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     try {
       await deleteJobMutation({
         variables: { id: jobId },
@@ -91,7 +86,17 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
     }
   };
 
-  // Memoize query variables to ensure stable object reference
+  const toggleSave = (jobId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSaved((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  };
+
   const queryVariables = useMemo(
     () => ({
       search: searchFilter || undefined,
@@ -106,39 +111,29 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
     variables: queryVariables,
     notifyOnNetworkStatusChange: true,
-    fetchPolicy: "network-only", // Force network fetch to ensure fresh data
+    fetchPolicy: "network-only",
   });
 
   const jobs = data?.jobs.jobs || [];
   const totalCount = data?.jobs.totalCount || 0;
   const hasMore = jobs.length < totalCount;
 
-  // Load more jobs
   const loadMore = useCallback(async () => {
     if (!hasMore || loading) return;
-
     try {
-      await fetchMore({
-        variables: {
-          offset: jobs.length,
-        },
-      });
+      await fetchMore({ variables: { offset: jobs.length } });
     } catch (err) {
       console.error("Error loading more jobs:", err);
     }
   }, [hasMore, loading, jobs.length, fetchMore]);
 
-  // Ref callback for infinite scroll
   const loadMoreRefCallback = useCallback(
     (node: HTMLDivElement | null) => {
       if (observerRef.current) observerRef.current.disconnect();
-
       if (node && hasMore && !loading) {
         observerRef.current = new IntersectionObserver(
           (entries) => {
-            if (entries[0].isIntersecting) {
-              loadMore();
-            }
+            if (entries[0].isIntersecting) loadMore();
           },
           { threshold: 0.1 },
         );
@@ -165,133 +160,150 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
 
   return (
     <Box>
-      {/* header row */}
-      <Flex
-        justify="between"
-        align="center"
-        py="2"
-        px="3"
-        style={{ borderBottom: "1px solid var(--gray-6)" }}
-      >
-        <span className="yc-row-title" style={{ fontSize: 14 }}>
+      {/* header */}
+      <Flex justify="between" align="center" py="2" px="3">
+        <Text size="2" weight="medium" style={{ color: "var(--gray-11)" }}>
           jobs
-        </span>
-        <span className="yc-row-meta">
+        </Text>
+        <Text
+          size="1"
+          style={{ fontFamily: "var(--yc-font-mono)", color: "var(--gray-9)" }}
+        >
           {jobs.length}/{totalCount}
-        </span>
+        </Text>
       </Flex>
 
-      {/* dense ruled list */}
-      <div style={{ borderTop: "1px solid var(--gray-6)" }}>
-        {jobs.map((job) => {
+      {/* card container */}
+      <div className="job-list-card">
+        {jobs.map((job, idx) => {
           const jobId = last(split(job.external_id, "/")) || job.external_id;
+          const isSaved = saved.has(job.id);
 
           return (
             <Link
               key={job.id}
               href={`/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`}
               target="_blank"
-              className="yc-row"
+              className="job-row"
             >
-              {/* left: title + inline meta */}
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className="yc-row-title">{job.title}</span>
+              {/* company avatar */}
+              <div className="job-row-avatar">
+                {companyInitials(job.company_key || "?")}
+              </div>
 
-                  {/* micro-pill status */}
+              {/* content — stacked: title, company, meta */}
+              <div className="job-row-content">
+                {/* line 1: title + status pill */}
+                <div className="job-row-title-line">
+                  <span className="job-row-title">{job.title}</span>
                   {job.status && (
-                    <span
-                      style={{
-                        fontFamily: "var(--yc-font-mono)",
-                        fontSize: 10,
-                        padding: "0 4px",
-                        border: `1px solid ${
-                          job.status === "eu_remote"
-                            ? "var(--green-9)"
-                            : job.status === "non_eu"
-                              ? "var(--orange-9)"
-                              : "var(--gray-6)"
-                        }`,
-                        color:
-                          job.status === "eu_remote"
-                            ? "var(--green-9)"
-                            : job.status === "non_eu"
-                              ? "var(--orange-9)"
-                              : "var(--gray-9)",
-                        lineHeight: "16px",
-                        whiteSpace: "nowrap",
-                        textTransform: "lowercase",
-                      }}
+                    <Badge
+                      size="1"
+                      variant="soft"
+                      color={
+                        job.status === "eu_remote"
+                          ? "green"
+                          : job.status === "non_eu"
+                            ? "amber"
+                            : "gray"
+                      }
+                      style={{ fontSize: 10, textTransform: "lowercase" }}
                     >
                       {getStatusLabel(job.status)}
-                    </span>
+                    </Badge>
                   )}
                 </div>
 
-                {/* inline metadata line */}
-                <span className="yc-row-meta">
-                  {job.company_key && (
-                    <span
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        router.push(`/boards/${job.company_key}`);
-                      }}
-                      style={{
-                        cursor: "pointer",
-                        textDecoration: "underline",
-                        textUnderlineOffset: 2,
-                      }}
-                    >
-                      {job.company_key}
+                {/* line 2: company name */}
+                {job.company_key && (
+                  <span
+                    className="job-row-company"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push(`/boards/${job.company_key}`);
+                    }}
+                  >
+                    {job.company_key}
+                  </span>
+                )}
+
+                {/* line 3: structured metadata */}
+                <div className="job-row-meta-line">
+                  {job.location && (
+                    <span className="job-row-meta-item">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 15 15"
+                        fill="none"
+                        style={{ opacity: 0.5, flexShrink: 0 }}
+                      >
+                        <path
+                          d="M7.5 0C4.46 0 2 2.46 2 5.5 2 9.64 7.5 15 7.5 15S13 9.64 13 5.5C13 2.46 10.54 0 7.5 0Zm0 7.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      {job.location}
                     </span>
                   )}
-                  {job.location && <span> · {job.location}</span>}
-                  {job.source_kind && <span> · {job.source_kind}</span>}
+                  {job.source_kind && (
+                    <span className="job-row-meta-badge">
+                      {job.source_kind}
+                    </span>
+                  )}
                   {job.posted_at && (
-                    <span>
-                      {" "}
-                      · {new Date(job.posted_at).toLocaleDateString()}
+                    <span
+                      className="job-row-meta-item"
+                      style={{ color: "var(--gray-8)" }}
+                    >
+                      {new Date(job.posted_at).toLocaleDateString()}
                     </span>
                   )}
                   {job.skills && job.skills.length > 0 && (
-                    <span>
-                      {" · "}
+                    <span
+                      className="job-row-meta-item"
+                      style={{ color: "var(--gray-8)" }}
+                    >
                       {sortBy(job.skills, [(s) => s.level !== "required"])
-                        .slice(0, 4)
+                        .slice(0, 3)
                         .map((s) => getSkillLabel(s.tag))
                         .join(", ")}
-                      {job.skills.length > 4 && ` +${job.skills.length - 4}`}
+                      {job.skills.length > 3 && ` +${job.skills.length - 3}`}
                     </span>
                   )}
-                </span>
+                </div>
               </div>
 
-              {/* right: CTA + admin */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginLeft: 12,
-                }}
-              >
+              {/* right actions */}
+              <div className="job-row-actions">
+                <IconButton
+                  size="1"
+                  variant="ghost"
+                  color="gray"
+                  onClick={(e) => toggleSave(job.id, e)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {isSaved ? (
+                    <HeartFilledIcon
+                      width={14}
+                      height={14}
+                      style={{ color: "var(--red-9)" }}
+                    />
+                  ) : (
+                    <HeartIcon width={14} height={14} />
+                  )}
+                </IconButton>
+
                 {job.url && (
                   <span
                     className="yc-cta"
-                    style={{ fontSize: 11, padding: "2px 8px" }}
+                    style={{ fontSize: 11, padding: "3px 10px" }}
                   >
                     apply
                   </span>
                 )}
+
                 {isAdmin && (
                   <IconButton
                     size="1"
@@ -307,19 +319,35 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
             </Link>
           );
         })}
+
+        {/* empty border-bottom guard */}
+        {jobs.length === 0 && !loading && (
+          <Flex justify="center" py="6">
+            <Text size="2" style={{ color: "var(--gray-9)" }}>
+              no jobs found
+            </Text>
+          </Flex>
+        )}
       </div>
 
       {/* infinite scroll trigger */}
       {hasMore && (
         <Box ref={loadMoreRefCallback} py="4">
-          {loading && (
+          {loading ? (
             <Flex justify="center" align="center">
               <Spinner size="2" />
             </Flex>
-          )}
-          {!loading && (
+          ) : (
             <Flex justify="center">
-              <span className="yc-row-meta">scroll for more…</span>
+              <Text
+                size="1"
+                style={{
+                  fontFamily: "var(--yc-font-mono)",
+                  color: "var(--gray-9)",
+                }}
+              >
+                scroll for more…
+              </Text>
             </Flex>
           )}
         </Box>
@@ -328,9 +356,15 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       {!hasMore && jobs.length > 0 && (
         <Box py="4">
           <Flex justify="center">
-            <span className="yc-row-meta">
+            <Text
+              size="1"
+              style={{
+                fontFamily: "var(--yc-font-mono)",
+                color: "var(--gray-9)",
+              }}
+            >
               {jobs.length}/{totalCount} loaded
-            </span>
+            </Text>
           </Flex>
         </Box>
       )}

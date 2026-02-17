@@ -1,25 +1,25 @@
 /* ============================================================
-   Nomadically.Work — Dark-mode YC design system
+   Nomadically.Work — Dark-mode design system
    ============================================================
    Uses ONLY Radix Themes built-in color tokens.
-   Set <Theme accentColor="orange"> so --accent-* = orange.
+   <Theme appearance="dark"> uses default accent color (indigo).
 
    Radix color mapping:
-     --orange-9 / --accent-9    primary action / topbar
-     --orange-10 / --accent-10  hover state for orange CTAs
-     --color-background         page background
-     --gray-2                   card / row surface
-     --gray-3                   hover tint on interactive rows
-     --gray-6                   hairline borders (1px)
-     --gray-12                  body text
-     --gray-11                  meta / secondary text
-     --gray-9                   tertiary / timestamps
-     --green-9                  positive status
+     --accent-9              primary action / topbar
+     --accent-10             hover state for accent CTAs
+     --accent-contrast       text on accent backgrounds
+     --color-background      page background
+     --gray-2                card / row surface
+     --gray-3                hover tint on interactive rows
+     --gray-6                hairline borders (1px)
+     --gray-12               body text
+     --gray-11               meta / secondary text
+     --gray-9                tertiary / timestamps
+     --green-9               positive status
 
    Typography
    ----------
-   Body:  Verdana, Geneva, sans-serif @ 13px/1.5
-   Mono:  "Courier New", Courier, monospace @ 12px
+   Uses Radix Themes default system font stack.
    CTAs:  lowercase, no "!" or "Now"
 
    Density
@@ -29,27 +29,13 @@
    ============================================================ */
 
 :root {
-  /* ---------- typography tokens ---------- */
-  --yc-font-body: Verdana, Geneva, sans-serif;
-  --yc-font-mono: "Courier New", Courier, monospace;
-  --yc-font-size-body: 13px;
-  --yc-font-size-mono: 12px;
-  --yc-line-height: 1.5;
-
   /* ---------- spacing ---------- */
-  --yc-row-height: 64px; /* target 60-70px per row          */
-  --yc-topbar-height: 28px; /* the iconic orange strip         */
-
-  /* ---------- legacy aliases (drop later) ---------- */
-  --font-geist-sans: var(--yc-font-body);
-  --font-geist-mono: var(--yc-font-mono);
+  --yc-row-height: 64px; /* target 60-70px per row */
+  --yc-topbar-height: 36px; /* the accent strip     */
 }
 
 /* ---------- base resets ---------- */
 body {
-  font-family: var(--yc-font-body);
-  font-size: var(--yc-font-size-body);
-  line-height: var(--yc-line-height);
   color: var(--gray-12);
   background: var(--color-background);
   -webkit-font-smoothing: antialiased;
@@ -73,18 +59,17 @@ a:hover svg {
 /* ---------- YC topbar ---------- */
 .yc-topbar {
   height: var(--yc-topbar-height);
-  background: var(--orange-9);
+  background: var(--accent-9);
   display: flex;
   align-items: center;
   padding: 0 16px;
-  font-family: var(--yc-font-body);
   font-size: 11px;
   font-weight: 700;
-  color: var(--orange-contrast);
+  color: var(--accent-contrast);
   letter-spacing: 0.02em;
 }
 .yc-topbar a {
-  color: var(--orange-contrast);
+  color: var(--accent-contrast);
   text-decoration: none;
   margin-right: 14px;
 }
@@ -96,21 +81,19 @@ a:hover svg {
 .yc-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
+  gap: 16px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--gray-6);
   background: var(--gray-2);
 }
 .yc-nav a {
-  font-family: var(--yc-font-body);
-  font-size: var(--yc-font-size-body);
-  color: var(--gray-11);
+  color: var(--gray-12);
   text-decoration: none;
   text-transform: lowercase;
   transition: color 0.15s;
 }
 .yc-nav a:hover {
-  color: var(--orange-9);
+  color: var(--accent-9);
 }
 
 /* ---------- flat rows (jobs, companies) ---------- */
@@ -130,7 +113,7 @@ a:hover svg {
   background: var(--gray-3);
 }
 .yc-row-title {
-  font-size: var(--yc-font-size-body);
+  font-size: 13px;
   font-weight: 600;
   color: var(--gray-12);
   margin: 0;
@@ -139,10 +122,126 @@ a:hover svg {
   text-overflow: ellipsis;
 }
 .yc-row-meta {
-  font-family: var(--yc-font-mono);
-  font-size: var(--yc-font-size-mono);
+  font-size: 12px;
   color: var(--gray-9);
   white-space: nowrap;
+}
+
+/* ---------- job list card container ---------- */
+.job-list-card {
+  background: var(--gray-2);
+  border: 1px solid var(--gray-6);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 4px;
+}
+
+/* ---------- job rows (redesigned — multi-line) ---------- */
+.job-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-4);
+  background: transparent;
+  transition: background 0.12s;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.job-row:last-child {
+  border-bottom: none;
+}
+.job-row:hover {
+  background: var(--gray-3);
+}
+
+/* company initial avatar */
+.job-row-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--gray-4);
+  color: var(--gray-11);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* stacked content */
+.job-row-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* line 1: title + badge */
+.job-row-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.job-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-12);
+  line-height: 1.35;
+}
+
+/* line 2: company */
+.job-row-company {
+  font-size: 13px;
+  color: var(--gray-11);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+.job-row-company:hover {
+  color: var(--accent-9);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* line 3: structured metadata */
+.job-row-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.job-row-meta-item {
+  font-family: var(--yc-font-mono);
+  font-size: 11px;
+  color: var(--gray-10);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.job-row-meta-badge {
+  font-family: var(--yc-font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border: 1px solid var(--gray-6);
+  color: var(--gray-11);
+  border-radius: 3px;
+  text-transform: lowercase;
+}
+
+/* right actions column */
+.job-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* ---------- CTA buttons ---------- */
@@ -150,8 +249,8 @@ a:hover svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--orange-9);
-  color: var(--orange-contrast);
+  background: var(--accent-9);
+  color: var(--accent-contrast);
   border: none;
   font-family: var(--yc-font-body);
   font-size: var(--yc-font-size-body);
@@ -165,7 +264,7 @@ a:hover svg {
   box-shadow: none;
 }
 .yc-cta:hover {
-  background: var(--orange-10);
+  background: var(--accent-10);
 }
 
 /* secondary action — ghost style */
@@ -200,8 +299,8 @@ a:hover svg {
   border-radius: 0;
 }
 .yc-badge--orange {
-  border-color: var(--orange-9);
-  color: var(--orange-9);
+  border-color: var(--accent-9);
+  color: var(--accent-9);
 }
 .yc-badge--green {
   border-color: var(--green-9);
@@ -233,7 +332,7 @@ a:hover svg {
   color: var(--gray-9);
 }
 .yc-search input:focus {
-  border-color: var(--orange-9);
+  border-color: var(--accent-9);
 }
 
 /* ---------- Radix theme overrides (flatten everything) ---------- */
@@ -257,13 +356,13 @@ a:hover svg {
   font-family: var(--yc-font-body) !important;
 }
 
-/* primary variant → orange */
+/* primary variant → accent */
 .rt-Button:where(.rt-variant-solid) {
-  background: var(--orange-9) !important;
-  color: var(--orange-contrast) !important;
+  background: var(--accent-9) !important;
+  color: var(--accent-contrast) !important;
 }
 .rt-Button:where(.rt-variant-solid):hover {
-  background: var(--orange-10) !important;
+  background: var(--accent-10) !important;
 }
 
 /* soft / ghost variant → flat borders */
@@ -293,7 +392,7 @@ a:hover svg {
 }
 .rt-TextFieldInput:focus {
   box-shadow: none !important;
-  border-color: var(--orange-9) !important;
+  border-color: var(--accent-9) !important;
 }
 
 /* ---------- shimmer animation (loading) ---------- */
@@ -338,5 +437,20 @@ a:hover svg {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px;
+  }
+  .job-row {
+    padding: 10px;
+    gap: 10px;
+  }
+  .job-row-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+  .job-row-title {
+    font-size: 13px;
+  }
+  .job-row-actions {
+    gap: 4px;
   }
 }

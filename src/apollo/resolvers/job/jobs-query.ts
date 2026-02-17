@@ -1,5 +1,16 @@
 import { jobs } from "@/db/schema";
-import { eq, and, or, like, desc } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  like,
+  notLike,
+  desc,
+  notInArray,
+  isNull,
+  sql,
+  count,
+} from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import { EXCLUDED_LOCATIONS, EXCLUDED_COUNTRIES } from "./constants";
 
@@ -34,53 +45,50 @@ export async function jobsQuery(
       );
     }
 
-    // Query all jobs (without pagination yet)
-    let query = context.db.select().from(jobs);
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)!) as any;
+    // Exclude companies at SQL level
+    if (args.excludedCompanies && args.excludedCompanies.length > 0) {
+      conditions.push(notInArray(jobs.company_key, args.excludedCompanies));
     }
 
-    query = query.orderBy(desc(jobs.posted_at), desc(jobs.created_at)) as any;
-
-    // Get all results first
-    const allResults = await query;
-
-    // Filter out excluded companies and specific locations
-    let filteredJobs = allResults || [];
-
-    // Filter out excluded companies
-    if (args.excludedCompanies && args.excludedCompanies.length > 0) {
-      filteredJobs = filteredJobs.filter(
-        (job) => !args.excludedCompanies!.includes(job.company_key),
+    // Exclude locations at SQL level
+    for (const location of EXCLUDED_LOCATIONS) {
+      conditions.push(
+        or(isNull(jobs.location), notLike(jobs.location, `%${location}%`))!,
       );
     }
 
-    // Filter out jobs with excluded locations
-    filteredJobs = filteredJobs.filter(
-      (job) =>
-        !EXCLUDED_LOCATIONS.some((location) =>
-          job?.location?.includes(location),
-        ),
-    );
+    // Exclude countries at SQL level
+    if (EXCLUDED_COUNTRIES.length > 0) {
+      conditions.push(
+        or(isNull(jobs.country), notInArray(jobs.country, EXCLUDED_COUNTRIES))!,
+      );
+    }
 
-    // Filter out jobs with excluded countries (from country column)
-    filteredJobs = filteredJobs.filter((job) => {
-      // Exclude if country is in the excluded list
-      return !job.country || !EXCLUDED_COUNTRIES.includes(job.country);
-    });
+    const whereClause =
+      conditions.length > 0 ? and(...conditions)! : undefined;
 
-    // Calculate total count from filtered results
-    const totalCount = filteredJobs.length;
-
-    // Apply pagination to filtered results
+    // Run count and paginated query in parallel
     const limit = args.limit ?? 20;
     const offset = args.offset ?? 0;
-    const paginatedJobs = filteredJobs.slice(offset, offset + limit);
+
+    const [countResult, paginatedJobs] = await Promise.all([
+      context.db
+        .select({ value: count() })
+        .from(jobs)
+        .where(whereClause)
+        .then((r) => r[0]?.value ?? 0),
+      context.db
+        .select()
+        .from(jobs)
+        .where(whereClause)
+        .orderBy(desc(jobs.posted_at), desc(jobs.created_at))
+        .limit(limit)
+        .offset(offset),
+    ]);
 
     return {
       jobs: paginatedJobs,
-      totalCount,
+      totalCount: countResult,
     };
   } catch (error) {
     console.error("Error fetching jobs:", error);

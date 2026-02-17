@@ -187,7 +187,6 @@ export function CompaniesList() {
                 {company.industry && (
                   <span
                     style={{
-                      fontFamily: "var(--yc-font-mono)",
                       fontSize: 10,
                       color: "var(--gray-9)",
                       padding: "0 4px",

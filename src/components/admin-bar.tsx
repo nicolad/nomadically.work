@@ -27,8 +27,8 @@ export function AdminBar({ userEmail }: AdminBarProps) {
           fontFamily: "var(--yc-font-mono)",
           fontSize: 10,
           padding: "0 4px",
-          border: "1px solid var(--orange-9)",
-          color: "var(--orange-9)",
+          border: "1px solid var(--accent-9)",
+          color: "var(--accent-9)",
           lineHeight: "16px",
           textTransform: "lowercase",
         }}

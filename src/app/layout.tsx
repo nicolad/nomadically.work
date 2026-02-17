@@ -22,39 +22,21 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" style={{ fontFamily: "var(--yc-font-body)" }}>
+      <html lang="en">
         <body>
-          <Theme appearance="dark" accentColor="orange">
+          <Theme appearance="dark">
             <Providers>
-              {/* ── YC orange topbar ── */}
-              <div className="yc-topbar">
-                <Link
-                  href="/"
-                  style={{ display: "flex", alignItems: "center" }}
-                >
+              {/* ── nav strip with logo ── */}
+              <nav className="yc-nav">
+                <Link href="/" style={{ display: "flex", alignItems: "center", marginRight: 24 }}>
                   <Image
                     src="/logo.svg"
                     alt="Nomadically"
-                    width={120}
-                    height={18}
+                    width={200}
+                    height={28}
                     priority
-                    style={{ marginRight: 12 }}
                   />
                 </Link>
-                <span style={{ flex: 1 }} />
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "var(--orange-contrast)",
-                  }}
-                >
-                  remote eu jobs
-                </span>
-              </div>
-
-              {/* ── flat nav strip ── */}
-              <nav className="yc-nav">
                 <Link href="/">jobs</Link>
                 <Link href="/applications">applications</Link>
                 <Link href="/companies">companies</Link>

@@ -1,0 +1,24 @@
+name = "ashby-crawler"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-02-01"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+# D1 Database — same database as the main app
+[[d1_databases]]
+binding = "DB"
+database_name = "nomadically-work-db"
+database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
+
+# Observability
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# Secrets (set via: wrangler secret put SECRET_NAME --config workers/ashby-crawler/wrangler.toml)
+# None required — the worker only calls the public Common Crawl CDX API.
+# Add CRON_SECRET here if you later add a scheduled trigger with auth.

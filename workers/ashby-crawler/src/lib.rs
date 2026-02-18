@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use worker::*;
+use worker::wasm_bindgen::JsValue;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MODULE: rig_compat — Rig framework patterns adapted for CF Workers/WASM
@@ -605,13 +606,14 @@ fn build_enrichment_pipeline() -> rig_compat::Pipeline<serde_json::Value, serde_
         })
         // Step 2: Extract domain hints from URL path
         .then(|mut val| {
-            if let Some(url) = val.get("url").and_then(|u| u.as_str()) {
+            let url_str = val.get("url").and_then(|u| u.as_str()).map(String::from);
+            if let Some(url) = url_str {
                 let segments: Vec<&str> = url
                     .split('/')
                     .filter(|s| !s.is_empty() && *s != "https:" && *s != "jobs.ashbyhq.com")
                     .collect();
-                val["url_segments"] = serde_json::json!(segments);
                 val["has_job_postings"] = serde_json::json!(segments.len() > 1);
+                val["url_segments"] = serde_json::json!(segments);
             }
             val
         })
@@ -671,7 +673,7 @@ async fn handle_crawl(req: Request, ctx: RouteContext<()>) -> Result<Response> {
                 "message": "Already done. DELETE /progress?crawl_id=… to re-run."
             })));
         }
-        Some((t, c, _, f)) => (t, c, "running".into(), f),
+        Some((t, c, _, f)) => (t, c, String::from("running"), f),
         None => (get_num_pages(&crawl_id).await?, 0, "pending".into(), 0),
     };
 

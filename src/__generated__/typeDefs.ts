@@ -551,6 +551,7 @@ type Mutation {
   3. Return the updated job with full ATS data
   """
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
+  ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult
   ingest_company_snapshot(capture_timestamp: String, company_id: Int!, content_hash: String, crawl_id: String, evidence: EvidenceInput!, extracted: JSON, fetched_at: String!, http_status: Int, jsonld: JSON, mime: String, source_url: String!, text_sample: String): CompanySnapshot!
   """
   Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
@@ -563,6 +564,7 @@ type Mutation {
   updateLangSmithPrompt(input: UpdateLangSmithPromptInput!, promptIdentifier: String!): LangSmithPrompt!
   updatePromptLabel(label: String!, name: String!, version: Int!): Prompt!
   updateUserSettings(settings: UserSettingsInput!, userId: String!): UserSettings!
+  uploadResume(email: String!, filename: String!, resumePdf: String!): ResumeUploadResult
   upsert_company_ats_boards(boards: [ATSBoardUpsertInput!]!, company_id: Int!): [ATSBoard!]!
 }
 
@@ -638,6 +640,7 @@ input PushLangSmithPromptInput {
 
 type Query {
   applications: [Application!]!
+  askAboutResume(email: String!, question: String!): ResumeAnswer
   companies(filter: CompanyFilterInput, limit: Int, offset: Int, order_by: CompanyOrderBy): CompaniesResponse!
   company(id: Int, key: String): Company
   company_ats_boards(company_id: Int!): [ATSBoard!]!
@@ -652,6 +655,7 @@ type Query {
   myPromptUsage(limit: Int): [PromptUsage!]!
   prompt(label: String, name: String!, version: Int): Prompt
   prompts: [RegisteredPrompt!]!
+  resumeStatus(email: String!): ResumeStatus
   textToSql(question: String!): TextToSqlResult!
   userSettings(userId: String!): UserSettings
 }
@@ -679,6 +683,35 @@ type RegisteredPrompt {
   type: String!
   usageCount: Int
   versions: [Int!]!
+}
+
+type ResumeAnswer {
+  answer: String!
+  context_count: Int!
+}
+
+type ResumeIngestResult {
+  chunks_stored: Int
+  error: String
+  job_id: String!
+  resume_id: String
+  status: String!
+  success: Boolean!
+}
+
+type ResumeStatus {
+  chunk_count: Int
+  exists: Boolean!
+  filename: String
+  ingested_at: String
+  resume_id: String
+}
+
+type ResumeUploadResult {
+  job_id: String!
+  status: String!
+  success: Boolean!
+  tier: String!
 }
 
 enum SourceType {

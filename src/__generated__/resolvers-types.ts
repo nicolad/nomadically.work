@@ -601,6 +601,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
@@ -613,6 +614,7 @@ export type Mutation = {
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
+  uploadResume: Maybe<ResumeUploadResult>;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
 
@@ -672,6 +674,13 @@ export type MutationEnhanceJobFromAtsArgs = {
 };
 
 
+export type MutationIngestResumeParseArgs = {
+  email: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  job_id: Scalars['String']['input'];
+};
+
+
 export type MutationIngest_Company_SnapshotArgs = {
   capture_timestamp?: InputMaybe<Scalars['String']['input']>;
   company_id: Scalars['Int']['input'];
@@ -721,6 +730,13 @@ export type MutationUpdatePromptLabelArgs = {
 export type MutationUpdateUserSettingsArgs = {
   settings: UserSettingsInput;
   userId: Scalars['String']['input'];
+};
+
+
+export type MutationUploadResumeArgs = {
+  email: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  resumePdf: Scalars['String']['input'];
 };
 
 
@@ -805,6 +821,7 @@ export type PushLangSmithPromptInput = {
 export type Query = {
   __typename?: 'Query';
   applications: Array<Application>;
+  askAboutResume: Maybe<ResumeAnswer>;
   companies: CompaniesResponse;
   company: Maybe<Company>;
   company_ats_boards: Array<AtsBoard>;
@@ -819,8 +836,15 @@ export type Query = {
   myPromptUsage: Array<PromptUsage>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
+  resumeStatus: Maybe<ResumeStatus>;
   textToSql: TextToSqlResult;
   userSettings: Maybe<UserSettings>;
+};
+
+
+export type QueryAskAboutResumeArgs = {
+  email: Scalars['String']['input'];
+  question: Scalars['String']['input'];
 };
 
 
@@ -908,6 +932,11 @@ export type QueryPromptArgs = {
 };
 
 
+export type QueryResumeStatusArgs = {
+  email: Scalars['String']['input'];
+};
+
+
 export type QueryTextToSqlArgs = {
   question: Scalars['String']['input'];
 };
@@ -942,6 +971,39 @@ export type RegisteredPrompt = {
   type: Scalars['String']['output'];
   usageCount: Maybe<Scalars['Int']['output']>;
   versions: Array<Scalars['Int']['output']>;
+};
+
+export type ResumeAnswer = {
+  __typename?: 'ResumeAnswer';
+  answer: Scalars['String']['output'];
+  context_count: Scalars['Int']['output'];
+};
+
+export type ResumeIngestResult = {
+  __typename?: 'ResumeIngestResult';
+  chunks_stored: Maybe<Scalars['Int']['output']>;
+  error: Maybe<Scalars['String']['output']>;
+  job_id: Scalars['String']['output'];
+  resume_id: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
+export type ResumeStatus = {
+  __typename?: 'ResumeStatus';
+  chunk_count: Maybe<Scalars['Int']['output']>;
+  exists: Scalars['Boolean']['output'];
+  filename: Maybe<Scalars['String']['output']>;
+  ingested_at: Maybe<Scalars['String']['output']>;
+  resume_id: Maybe<Scalars['String']['output']>;
+};
+
+export type ResumeUploadResult = {
+  __typename?: 'ResumeUploadResult';
+  job_id: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  tier: Scalars['String']['output'];
 };
 
 export type SourceType =
@@ -1167,6 +1229,10 @@ export type ResolversTypes = {
   QuestionAnswer: ResolverTypeWrapper<Partial<QuestionAnswer>>;
   QuestionAnswerInput: ResolverTypeWrapper<Partial<QuestionAnswerInput>>;
   RegisteredPrompt: ResolverTypeWrapper<Partial<RegisteredPrompt>>;
+  ResumeAnswer: ResolverTypeWrapper<Partial<ResumeAnswer>>;
+  ResumeIngestResult: ResolverTypeWrapper<Partial<ResumeIngestResult>>;
+  ResumeStatus: ResolverTypeWrapper<Partial<ResumeStatus>>;
+  ResumeUploadResult: ResolverTypeWrapper<Partial<ResumeUploadResult>>;
   SourceType: ResolverTypeWrapper<Partial<SourceType>>;
   String: ResolverTypeWrapper<Partial<Scalars['String']['output']>>;
   TextToSqlResult: ResolverTypeWrapper<Partial<TextToSqlResult>>;
@@ -1241,6 +1307,10 @@ export type ResolversParentTypes = {
   QuestionAnswer: Partial<QuestionAnswer>;
   QuestionAnswerInput: Partial<QuestionAnswerInput>;
   RegisteredPrompt: Partial<RegisteredPrompt>;
+  ResumeAnswer: Partial<ResumeAnswer>;
+  ResumeIngestResult: Partial<ResumeIngestResult>;
+  ResumeStatus: Partial<ResumeStatus>;
+  ResumeUploadResult: Partial<ResumeUploadResult>;
   String: Partial<Scalars['String']['output']>;
   TextToSqlResult: Partial<TextToSqlResult>;
   URL: Partial<Scalars['URL']['output']>;
@@ -1615,6 +1685,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
+  ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
@@ -1622,6 +1693,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updateLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationUpdateLangSmithPromptArgs, 'input' | 'promptIdentifier'>>;
   updatePromptLabel?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationUpdatePromptLabelArgs, 'label' | 'name' | 'version'>>;
   updateUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType, RequireFields<MutationUpdateUserSettingsArgs, 'settings' | 'userId'>>;
+  uploadResume?: Resolver<Maybe<ResolversTypes['ResumeUploadResult']>, ParentType, ContextType, RequireFields<MutationUploadResumeArgs, 'email' | 'filename' | 'resumePdf'>>;
   upsert_company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<MutationUpsert_Company_Ats_BoardsArgs, 'boards' | 'company_id'>>;
 };
 
@@ -1669,6 +1741,7 @@ export type PromptUsageResolvers<ContextType = GraphQLContext, ParentType extend
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   applications?: Resolver<Array<ResolversTypes['Application']>, ParentType, ContextType>;
+  askAboutResume?: Resolver<Maybe<ResolversTypes['ResumeAnswer']>, ParentType, ContextType, RequireFields<QueryAskAboutResumeArgs, 'email' | 'question'>>;
   companies?: Resolver<ResolversTypes['CompaniesResponse'], ParentType, ContextType, Partial<QueryCompaniesArgs>>;
   company?: Resolver<Maybe<ResolversTypes['Company']>, ParentType, ContextType, Partial<QueryCompanyArgs>>;
   company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<QueryCompany_Ats_BoardsArgs, 'company_id'>>;
@@ -1683,6 +1756,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   myPromptUsage?: Resolver<Array<ResolversTypes['PromptUsage']>, ParentType, ContextType, Partial<QueryMyPromptUsageArgs>>;
   prompt?: Resolver<Maybe<ResolversTypes['Prompt']>, ParentType, ContextType, RequireFields<QueryPromptArgs, 'name'>>;
   prompts?: Resolver<Array<ResolversTypes['RegisteredPrompt']>, ParentType, ContextType>;
+  resumeStatus?: Resolver<Maybe<ResolversTypes['ResumeStatus']>, ParentType, ContextType, RequireFields<QueryResumeStatusArgs, 'email'>>;
   textToSql?: Resolver<ResolversTypes['TextToSqlResult'], ParentType, ContextType, RequireFields<QueryTextToSqlArgs, 'question'>>;
   userSettings?: Resolver<Maybe<ResolversTypes['UserSettings']>, ParentType, ContextType, RequireFields<QueryUserSettingsArgs, 'userId'>>;
 };
@@ -1704,6 +1778,35 @@ export type RegisteredPromptResolvers<ContextType = GraphQLContext, ParentType e
   type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   usageCount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   versions?: Resolver<Array<ResolversTypes['Int']>, ParentType, ContextType>;
+};
+
+export type ResumeAnswerResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeAnswer'] = ResolversParentTypes['ResumeAnswer']> = {
+  answer?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  context_count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
+export type ResumeIngestResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeIngestResult'] = ResolversParentTypes['ResumeIngestResult']> = {
+  chunks_stored?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  error?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  job_id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  resume_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+};
+
+export type ResumeStatusResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeStatus'] = ResolversParentTypes['ResumeStatus']> = {
+  chunk_count?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  exists?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  filename?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ingested_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  resume_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
+export type ResumeUploadResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeUploadResult'] = ResolversParentTypes['ResumeUploadResult']> = {
+  job_id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  tier?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type TextToSqlResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TextToSqlResult'] = ResolversParentTypes['TextToSqlResult']> = {
@@ -1789,6 +1892,10 @@ export type Resolvers<ContextType = GraphQLContext> = {
   Query?: QueryResolvers<ContextType>;
   QuestionAnswer?: QuestionAnswerResolvers<ContextType>;
   RegisteredPrompt?: RegisteredPromptResolvers<ContextType>;
+  ResumeAnswer?: ResumeAnswerResolvers<ContextType>;
+  ResumeIngestResult?: ResumeIngestResultResolvers<ContextType>;
+  ResumeStatus?: ResumeStatusResolvers<ContextType>;
+  ResumeUploadResult?: ResumeUploadResultResolvers<ContextType>;
   TextToSqlResult?: TextToSqlResultResolvers<ContextType>;
   URL?: GraphQLScalarType;
   Upload?: GraphQLScalarType;

@@ -598,6 +598,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
@@ -610,6 +611,7 @@ export type Mutation = {
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
+  uploadResume: Maybe<ResumeUploadResult>;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
 
@@ -669,6 +671,13 @@ export type MutationEnhanceJobFromAtsArgs = {
 };
 
 
+export type MutationIngestResumeParseArgs = {
+  email: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  job_id: Scalars['String']['input'];
+};
+
+
 export type MutationIngest_Company_SnapshotArgs = {
   capture_timestamp?: InputMaybe<Scalars['String']['input']>;
   company_id: Scalars['Int']['input'];
@@ -718,6 +727,13 @@ export type MutationUpdatePromptLabelArgs = {
 export type MutationUpdateUserSettingsArgs = {
   settings: UserSettingsInput;
   userId: Scalars['String']['input'];
+};
+
+
+export type MutationUploadResumeArgs = {
+  email: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  resumePdf: Scalars['String']['input'];
 };
 
 
@@ -802,6 +818,7 @@ export type PushLangSmithPromptInput = {
 export type Query = {
   __typename: 'Query';
   applications: Array<Application>;
+  askAboutResume: Maybe<ResumeAnswer>;
   companies: CompaniesResponse;
   company: Maybe<Company>;
   company_ats_boards: Array<AtsBoard>;
@@ -816,8 +833,15 @@ export type Query = {
   myPromptUsage: Array<PromptUsage>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
+  resumeStatus: Maybe<ResumeStatus>;
   textToSql: TextToSqlResult;
   userSettings: Maybe<UserSettings>;
+};
+
+
+export type QueryAskAboutResumeArgs = {
+  email: Scalars['String']['input'];
+  question: Scalars['String']['input'];
 };
 
 
@@ -905,6 +929,11 @@ export type QueryPromptArgs = {
 };
 
 
+export type QueryResumeStatusArgs = {
+  email: Scalars['String']['input'];
+};
+
+
 export type QueryTextToSqlArgs = {
   question: Scalars['String']['input'];
 };
@@ -939,6 +968,39 @@ export type RegisteredPrompt = {
   type: Scalars['String']['output'];
   usageCount: Maybe<Scalars['Int']['output']>;
   versions: Array<Scalars['Int']['output']>;
+};
+
+export type ResumeAnswer = {
+  __typename: 'ResumeAnswer';
+  answer: Scalars['String']['output'];
+  context_count: Scalars['Int']['output'];
+};
+
+export type ResumeIngestResult = {
+  __typename: 'ResumeIngestResult';
+  chunks_stored: Maybe<Scalars['Int']['output']>;
+  error: Maybe<Scalars['String']['output']>;
+  job_id: Scalars['String']['output'];
+  resume_id: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
+export type ResumeStatus = {
+  __typename: 'ResumeStatus';
+  chunk_count: Maybe<Scalars['Int']['output']>;
+  exists: Scalars['Boolean']['output'];
+  filename: Maybe<Scalars['String']['output']>;
+  ingested_at: Maybe<Scalars['String']['output']>;
+  resume_id: Maybe<Scalars['String']['output']>;
+};
+
+export type ResumeUploadResult = {
+  __typename: 'ResumeUploadResult';
+  job_id: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  tier: Scalars['String']['output'];
 };
 
 export type SourceType =

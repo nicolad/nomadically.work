@@ -1,0 +1,46 @@
+# Resume operations — async fire-and-forget upload + polling
+
+query ResumeStatus($email: String!) {
+  resumeStatus(email: $email) {
+    exists
+    resume_id
+    chunk_count
+    filename
+    ingested_at
+  }
+}
+
+mutation UploadResume(
+  $email: String!
+  $resumePdf: String!
+  $filename: String!
+) {
+  uploadResume(email: $email, resumePdf: $resumePdf, filename: $filename) {
+    success
+    job_id
+    tier
+    status
+  }
+}
+
+mutation IngestResumeParse(
+  $email: String!
+  $job_id: String!
+  $filename: String!
+) {
+  ingestResumeParse(email: $email, job_id: $job_id, filename: $filename) {
+    success
+    status
+    job_id
+    resume_id
+    chunks_stored
+    error
+  }
+}
+
+query AskAboutResume($email: String!, $question: String!) {
+  askAboutResume(email: $email, question: $question) {
+    answer
+    context_count
+  }
+}

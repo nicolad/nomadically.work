@@ -1,0 +1,54 @@
+# Resume-related types and operations
+
+type ResumeUploadResult {
+  success: Boolean!
+  job_id: String!
+  tier: String!
+  status: String!
+}
+
+type ResumeIngestResult {
+  success: Boolean!
+  status: String!
+  job_id: String!
+  resume_id: String
+  chunks_stored: Int
+  error: String
+}
+
+type ResumeAnswer {
+  answer: String!
+  context_count: Int!
+}
+
+type ResumeStatus {
+  exists: Boolean!
+  resume_id: String
+  chunk_count: Int
+  filename: String
+  ingested_at: String
+}
+
+extend type Query {
+  # Check if a resume exists for the user
+  resumeStatus(email: String!): ResumeStatus
+
+  # Ask a question about the user's resume
+  askAboutResume(email: String!, question: String!): ResumeAnswer
+}
+
+extend type Mutation {
+  # Upload resume PDF (base64 encoded) — returns job_id for async polling
+  uploadResume(
+    email: String!
+    resumePdf: String!
+    filename: String!
+  ): ResumeUploadResult
+
+  # Poll parse status and ingest into Vectorize when ready
+  ingestResumeParse(
+    email: String!
+    job_id: String!
+    filename: String!
+  ): ResumeIngestResult
+}

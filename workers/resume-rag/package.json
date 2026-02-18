@@ -1,0 +1,18 @@
+{
+  "name": "resume-rag-worker",
+  "version": "0.1.0",
+  "description": "Cloudflare Python Worker for Resume RAG with Vectorize",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sync": "uv run pywrangler sync",
+    "dev": "uv run pywrangler sync && wrangler dev --config wrangler.jsonc --port 8788",
+    "deploy": "uv run pywrangler sync && wrangler deploy --config wrangler.jsonc",
+    "tail": "wrangler tail --config wrangler.jsonc",
+    "cf:login": "wrangler login",
+    "vectorize:create": "wrangler vectorize create resume-rag-index --dimensions=768 --metric=cosine",
+    "vectorize:list": "wrangler vectorize list",
+    "vectorize:info": "wrangler vectorize info resume-rag-index",
+    "clean": "rm -rf .wrangler python_modules"
+  }
+}

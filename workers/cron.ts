@@ -1,28 +1,37 @@
 /**
- * Cloudflare Workers Cron for Job Discovery
- * Runs daily at midnight UTC
+ * Cloudflare Workers Cron — Job Source Discovery
+ *
+ * Runs daily at midnight UTC to discover new ATS job boards via Brave Search.
+ * After discovery, triggers the insert-jobs worker to auto-ingest from the
+ * newly discovered sources.
  */
 
-import { createClient } from "@libsql/client";
-import { ASHBY_JOBS_DOMAIN, ASHBY_API_DOMAIN } from "../src/constants/ats";
-
 interface Env {
+  DB: D1Database;
   BRAVE_API_KEY: string;
-  TURSO_DB_URL: string;
-  TURSO_DB_AUTH_TOKEN: string;
   APP_URL: string;
   CRON_SECRET?: string;
+
+  /** Queue binding to trigger insert-jobs ingestion after discovery */
+  INGESTION_QUEUE?: Queue<{ action: "ingest"; maxSources: number }>;
+
+  /** Direct URL of insert-jobs worker (fallback if queue binding unavailable) */
+  INSERT_JOBS_URL?: string;
 }
 
-interface ScheduledEvent {
+type Queue<T = unknown> = {
+  send(message: T): Promise<void>;
+};
+
+type ScheduledEvent = {
   scheduledTime: number;
   cron: string;
-}
+};
 
-interface ExecutionContext {
-  waitUntil(promise: Promise<any>): void;
+type ExecutionContext = {
+  waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
-}
+};
 
 type BraveWebResult = {
   title?: string;
@@ -42,6 +51,10 @@ type JobSource = {
   canonical_url?: string;
   first_seen_at: number;
 };
+
+// ATS domain constants (inlined to avoid cross-worker imports)
+const ASHBY_JOBS_DOMAIN = "jobs.ashbyhq.com";
+const ASHBY_API_DOMAIN = "api.ashbyhq.com";
 
 const DISCOVERY_QUERIES = [
   {
@@ -140,7 +153,7 @@ async function braveSearch(
 
   if (!res.ok) {
     const errorText = await res.text();
-    console.error(`❌ Brave API ${res.status} ${res.statusText}: ${errorText}`);
+    console.error(`Brave API ${res.status} ${res.statusText}: ${errorText}`);
     throw new Error(`Brave API ${res.status}: ${errorText}`);
   }
 
@@ -288,7 +301,7 @@ async function discoverJobSources(
   } = options;
 
   console.log(
-    `🔍 Discovering jobs via Brave Search (freshness: ${freshness}, pages: ${maxPages}, perPage: ${perPage})...`,
+    `Discovering jobs via Brave Search (freshness: ${freshness}, pages: ${maxPages}, perPage: ${perPage})...`,
   );
 
   const discovered = new Map<string, JobSource>();
@@ -343,19 +356,18 @@ async function discoverJobSources(
             discovered.set(key, source);
             stats.sourcesExtracted++;
             addedThisPage++;
-            console.log(`    ✓ Found ${source.kind}: ${source.company_key}`);
+            console.log(`    Found ${source.kind}: ${source.company_key}`);
           }
         }
 
-        // Early stop: if Brave says no more, or we're no longer finding new sources
+        // Early stop
         if (!result.more) break;
         if (page >= 1 && addedThisPage === 0) break;
         if (result.results.length < Math.min(20, perPage)) break;
-      } catch (error: any) {
-        stats.errors.push(
-          `${discoveryQuery.kind} page ${page}: ${error?.message ?? String(error)}`,
-        );
-        console.error(`❌ Error: ${error?.message ?? String(error)}`);
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        stats.errors.push(`${discoveryQuery.kind} page ${page}: ${msg}`);
+        console.error(`Error: ${msg}`);
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
     }
@@ -364,7 +376,7 @@ async function discoverJobSources(
   const sources = [...discovered.values()];
 
   console.log(
-    `✅ Brave discovery complete: ${stats.sourcesExtracted} sources found (filtered out: ${stats.filteredOut})`,
+    `Brave discovery complete: ${stats.sourcesExtracted} sources found (filtered out: ${stats.filteredOut})`,
   );
 
   return {
@@ -375,14 +387,107 @@ async function discoverJobSources(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Trigger job ingestion after discovery
+// ---------------------------------------------------------------------------
+
+async function triggerIngestion(env: Env, sourceCount: number): Promise<void> {
+  // Method 1: Via insert-jobs HTTP endpoint (direct)
+  if (env.INSERT_JOBS_URL) {
+    try {
+      const url = `${env.INSERT_JOBS_URL}/ingest?limit=${Math.min(sourceCount, 20)}`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { stats?: { jobsInserted?: number } };
+        console.log(
+          `Triggered ingestion via HTTP: ${data.stats?.jobsInserted ?? 0} jobs inserted`,
+        );
+        return;
+      }
+      console.error(`Ingestion HTTP trigger failed: ${res.status}`);
+    } catch (err) {
+      console.error("Ingestion HTTP trigger error:", err);
+    }
+  }
+
+  // Method 2: The insert-jobs worker will pick up stale sources on its own cron
+  console.log(
+    "No INSERT_JOBS_URL configured — insert-jobs worker cron will pick up new sources automatically",
+  );
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Manual trigger endpoint for testing
+    const url = new URL(request.url);
+
+    // GET /health
+    if (url.pathname === "/health") {
+      try {
+        const result = await env.DB.prepare(
+          "SELECT COUNT(*) as count FROM job_sources",
+        ).first();
+        return new Response(
+          JSON.stringify({
+            status: "healthy",
+            sourceCount: result?.count,
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ status: "unhealthy", error: String(err) }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    // GET /discover — manual trigger for testing
+    if (url.pathname === "/discover") {
+      const result = await discoverJobSources(env, {
+        freshness: "pm",
+        maxPages: 2,
+        perPage: 20,
+        onlyEuFullyRemote: true,
+      });
+
+      // Save sources
+      let savedCount = 0;
+      for (const source of result.sources) {
+        try {
+          await env.DB.prepare(
+            `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+             VALUES (?, ?, ?, ?)`,
+          )
+            .bind(
+              source.kind,
+              source.company_key,
+              source.canonical_url || "",
+              new Date(source.first_seen_at).toISOString(),
+            )
+            .run();
+          savedCount++;
+        } catch (err) {
+          console.error(`Failed to save ${source.kind}/${source.company_key}:`, err);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          ...result,
+          savedCount,
+          message: `${result.message}; saved ${savedCount} to D1`,
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     return new Response(
       JSON.stringify({
-        message:
-          "This is a scheduled worker. Use wrangler to trigger the cron.",
-        hint: "npx wrangler deploy && npx wrangler tail",
+        message: "Job discovery cron worker. Endpoints: /health, /discover",
+        hint: "Cron runs daily at midnight UTC. Use /discover for manual trigger.",
       }),
       { headers: { "Content-Type": "application/json" } },
     );
@@ -393,77 +498,68 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<void> {
-    console.log("🔄 Cloudflare Cron: Starting job discovery...");
+    console.log("Cron: Starting job source discovery...");
 
     try {
       const result = await discoverJobSources(env, {
-        freshness: "pm", // past month for better results
-        maxPages: 3, // 3 pages per query type
-        perPage: 20, // Brave max
-        onlyEuFullyRemote: true, // Filter for EU + fully remote jobs
+        freshness: "pm",
+        maxPages: 3,
+        perPage: 20,
+        onlyEuFullyRemote: true,
       });
 
-      console.log(`✅ Discovered ${result.stats.sourcesExtracted} sources`);
-      console.log(`Stats: ${JSON.stringify(result.stats)}`);
+      console.log(`Discovered ${result.stats.sourcesExtracted} sources`);
 
-      // Save discovered sources to D1 database
+      // Save discovered sources to D1
+      let savedCount = 0;
       if (result.sources.length > 0) {
-        console.log("💾 Saving sources to D1...");
-        const db = env.DB;
+        console.log("Saving sources to D1...");
 
-        let savedCount = 0;
-        for (const source of result.sources) {
+        // Batch saves using D1 batch API
+        const stmts = result.sources.map((source) =>
+          env.DB.prepare(
+            `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+             VALUES (?, ?, ?, ?)`,
+          ).bind(
+            source.kind,
+            source.company_key,
+            source.canonical_url || "",
+            new Date(source.first_seen_at).toISOString(),
+          ),
+        );
+
+        // D1 batch supports up to 100 statements
+        for (let i = 0; i < stmts.length; i += 100) {
+          const batch = stmts.slice(i, i + 100);
           try {
-            await db.prepare(
-              `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
-               VALUES (?, ?, ?, ?)`
-            )
-            .bind(
-              source.kind,
-              source.company_key,
-              source.canonical_url || "",
-              new Date(source.first_seen_at).toISOString()
-            )
-            .run();
-            savedCount++;
+            await env.DB.batch(batch);
+            savedCount += batch.length;
           } catch (err) {
-            console.error(
-              `Failed to save ${source.kind}/${source.company_key}:`,
-              err,
-            );
+            console.error(`Batch save error (batch ${i / 100}):`, err);
+            // Fall back to individual inserts
+            for (const stmt of batch) {
+              try {
+                await stmt.run();
+                savedCount++;
+              } catch (innerErr) {
+                console.error("Individual save error:", innerErr);
+              }
+            }
           }
         }
-        console.log(
-          `✅ Saved ${savedCount}/${result.sources.length} sources to D1`,
-        );
+
+        console.log(`Saved ${savedCount}/${result.sources.length} sources to D1`);
       }
 
-      // Trigger scoring after job insertion
-      if (result.stats.sourcesExtracted > 0 && env.APP_URL) {
-        console.log("🎯 Triggering job scoring...");
-        ctx.waitUntil(
-          fetch(`${env.APP_URL}/api/jobs/score`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${env.CRON_SECRET || ""}`,
-            },
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              console.log(
-                `✅ Scoring triggered: ${data.scoredCount || 0} jobs scored`,
-              );
-            })
-            .catch((err) => {
-              console.error("⚠️ Failed to trigger scoring:", err);
-            }),
-        );
+      // Trigger job ingestion from the newly discovered (and existing stale) sources
+      if (savedCount > 0 || result.stats.sourcesExtracted > 0) {
+        console.log("Triggering job ingestion...");
+        ctx.waitUntil(triggerIngestion(env, result.stats.sourcesExtracted));
       }
 
-      console.log("✅ Cron job completed successfully");
+      console.log("Cron job completed");
     } catch (error) {
-      console.error("❌ Cron job failed:", error);
+      console.error("Cron job failed:", error);
       throw error;
     }
   },

@@ -15,11 +15,14 @@ database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
 # Environment variables
 [vars]
 APP_URL = "https://nomadically.work"
+# Set INSERT_JOBS_URL to auto-trigger ingestion after discovery
+# INSERT_JOBS_URL = "https://nomadically-work-insert-jobs.<subdomain>.workers.dev"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # - BRAVE_API_KEY
+# - INSERT_JOBS_URL (optional — set as secret or var to trigger insert-jobs after discovery)
 
-# Observability - Enable logging
+# Observability
 [observability]
 enabled = true
 

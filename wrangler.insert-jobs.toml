@@ -2,6 +2,10 @@ name = "nomadically-work-insert-jobs"
 main = "workers/insert-jobs.ts"
 compatibility_date = "2026-02-01"
 
+# Cron trigger — auto-ingest from ATS sources every 3 hours + recover stalled jobs
+[triggers]
+crons = ["0 */3 * * *"]
+
 # D1 Database
 [[d1_databases]]
 binding = "DB"
@@ -9,22 +13,30 @@ database_name = "nomadically-work-db"
 database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME --name nomadically-work-insert-jobs)
-# - API_SECRET (optional, for authentication)
-# - NEXT_WEBHOOK_URL (required, e.g., https://nomadically.work/api/jobs/process)
-# - WEBHOOK_SECRET (required, shared secret for Worker -> Next webhook)
+# - API_SECRET          (optional — authenticate the POST ingest endpoint)
+# - PROCESS_JOBS_URL    (optional — URL of the process-jobs worker for HTTP fallback)
+# - PROCESS_JOBS_SECRET (optional — shared secret for process-jobs worker auth)
 
-# Queue configuration for async job processing pipeline
+# Queue: jobs-pipeline — this worker produces AND consumes
+# Producer: insert-jobs sends newly inserted job IDs here
+# Consumer: batch-acks job IDs and triggers process-jobs pipeline
 [[queues.producers]]
 queue = "jobs-pipeline"
 binding = "JOBS_QUEUE"
 
 [[queues.consumers]]
 queue = "jobs-pipeline"
-max_batch_size = 1
-max_batch_timeout = 1
-max_retries = 10
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 5
+dead_letter_queue = "jobs-pipeline-dlq"
 
-# Observability - Enable logging
+# Queue: process-jobs-queue — producer only, sends pipeline trigger messages
+[[queues.producers]]
+queue = "process-jobs-queue"
+binding = "PROCESS_JOBS_QUEUE"
+
+# Observability
 [observability]
 enabled = true
 

@@ -1,0 +1,31 @@
+{
+  "user_id": "test_user_001",
+  "name": "Sarah Johnson",
+  "email": "sarah.johnson@example.com",
+  "summary": "Senior Full-Stack Engineer with 8+ years of experience building scalable web applications. Passionate about React, TypeScript, and cloud architecture. Led teams of 5-10 engineers and shipped multiple successful SaaS products.",
+  "experience": "Senior Software Engineer at TechCorp (2020-Present): Led the development of a React-based dashboard serving 10M+ users. Architected microservices on AWS using Node.js and PostgreSQL. \n\nSoftware Engineer at StartupXYZ (2017-2020): Built the company's main product from scratch using React, Redux, and Node.js. Grew the engineering team from 2 to 15 people.\n\nJunior Developer at WebAgency (2015-2017): Developed client websites using modern web technologies.",
+  "skills": [
+    "React",
+    "TypeScript",
+    "Node.js",
+    "Python",
+    "AWS",
+    "Docker",
+    "Kubernetes",
+    "PostgreSQL",
+    "Redis",
+    "GraphQL",
+    "REST APIs",
+    "CI/CD",
+    "Team Leadership"
+  ],
+  "education": "BS Computer Science, UC Berkeley (2011-2015)\nRelevant coursework: Data Structures, Algorithms, Distributed Systems, Machine Learning",
+  "metadata": {
+    "location": "San Francisco, CA",
+    "years_experience": 8,
+    "willing_to_relocate": false,
+    "remote_preference": "remote-first",
+    "expected_salary": 180000,
+    "availability": "2 weeks notice"
+  }
+}

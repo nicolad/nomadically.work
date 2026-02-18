@@ -1,0 +1,20 @@
+[project]
+name = "nomadically-work-resume-rag"
+version = "0.1.0"
+description = "Cloudflare Python Worker for Resume RAG with Vectorize + LlamaParse"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "webtypy>=0.1.7",
+    "langchain-cloudflare>=0.1.8",
+    "langchain-core>=0.3.60,<2.0.0",
+    # NOTE: Do NOT include pydantic — use Pyodide's built-in version.
+    # pydantic_core requires compiled Rust binaries unavailable for WebAssembly.
+]
+
+[dependency-groups]
+dev = ["workers-py", "workers-runtime-sdk"]
+
+[tool.uv]
+# Use Pyodide-compatible packages when available
+index-url = "https://pypi.org/simple"

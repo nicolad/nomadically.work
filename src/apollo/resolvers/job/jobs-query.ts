@@ -78,7 +78,26 @@ export async function jobsQuery(
         .where(whereClause)
         .then((r) => r[0]?.value ?? 0),
       context.db
-        .select()
+        .select({
+          id: jobs.id,
+          external_id: jobs.external_id,
+          source_id: jobs.source_id,
+          source_kind: jobs.source_kind,
+          company_id: jobs.company_id,
+          company_key: jobs.company_key,
+          title: jobs.title,
+          location: jobs.location,
+          url: jobs.url,
+          posted_at: jobs.posted_at,
+          score: jobs.score,
+          score_reason: jobs.score_reason,
+          status: jobs.status,
+          is_remote_eu: jobs.is_remote_eu,
+          remote_eu_confidence: jobs.remote_eu_confidence,
+          remote_eu_reason: jobs.remote_eu_reason,
+          created_at: jobs.created_at,
+          updated_at: jobs.updated_at,
+        })
         .from(jobs)
         .where(whereClause)
         .orderBy(desc(jobs.posted_at), desc(jobs.created_at))

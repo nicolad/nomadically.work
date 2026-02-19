@@ -14,78 +14,214 @@ import {
   type RemoteEUClassification,
 } from "./remote-eu";
 
-// Mock classifier function - replace this with your actual implementation
+// EU member countries list for validation
+const EU_MEMBERS = new Set([
+  "austria", "belgium", "bulgaria", "croatia", "cyprus", "czech republic",
+  "czechia", "denmark", "estonia", "finland", "france", "germany", "greece",
+  "hungary", "ireland", "italy", "latvia", "lithuania", "luxembourg", "malta",
+  "netherlands", "poland", "portugal", "romania", "slovakia", "slovenia",
+  "spain", "sweden"
+]);
+
+const EEA_NON_EU = new Set(["norway", "iceland", "liechtenstein"]);
+const SCHENGEN_ONLY = new Set(["switzerland"]);
+const UK = "united kingdom";
+const NON_EU_REGIONS = new Set(["middle east", "africa", "asia", "america"]);
+
+// Mock classifier function with improved EU-remote detection
 async function classifyRemoteEU(jobPosting: {
   title: string;
   location: string;
   description: string;
 }): Promise<RemoteEUClassification> {
-  // TODO: Replace with actual classification logic
-  // This could call your AI agent, use rules, or a combination
-
-  const location = jobPosting.location.toLowerCase();
+  const location = jobPosting.location.toLowerCase().trim();
   const description = jobPosting.description.toLowerCase();
+  const title = jobPosting.title.toLowerCase();
+  const fullText = `${title} ${location} ${description}`;
 
-  // Simple rule-based mock for demonstration
-  // In production, this would be your AI agent or classifier
+  // Rule 0: Not fully remote (check first, highest priority for rejection)
+  const isRemote = location.includes("remote") ||
+                   description.includes("fully remote") ||
+                   location.includes("work from");
 
-  // Explicit EU mentions
-  if (location.includes("remote - eu") || location.includes("remote eu")) {
+  if (!isRemote && (location.includes("hybrid") ||
+                     location.includes("office") ||
+                     location.includes("on-site") ||
+                     location.includes("onsite") ||
+                     description.includes("days per week in office") ||
+                     description.includes("3 days onsite") ||
+                     description.match(/\d+\s*days?\s*(?:per\s*)?week\s*in\s*office/))) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Position is not fully remote",
+    };
+  }
+
+  // Rule 1: Explicit EU-only remote mentions (highest priority)
+  // Use word boundaries to distinguish "eu" from "europe"
+  const isExplicitEURemote =
+    location.includes("remote - eu") ||
+    location.includes("remote eu") ||
+    location.includes("eu only") ||
+    location.match(/\beu\b.*\bonly\b/) ||
+    (location.includes("remote") && location.includes(" eu") && !location.includes("remote - europe"));
+
+  if (isExplicitEURemote) {
     return {
       isRemoteEU: true,
       confidence: "high",
-      reason: "Explicit EU remote mention in location",
+      reason: "Explicitly states EU-only remote work",
     };
   }
 
-  // EMEA without EU restriction
-  if (
-    location.includes("emea") &&
-    !description.includes("eu member") &&
-    !description.includes("european union")
-  ) {
-    return {
-      isRemoteEU: false,
-      confidence: "high",
-      reason: "EMEA includes non-EU countries",
-    };
+  // Rule 2: Specific EU countries listed (only EU countries, no EMEA/UK/Switzerland)
+  const mentionedCountries = Array.from(EU_MEMBERS).filter(country =>
+    location.includes(country) || fullText.includes(country)
+  );
+
+  if (mentionedCountries.length > 0) {
+    // Check for non-EU countries in the same location
+    const hasNonEU = location.includes("uk") ||
+                    location.includes("switzerland") ||
+                    location.includes("emea") ||
+                    location.includes("worldwide");
+
+    if (!hasNonEU) {
+      return {
+        isRemoteEU: true,
+        confidence: "high",
+        reason: `Lists only EU member countries: ${mentionedCountries.slice(0, 3).join(", ")}${mentionedCountries.length > 3 ? ", ..." : ""}`,
+      };
+    }
   }
 
-  // UK only
-  if (location.includes("uk") && !location.includes("eu")) {
-    return {
-      isRemoteEU: false,
-      confidence: "high",
-      reason: "UK is not part of EU",
-    };
-  }
-
-  // Switzerland
-  if (location.includes("switzerland")) {
-    return {
-      isRemoteEU: false,
-      confidence: "high",
-      reason: "Switzerland is not an EU member",
-    };
-  }
-
-  // EU work authorization
+  // Rule 3: EU work authorization/passport requirement (strong signal)
   if (
     description.includes("eu work authorization") ||
-    description.includes("eu passport")
+    description.includes("eu passport") ||
+    description.includes("eu citizen") ||
+    description.includes("right to work in the eu") ||
+    description.includes("eu residency")
   ) {
     return {
       isRemoteEU: true,
       confidence: "high",
-      reason: "Requires EU work authorization",
+      reason: "Requires EU work authorization or residency",
     };
   }
 
-  // Default fallback
+  // Rule 4: EMEA explicitly restricted to EU only
+  if (location.includes("emea") && description.includes("eu member")) {
+    return {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "EMEA explicitly restricted to EU member states",
+    };
+  }
+
+  // Rule 5: EEA mention (includes non-EU but majority EU)
+  if (location.includes("eea") && !location.includes("emea")) {
+    return {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "EEA includes EU countries plus Norway, Iceland, Liechtenstein",
+    };
+  }
+
+  // Rule 6: Mixed EU + non-EU countries
+  const hasMixedRegions = (location.includes("eu") || mentionedCountries.length > 0) &&
+                         (location.includes("uk") || location.includes("switzerland") || location.includes("emea"));
+
+  if (hasMixedRegions && mentionedCountries.length > 0) {
+    return {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Includes EU countries among other regions",
+    };
+  }
+
+  // Rule 7: EMEA (includes non-EU countries - reject)
+  if (location.includes("emea") && !location.includes("eu member")) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "EMEA includes non-EU countries (UK post-Brexit, Switzerland, Middle East)",
+    };
+  }
+
+  // Rule 8: Generic "Remote - Europe" without EU spec - CHECK EARLY (ambiguous)
+  // Must check for explicit EU mention (not just 'eu' substring in 'europe')
+  const hasExplicitEU = /\beu\b/.test(location) ||
+                        location.includes("eu only") ||
+                        location.includes("eu member") ||
+                        location.includes("eu countries");
+  const hasEEA = location.includes("eea");
+
+  if (location.includes("remote") && location.includes("europe") &&
+      !mentionedCountries.length &&
+      !hasExplicitEU &&
+      !hasEEA) {
+    return {
+      isRemoteEU: false,
+      confidence: "low",
+      reason: "Europe is too broad - could include non-EU countries",
+    };
+  }
+
+  // Rule 9: CET/CEST timezone mention (ambiguous - not exclusive to EU)
+  if ((location.includes("cet") || location.includes("cest")) &&
+      !location.includes("eu") &&
+      !mentionedCountries.length) {
+    return {
+      isRemoteEU: false,
+      confidence: "medium",
+      reason: "CET timezone is not exclusive to EU (includes Switzerland, some African countries)",
+    };
+  }
+
+  // Rule 10: UK-only positions (post-Brexit, not EU)
+  if (location.includes("uk") && !location.includes("eu") && !location.includes("emea")) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "UK is not part of the EU since Brexit",
+    };
+  }
+
+  // Rule 11: Switzerland-only (not EU, but Schengen)
+  if (location.includes("switzerland") && !location.includes("eu")) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Switzerland is not an EU member state",
+    };
+  }
+
+  // Rule 12: Schengen area mention (partially EU, ambiguous)
+  if (location.includes("schengen")) {
+    return {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Most Schengen countries are EU members, though some are not",
+    };
+  }
+
+  // Rule 13: Worldwide or global scope (unlikely to be EU-only)
+  if ((location.includes("worldwide") || location.includes("global")) &&
+      !location.includes("eu")) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Worldwide scope does not restrict to EU",
+    };
+  }
+
+  // Default fallback - insufficient information
   return {
     isRemoteEU: false,
     confidence: "low",
-    reason: "Unable to determine with confidence",
+    reason: "Unable to determine with confidence from available information",
   };
 }
 

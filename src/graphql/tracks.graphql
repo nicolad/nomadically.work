@@ -1,0 +1,87 @@
+mutation CreateTrack($input: CreateTrackInput!) {
+  createTrack(input: $input) {
+    id
+    slug
+    title
+    description
+    level
+    items {
+      id
+    }
+  }
+}
+
+query GetTracks($limit: Int) {
+  tracks(limit: $limit) {
+    id
+    slug
+    title
+    description
+    level
+    items {
+      id
+      kind
+      title
+      position
+      contentRef
+      promptRef
+      difficulty
+      tags
+      prereqs
+      children {
+        id
+        kind
+        title
+        position
+        contentRef
+        promptRef
+        difficulty
+        tags
+        prereqs
+      }
+    }
+  }
+}
+
+query GetTrack($slug: String!) {
+  track(slug: $slug) {
+    id
+    slug
+    title
+    description
+    level
+    items {
+      id
+      kind
+      title
+      position
+      contentRef
+      promptRef
+      difficulty
+      tags
+      prereqs
+      children {
+        id
+        kind
+        title
+        position
+        contentRef
+        promptRef
+        difficulty
+        tags
+        prereqs
+        children {
+          id
+          kind
+          title
+          position
+          contentRef
+          promptRef
+          difficulty
+          tags
+          prereqs
+        }
+      }
+    }
+  }
+}

@@ -284,6 +284,13 @@ export type CreatePromptInput = {
   type: PromptType;
 };
 
+export type CreateTrackInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  level?: InputMaybe<Scalars['String']['input']>;
+  slug: Scalars['String']['input'];
+  title: Scalars['String']['input'];
+};
+
 export type DeleteCompanyResponse = {
   __typename: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -572,6 +579,7 @@ export type Mutation = {
   createCompany: Company;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
+  createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
@@ -640,6 +648,11 @@ export type MutationCreateLangSmithPromptArgs = {
 
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
+};
+
+
+export type MutationCreateTrackArgs = {
+  input: CreateTrackInput;
 };
 
 
@@ -862,6 +875,8 @@ export type Query = {
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
   textToSql: TextToSqlResult;
+  track: Maybe<Track>;
+  tracks: Array<Track>;
   userSettings: Maybe<UserSettings>;
 };
 
@@ -971,6 +986,16 @@ export type QueryTextToSqlArgs = {
 };
 
 
+export type QueryTrackArgs = {
+  slug: Scalars['String']['input'];
+};
+
+
+export type QueryTracksArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryUserSettingsArgs = {
   userId: Scalars['String']['input'];
 };
@@ -1048,6 +1073,30 @@ export type TextToSqlResult = {
   explanation: Maybe<Scalars['String']['output']>;
   rows: Array<Maybe<Array<Maybe<Scalars['JSON']['output']>>>>;
   sql: Scalars['String']['output'];
+};
+
+export type Track = {
+  __typename: 'Track';
+  description: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  items: Array<TrackItem>;
+  level: Maybe<Scalars['String']['output']>;
+  slug: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type TrackItem = {
+  __typename: 'TrackItem';
+  children: Array<TrackItem>;
+  contentRef: Maybe<Scalars['String']['output']>;
+  difficulty: Maybe<Scalars['Int']['output']>;
+  id: Scalars['ID']['output'];
+  kind: Scalars['String']['output'];
+  position: Scalars['Int']['output'];
+  prereqs: Array<Scalars['ID']['output']>;
+  promptRef: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
 };
 
 export type UpdateCompanyInput = {

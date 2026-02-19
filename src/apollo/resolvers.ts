@@ -8,6 +8,7 @@ import { applicationResolvers } from "./resolvers/application";
 import { langsmithResolvers } from "./resolvers/langsmith";
 import { resumeResolvers } from "./resolvers/resume";
 import { prepResolvers } from "./resolvers/prep";
+import { trackResolvers } from "./resolvers/track";
 import { merge } from "lodash";
 
 export const resolvers = merge(
@@ -22,4 +23,5 @@ export const resolvers = merge(
   langsmithResolvers,
   resumeResolvers,
   prepResolvers,
+  trackResolvers,
 );

@@ -71,17 +71,36 @@ export type AtsVendor =
 
 export type Application = {
   __typename?: 'Application';
+  companyName: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
+  id: Scalars['Int']['output'];
   jobId: Scalars['String']['output'];
+  jobTitle: Maybe<Scalars['String']['output']>;
+  notes: Maybe<Scalars['String']['output']>;
   questions: Array<QuestionAnswer>;
   resume: Maybe<Scalars['Upload']['output']>;
+  status: ApplicationStatus;
 };
 
 export type ApplicationInput = {
+  companyName?: InputMaybe<Scalars['String']['input']>;
   jobId: Scalars['String']['input'];
+  jobTitle?: InputMaybe<Scalars['String']['input']>;
   questions: Array<QuestionAnswerInput>;
   resume?: InputMaybe<Scalars['Upload']['input']>;
 };
+
+/**
+ * Pipeline status for a tracked job application.
+ * Maps to a kanban column in the UI.
+ */
+export type ApplicationStatus =
+  | 'accepted'
+  | 'pending'
+  | 'rejected'
+  | 'reviewed'
+  | 'submitted';
 
 export type AshbyAddress = {
   __typename?: 'AshbyAddress';
@@ -618,6 +637,7 @@ export type Mutation = {
    */
   processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
+  updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
@@ -718,6 +738,12 @@ export type MutationProcessAllJobsArgs = {
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateApplicationArgs = {
+  id: Scalars['Int']['input'];
+  input: UpdateApplicationInput;
 };
 
 
@@ -1102,6 +1128,11 @@ export type TrackItem = {
   title: Scalars['String']['output'];
 };
 
+export type UpdateApplicationInput = {
+  notes?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<ApplicationStatus>;
+};
+
 export type UpdateCompanyInput = {
   canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
@@ -1246,14 +1277,22 @@ export type UpdateUserSettingsMutation = { __typename?: 'Mutation', updateUserSe
 export type GetApplicationsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetApplicationsQuery = { __typename?: 'Query', applications: Array<{ __typename?: 'Application', email: string, jobId: string, resume: File | null, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> }> };
+export type GetApplicationsQuery = { __typename?: 'Query', applications: Array<{ __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> }> };
 
 export type CreateApplicationMutationVariables = Exact<{
   input: ApplicationInput;
 }>;
 
 
-export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', email: string, jobId: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> } };
+export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', id: number, email: string, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> } };
+
+export type UpdateApplicationMutationVariables = Exact<{
+  id: Scalars['Int']['input'];
+  input: UpdateApplicationInput;
+}>;
+
+
+export type UpdateApplicationMutation = { __typename?: 'Mutation', updateApplication: { __typename?: 'Application', id: number, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null } };
 
 export type EvidenceFieldsFragment = { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null };
 
@@ -2289,6 +2328,7 @@ export type UpdateUserSettingsMutationOptions = Apollo.BaseMutationOptions<Updat
 export const GetApplicationsDocument = gql`
     query GetApplications {
   applications {
+    id
     email
     jobId
     resume
@@ -2297,6 +2337,11 @@ export const GetApplicationsDocument = gql`
       questionText
       answerText
     }
+    status
+    notes
+    jobTitle
+    companyName
+    createdAt
   }
 }
     `;
@@ -2338,6 +2383,7 @@ export type GetApplicationsQueryResult = Apollo.QueryResult<GetApplicationsQuery
 export const CreateApplicationDocument = gql`
     mutation CreateApplication($input: ApplicationInput!) {
   createApplication(input: $input) {
+    id
     email
     jobId
     questions {
@@ -2345,6 +2391,11 @@ export const CreateApplicationDocument = gql`
       questionText
       answerText
     }
+    status
+    notes
+    jobTitle
+    companyName
+    createdAt
   }
 }
     `;
@@ -2374,6 +2425,45 @@ export function useCreateApplicationMutation(baseOptions?: Apollo.MutationHookOp
 export type CreateApplicationMutationHookResult = ReturnType<typeof useCreateApplicationMutation>;
 export type CreateApplicationMutationResult = Apollo.MutationResult<CreateApplicationMutation>;
 export type CreateApplicationMutationOptions = Apollo.BaseMutationOptions<CreateApplicationMutation, CreateApplicationMutationVariables>;
+export const UpdateApplicationDocument = gql`
+    mutation UpdateApplication($id: Int!, $input: UpdateApplicationInput!) {
+  updateApplication(id: $id, input: $input) {
+    id
+    jobId
+    status
+    notes
+    jobTitle
+    companyName
+  }
+}
+    `;
+export type UpdateApplicationMutationFn = Apollo.MutationFunction<UpdateApplicationMutation, UpdateApplicationMutationVariables>;
+
+/**
+ * __useUpdateApplicationMutation__
+ *
+ * To run a mutation, you first call `useUpdateApplicationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateApplicationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateApplicationMutation, { data, loading, error }] = useUpdateApplicationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateApplicationMutation(baseOptions?: Apollo.MutationHookOptions<UpdateApplicationMutation, UpdateApplicationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateApplicationMutation, UpdateApplicationMutationVariables>(UpdateApplicationDocument, options);
+      }
+export type UpdateApplicationMutationHookResult = ReturnType<typeof useUpdateApplicationMutation>;
+export type UpdateApplicationMutationResult = Apollo.MutationResult<UpdateApplicationMutation>;
+export type UpdateApplicationMutationOptions = Apollo.BaseMutationOptions<UpdateApplicationMutation, UpdateApplicationMutationVariables>;
 export const CreateCompanyDocument = gql`
     mutation CreateCompany($input: CreateCompanyInput!) {
   createCompany(input: $input) {

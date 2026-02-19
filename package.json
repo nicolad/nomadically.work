@@ -20,6 +20,7 @@
     "codegen": "graphql-codegen",
     "test:eval": "vitest run src/evals",
     "test:eval:watch": "vitest src/evals",
+    "eval:export-db": "tsx scripts/export-eval-data.ts",
     "test:openrouter": "tsx src/openrouter/test-integration.ts",
     "eval:promptfoo": "tsx scripts/setup-langfuse-prompts.ts && NODE_OPTIONS='--import tsx/esm' npx promptfoo eval -c src/promptfoo/remote-jobs.promptfooconfig.yaml",
     "eval:promptfoo:setup": "tsx scripts/setup-langfuse-prompts.ts",

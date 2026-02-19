@@ -8,7 +8,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import {
   GetUserSettingsDocument,
   UpdateUserSettingsDocument,
-} from "@/__generated__/index";
+} from "@/__generated__/hooks";
 
 export function UserPreferences() {
   const { userId } = useAuth();

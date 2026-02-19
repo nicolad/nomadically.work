@@ -68,17 +68,36 @@ export type AtsVendor =
 
 export type Application = {
   __typename: 'Application';
+  companyName: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
+  id: Scalars['Int']['output'];
   jobId: Scalars['String']['output'];
+  jobTitle: Maybe<Scalars['String']['output']>;
+  notes: Maybe<Scalars['String']['output']>;
   questions: Array<QuestionAnswer>;
   resume: Maybe<Scalars['Upload']['output']>;
+  status: ApplicationStatus;
 };
 
 export type ApplicationInput = {
+  companyName?: InputMaybe<Scalars['String']['input']>;
   jobId: Scalars['String']['input'];
+  jobTitle?: InputMaybe<Scalars['String']['input']>;
   questions: Array<QuestionAnswerInput>;
   resume?: InputMaybe<Scalars['Upload']['input']>;
 };
+
+/**
+ * Pipeline status for a tracked job application.
+ * Maps to a kanban column in the UI.
+ */
+export type ApplicationStatus =
+  | 'accepted'
+  | 'pending'
+  | 'rejected'
+  | 'reviewed'
+  | 'submitted';
 
 export type AshbyAddress = {
   __typename: 'AshbyAddress';
@@ -615,6 +634,7 @@ export type Mutation = {
    */
   processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
+  updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
@@ -715,6 +735,12 @@ export type MutationProcessAllJobsArgs = {
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateApplicationArgs = {
+  id: Scalars['Int']['input'];
+  input: UpdateApplicationInput;
 };
 
 
@@ -1097,6 +1123,11 @@ export type TrackItem = {
   promptRef: Maybe<Scalars['String']['output']>;
   tags: Array<Scalars['String']['output']>;
   title: Scalars['String']['output'];
+};
+
+export type UpdateApplicationInput = {
+  notes?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<ApplicationStatus>;
 };
 
 export type UpdateCompanyInput = {

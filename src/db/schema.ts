@@ -459,6 +459,9 @@ export const applications = sqliteTable("applications", {
   })
     .notNull()
     .default("pending"),
+  notes: text("notes"), // Free-text notes on this application
+  job_title: text("job_title"), // Denormalized job title for display
+  company_name: text("company_name"), // Denormalized company name for display
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

@@ -457,9 +457,29 @@ ${cases.join(",\n")}
 
 async function printStats(
   client: ReturnType<typeof createD1HttpClient>,
-): Promise<void> {
-  console.log("\n📊 Database classification stats:");
+): Promise<{ totalJobs: number; classifiedJobs: number; roleColumnsExist: boolean }> {
+  console.log("\n📊 Database stats:");
 
+  const total = await query<{ count: number }>(
+    client,
+    "SELECT COUNT(*) AS count FROM jobs",
+  );
+  const totalJobs = total[0]?.count ?? 0;
+  console.log(`  Total jobs: ${totalJobs}`);
+
+  // Status breakdown — shows where jobs are in the pipeline
+  const statusStats = await query<{ status: string | null; count: number }>(
+    client,
+    `SELECT status, COUNT(*) AS count FROM jobs GROUP BY status ORDER BY count DESC`,
+  );
+  if (statusStats.length > 0) {
+    console.log("  Pipeline status breakdown:");
+    for (const row of statusStats) {
+      console.log(`    ${row.status ?? "null"}: ${row.count}`);
+    }
+  }
+
+  // EU classification breakdown
   const euStats = await query<{ is_remote_eu: number | null; confidence: string | null; count: number }>(
     client,
     `SELECT is_remote_eu, remote_eu_confidence AS confidence, COUNT(*) AS count
@@ -468,12 +488,19 @@ async function printStats(
      GROUP BY is_remote_eu, remote_eu_confidence
      ORDER BY is_remote_eu DESC, count DESC`,
   );
+  const classifiedJobs = euStats.reduce((s, r) => s + r.count, 0);
 
-  for (const row of euStats) {
-    const label = row.is_remote_eu === 1 ? "EU remote=true " : "EU remote=false";
-    console.log(`  ${label}  conf=${row.confidence ?? "null"}  n=${row.count}`);
+  if (euStats.length > 0) {
+    console.log(`  EU classification (${classifiedJobs} classified):`);
+    for (const row of euStats) {
+      const label = row.is_remote_eu === 1 ? "eu-remote=true " : "eu-remote=false";
+      console.log(`    ${label}  conf=${row.confidence ?? "null"}  n=${row.count}`);
+    }
+  } else {
+    console.log("  EU classification: no classified jobs yet (Phase 3 not run)");
   }
 
+  // Role tagging (Phase 2 columns may not exist)
   const roleStats = await query<{ ai: number | null; frontend: number | null; count: number }>(
     client,
     `SELECT role_ai_engineer AS ai, role_frontend_react AS frontend, COUNT(*) AS count
@@ -481,22 +508,21 @@ async function printStats(
      WHERE role_ai_engineer IS NOT NULL OR role_frontend_react IS NOT NULL
      GROUP BY role_ai_engineer, role_frontend_react
      ORDER BY count DESC`,
-  ).catch(() => []);
+  ).catch(() => null);
 
-  if (roleStats.length > 0) {
-    console.log("\n  Role tagging (Phase 2):");
+  const roleColumnsExist = roleStats !== null;
+  if (roleStats && roleStats.length > 0) {
+    console.log("  Role tagging (Phase 2):");
     for (const row of roleStats) {
-      console.log(`  ai=${row.ai ?? "null"}  frontend=${row.frontend ?? "null"}  n=${row.count}`);
+      console.log(`    ai=${row.ai ?? "null"}  frontend=${row.frontend ?? "null"}  n=${row.count}`);
     }
+  } else if (!roleColumnsExist) {
+    console.log("  Role tagging: columns not yet added (Phase 2 migration needed)");
   } else {
-    console.log("\n  Role tagging: no data (Phase 2 migration may not be applied)");
+    console.log("  Role tagging: columns exist but no data yet");
   }
 
-  const total = await query<{ count: number }>(
-    client,
-    "SELECT COUNT(*) AS count FROM jobs",
-  );
-  console.log(`\n  Total jobs in DB: ${total[0]?.count ?? "?"}`);
+  return { totalJobs, classifiedJobs, roleColumnsExist };
 }
 
 // ---------------------------------------------------------------------------
@@ -515,7 +541,41 @@ async function main() {
     process.exit(1);
   }
 
-  await printStats(client);
+  const { totalJobs, classifiedJobs, roleColumnsExist } = await printStats(client);
+
+  // Early-exit with remediation guidance if DB is not ready
+  if (totalJobs === 0) {
+    console.log("\n⚠️  DB is empty — no jobs to export yet.");
+    console.log("\nTo populate the DB, run the ingestion pipeline:");
+    console.log("  pnpm jobs:ingest          # pull jobs from Greenhouse/Lever/Ashby");
+    console.log("  pnpm jobs:enhance         # enrich with ATS data (Phase 1)");
+    console.log("  # Then trigger the process-jobs CF Worker to run Phase 2 + 3:");
+    console.log("  curl -X POST $CLASSIFY_JOBS_WORKER_URL/process-sync");
+    console.log("\nThen re-run: pnpm eval:export-db");
+    return;
+  }
+
+  if (classifiedJobs === 0) {
+    console.log("\n⚠️  Jobs exist but none are classified yet.");
+    console.log(`  ${totalJobs} jobs in DB — run the process-jobs worker to classify them:`);
+    console.log("  curl -X POST $CLASSIFY_JOBS_WORKER_URL/process-sync");
+    console.log("  # or trigger via queue:");
+    console.log("  curl -X POST $CLASSIFY_JOBS_WORKER_URL");
+    console.log("\nThen re-run: pnpm eval:export-db");
+    // Still try exporting — there may be partial data
+  }
+
+  if (!roleColumnsExist) {
+    console.log("\n⚠️  Phase 2 role columns missing. Apply the migration:");
+    console.log("  npx wrangler d1 execute nomadically-work-db --remote --command \\");
+    console.log(`    "ALTER TABLE jobs ADD COLUMN role_ai_engineer INTEGER;`);
+    console.log(`    ALTER TABLE jobs ADD COLUMN role_frontend_react INTEGER;`);
+    console.log(`    ALTER TABLE jobs ADD COLUMN role_confidence TEXT;`);
+    console.log(`    ALTER TABLE jobs ADD COLUMN role_reason TEXT;`);
+    console.log(`    ALTER TABLE jobs ADD COLUMN role_source TEXT;"`);
+    console.log("\nThen re-run: pnpm eval:export-db");
+  }
+
   await exportEURemoteCases(client, samplesPerBucket);
   await exportRoleTaggingCases(client, samplesPerBucket);
 
@@ -523,8 +583,7 @@ async function main() {
   console.log(
     "\nNext steps:",
     "\n  1. Review the generated files — spot-check low/medium confidence labels",
-    "\n  2. Import dbRemoteEUTestCases in remote-eu-eval.test.ts alongside remoteEUTestCases",
-    "\n  3. Run: pnpm test:eval",
+    "\n  2. Run: pnpm test:eval  (DB cases are merged automatically)",
   );
 }
 

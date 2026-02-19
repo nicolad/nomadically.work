@@ -5,7 +5,7 @@ import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@apollo/client";
 import { gql } from "@/__generated__";
 
-export default function PrepPage() {
+export default function InterviewPrepPage() {
   const { data, loading, error } = useQuery(
     gql(`
       query GetPrepResources {

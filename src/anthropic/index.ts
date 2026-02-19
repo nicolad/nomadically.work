@@ -97,7 +97,9 @@ export {
   createResearchAgent,
   createReasoningAgent,
   createQuickAgent,
+  createJobSeekerAgent,
   agentTemplates,
+  type JobSeekerAgentOptions,
 } from './agents';
 
 // Subagents

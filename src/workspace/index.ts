@@ -11,6 +11,7 @@ import {
   rerunJobClassifierTool,
   diffSnapshotsTool,
 } from "./ops-skills";
+import { strategyEnforcerTool } from "@/agents/strategy-enforcer";
 
 /**
  * Main workspace for agents with filesystem, sandbox, and skills support
@@ -150,4 +151,5 @@ export const opsTools = {
   inspectJobDecision: inspectJobDecisionTool,
   rerunJobClassifier: rerunJobClassifierTool,
   diffSnapshots: diffSnapshotsTool,
+  strategyEnforcer: strategyEnforcerTool,
 };

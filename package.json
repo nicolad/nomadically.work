@@ -38,6 +38,8 @@
     "jobs:extract-skills": "tsx scripts/ingest-jobs.ts --extract-skills",
     "ccx:scrape": "tsx scripts/scrape-from-ccx.ts",
     "preferences:example": "tsx scripts/example-preferences.ts",
+    "strategy:check": "tsx scripts/enforce-strategy.ts",
+    "strategy:check:all": "tsx scripts/enforce-strategy.ts --all",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "wrangler d1 migrations apply nomadically-work-db --remote",

@@ -625,6 +625,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  generateResearch: Array<ResearchItem>;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   /**
@@ -701,6 +702,11 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateResearchArgs = {
+  goalDescription: Scalars['String']['input'];
 };
 
 
@@ -1051,6 +1057,15 @@ export type RegisteredPrompt = {
   type: Scalars['String']['output'];
   usageCount: Maybe<Scalars['Int']['output']>;
   versions: Array<Scalars['Int']['output']>;
+};
+
+export type ResearchItem = {
+  __typename: 'ResearchItem';
+  id: Scalars['String']['output'];
+  relevance: Maybe<Scalars['String']['output']>;
+  summary: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  url: Scalars['URL']['output'];
 };
 
 export type ResumeAnswer = {

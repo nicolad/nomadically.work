@@ -568,6 +568,28 @@ type Mutation {
   upsert_company_ats_boards(boards: [ATSBoardUpsertInput!]!, company_id: Int!): [ATSBoard!]!
 }
 
+type PrepCategory {
+  description: String!
+  emoji: String!
+  id: String!
+  name: String!
+  resources: [PrepResource!]!
+}
+
+type PrepContent {
+  categories: [PrepCategory!]!
+  totalResources: Int!
+}
+
+type PrepResource {
+  category: String!
+  description: String!
+  href: URL!
+  id: String!
+  tags: [String!]!
+  title: String!
+}
+
 """Response from triggering the classify-jobs Cloudflare Worker"""
 type ProcessAllJobsResponse {
   """Number of errors during ATS enhancement"""
@@ -653,6 +675,8 @@ type Query {
   langsmithPromptCommit(includeModel: Boolean, promptIdentifier: String!): LangSmithPromptCommit
   langsmithPrompts(isArchived: Boolean, isPublic: Boolean, query: String): [LangSmithPrompt!]!
   myPromptUsage(limit: Int): [PromptUsage!]!
+  prepResources: PrepContent!
+  prepResourcesByCategory(category: String!): [PrepResource!]!
   prompt(label: String, name: String!, version: Int): Prompt
   prompts: [RegisteredPrompt!]!
   resumeStatus(email: String!): ResumeStatus

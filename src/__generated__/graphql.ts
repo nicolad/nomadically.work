@@ -744,6 +744,31 @@ export type MutationUpsert_Company_Ats_BoardsArgs = {
   company_id: Scalars['Int']['input'];
 };
 
+export type PrepCategory = {
+  __typename: 'PrepCategory';
+  description: Scalars['String']['output'];
+  emoji: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  resources: Array<PrepResource>;
+};
+
+export type PrepContent = {
+  __typename: 'PrepContent';
+  categories: Array<PrepCategory>;
+  totalResources: Scalars['Int']['output'];
+};
+
+export type PrepResource = {
+  __typename: 'PrepResource';
+  category: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  href: Scalars['URL']['output'];
+  id: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
 /** Response from triggering the classify-jobs Cloudflare Worker */
 export type ProcessAllJobsResponse = {
   __typename: 'ProcessAllJobsResponse';
@@ -833,6 +858,8 @@ export type Query = {
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
   myPromptUsage: Array<PromptUsage>;
+  prepResources: PrepContent;
+  prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
@@ -921,6 +948,11 @@ export type QueryLangsmithPromptsArgs = {
 
 export type QueryMyPromptUsageArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryPrepResourcesByCategoryArgs = {
+  category: Scalars['String']['input'];
 };
 
 
@@ -1433,6 +1465,18 @@ export type PushLangSmithPromptMutationVariables = Exact<{
 
 export type PushLangSmithPromptMutation = { __typename: 'Mutation', pushLangSmithPrompt: string };
 
+export type GetPrepResourcesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetPrepResourcesQuery = { __typename: 'Query', prepResources: { __typename: 'PrepContent', totalResources: number, categories: Array<{ __typename: 'PrepCategory', id: string, name: string, emoji: string, description: string, resources: Array<{ __typename: 'PrepResource', id: string, title: string, href: string, description: string, category: string, tags: Array<string> }> }> } };
+
+export type GetPrepResourcesByCategoryQueryVariables = Exact<{
+  category: Scalars['String']['input'];
+}>;
+
+
+export type GetPrepResourcesByCategoryQuery = { __typename: 'Query', prepResourcesByCategory: Array<{ __typename: 'PrepResource', id: string, title: string, href: string, description: string, category: string, tags: Array<string> }> };
+
 export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1524,6 +1568,8 @@ export const CreateLangSmithPromptDocument = {"kind":"Document","definitions":[{
 export const UpdateLangSmithPromptDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateLangSmithPrompt"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"promptIdentifier"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateLangSmithPromptInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateLangSmithPrompt"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"promptIdentifier"},"value":{"kind":"Variable","name":{"kind":"Name","value":"promptIdentifier"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"promptHandle"}},{"kind":"Field","name":{"kind":"Name","value":"fullName"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"readme"}},{"kind":"Field","name":{"kind":"Name","value":"tenantId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"isArchived"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"owner"}},{"kind":"Field","name":{"kind":"Name","value":"numLikes"}},{"kind":"Field","name":{"kind":"Name","value":"numDownloads"}},{"kind":"Field","name":{"kind":"Name","value":"numViews"}},{"kind":"Field","name":{"kind":"Name","value":"numCommits"}},{"kind":"Field","name":{"kind":"Name","value":"lastCommitHash"}},{"kind":"Field","name":{"kind":"Name","value":"likedByAuthUser"}}]}}]}}]} as unknown as DocumentNode<UpdateLangSmithPromptMutation, UpdateLangSmithPromptMutationVariables>;
 export const DeleteLangSmithPromptDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteLangSmithPrompt"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"promptIdentifier"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteLangSmithPrompt"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"promptIdentifier"},"value":{"kind":"Variable","name":{"kind":"Name","value":"promptIdentifier"}}}]}]}}]} as unknown as DocumentNode<DeleteLangSmithPromptMutation, DeleteLangSmithPromptMutationVariables>;
 export const PushLangSmithPromptDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"PushLangSmithPrompt"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"promptIdentifier"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"PushLangSmithPromptInput"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pushLangSmithPrompt"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"promptIdentifier"},"value":{"kind":"Variable","name":{"kind":"Name","value":"promptIdentifier"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}]}]}}]} as unknown as DocumentNode<PushLangSmithPromptMutation, PushLangSmithPromptMutationVariables>;
+export const GetPrepResourcesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPrepResources"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"prepResources"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"emoji"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"resources"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"href"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalResources"}}]}}]}}]} as unknown as DocumentNode<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>;
+export const GetPrepResourcesByCategoryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPrepResourcesByCategory"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"category"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"prepResourcesByCategory"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"category"},"value":{"kind":"Variable","name":{"kind":"Name","value":"category"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"href"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}}]}}]}}]} as unknown as DocumentNode<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>;
 export const GetPromptsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPrompts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"prompts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"content"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"labels"}},{"kind":"Field","name":{"kind":"Name","value":"versions"}},{"kind":"Field","name":{"kind":"Name","value":"lastUpdatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastConfig"}},{"kind":"Field","name":{"kind":"Name","value":"usageCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedBy"}}]}}]}}]} as unknown as DocumentNode<GetPromptsQuery, GetPromptsQueryVariables>;
 export const GetMyPromptUsageDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyPromptUsage"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myPromptUsage"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"promptName"}},{"kind":"Field","name":{"kind":"Name","value":"userEmail"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"traceId"}}]}}]}}]} as unknown as DocumentNode<GetMyPromptUsageQuery, GetMyPromptUsageQueryVariables>;
 export const CreatePromptDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreatePrompt"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreatePromptInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createPrompt"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"labels"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"}}]}}]}}]} as unknown as DocumentNode<CreatePromptMutation, CreatePromptMutationVariables>;

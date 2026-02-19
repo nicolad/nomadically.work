@@ -1,0 +1,37 @@
+type Track {
+  id: ID!
+  slug: String!
+  title: String!
+  description: String
+  level: String
+  items: [TrackItem!]!
+}
+
+type TrackItem {
+  id: ID!
+  kind: String!
+  title: String!
+  position: Int!
+  contentRef: String
+  promptRef: String
+  difficulty: Int
+  children: [TrackItem!]!
+  tags: [String!]!
+  prereqs: [ID!]!
+}
+
+input CreateTrackInput {
+  slug: String!
+  title: String!
+  description: String
+  level: String
+}
+
+extend type Query {
+  track(slug: String!): Track
+  tracks(limit: Int = 50): [Track!]!
+}
+
+extend type Mutation {
+  createTrack(input: CreateTrackInput!): Track!
+}

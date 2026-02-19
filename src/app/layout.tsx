@@ -28,7 +28,14 @@ export default function RootLayout({
             <Providers>
               {/* ── nav strip with logo ── */}
               <nav className="yc-nav">
-                <Link href="/" style={{ display: "flex", alignItems: "center", marginRight: 24 }}>
+                <Link
+                  href="/"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginRight: 24,
+                  }}
+                >
                   <Image
                     src="/logo.svg"
                     alt="Nomadically"
@@ -40,6 +47,7 @@ export default function RootLayout({
                 <Link href="/">jobs</Link>
                 <Link href="/applications">applications</Link>
                 <Link href="/companies">companies</Link>
+                <Link href="/prep">prep</Link>
                 <Link href="/prompts">prompts</Link>
                 <Link href="/chats">query</Link>
                 <span style={{ flex: 1 }} />

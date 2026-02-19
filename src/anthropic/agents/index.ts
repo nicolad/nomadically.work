@@ -9,6 +9,7 @@ import { createAgent } from '../client';
 import { CLAUDE_MODELS, TOOL_PRESETS, EFFORT_LEVELS } from '../constants';
 
 export { createArchitectAgent } from '../agents/architect';
+export { createJobSearchAgent } from '../agents/job-search';
 
 /**
  * Pre-configured agent for code analysis and review
@@ -102,6 +103,7 @@ export function createQuickAgent(opts?: {
  */
 // Re-import for template map
 import { createArchitectAgent } from '../agents/architect';
+import { createJobSearchAgent } from '../agents/job-search';
 
 /**
  * Agent template map for easy access
@@ -113,4 +115,5 @@ export const agentTemplates = {
   reasoning: createReasoningAgent,
   architect: createArchitectAgent,
   quick: createQuickAgent,
+  jobSearch: createJobSearchAgent,
 } as const;

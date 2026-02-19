@@ -8,8 +8,6 @@ import {
   adminAssistantAgent,
   postgresAgent,
   sqlGenerationAgent,
-  jobSearchAgent,
-  searchD1JobsTool,
 } from "@/agents";
 import { personalizationAgent, recommendationAgent } from "@/memory";
 import {
@@ -87,7 +85,6 @@ export const mastra = new Mastra({
     adminAssistantAgent,
     postgresAgent,
     sqlGenerationAgent,
-    jobSearchAgent,
   },
   // Storage is optional - using in-memory for simplicity
   // For production, configure external storage as needed
@@ -124,9 +121,6 @@ export const mastra = new Mastra({
     inspectJobDecision: inspectJobDecisionTool,
     rerunJobClassifier: rerunJobClassifierTool,
     diffSnapshots: diffSnapshotsTool,
-
-    // Job search tool
-    searchD1Jobs: searchD1JobsTool,
 
     // Database tools
     databaseIntrospection: databaseIntrospectionTool,

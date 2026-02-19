@@ -80,9 +80,6 @@ export {
 // Export admin assistant for ops control plane
 export { adminAssistantAgent } from "./admin-assistant";
 
-// Export job search agent for remote AI/React engineer positions
-export { jobSearchAgent, searchD1JobsTool } from "./job-search-agent";
-
 // Export strategy enforcer for optimization strategy validation
 export {
   strategyEnforcerTool,

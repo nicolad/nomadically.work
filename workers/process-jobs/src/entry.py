@@ -119,32 +119,47 @@ class JobClassification(BaseModel):
 ROLE_TAGGING_PROMPT = ChatPromptTemplate.from_messages([
     (
         "system",
-        "You are a job-classification assistant. "
-        "Analyse the job posting and determine whether it is a Frontend/React engineer "
-        "role and/or an AI/ML/LLM engineer role. "
-        "Return ONLY a JSON object — no markdown, no explanation, no preamble.",
+        "You are a job-classification specialist. "
+        "Analyze job postings to identify target roles: Frontend/React engineers and AI/ML/LLM engineers. "
+        "Return structured JSON with clear confidence assessment.",
     ),
     (
         "human",
-        """Classify this job posting.
+        """Analyze this job posting and classify the role type.
 
-Title:       {title}
-Location:    {location}
-Description: {description}
+JOB DETAILS:
+- Title:       {title}
+- Location:    {location}
+- Description: {description}
 
-Return exactly this JSON (no extra keys):
+CLASSIFICATION GUIDANCE:
+
+FRONTEND/REACT INDICATOR:
+- Look for: React, Vue, Angular, Next.js, TypeScript, JavaScript, HTML/CSS
+- Look for: "Frontend Engineer", "UI Engineer", "Web Developer", "Full Stack (React focus)"
+- HIGH confidence if: Title explicitly mentions React/Frontend AND description has React/JS frameworks
+
+AI/ML/LLM ENGINEER INDICATOR:
+- Look for: AI, Machine Learning, LLM, RAG, embeddings, vector search, transformers, PyTorch
+- Look for: "AI Engineer", "ML Engineer", "Data Scientist (ML-focused)", "LLM Engineer"
+- Look for: "NLP", "computer vision", "deep learning", "neural networks", "fine-tuning"
+- HIGH confidence if: Title or description explicitly includes AI/ML terminology
+
+DUAL ROLES:
+- Both can be true for "AI-powered React engineer" or "ML + Frontend" roles
+
+CONFIDENCE LEVELS:
+- HIGH: Role title or opening sentence clearly indicates specialization + skills match
+- MEDIUM: Role could be either, mixed signals, or senior generalista with tech requirements
+- LOW: Insufficient information, generic "engineer" title, or unclear skill requirements
+
+Return ONLY valid JSON (no markdown):
 {{
-  "isFrontendReact": true|false,
-  "isAIEngineer": true|false,
+  "isFrontendReact": boolean,
+  "isAIEngineer": boolean,
   "confidence": "high" | "medium" | "low",
-  "reason": "one sentence explanation"
-}}
-
-Guidelines:
-- isFrontendReact = true if the primary stack is React / Next.js / frontend UI
-- isAIEngineer    = true if ML / LLM / RAG / embeddings / AI infra is primary
-- Both can be true (e.g. AI-powered React product engineer)
-- confidence = high only when signals are unambiguous""",
+  "reason": "Brief explanation of classification"
+}}""",
     ),
 ])
 
@@ -152,30 +167,53 @@ Guidelines:
 CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages([
     (
         "system",
-        "You are a job classification expert. "
-        "Determine whether the given job posting is a fully Remote EU position. "
-        "Return structured JSON output.",
+        "You are an expert at classifying job postings for Remote EU eligibility. "
+        "A Remote EU position must be FULLY REMOTE and allow work from EU member countries. "
+        "Return structured JSON output with clear reasoning.",
     ),
     (
         "human",
-        """Analyze this job posting and determine if it is a Remote EU position.
+        """Classify this job posting as Remote EU or not.
 
-Title: {title}
-Location: {location}
-Description: {description}
+JOB DETAILS:
+- Title: {title}
+- Location: {location}
+- Description: {description}
 
-Consider:
-- EMEA includes non-EU countries (UK post-Brexit, Switzerland, Middle East)
-- CET timezone is not exclusive to EU
-- UK is not part of EU since Brexit
-- EU work authorization suggests EU remote
-- Must be fully remote, not hybrid or onsite
+CLASSIFICATION RULES (apply in order):
+1. FULLY REMOTE REQUIREMENT: Must explicitly state "remote", "fully remote", or similar.
+   - Hybrid, office-based, or on-site positions → isRemoteEU: false
 
-Respond ONLY with a JSON object using exactly these keys:
+2. EXPLICIT EU MENTIONS: Look for clear EU indicators:
+   - "Remote - EU", "EU only", "EU members only" → isRemoteEU: true (high confidence)
+   - Specific EU countries only (e.g., "Germany, France, Spain") → isRemoteEU: true
+
+3. WORK AUTHORIZATION: Strong signal for EU remote:
+   - "EU work authorization", "EU passport", "EU residency" → isRemoteEU: true
+
+4. AMBIGUOUS/MIXED REGIONS:
+   - "EMEA" (includes UK, Switzerland, Middle East) → isRemoteEU: false
+   - "Europe" without EU specification → isRemoteEU: false
+   - "EU + UK + Switzerland" (mixed) → isRemoteEU: true with medium confidence
+
+5. TIMEZONE-ONLY: NOT sufficient for EU classification:
+   - "CET timezone" or "European timezone" alone → isRemoteEU: false
+
+6. SPECIFIC COUNTRIES TO EXCLUDE:
+   - UK only (post-Brexit) → isRemoteEU: false
+   - Switzerland → isRemoteEU: false
+   - Worldwide/global → isRemoteEU: false
+
+7. CONFIDENCE LEVELS:
+   - HIGH: Explicit EU mention, clear remote status, work authorization required
+   - MEDIUM: Mixed regions (includes EU), EEA, ambiguous language
+   - LOW: Too vague to determine, timezone-based, preference (not requirement)
+
+RESPOND ONLY WITH VALID JSON:
 {{
   "isRemoteEU": true/false,
   "confidence": "high" | "medium" | "low",
-  "reason": "brief explanation"
+  "reason": "Brief explanation referencing the classification rules applied"
 }}""",
     ),
 ])

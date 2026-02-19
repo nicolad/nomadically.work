@@ -211,7 +211,7 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
   },
   {
     id: "worldwide-position-1",
-    description: "Worldwide remote (not EU-restricted)",
+    description: "Worldwide remote (EU workers can work these roles)",
     jobPosting: {
       title: "Product Manager",
       location: "Remote - Worldwide",
@@ -219,9 +219,9 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
         "We hire talented professionals from anywhere in the world.",
     },
     expectedClassification: {
-      isRemoteEU: false,
-      confidence: "high",
-      reason: "Worldwide scope is not restricted to EU",
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Worldwide/global remote roles are accessible to EU workers",
     },
   },
   {

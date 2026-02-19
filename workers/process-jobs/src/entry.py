@@ -199,14 +199,14 @@ CLASSIFICATION RULES (apply in order):
 5. TIMEZONE-ONLY: NOT sufficient for EU classification:
    - "CET timezone" or "European timezone" alone → isRemoteEU: false
 
-6. SPECIFIC COUNTRIES TO EXCLUDE:
+6. SPECIFIC COUNTRIES/REGIONS:
    - UK only (post-Brexit) → isRemoteEU: false
    - Switzerland → isRemoteEU: false
-   - Worldwide/global → isRemoteEU: false
+   - Worldwide/global/anywhere → isRemoteEU: true (medium confidence — EU workers can work these roles)
 
 7. CONFIDENCE LEVELS:
    - HIGH: Explicit EU mention, clear remote status, work authorization required
-   - MEDIUM: Mixed regions (includes EU), EEA, ambiguous language
+   - MEDIUM: Mixed regions (includes EU), EEA, ambiguous language, worldwide/global remote
    - LOW: Too vague to determine, timezone-based, preference (not requirement)
 
 RESPOND ONLY WITH VALID JSON:

@@ -579,6 +579,7 @@ type Mutation {
   3. Return the updated job with full ATS data
   """
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
+  generateResearch(goalDescription: String!): [ResearchItem!]!
   ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult
   ingest_company_snapshot(capture_timestamp: String, company_id: Int!, content_hash: String, crawl_id: String, evidence: EvidenceInput!, extracted: JSON, fetched_at: String!, http_status: Int, jsonld: JSON, mime: String, source_url: String!, text_sample: String): CompanySnapshot!
   """
@@ -738,6 +739,14 @@ type RegisteredPrompt {
   type: String!
   usageCount: Int
   versions: [Int!]!
+}
+
+type ResearchItem {
+  id: String!
+  relevance: String
+  summary: String!
+  title: String!
+  url: URL!
 }
 
 type ResumeAnswer {

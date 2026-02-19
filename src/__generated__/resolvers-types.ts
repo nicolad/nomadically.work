@@ -628,6 +628,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  generateResearch: Array<ResearchItem>;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   /**
@@ -704,6 +705,11 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateResearchArgs = {
+  goalDescription: Scalars['String']['input'];
 };
 
 
@@ -1056,6 +1062,15 @@ export type RegisteredPrompt = {
   versions: Array<Scalars['Int']['output']>;
 };
 
+export type ResearchItem = {
+  __typename?: 'ResearchItem';
+  id: Scalars['String']['output'];
+  relevance: Maybe<Scalars['String']['output']>;
+  summary: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  url: Scalars['URL']['output'];
+};
+
 export type ResumeAnswer = {
   __typename?: 'ResumeAnswer';
   answer: Scalars['String']['output'];
@@ -1347,6 +1362,7 @@ export type ResolversTypes = {
   QuestionAnswer: ResolverTypeWrapper<Partial<QuestionAnswer>>;
   QuestionAnswerInput: ResolverTypeWrapper<Partial<QuestionAnswerInput>>;
   RegisteredPrompt: ResolverTypeWrapper<Partial<RegisteredPrompt>>;
+  ResearchItem: ResolverTypeWrapper<Partial<ResearchItem>>;
   ResumeAnswer: ResolverTypeWrapper<Partial<ResumeAnswer>>;
   ResumeIngestResult: ResolverTypeWrapper<Partial<ResumeIngestResult>>;
   ResumeStatus: ResolverTypeWrapper<Partial<ResumeStatus>>;
@@ -1433,6 +1449,7 @@ export type ResolversParentTypes = {
   QuestionAnswer: Partial<QuestionAnswer>;
   QuestionAnswerInput: Partial<QuestionAnswerInput>;
   RegisteredPrompt: Partial<RegisteredPrompt>;
+  ResearchItem: Partial<ResearchItem>;
   ResumeAnswer: Partial<ResumeAnswer>;
   ResumeIngestResult: Partial<ResumeIngestResult>;
   ResumeStatus: Partial<ResumeStatus>;
@@ -1821,6 +1838,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
+  generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
@@ -1941,6 +1959,14 @@ export type RegisteredPromptResolvers<ContextType = GraphQLContext, ParentType e
   type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   usageCount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   versions?: Resolver<Array<ResolversTypes['Int']>, ParentType, ContextType>;
+};
+
+export type ResearchItemResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResearchItem'] = ResolversParentTypes['ResearchItem']> = {
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  relevance?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  url?: Resolver<ResolversTypes['URL'], ParentType, ContextType>;
 };
 
 export type ResumeAnswerResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeAnswer'] = ResolversParentTypes['ResumeAnswer']> = {
@@ -2080,6 +2106,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   Query?: QueryResolvers<ContextType>;
   QuestionAnswer?: QuestionAnswerResolvers<ContextType>;
   RegisteredPrompt?: RegisteredPromptResolvers<ContextType>;
+  ResearchItem?: ResearchItemResolvers<ContextType>;
   ResumeAnswer?: ResumeAnswerResolvers<ContextType>;
   ResumeIngestResult?: ResumeIngestResultResolvers<ContextType>;
   ResumeStatus?: ResumeStatusResolvers<ContextType>;

@@ -1,3 +1,13 @@
+# ── Research types ───────────────────────────────────
+
+type ResearchItem {
+  id: String!
+  title: String!
+  url: URL!
+  summary: String!
+  relevance: String
+}
+
 # ── Track types ──────────────────────────────────────
 
 type Track {
@@ -64,4 +74,5 @@ extend type Query {
 
 extend type Mutation {
   createTrack(input: CreateTrackInput!): Track!
+  generateResearch(goalDescription: String!): [ResearchItem!]!
 }

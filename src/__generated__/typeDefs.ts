@@ -56,16 +56,36 @@ enum ATSVendor {
 }
 
 type Application {
+  companyName: String
+  createdAt: String!
   email: EmailAddress!
+  id: Int!
   jobId: String!
+  jobTitle: String
+  notes: String
   questions: [QuestionAnswer!]!
   resume: Upload
+  status: ApplicationStatus!
 }
 
 input ApplicationInput {
+  companyName: String
   jobId: String!
+  jobTitle: String
   questions: [QuestionAnswerInput!]!
   resume: Upload
+}
+
+"""
+Pipeline status for a tracked job application.
+Maps to a kanban column in the UI.
+"""
+enum ApplicationStatus {
+  accepted
+  pending
+  rejected
+  reviewed
+  submitted
 }
 
 type AshbyAddress {
@@ -568,6 +588,7 @@ type Mutation {
   """
   processAllJobs(limit: Int): ProcessAllJobsResponse!
   pushLangSmithPrompt(input: PushLangSmithPromptInput, promptIdentifier: String!): String!
+  updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
   updateLangSmithPrompt(input: UpdateLangSmithPromptInput!, promptIdentifier: String!): LangSmithPrompt!
   updatePromptLabel(label: String!, name: String!, version: Int!): Prompt!
@@ -786,6 +807,11 @@ type TrackItem {
 }
 
 scalar URL
+
+input UpdateApplicationInput {
+  notes: String
+  status: ApplicationStatus
+}
 
 input UpdateCompanyInput {
   canonical_domain: String

@@ -742,6 +742,31 @@ export type MutationUpsert_Company_Ats_BoardsArgs = {
   company_id: Scalars['Int']['input'];
 };
 
+export type PrepCategory = {
+  __typename: 'PrepCategory';
+  description: Scalars['String']['output'];
+  emoji: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  resources: Array<PrepResource>;
+};
+
+export type PrepContent = {
+  __typename: 'PrepContent';
+  categories: Array<PrepCategory>;
+  totalResources: Scalars['Int']['output'];
+};
+
+export type PrepResource = {
+  __typename: 'PrepResource';
+  category: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  href: Scalars['URL']['output'];
+  id: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
 /** Response from triggering the classify-jobs Cloudflare Worker */
 export type ProcessAllJobsResponse = {
   __typename: 'ProcessAllJobsResponse';
@@ -831,6 +856,8 @@ export type Query = {
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
   myPromptUsage: Array<PromptUsage>;
+  prepResources: PrepContent;
+  prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
@@ -919,6 +946,11 @@ export type QueryLangsmithPromptsArgs = {
 
 export type QueryMyPromptUsageArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryPrepResourcesByCategoryArgs = {
+  category: Scalars['String']['input'];
 };
 
 

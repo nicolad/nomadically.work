@@ -758,6 +758,31 @@ export type MutationUpsert_Company_Ats_BoardsArgs = {
   company_id: Scalars['Int']['input'];
 };
 
+export type PrepCategory = {
+  __typename?: 'PrepCategory';
+  description: Scalars['String']['output'];
+  emoji: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  resources: Array<PrepResource>;
+};
+
+export type PrepContent = {
+  __typename?: 'PrepContent';
+  categories: Array<PrepCategory>;
+  totalResources: Scalars['Int']['output'];
+};
+
+export type PrepResource = {
+  __typename?: 'PrepResource';
+  category: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  href: Scalars['URL']['output'];
+  id: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
 /** Response from triggering the classify-jobs Cloudflare Worker */
 export type ProcessAllJobsResponse = {
   __typename?: 'ProcessAllJobsResponse';
@@ -847,6 +872,8 @@ export type Query = {
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
   myPromptUsage: Array<PromptUsage>;
+  prepResources: PrepContent;
+  prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
@@ -937,6 +964,11 @@ export type QueryLangsmithPromptsArgs = {
 
 export type QueryMyPromptUsageArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryPrepResourcesByCategoryArgs = {
+  category: Scalars['String']['input'];
 };
 
 
@@ -1422,6 +1454,18 @@ export type PushLangSmithPromptMutationVariables = Exact<{
 
 
 export type PushLangSmithPromptMutation = { __typename?: 'Mutation', pushLangSmithPrompt: string };
+
+export type GetPrepResourcesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetPrepResourcesQuery = { __typename?: 'Query', prepResources: { __typename?: 'PrepContent', totalResources: number, categories: Array<{ __typename?: 'PrepCategory', id: string, name: string, emoji: string, description: string, resources: Array<{ __typename?: 'PrepResource', id: string, title: string, href: string, description: string, category: string, tags: Array<string> }> }> } };
+
+export type GetPrepResourcesByCategoryQueryVariables = Exact<{
+  category: Scalars['String']['input'];
+}>;
+
+
+export type GetPrepResourcesByCategoryQuery = { __typename?: 'Query', prepResourcesByCategory: Array<{ __typename?: 'PrepResource', id: string, title: string, href: string, description: string, category: string, tags: Array<string> }> };
 
 export type GetPromptsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3472,6 +3516,110 @@ export function usePushLangSmithPromptMutation(baseOptions?: Apollo.MutationHook
 export type PushLangSmithPromptMutationHookResult = ReturnType<typeof usePushLangSmithPromptMutation>;
 export type PushLangSmithPromptMutationResult = Apollo.MutationResult<PushLangSmithPromptMutation>;
 export type PushLangSmithPromptMutationOptions = Apollo.BaseMutationOptions<PushLangSmithPromptMutation, PushLangSmithPromptMutationVariables>;
+export const GetPrepResourcesDocument = gql`
+    query GetPrepResources {
+  prepResources {
+    categories {
+      id
+      name
+      emoji
+      description
+      resources {
+        id
+        title
+        href
+        description
+        category
+        tags
+      }
+    }
+    totalResources
+  }
+}
+    `;
+
+/**
+ * __useGetPrepResourcesQuery__
+ *
+ * To run a query within a React component, call `useGetPrepResourcesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPrepResourcesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPrepResourcesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetPrepResourcesQuery(baseOptions?: Apollo.QueryHookOptions<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>(GetPrepResourcesDocument, options);
+      }
+export function useGetPrepResourcesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>(GetPrepResourcesDocument, options);
+        }
+// @ts-ignore
+export function useGetPrepResourcesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>): Apollo.UseSuspenseQueryResult<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>;
+export function useGetPrepResourcesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>): Apollo.UseSuspenseQueryResult<GetPrepResourcesQuery | undefined, GetPrepResourcesQueryVariables>;
+export function useGetPrepResourcesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>(GetPrepResourcesDocument, options);
+        }
+export type GetPrepResourcesQueryHookResult = ReturnType<typeof useGetPrepResourcesQuery>;
+export type GetPrepResourcesLazyQueryHookResult = ReturnType<typeof useGetPrepResourcesLazyQuery>;
+export type GetPrepResourcesSuspenseQueryHookResult = ReturnType<typeof useGetPrepResourcesSuspenseQuery>;
+export type GetPrepResourcesQueryResult = Apollo.QueryResult<GetPrepResourcesQuery, GetPrepResourcesQueryVariables>;
+export const GetPrepResourcesByCategoryDocument = gql`
+    query GetPrepResourcesByCategory($category: String!) {
+  prepResourcesByCategory(category: $category) {
+    id
+    title
+    href
+    description
+    category
+    tags
+  }
+}
+    `;
+
+/**
+ * __useGetPrepResourcesByCategoryQuery__
+ *
+ * To run a query within a React component, call `useGetPrepResourcesByCategoryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPrepResourcesByCategoryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPrepResourcesByCategoryQuery({
+ *   variables: {
+ *      category: // value for 'category'
+ *   },
+ * });
+ */
+export function useGetPrepResourcesByCategoryQuery(baseOptions: Apollo.QueryHookOptions<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables> & ({ variables: GetPrepResourcesByCategoryQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>(GetPrepResourcesByCategoryDocument, options);
+      }
+export function useGetPrepResourcesByCategoryLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>(GetPrepResourcesByCategoryDocument, options);
+        }
+// @ts-ignore
+export function useGetPrepResourcesByCategorySuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>): Apollo.UseSuspenseQueryResult<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>;
+export function useGetPrepResourcesByCategorySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>): Apollo.UseSuspenseQueryResult<GetPrepResourcesByCategoryQuery | undefined, GetPrepResourcesByCategoryQueryVariables>;
+export function useGetPrepResourcesByCategorySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>(GetPrepResourcesByCategoryDocument, options);
+        }
+export type GetPrepResourcesByCategoryQueryHookResult = ReturnType<typeof useGetPrepResourcesByCategoryQuery>;
+export type GetPrepResourcesByCategoryLazyQueryHookResult = ReturnType<typeof useGetPrepResourcesByCategoryLazyQuery>;
+export type GetPrepResourcesByCategorySuspenseQueryHookResult = ReturnType<typeof useGetPrepResourcesByCategorySuspenseQuery>;
+export type GetPrepResourcesByCategoryQueryResult = Apollo.QueryResult<GetPrepResourcesByCategoryQuery, GetPrepResourcesByCategoryQueryVariables>;
 export const GetPromptsDocument = gql`
     query GetPrompts {
   prompts {

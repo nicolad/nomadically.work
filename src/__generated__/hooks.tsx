@@ -628,6 +628,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  generateResearch: Array<ResearchItem>;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   /**
@@ -704,6 +705,11 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateResearchArgs = {
+  goalDescription: Scalars['String']['input'];
 };
 
 
@@ -1054,6 +1060,15 @@ export type RegisteredPrompt = {
   type: Scalars['String']['output'];
   usageCount: Maybe<Scalars['Int']['output']>;
   versions: Array<Scalars['Int']['output']>;
+};
+
+export type ResearchItem = {
+  __typename?: 'ResearchItem';
+  id: Scalars['String']['output'];
+  relevance: Maybe<Scalars['String']['output']>;
+  summary: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  url: Scalars['URL']['output'];
 };
 
 export type ResumeAnswer = {
@@ -1550,6 +1565,13 @@ export type AskAboutResumeQueryVariables = Exact<{
 
 
 export type AskAboutResumeQuery = { __typename?: 'Query', askAboutResume: { __typename?: 'ResumeAnswer', answer: string, context_count: number } | null };
+
+export type GenerateResearchMutationVariables = Exact<{
+  goalDescription: Scalars['String']['input'];
+}>;
+
+
+export type GenerateResearchMutation = { __typename?: 'Mutation', generateResearch: Array<{ __typename?: 'ResearchItem', id: string, title: string, url: string, summary: string, relevance: string | null }> };
 
 export type CreateTrackMutationVariables = Exact<{
   input: CreateTrackInput;
@@ -3969,6 +3991,43 @@ export type AskAboutResumeQueryHookResult = ReturnType<typeof useAskAboutResumeQ
 export type AskAboutResumeLazyQueryHookResult = ReturnType<typeof useAskAboutResumeLazyQuery>;
 export type AskAboutResumeSuspenseQueryHookResult = ReturnType<typeof useAskAboutResumeSuspenseQuery>;
 export type AskAboutResumeQueryResult = Apollo.QueryResult<AskAboutResumeQuery, AskAboutResumeQueryVariables>;
+export const GenerateResearchDocument = gql`
+    mutation GenerateResearch($goalDescription: String!) {
+  generateResearch(goalDescription: $goalDescription) {
+    id
+    title
+    url
+    summary
+    relevance
+  }
+}
+    `;
+export type GenerateResearchMutationFn = Apollo.MutationFunction<GenerateResearchMutation, GenerateResearchMutationVariables>;
+
+/**
+ * __useGenerateResearchMutation__
+ *
+ * To run a mutation, you first call `useGenerateResearchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateResearchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateResearchMutation, { data, loading, error }] = useGenerateResearchMutation({
+ *   variables: {
+ *      goalDescription: // value for 'goalDescription'
+ *   },
+ * });
+ */
+export function useGenerateResearchMutation(baseOptions?: Apollo.MutationHookOptions<GenerateResearchMutation, GenerateResearchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateResearchMutation, GenerateResearchMutationVariables>(GenerateResearchDocument, options);
+      }
+export type GenerateResearchMutationHookResult = ReturnType<typeof useGenerateResearchMutation>;
+export type GenerateResearchMutationResult = Apollo.MutationResult<GenerateResearchMutation>;
+export type GenerateResearchMutationOptions = Apollo.BaseMutationOptions<GenerateResearchMutation, GenerateResearchMutationVariables>;
 export const CreateTrackDocument = gql`
     mutation CreateTrack($input: CreateTrackInput!) {
   createTrack(input: $input) {

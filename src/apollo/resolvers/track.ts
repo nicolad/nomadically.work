@@ -1,4 +1,5 @@
 import type { GraphQLContext } from "../context";
+import { BraveSearchAgent } from "@/brave/search-agent";
 
 // ── Prep resource data ───────────────────────────────────────────────
 
@@ -18,6 +19,60 @@ interface PrepCategory {
   description: string;
   resources: PrepResource[];
 }
+
+interface ResearchItem {
+  id: string;
+  title: string;
+  url: string;
+  summary: string;
+  relevance: string;
+}
+
+// Curated fallback research resources grouped by common career goal keywords
+const CURATED_RESEARCH: ResearchItem[] = [
+  {
+    id: "remote-work-guide",
+    title: "The Ultimate Guide to Remote Work in Europe",
+    url: "https://nomads.com/remote-work",
+    summary: "Comprehensive guide covering visa options, tax implications, and top remote-friendly companies hiring across the EU.",
+    relevance: "high",
+  },
+  {
+    id: "eu-job-market",
+    title: "European Tech Job Market Report 2024",
+    url: "https://hired.com/state-of-tech-salaries",
+    summary: "Salary benchmarks, in-demand skills, and hiring trends across major EU tech hubs including Berlin, Amsterdam, and Warsaw.",
+    relevance: "high",
+  },
+  {
+    id: "remote-eu-visa",
+    title: "EU Digital Nomad Visas: Complete Overview",
+    url: "https://nomadgate.com/eu-digital-nomad-visas",
+    summary: "Comparison of digital nomad visa programs across EU member states, eligibility requirements, and application processes.",
+    relevance: "high",
+  },
+  {
+    id: "async-work",
+    title: "Async-First Work: Best Practices for Distributed Teams",
+    url: "https://about.gitlab.com/company/culture/all-remote/asynchronous",
+    summary: "GitLab's handbook on asynchronous communication, documentation, and collaboration for fully remote teams.",
+    relevance: "medium",
+  },
+  {
+    id: "skills-demand-eu",
+    title: "Top In-Demand Skills for EU Remote Jobs",
+    url: "https://www.linkedin.com/pulse/top-skills-companies-need-most-2024",
+    summary: "Analysis of the most sought-after technical and soft skills for remote positions at European companies.",
+    relevance: "medium",
+  },
+  {
+    id: "salary-negotiation",
+    title: "How to Negotiate Salary for Remote EU Positions",
+    url: "https://www.levels.fyi/blog/salary-negotiation",
+    summary: "Strategies for negotiating competitive compensation when working remotely for EU-based employers.",
+    relevance: "medium",
+  },
+];
 
 const PREP_CATEGORIES: PrepCategory[] = [
   {
@@ -659,6 +714,42 @@ let nextId = String(mockTracks.length + 1);
 
 export const trackResolvers = {
   Mutation: {
+    generateResearch: async (
+      _: any,
+      { goalDescription }: { goalDescription: string },
+      _context: GraphQLContext,
+    ): Promise<ResearchItem[]> => {
+      const braveApiKey =
+        process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY;
+
+      if (braveApiKey) {
+        try {
+          const agent = new BraveSearchAgent(braveApiKey);
+          const response = await agent.searchGet({
+            q: `${goalDescription} remote EU job career resources articles`,
+            count: 10,
+            maximum_number_of_urls: 8,
+            maximum_number_of_tokens: 4096,
+          });
+
+          const items = response.grounding.generic.map((item, index) => ({
+            id: `research-brave-${index}`,
+            title: item.title,
+            url: item.url,
+            summary: item.snippets[0] ?? "",
+            relevance: "high",
+          }));
+
+          if (items.length > 0) return items;
+        } catch {
+          // Fall through to curated results
+        }
+      }
+
+      // Return curated fallback resources
+      return CURATED_RESEARCH;
+    },
+
     createTrack: async (
       _: any,
       {

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Container, Box } from "@radix-ui/themes";
 import { SearchQueryBar } from "./SearchQueryBar";
+import { UserPreferences } from "./user-preferences";
 import { JobsList } from "./jobs-list";
 
 export function UnifiedJobsProvider() {
@@ -29,6 +30,7 @@ export function UnifiedJobsProvider() {
   return (
     <Container size="4" py="6">
       <Box mb="6">
+        <UserPreferences />
         <SearchQueryBar
           onSearchSubmit={handleSearch}
           initialQuery={searchFilter}

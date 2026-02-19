@@ -4,6 +4,31 @@ Remote EU job board aggregator. Next.js 16 frontend + GraphQL API backed by Clou
 
 ---
 
+## Optimization Strategy (Two-Layer Model)
+
+**See [OPTIMIZATION-STRATEGY.md](./OPTIMIZATION-STRATEGY.md)** for the full strategy document.
+
+This project follows the Two-Layer Model for AI systems. Before making changes, understand what we optimize for:
+
+| Meta Approach | Status | What It Guarantees |
+|---|---|---|
+| **Eval-First** | PRIMARY | Every prompt/model change tested against >= 80% accuracy bar |
+| **Grounding-First** | PRIMARY | LLM outputs schema-constrained; skills validated against taxonomy; evidence required |
+| **Multi-Model Routing** | SECONDARY | Cheap model first (Workers AI), escalate on low confidence only |
+| **Spec-Driven** | CROSS-CUTTING | GraphQL + Drizzle + Zod schemas as formal contracts |
+| **Observability** | EMERGING | Langfuse scoring active; production tracing partial |
+| **Human-Validation** | EMERGING | Approval gates for batch ops and destructive actions |
+
+**Enforcement:**
+```bash
+pnpm strategy:check        # Validate staged changes against strategy rules
+pnpm strategy:check:all    # Validate all tracked files
+```
+
+The strategy enforcer agent (`src/agents/strategy-enforcer.ts`) is also available as a Mastra tool for any agent to call.
+
+---
+
 ## Repository layout
 
 ```
@@ -155,6 +180,10 @@ pnpm test:eval                    # Run Vitest evals once
 pnpm test:eval:watch              # Watch mode
 pnpm eval:promptfoo               # Run Promptfoo evaluation suite
 pnpm eval:promptfoo:setup         # Setup Langfuse prompts for eval
+
+# Strategy enforcement
+pnpm strategy:check               # Validate changed files against optimization strategy
+pnpm strategy:check:all           # Validate all files against optimization strategy
 
 # Deployment
 pnpm deploy                       # Run deploy script

@@ -36,10 +36,12 @@
     "jobs:ingest": "tsx scripts/ingest-jobs.ts",
     "jobs:status": "tsx scripts/ingest-jobs.ts --check-status",
     "jobs:extract-skills": "tsx scripts/ingest-jobs.ts --extract-skills",
+    "jobs:setup": "tsx scripts/db-migrate-phase2.ts && tsx scripts/ingest-jobs.ts",
     "ccx:scrape": "tsx scripts/scrape-from-ccx.ts",
     "preferences:example": "tsx scripts/example-preferences.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:phase2": "tsx scripts/db-migrate-phase2.ts",
     "db:push": "wrangler d1 migrations apply nomadically-work-db --remote",
     "db:studio": "drizzle-kit studio"
   },

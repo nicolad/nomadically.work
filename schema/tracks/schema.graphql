@@ -1,3 +1,5 @@
+# ── Track types ──────────────────────────────────────
+
 type Track {
   id: ID!
   slug: String!
@@ -27,9 +29,37 @@ input CreateTrackInput {
   level: String
 }
 
+# ── Prep Resource types ──────────────────────────────
+
+type PrepResource {
+  id: String!
+  title: String!
+  href: URL!
+  description: String!
+  category: String!
+  tags: [String!]!
+}
+
+type PrepCategory {
+  id: String!
+  name: String!
+  emoji: String!
+  description: String!
+  resources: [PrepResource!]!
+}
+
+type PrepContent {
+  categories: [PrepCategory!]!
+  totalResources: Int!
+}
+
+# ── Queries & Mutations ──────────────────────────────
+
 extend type Query {
   track(slug: String!): Track
   tracks(limit: Int = 50): [Track!]!
+  prepResources: PrepContent!
+  prepResourcesByCategory(category: String!): [PrepResource!]!
 }
 
 extend type Mutation {

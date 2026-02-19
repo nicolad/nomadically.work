@@ -85,3 +85,34 @@ query GetTrack($slug: String!) {
     }
   }
 }
+
+query GetPrepResources {
+  prepResources {
+    categories {
+      id
+      name
+      emoji
+      description
+      resources {
+        id
+        title
+        href
+        description
+        category
+        tags
+      }
+    }
+    totalResources
+  }
+}
+
+query GetPrepResourcesByCategory($category: String!) {
+  prepResourcesByCategory(category: $category) {
+    id
+    title
+    href
+    description
+    category
+    tags
+  }
+}

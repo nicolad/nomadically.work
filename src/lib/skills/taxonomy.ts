@@ -85,11 +85,69 @@ export const SKILL_LABELS: Record<string, string> = {
 
   // Data Science & ML
   "machine-learning": "Machine Learning",
+  "deep-learning": "Deep Learning",
   tensorflow: "TensorFlow",
   pytorch: "PyTorch",
   pandas: "Pandas",
   numpy: "NumPy",
   scikit: "scikit-learn",
+  nlp: "Natural Language Processing",
+  "computer-vision": "Computer Vision",
+
+  // AI / LLM / GenAI
+  llm: "Large Language Models",
+  rag: "Retrieval-Augmented Generation",
+  "prompt-engineering": "Prompt Engineering",
+  "fine-tuning": "Fine-Tuning",
+  embeddings: "Embeddings",
+  transformers: "Transformers",
+  agents: "AI Agents",
+  "agentic-ai": "Agentic AI",
+  langchain: "LangChain",
+  langgraph: "LangGraph",
+  openai: "OpenAI",
+  anthropic: "Anthropic Claude",
+  "vercel-ai-sdk": "Vercel AI SDK",
+  "vector-db": "Vector Databases",
+  pinecone: "Pinecone",
+  weaviate: "Weaviate",
+  chromadb: "ChromaDB",
+  mlops: "MLOps",
+  huggingface: "Hugging Face",
+  "model-evaluation": "Model Evaluation",
+  "structured-output": "Structured Output",
+  "function-calling": "Function Calling",
+  mastra: "Mastra",
+  langfuse: "Langfuse",
+  promptfoo: "Promptfoo",
+
+  // Cloudflare ecosystem
+  "cloudflare-workers": "Cloudflare Workers",
+  "cloudflare-workers-ai": "Cloudflare Workers AI",
+  "cloudflare-d1": "Cloudflare D1",
+  "cloudflare-vectorize": "Cloudflare Vectorize",
+
+  // Frontend (extended)
+  "next-auth": "NextAuth.js",
+  "radix-ui": "Radix UI",
+  "shadcn-ui": "shadcn/ui",
+  storybook: "Storybook",
+  playwright: "Playwright",
+  cypress: "Cypress",
+  vitest: "Vitest",
+  "react-query": "React Query / TanStack Query",
+  zustand: "Zustand",
+  "apollo-client": "Apollo Client",
+  remix: "Remix",
+  astro: "Astro",
+
+  // Backend (extended)
+  "drizzle-orm": "Drizzle ORM",
+  prisma: "Prisma",
+  trpc: "tRPC",
+  hono: "Hono",
+  bun: "Bun",
+  deno: "Deno",
 };
 
 /**

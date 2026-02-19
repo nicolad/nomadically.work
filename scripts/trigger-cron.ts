@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
 /**
- * Manually trigger Cloudflare Workers Cron for job discovery
- * This script uses the Brave Search API to discover job sources and save them to Turso
+ * Manually trigger Cloudflare Workers Cron for ATS job ingestion
+ * Triggers ingestion from known ATS sources (Greenhouse, Lever, Ashby) stored in D1
  */
 
 import { execSync } from "child_process";
@@ -28,7 +28,7 @@ async function triggerCron() {
     });
 
     console.log("\n✅ Cron trigger completed successfully!");
-    console.log("   Check your Turso database for new job sources");
+    console.log("   Check your D1 database for new job sources");
   } catch (error: any) {
     console.error("\n❌ Failed to trigger cron:", error.message);
     process.exit(1);

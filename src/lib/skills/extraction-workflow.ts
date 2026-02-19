@@ -40,7 +40,7 @@ const skillExtractorAgent = new Agent({
     "Ignore vague terms like 'team player' or 'good communication' unless they map to a specific technical skill.",
   ].join("\n"),
   model: {
-    id: "deepseek/deepseek-reasoner",
+    id: "deepseek/deepseek-chat",
   },
 });
 

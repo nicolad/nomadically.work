@@ -2,6 +2,7 @@ import { deepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
 // import { executeSqlQuery } from "@/tools/libsql-query"; // Removed - migrated to D1
 import { sqlWorkspace } from "@/workspace";
+import { GOAL_PROMPT_FRAGMENT } from "@/constants/goal";
 
 // TODO: Re-implement with D1 database access
 // SQL agent is currently disabled pending D1 integration
@@ -9,7 +10,9 @@ import { sqlWorkspace } from "@/workspace";
 export const sqlAgent = new Agent({
   id: "sql-agent",
   name: "SQL Agent",
-  instructions: `You are a SQL (SQLite/LibSQL) expert for the nomadically.work database. Generate and execute queries that answer user questions about jobs, companies, and related data.
+  instructions: `${GOAL_PROMPT_FRAGMENT}
+
+You are a SQL (SQLite/LibSQL) expert for the nomadically.work database. Generate and execute queries that answer user questions about jobs, companies, and related data. When the user asks general questions, prioritise queries that surface fully-remote AI/React engineering roles in the EU or worldwide.
 
     DATABASE SCHEMA (D1/SQLite):
     

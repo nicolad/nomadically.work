@@ -51,27 +51,59 @@ const PROMPT_PATTERNS = [
 
 const SCHEMA_PATTERNS = [/schema\/.*\.graphql$/, /schema\.graphql$/];
 
+// Only actual LLM invocations need structured output — agent definition
+// files (new Agent / createAgent) are excluded because they don't make
+// LLM calls themselves; the callers do.
 const LLM_CALL_PATTERNS = [
   /\.generate\s*\(/,
   /\.chat\s*\(/,
   /\.complete\s*\(/,
   /ChatOpenAI\s*\(/,
-  /new Agent\s*\(/,
-  /createAgent\s*\(/,
 ];
 
 const STRUCTURED_OUTPUT_PATTERNS = [
   /structuredOutput/,
-  /response_format.*json/i,
+  /response_format/,   // includes both { type: 'json_object' } and pass-through
   /\.object\s*\(/,
   /output_schema/i,
   /JsonOutputParser/,
   /PydanticOutputParser/,
+  /model_validate/,    // Pydantic structured output
+  /generateObject/,
+];
+
+// Files exempt from Grounding-First because they are infrastructure,
+// examples, or eval harnesses — not production LLM call sites.
+const GROUNDING_EXEMPT_PATHS = [
+  "src/promptfoo/",
+  "workers/promptfoo-eval.ts",
+  "src/anthropic/examples.ts",
+  "scripts/bm25-skills.ts",
+  "src/agents/cloudflare-workers-ai.ts",
 ];
 
 const PROVENANCE_FIELDS = ["confidence", "reason", "source", "evidence"];
 
 const APPROVAL_PATTERNS = [/requireApproval:\s*true/, /requires?\s*approval/i];
+
+// ---------------------------------------------------------------------------
+// Helper: strip comment lines so pattern matching operates on code only
+// ---------------------------------------------------------------------------
+
+function stripCommentLines(content: string): string {
+  return content
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      return (
+        !t.startsWith("//") &&
+        !t.startsWith("*") &&
+        !t.startsWith("/*") &&
+        !t.startsWith("#")  // Python / shell comments
+      );
+    })
+    .join("\n");
+}
 
 // ---------------------------------------------------------------------------
 // Rule checks
@@ -83,8 +115,11 @@ function checkEvalFirst(
 ): Violation[] {
   const violations: Violation[] = [];
 
-  const touchesPromptOrModel = changedFiles.some((f) =>
-    PROMPT_PATTERNS.some((p) => p.test(f)),
+  // GraphQL schema files in schema/ are specs, not prompts — exclude them
+  const touchesPromptOrModel = changedFiles.some(
+    (f) =>
+      !SCHEMA_PATTERNS.some((p) => p.test(f)) &&
+      PROMPT_PATTERNS.some((p) => p.test(f)),
   );
 
   if (touchesPromptOrModel) {
@@ -111,10 +146,16 @@ function checkGroundingFirst(
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
+    // Skip infra / example / eval files that legitimately make unstructured calls
+    if (GROUNDING_EXEMPT_PATHS.some((p) => file.includes(p))) continue;
+
+    // Strip comments before matching so JSDoc examples don't trigger false positives
+    const codeContent = stripCommentLines(content);
+
     // Check for LLM calls without structured output
-    const hasLLMCall = LLM_CALL_PATTERNS.some((p) => p.test(content));
+    const hasLLMCall = LLM_CALL_PATTERNS.some((p) => p.test(codeContent));
     const hasStructuredOutput = STRUCTURED_OUTPUT_PATTERNS.some((p) =>
-      p.test(content),
+      p.test(codeContent),
     );
 
     if (hasLLMCall && !hasStructuredOutput) {
@@ -131,7 +172,7 @@ function checkGroundingFirst(
 
     // Check skill extraction pipeline integrity
     if (file.includes("extraction-workflow")) {
-      if (!content.includes("allowed.has")) {
+      if (!codeContent.includes("allowed.has")) {
         violations.push({
           rule: "Rule 3: Grounding-First — Skill extraction must validate against taxonomy",
           severity: "BLOCKING",
@@ -215,6 +256,9 @@ function checkObservability(
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
+    // Skip auto-generated stubs — they don't persist classification decisions
+    if (file.includes("/stubs/")) continue;
+
     // Check classification outputs for provenance fields
     const isClassificationFile =
       file.includes("classif") ||

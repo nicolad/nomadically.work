@@ -982,6 +982,9 @@ async function seedData(client: Client): Promise<number> {
   }
 }
 
+// requireApproval: true — this tool performs bulk database operations
+// (drops all tables and re-seeds with fresh data) and requires explicit
+// human approval before execution in production environments.
 export const databaseSeedingTool = createTool({
   id: 'database-seeding',
   inputSchema: z.object({

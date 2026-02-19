@@ -1,10 +1,10 @@
 /**
  * Cloudflare Workers AI Integration
- * 
+ *
  * Provides utilities and examples for using Cloudflare Workers AI models
  * with Mastra agents. Workers AI offers edge deployment with low latency
  * and cost-effective pricing.
- * 
+ *
  * Documentation: https://developers.cloudflare.com/workers-ai/
  */
 
@@ -12,6 +12,7 @@ import { Agent } from "@mastra/core/agent";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
 import { embedMany } from "ai";
 import { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN } from "@/config/env";
+import { GOAL_CONTEXT_LINE } from "@/constants/goal";
 
 // ============================================================================
 // Model Categories
@@ -23,27 +24,31 @@ import { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN } from "@/config/env";
 export const WORKERS_AI_MODELS = {
   // Chat & Text Generation
   CHAT: {
-    LATEST: "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-4-scout-17b-16e-instruct",
+    LATEST:
+      "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-4-scout-17b-16e-instruct",
     BALANCED: "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-3.2-3b-instruct",
     FAST: "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-3.1-8b-instruct-awq",
-    POWERFUL: "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-    ULTRA_BUDGET: "cloudflare-ai-gateway/workers-ai/@cf/ibm-granite/granite-4.0-h-micro",
+    POWERFUL:
+      "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    ULTRA_BUDGET:
+      "cloudflare-ai-gateway/workers-ai/@cf/ibm-granite/granite-4.0-h-micro",
   },
-  
+
   // Specialized Tasks
   CODE: "cloudflare-ai-gateway/workers-ai/@cf/qwen/qwen2.5-coder-32b-instruct",
   REASONING: "cloudflare-ai-gateway/workers-ai/@cf/qwen/qwq-32b",
-  VISION: "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-3.2-11b-vision-instruct",
-  
+  VISION:
+    "cloudflare-ai-gateway/workers-ai/@cf/meta/llama-3.2-11b-vision-instruct",
+
   // Embeddings
   EMBEDDINGS: {
-    SMALL: "@cf/baai/bge-small-en-v1.5",      // 384-dim, $0.02/1M
-    BASE: "@cf/baai/bge-base-en-v1.5",        // 768-dim, $0.07/1M
-    LARGE: "@cf/baai/bge-large-en-v1.5",      // 1024-dim, $0.07/1M
-    MULTILINGUAL: "@cf/baai/bge-m3",          // Multilingual, $0.01/1M
+    SMALL: "@cf/baai/bge-small-en-v1.5", // 384-dim, $0.02/1M
+    BASE: "@cf/baai/bge-base-en-v1.5", // 768-dim, $0.07/1M
+    LARGE: "@cf/baai/bge-large-en-v1.5", // 1024-dim, $0.07/1M
+    MULTILINGUAL: "@cf/baai/bge-m3", // Multilingual, $0.01/1M
     CHINESE: "@cf/qwen/qwen3-embedding-0.6b", // Chinese-optimized, $0.01/1M
   },
-  
+
   // Audio
   TTS: {
     ENGLISH: "@cf/deepgram/aura-2-en",
@@ -53,7 +58,7 @@ export const WORKERS_AI_MODELS = {
   STT: {
     NOVA: "@cf/deepgram/nova-3",
   },
-  
+
   // Moderation & Safety
   MODERATION: "@cf/meta/llama-guard-3-8b",
   RERANKER: "@cf/baai/bge-reranker-base",
@@ -75,7 +80,9 @@ export function createChatAgent(options?: {
   return new Agent({
     id: options?.id || "workers-ai-chat",
     name: options?.name || "Workers AI Chat Agent",
-    instructions: options?.instructions || "You are a helpful assistant running on Cloudflare's edge network.",
+    instructions:
+      options?.instructions ||
+      `${GOAL_CONTEXT_LINE} You are a helpful assistant running on Cloudflare's edge network.`,
     model: options?.model || WORKERS_AI_MODELS.CHAT.BALANCED,
   });
 }
@@ -91,7 +98,9 @@ export function createCodeAgent(options?: {
   return new Agent({
     id: options?.id || "workers-ai-code",
     name: options?.name || "Code Generator",
-    instructions: options?.instructions || "You are an expert programmer. Write clean, efficient, well-documented code.",
+    instructions:
+      options?.instructions ||
+      `${GOAL_CONTEXT_LINE} You are an expert programmer. Write clean, efficient, well-documented code.`,
     model: WORKERS_AI_MODELS.CODE,
   });
 }
@@ -107,7 +116,9 @@ export function createReasoningAgent(options?: {
   return new Agent({
     id: options?.id || "workers-ai-reasoning",
     name: options?.name || "Reasoning Agent",
-    instructions: options?.instructions || "Think step by step. Break down complex problems into manageable parts.",
+    instructions:
+      options?.instructions ||
+      `${GOAL_CONTEXT_LINE} Think step by step. Break down complex problems into manageable parts.`,
     model: WORKERS_AI_MODELS.REASONING,
   });
 }
@@ -123,7 +134,9 @@ export function createVisionAgent(options?: {
   return new Agent({
     id: options?.id || "workers-ai-vision",
     name: options?.name || "Vision Agent",
-    instructions: options?.instructions || "Analyze images in detail. Describe what you see accurately and comprehensively.",
+    instructions:
+      options?.instructions ||
+      `${GOAL_CONTEXT_LINE} Analyze images in detail. Describe what you see accurately and comprehensively.`,
     model: WORKERS_AI_MODELS.VISION,
   });
 }
@@ -139,7 +152,9 @@ export function createDynamicAgent(options?: {
   return new Agent({
     id: options?.id || "workers-ai-dynamic",
     name: options?.name || "Dynamic Agent",
-    instructions: options?.instructions || "You are an adaptive assistant.",
+    instructions:
+      options?.instructions ||
+      `${GOAL_CONTEXT_LINE} You are an adaptive assistant.`,
     model: ({ requestContext }) => {
       const context = requestContext as {
         priority?: "low" | "medium" | "high";
@@ -184,7 +199,9 @@ export function createDynamicAgent(options?: {
 /**
  * Creates an embedding model instance for Cloudflare Workers AI
  */
-export function createEmbeddingModel(modelId: string = WORKERS_AI_MODELS.EMBEDDINGS.SMALL) {
+export function createEmbeddingModel(
+  modelId: string = WORKERS_AI_MODELS.EMBEDDINGS.SMALL,
+) {
   if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
     throw new Error(
       "Missing Cloudflare credentials. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in your environment.",
@@ -201,11 +218,11 @@ export function createEmbeddingModel(modelId: string = WORKERS_AI_MODELS.EMBEDDI
 
 /**
  * Embeds text using Cloudflare Workers AI
- * 
+ *
  * @param values - Array of strings to embed
  * @param modelId - Model to use (default: bge-small-en-v1.5)
  * @returns Array of embedding vectors
- * 
+ *
  * @example
  * ```typescript
  * const embeddings = await embedWithWorkersAI([
@@ -224,7 +241,7 @@ export async function embedWithWorkersAI(
 
   const model = createEmbeddingModel(modelId);
   const { embeddings } = await embedMany({ model, values });
-  
+
   return embeddings;
 }
 
@@ -258,7 +275,7 @@ export async function exampleSimpleChat() {
 export async function exampleCodeGeneration() {
   const agent = createCodeAgent();
   const response = await agent.generate(
-    "Write a TypeScript function to calculate the Fibonacci sequence using memoization"
+    "Write a TypeScript function to calculate the Fibonacci sequence using memoization",
   );
   return response;
 }
@@ -269,13 +286,15 @@ export async function exampleCodeGeneration() {
 export async function exampleVisionAnalysis(imageUrl: string) {
   const agent = createVisionAgent();
   const response = await agent.generate({
-    messages: [{
-      role: "user",
-      content: [
-        { type: "text", text: "Describe this image in detail" },
-        { type: "image", image: imageUrl },
-      ],
-    }],
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Describe this image in detail" },
+          { type: "image", image: imageUrl },
+        ],
+      },
+    ],
   });
   return response;
 }
@@ -285,25 +304,22 @@ export async function exampleVisionAnalysis(imageUrl: string) {
  */
 export async function exampleDynamicAgent() {
   const agent = createDynamicAgent();
-  
+
   // High priority task - uses latest model
-  const urgentResponse = await agent.generate(
-    "Explain quantum computing",
-    { requestContext: { priority: "high" } }
-  );
-  
+  const urgentResponse = await agent.generate("Explain quantum computing", {
+    requestContext: { priority: "high" },
+  });
+
   // Code task - uses code specialist model
-  const codeResponse = await agent.generate(
-    "Write a React component",
-    { requestContext: { taskType: "code" } }
-  );
-  
+  const codeResponse = await agent.generate("Write a React component", {
+    requestContext: { taskType: "code" },
+  });
+
   // Budget task - uses cheapest model
-  const budgetResponse = await agent.generate(
-    "Say hello",
-    { requestContext: { budget: "minimal" } }
-  );
-  
+  const budgetResponse = await agent.generate("Say hello", {
+    requestContext: { budget: "minimal" },
+  });
+
   return { urgentResponse, codeResponse, budgetResponse };
 }
 
@@ -316,26 +332,33 @@ export async function exampleEmbeddings() {
     "Python is popular for machine learning",
     "Rust provides memory safety without garbage collection",
   ];
-  
+
   const query = "programming language with types";
-  
+
   // Embed all documents and query
   const [docEmbeddings, queryEmbedding] = await Promise.all([
     embedWithWorkersAI(documents),
     embedText(query),
   ]);
-  
+
   // Calculate cosine similarity (simplified)
   const similarities = docEmbeddings.map((docEmbed) => {
-    const dotProduct = docEmbed.reduce((sum, val, i) => sum + val * queryEmbedding[i], 0);
-    const magnitude1 = Math.sqrt(docEmbed.reduce((sum, val) => sum + val * val, 0));
-    const magnitude2 = Math.sqrt(queryEmbedding.reduce((sum, val) => sum + val * val, 0));
+    const dotProduct = docEmbed.reduce(
+      (sum, val, i) => sum + val * queryEmbedding[i],
+      0,
+    );
+    const magnitude1 = Math.sqrt(
+      docEmbed.reduce((sum, val) => sum + val * val, 0),
+    );
+    const magnitude2 = Math.sqrt(
+      queryEmbedding.reduce((sum, val) => sum + val * val, 0),
+    );
     return dotProduct / (magnitude1 * magnitude2);
   });
-  
+
   // Find most similar document
   const maxIndex = similarities.indexOf(Math.max(...similarities));
-  
+
   return {
     query,
     mostSimilar: documents[maxIndex],
@@ -347,14 +370,14 @@ export async function exampleEmbeddings() {
 // Type Exports
 // ============================================================================
 
-export type WorkersAIModelId = 
-  | typeof WORKERS_AI_MODELS.CHAT[keyof typeof WORKERS_AI_MODELS.CHAT]
+export type WorkersAIModelId =
+  | (typeof WORKERS_AI_MODELS.CHAT)[keyof typeof WORKERS_AI_MODELS.CHAT]
   | typeof WORKERS_AI_MODELS.CODE
   | typeof WORKERS_AI_MODELS.REASONING
   | typeof WORKERS_AI_MODELS.VISION
-  | typeof WORKERS_AI_MODELS.EMBEDDINGS[keyof typeof WORKERS_AI_MODELS.EMBEDDINGS]
-  | typeof WORKERS_AI_MODELS.TTS[keyof typeof WORKERS_AI_MODELS.TTS]
-  | typeof WORKERS_AI_MODELS.STT[keyof typeof WORKERS_AI_MODELS.STT]
+  | (typeof WORKERS_AI_MODELS.EMBEDDINGS)[keyof typeof WORKERS_AI_MODELS.EMBEDDINGS]
+  | (typeof WORKERS_AI_MODELS.TTS)[keyof typeof WORKERS_AI_MODELS.TTS]
+  | (typeof WORKERS_AI_MODELS.STT)[keyof typeof WORKERS_AI_MODELS.STT]
   | typeof WORKERS_AI_MODELS.MODERATION
   | typeof WORKERS_AI_MODELS.RERANKER;
 

@@ -9,6 +9,11 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { z } from "zod";
 import { preferenceManager, PREFERENCE_FIELDS } from "./preferences";
+import {
+  GOAL_PROMPT_FRAGMENT,
+  TARGET_ROLES,
+  REMOTE_SCOPES,
+} from "@/constants/goal";
 
 // Working memory schema for user context
 const userContextSchema = z.object({
@@ -30,19 +35,19 @@ const userContextSchema = z.object({
 
 /**
  * Memory configuration for personalization agents
- * 
+ *
  * Features:
  * - lastMessages: 20 - Keep last 20 messages in context
  * - generateTitle: Auto-generate thread titles from first message
  * - workingMemory: Structured user preference context that persists across threads
  * - scope: "resource" - Per-user memory (isolated by userId)
- * 
+ *
  * Thread and resource identifiers:
  * - thread: conversation session ID (e.g., "conversation-abc-123")
  * - resource: user ID that owns the thread (e.g., "user_123")
- * 
+ *
  * Both are required when calling agent.generate() or agent.stream():
- * 
+ *
  * const response = await personalizationAgent.generate("hello", {
  *   memory: {
  *     thread: threadId,
@@ -57,7 +62,8 @@ const memory = new Memory({
       // Use smaller, faster model for title generation
       model: "deepseek/deepseek-chat",
       // Keep titles concise for UI display
-      instructions: "Generate a concise 3-5 word title summarizing the user's main preference or question",
+      instructions:
+        "Generate a concise 3-5 word title summarizing the user's main preference or question",
     },
     workingMemory: {
       enabled: true,
@@ -76,7 +82,13 @@ const memory = new Memory({
 export const personalizationAgent = new Agent({
   id: "personalization-agent",
   name: "Personalization Assistant",
-  instructions: `You are a helpful personalization assistant for a remote job search platform.
+  instructions: `${GOAL_PROMPT_FRAGMENT}
+
+You are a helpful personalization assistant for nomadically.work — a remote job search platform.
+
+The owner's default profile targets: ${TARGET_ROLES.join(", ")}.
+Acceptable remote scope: ${REMOTE_SCOPES.join("; ")}.
+Use these as sensible defaults when the user hasn't specified preferences yet.
 
 Your role is to help users define and refine their job search preferences through natural conversation.
 
@@ -120,12 +132,14 @@ RESPONSE STYLE:
 export const recommendationAgent = new Agent({
   id: "recommendation-agent",
   name: "Job Recommendation Assistant",
-  instructions: `You are a job recommendation assistant that helps users find relevant remote jobs based on their preferences.
+  instructions: `${GOAL_PROMPT_FRAGMENT}
+
+You are a job recommendation assistant that helps users find relevant fully-remote jobs in the EU or worldwide, with a focus on AI Engineer and React Engineer roles.
 
 Your role is to:
 1. Understand user preferences from their working memory context
 2. Query the preference manager for evidence-based preferences
-3. Filter and rank jobs based on these preferences
+3. Filter and rank jobs based on these preferences — default to target roles (${TARGET_ROLES.join(", ")}) when no explicit preference is set
 4. Explain why jobs match or don't match user criteria
 
 When a user asks about jobs:

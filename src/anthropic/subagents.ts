@@ -31,8 +31,13 @@
  * ```
  */
 
-import type { AgentDefinition, AgentMcpServerSpec, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { AGENT_TOOLS } from './constants';
+import type {
+  AgentDefinition,
+  AgentMcpServerSpec,
+  SDKMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import { AGENT_TOOLS } from "./constants";
+import { GOAL_CONTEXT_LINE } from "@/constants/goal";
 
 /**
  * Options for defining a subagent (same as AgentDefinition but
@@ -48,7 +53,7 @@ export interface SubagentConfig {
   /** Tool names to explicitly disallow */
   disallowedTools?: string[];
   /** Model shorthand: 'sonnet' | 'opus' | 'haiku' | 'inherit' */
-  model?: AgentDefinition['model'];
+  model?: AgentDefinition["model"];
   /** MCP server specs for this subagent */
   mcpServers?: AgentMcpServerSpec[];
   /** Skill names to preload */
@@ -131,14 +136,14 @@ export function mergeSubagents(
  * ```
  */
 export function isSubagentMessage(msg: SDKMessage): boolean {
-  return 'parent_tool_use_id' in msg && msg.parent_tool_use_id !== null;
+  return "parent_tool_use_id" in msg && msg.parent_tool_use_id !== null;
 }
 
 /**
  * Get the parent tool use ID from a message, or null if it's from the main agent.
  */
 export function getSubagentId(msg: SDKMessage): string | null {
-  if ('parent_tool_use_id' in msg) {
+  if ("parent_tool_use_id" in msg) {
     return msg.parent_tool_use_id as string | null;
   }
   return null;
@@ -169,9 +174,7 @@ export const SUBAGENT_TOOLS = {
   ] as string[],
 
   /** All tools including Task */
-  ALL_WITH_TASK: [
-    ...Object.values(AGENT_TOOLS),
-  ] as string[],
+  ALL_WITH_TASK: [...Object.values(AGENT_TOOLS)] as string[],
 } as const;
 
 /**
@@ -179,39 +182,39 @@ export const SUBAGENT_TOOLS = {
  */
 export const SUBAGENT_PRESETS = {
   /** Code reviewer subagent */
-  codeReviewer: defineSubagent('code-reviewer', {
-    description: 'Expert code reviewer for quality and security reviews.',
-    prompt: 'Analyze code quality, security vulnerabilities, and suggest improvements. Be specific and actionable.',
-    tools: ['Read', 'Glob', 'Grep'],
+  codeReviewer: defineSubagent("code-reviewer", {
+    description: "Expert code reviewer for quality and security reviews.",
+    prompt: `${GOAL_CONTEXT_LINE} Analyze code quality, security vulnerabilities, and suggest improvements. Be specific and actionable.`,
+    tools: ["Read", "Glob", "Grep"],
   }),
 
   /** Test runner subagent */
-  testRunner: defineSubagent('test-runner', {
-    description: 'Runs tests and reports results.',
-    prompt: 'Execute tests and report failures with clear diagnostics.',
-    tools: ['Bash', 'Read'],
-    model: 'haiku',
+  testRunner: defineSubagent("test-runner", {
+    description: "Runs tests and reports results.",
+    prompt: `${GOAL_CONTEXT_LINE} Execute tests and report failures with clear diagnostics.`,
+    tools: ["Bash", "Read"],
+    model: "haiku",
   }),
 
   /** Linter subagent */
-  linter: defineSubagent('linter', {
-    description: 'Checks code style and lint errors.',
-    prompt: 'Check code for style issues, lint errors, and formatting problems.',
-    tools: ['Read', 'Glob', 'Grep'],
-    model: 'haiku',
+  linter: defineSubagent("linter", {
+    description: "Checks code style and lint errors.",
+    prompt: `${GOAL_CONTEXT_LINE} Check code for style issues, lint errors, and formatting problems.`,
+    tools: ["Read", "Glob", "Grep"],
+    model: "haiku",
   }),
 
   /** Documentation writer subagent */
-  docWriter: defineSubagent('doc-writer', {
-    description: 'Writes and updates documentation.',
-    prompt: 'Write clear, concise documentation. Follow existing documentation patterns.',
-    tools: ['Read', 'Write', 'Edit', 'Glob'],
+  docWriter: defineSubagent("doc-writer", {
+    description: "Writes and updates documentation.",
+    prompt: `${GOAL_CONTEXT_LINE} Write clear, concise documentation. Follow existing documentation patterns.`,
+    tools: ["Read", "Write", "Edit", "Glob"],
   }),
 
   /** Research subagent with web access */
-  researcher: defineSubagent('researcher', {
-    description: 'Researches topics using the web and codebase.',
-    prompt: 'Research thoroughly using web search and codebase analysis. Provide citations.',
-    tools: ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'],
+  researcher: defineSubagent("researcher", {
+    description: "Researches topics using the web and codebase.",
+    prompt: `${GOAL_CONTEXT_LINE} Research thoroughly using web search and codebase analysis. Provide citations.`,
+    tools: ["Read", "Glob", "Grep", "WebSearch", "WebFetch"],
   }),
 } as const;

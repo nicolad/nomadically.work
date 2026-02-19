@@ -104,7 +104,19 @@ function main() {
     filesToCheck = explicitFiles;
     console.log(`Checking ${filesToCheck.length} specified file(s)...\n`);
   } else if (checkAll) {
-    filesToCheck = getAllTrackedFiles();
+    const allTracked = getAllTrackedFiles();
+    // Spec-Driven: only flag schema files that are actually modified in git,
+    // not every tracked schema file. Running --all shouldn't require codegen
+    // for schemas that haven't changed.
+    const actuallyChanged = [
+      ...new Set([...getStagedFiles(), ...getUnstagedChanges()]),
+    ];
+    filesToCheck = allTracked.filter((f) => {
+      if (/schema\/.*\.graphql$|schema\.graphql$/.test(f)) {
+        return actuallyChanged.includes(f);
+      }
+      return true;
+    });
     console.log(`Checking all ${filesToCheck.length} tracked file(s)...\n`);
   } else {
     const staged = getStagedFiles();

@@ -194,4 +194,155 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
         "Most Schengen countries are EU members, though includes some non-EU",
     },
   },
+  {
+    id: "multiple-eu-countries-1",
+    description: "Multiple specific EU countries listed",
+    jobPosting: {
+      title: "Senior Backend Developer",
+      location: "Remote - France, Germany, Netherlands",
+      description:
+        "Accepting applications from France, Germany, or Netherlands.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "All mentioned locations are EU member states",
+    },
+  },
+  {
+    id: "worldwide-position-1",
+    description: "Worldwide remote (not EU-restricted)",
+    jobPosting: {
+      title: "Product Manager",
+      location: "Remote - Worldwide",
+      description:
+        "We hire talented professionals from anywhere in the world.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Worldwide scope is not restricted to EU",
+    },
+  },
+  {
+    id: "cest-timezone-1",
+    description: "CEST timezone (not EU-exclusive)",
+    jobPosting: {
+      title: "Frontend Developer",
+      location: "Remote - CEST timezone",
+      description:
+        "Must be available during CEST business hours. Flexible arrangements.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "medium",
+      reason: "CEST timezone includes non-EU countries",
+    },
+  },
+  {
+    id: "eu-residency-requirement-1",
+    description: "Explicit EU residency requirement",
+    jobPosting: {
+      title: "Compliance Officer",
+      location: "Remote - EU",
+      description:
+        "Must have EU residency. Candidates must be based in an EU country.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "Explicit EU residency requirement",
+    },
+  },
+  {
+    id: "nordic-countries-only",
+    description: "Nordic/Scandinavian countries (all EU except Norway)",
+    jobPosting: {
+      title: "Data Engineer",
+      location: "Remote - Nordic Countries",
+      description:
+        "Looking for talented engineers in Sweden, Denmark, or Finland.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason:
+        "Sweden, Denmark, Finland are EU members (though may include non-EU Nordic countries)",
+    },
+  },
+  {
+    id: "hybrid-office-europe",
+    description: "Hybrid role in European office (not fully remote)",
+    jobPosting: {
+      title: "Software Engineer",
+      location: "Berlin, Germany (Hybrid)",
+      description:
+        "2-3 days per week in office in Berlin, Germany. EU candidates preferred.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Position is hybrid, not fully remote",
+    },
+  },
+  {
+    id: "eu-preferred-not-required",
+    description: "EU preferred but not required",
+    jobPosting: {
+      title: "Frontend Engineer",
+      location: "Remote",
+      description:
+        "EU-based candidates preferred but not required. We work with global teams.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "medium",
+      reason: "EU is preferred but not a requirement - position is open globally",
+    },
+  },
+  {
+    id: "eastern-europe-eu-subset",
+    description: "Eastern European countries that are EU members",
+    jobPosting: {
+      title: "Backend Developer",
+      location: "Remote - Poland, Czech Republic, Hungary",
+      description:
+        "Open to candidates from Central and Eastern Europe EU member states.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "All mentioned countries are EU members",
+    },
+  },
+  {
+    id: "visa-sponsorship-available",
+    description: "Visa sponsorship available outside EU",
+    jobPosting: {
+      title: "Senior Engineer",
+      location: "Remote - EU",
+      description:
+        "Based in EU. Visa sponsorship available for qualified candidates outside EU.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "Primary location is EU; sponsorship is secondary",
+    },
+  },
+  {
+    id: "southern-europe-subset",
+    description: "Southern European countries (all EU)",
+    jobPosting: {
+      title: "Product Designer",
+      location: "Remote - Spain, Italy, Greece, Portugal",
+      description:
+        "Candidates based in Southern Europe welcome to apply.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "Spain, Italy, Greece, and Portugal are all EU members",
+    },
+  },
 ];

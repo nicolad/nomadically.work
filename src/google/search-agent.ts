@@ -1,40 +1,41 @@
 /**
  * Gemini API Google Search tool for ADK
- * 
+ *
  * The google_search tool allows the agent to perform web searches using Google Search.
  * The google_search tool is only compatible with Gemini 2 models.
- * 
+ *
  * Additional requirements when using the google_search tool:
  * - When you use grounding with Google Search, and you receive Search suggestions in your response,
  *   you must display the Search suggestions in production and in your applications.
  * - The UI code (HTML) is returned in the Gemini response as renderedContent,
  *   and you will need to show the HTML in your app, in accordance with the policy.
- * 
+ *
  * Warning: Single tool per agent limitation
  * This tool can only be used by itself within an agent instance.
- * 
+ *
  * Workaround: We isolate GOOGLE_SEARCH in a sub-agent (jobSearchAgent) and wrap it
  * with AgentTool in the root agent. This allows you to add more tools to the root
  * agent later without violating the single-tool limitation.
- * 
+ *
  * @see https://google.github.io/adk-docs/integrations/google-search/
  * @see https://ai.google.dev/gemini-api/docs/google-search
  */
 
-import {AgentTool, GOOGLE_SEARCH, LlmAgent} from '@google/adk';
+import { AgentTool, GOOGLE_SEARCH, LlmAgent } from "@google/adk";
+import { GOAL_CONTEXT_LINE } from "@/constants/goal";
 
 /**
  * Main agent: Uses GOOGLE_SEARCH grounding to find remote AI jobs
  * (Note: GOOGLE_SEARCH must be the only tool in this agent due to ADK limitations)
- * 
+ *
  * This agent specializes in finding fully-remote AI/GenAI roles at agencies,
  * consultancies, and professional services organizations.
  */
 export const rootAgent = new LlmAgent({
-  name: 'remote_ai_consulting_job_scout',
-  model: 'gemini-2.5-flash',
+  name: "remote_ai_consulting_job_scout",
+  model: "gemini-2.5-flash",
   description:
-    'Finds fully-remote AI/GenAI roles at agencies/consultancies using Google Search grounding.',
+    "Finds fully-remote AI/GenAI roles at agencies/consultancies using Google Search grounding.",
   instruction: `
 You are a job-search scout focused on FULLY-REMOTE AI roles at agencies, consultancies, and professional services orgs.
 
@@ -98,16 +99,15 @@ Here are my top 3 recommendations:
 
 /**
  * Generic Google Search Agent
- * 
+ *
  * A simple agent that can perform Google search queries and answer questions.
  * Useful for general-purpose web search tasks.
  */
 export const searchAgent = new LlmAgent({
-  model: 'gemini-2.5-flash',
-  name: 'google_search_agent',
+  model: "gemini-2.5-flash",
+  name: "google_search_agent",
   description:
-    'An agent whose job it is to perform Google search queries and answer questions about the results.',
-  instruction:
-    'You are an agent whose job is to perform Google search queries and answer questions about the results.',
+    "An agent whose job it is to perform Google search queries and answer questions about the results.",
+  instruction: `${GOAL_CONTEXT_LINE} You are an agent whose job is to perform Google search queries and answer questions about the results. Default to searching for fully-remote AI Engineer or React Engineer roles when the query is job-related.`,
   tools: [GOOGLE_SEARCH],
 });

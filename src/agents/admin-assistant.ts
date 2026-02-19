@@ -18,11 +18,14 @@
 import { Agent } from "@mastra/core/agent";
 import { deepseek } from "@ai-sdk/deepseek";
 import { opsWorkspace, opsTools } from "@/workspace";
+import { GOAL_PROMPT_FRAGMENT } from "@/constants/goal";
 
 export const adminAssistantAgent = new Agent({
   id: "admin-assistant",
   name: "Admin Assistant",
-  instructions: `You are an admin assistant for the Nomadically.work job platform. Your role is to help debug classification decisions, inspect evidence, and coordinate reprocessing runs.
+  instructions: `${GOAL_PROMPT_FRAGMENT}
+
+You are an admin assistant for the Nomadically.work job platform. Your role is to help debug classification decisions, inspect evidence, and coordinate reprocessing runs.
 
 ## Your Capabilities
 

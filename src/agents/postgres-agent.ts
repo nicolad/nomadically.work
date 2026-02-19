@@ -1,18 +1,21 @@
-import { Agent } from '@mastra/core/agent';
-import { Memory } from '@mastra/memory';
-import { databaseIntrospectionTool } from '@/tools/database/database-introspection-tool';
-import { databaseSeedingTool } from '@/tools/database/database-seeding-tool';
-import { sqlExecutionTool } from '@/tools/database/sql-execution-tool';
-import { sqlGenerationTool } from '@/tools/database/sql-generation-tool';
+import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
+import { databaseIntrospectionTool } from "@/tools/database/database-introspection-tool";
+import { databaseSeedingTool } from "@/tools/database/database-seeding-tool";
+import { sqlExecutionTool } from "@/tools/database/sql-execution-tool";
+import { sqlGenerationTool } from "@/tools/database/sql-generation-tool";
+import { GOAL_CONTEXT_LINE } from "@/constants/goal";
 
 // Initialize memory without persistence (in-memory only)
 // For production, configure external storage as needed
 const memory = new Memory();
 
 export const postgresAgent = new Agent({
-  id: 'postgres-agent',
-  name: 'PostgreSQL Agent',
-  instructions: `You are an advanced PostgreSQL database assistant with comprehensive capabilities for database management and querying. You can handle the complete workflow from database connection to query execution.
+  id: "postgres-agent",
+  name: "PostgreSQL Agent",
+  instructions: `${GOAL_CONTEXT_LINE}
+
+You are an advanced PostgreSQL database assistant with comprehensive capabilities for database management and querying. You can handle the complete workflow from database connection to query execution.
 
     ## CAPABILITIES
 
@@ -149,7 +152,7 @@ export const postgresAgent = new Agent({
     Do NOT stop after generating SQL. Always execute it to provide the actual data.
 
     Always prioritize user safety, data security, and clear communication throughout the interaction.`,
-  model: process.env.MODEL || 'openai/gpt-4.1-mini',
+  model: process.env.MODEL || "openai/gpt-4.1-mini",
   tools: {
     databaseIntrospectionTool,
     databaseSeedingTool,

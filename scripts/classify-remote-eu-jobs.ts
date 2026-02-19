@@ -98,10 +98,18 @@ async function classifyJob(
   });
 
   try {
+    // Provenance fields for every AI decision (Observability-First)
+    const source = "deepseek-chat";
+    const evidence = {
+      titleExcerpt: job.title.substring(0, 150),
+      locationExcerpt: job.location?.substring(0, 100) ?? "Not specified",
+      descriptionExcerpt: job.description?.substring(0, 300) ?? "No description",
+    };
+
     // Create generation span
     const generation = trace.generation({
       name: "classify-job",
-      model: "deepseek-chat",
+      model: source,
       input: {
         jobId: job.id,
         title: job.title,
@@ -132,9 +140,9 @@ Classify this job posting.`,
 
     const classification: RemoteEUClassification = result.object;
 
-    // Update generation with output
+    // Update generation with output — includes source + evidence for provenance tracking
     generation.update({
-      output: classification,
+      output: { ...classification, source, evidence },
       usage: result.usage as any,
     });
 

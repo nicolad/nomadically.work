@@ -1,1 +1,3 @@
-Get a fully remote job in europe or worldwide as ai engineer or as a react engieer.
+Find a fully remote job in Europe or worldwide as an AI Engineer or as a React Engineer.
+
+Enforced via `src/constants/goal.ts` — imported by every agent in the codebase.

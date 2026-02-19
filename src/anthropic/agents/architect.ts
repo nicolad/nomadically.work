@@ -1,5 +1,6 @@
-import { createAgent } from '../client';
-import { CLAUDE_MODELS, AGENT_TOOLS, EFFORT_LEVELS } from '../constants';
+import { createAgent } from "../client";
+import { CLAUDE_MODELS, AGENT_TOOLS, EFFORT_LEVELS } from "../constants";
+import { GOAL_CONTEXT_LINE } from "@/constants/goal";
 
 // Lean tool set — Write covers the report, WebSearch returns snippets so WebFetch is rarely additive.
 const ARCHITECT_TOOLS = [
@@ -22,10 +23,10 @@ export interface ArchitectAgentOptions {
  * Build the full system prompt for the architect agent.
  * `outputFile` is included so the agent knows where to write the report.
  */
-export function buildArchitectSystemPrompt(
-  outputFile: string,
-): string {
-  return `Principal architect. Autonomously analyse the repo and write a full Architecture Review Report to ${outputFile}.
+export function buildArchitectSystemPrompt(outputFile: string): string {
+  return `${GOAL_CONTEXT_LINE}
+
+Principal architect. Autonomously analyse the repo and write a full Architecture Review Report to ${outputFile}.
 
 Workflow: root files → Glob/Grep tree → read key sources (entry points, schemas, API, auth, config, CI, tests) → Bash (git log, cloc, npm audit, grep TODO) → WebSearch dep CVEs → Write report.
 
@@ -33,7 +34,7 @@ Report sections: 1) Executive Summary (overview, health 1-10, top 3 actions) 2) 
 }
 
 export function createArchitectAgent(opts?: ArchitectAgentOptions) {
-  const outputFile = 'ARCHITECTURE_REPORT.md';
+  const outputFile = "ARCHITECTURE_REPORT.md";
 
   return createAgent({
     model: CLAUDE_MODELS.OPUS_4_6,

@@ -5,28 +5,29 @@
  * as the OpenRouter agents module.
  */
 
-import { createAgent } from '../client';
-import { CLAUDE_MODELS, TOOL_PRESETS, EFFORT_LEVELS } from '../constants';
-import { createArchitectAgent } from '../agents/architect';
-import { createJobSeekerAgent } from '../agents/job-seeker';
+import { createAgent } from "../client";
+import { CLAUDE_MODELS, TOOL_PRESETS, EFFORT_LEVELS } from "../constants";
+import { GOAL_CONTEXT_LINE } from "@/constants/goal";
+import { createArchitectAgent } from "../agents/architect";
+import { createJobSeekerAgent } from "../agents/job-seeker";
 
-export { createArchitectAgent } from '../agents/architect';
-export { createJobSeekerAgent, buildJobSeekerSystemPrompt, type JobSeekerAgentOptions } from '../agents/job-seeker';
+export { createArchitectAgent } from "../agents/architect";
+export {
+  createJobSeekerAgent,
+  buildJobSeekerSystemPrompt,
+  type JobSeekerAgentOptions,
+} from "../agents/job-seeker";
 
 /**
  * Pre-configured agent for code analysis and review
  */
-export function createCodeReviewAgent(opts?: {
-  model?: string;
-  cwd?: string;
-}) {
+export function createCodeReviewAgent(opts?: { model?: string; cwd?: string }) {
   return createAgent({
     model: opts?.model ?? CLAUDE_MODELS.SONNET_4_5,
     tools: TOOL_PRESETS.READONLY,
     allowedTools: TOOL_PRESETS.READONLY,
     effort: EFFORT_LEVELS.HIGH,
-    systemPrompt:
-      'You are an expert code reviewer. Analyze code for bugs, security issues, performance problems, and best practice violations. Be specific and actionable.',
+    systemPrompt: `${GOAL_CONTEXT_LINE} Analyze code for bugs, security issues, performance problems, and best practice violations. Be specific and actionable.`,
     cwd: opts?.cwd,
   });
 }
@@ -34,17 +35,13 @@ export function createCodeReviewAgent(opts?: {
 /**
  * Pre-configured agent for bug fixing
  */
-export function createBugFixAgent(opts?: {
-  model?: string;
-  cwd?: string;
-}) {
+export function createBugFixAgent(opts?: { model?: string; cwd?: string }) {
   return createAgent({
     model: opts?.model ?? CLAUDE_MODELS.SONNET_4_5,
     tools: TOOL_PRESETS.CODING,
     allowedTools: TOOL_PRESETS.CODING,
     effort: EFFORT_LEVELS.HIGH,
-    systemPrompt:
-      'You are a skilled debugger. Find and fix bugs efficiently. Read the relevant code, understand the issue, and make precise edits to resolve it.',
+    systemPrompt: `${GOAL_CONTEXT_LINE} You are a skilled debugger. Find and fix bugs efficiently. Read the relevant code, understand the issue, and make precise edits to resolve it.`,
     cwd: opts?.cwd,
   });
 }
@@ -52,17 +49,13 @@ export function createBugFixAgent(opts?: {
 /**
  * Pre-configured agent for research tasks
  */
-export function createResearchAgent(opts?: {
-  model?: string;
-  cwd?: string;
-}) {
+export function createResearchAgent(opts?: { model?: string; cwd?: string }) {
   return createAgent({
     model: opts?.model ?? CLAUDE_MODELS.SONNET_4_5,
     tools: [...TOOL_PRESETS.READONLY, ...TOOL_PRESETS.WEB],
     allowedTools: [...TOOL_PRESETS.READONLY, ...TOOL_PRESETS.WEB],
     effort: EFFORT_LEVELS.HIGH,
-    systemPrompt:
-      'You are a research assistant. Search the codebase and the web to answer questions thoroughly. Provide citations and source references.',
+    systemPrompt: `${GOAL_CONTEXT_LINE} You are a research assistant. Search the codebase and the web to answer questions thoroughly. Provide citations and source references.`,
     cwd: opts?.cwd,
   });
 }
@@ -70,16 +63,13 @@ export function createResearchAgent(opts?: {
 /**
  * Pre-configured agent for deep reasoning tasks (Opus 4.6)
  */
-export function createReasoningAgent(opts?: {
-  cwd?: string;
-}) {
+export function createReasoningAgent(opts?: { cwd?: string }) {
   return createAgent({
     model: CLAUDE_MODELS.OPUS_4_6,
     tools: TOOL_PRESETS.READONLY,
     allowedTools: TOOL_PRESETS.READONLY,
     effort: EFFORT_LEVELS.MAX,
-    systemPrompt:
-      'You are a reasoning specialist. Think through complex problems step by step using extended thinking. Be thorough and precise.',
+    systemPrompt: `${GOAL_CONTEXT_LINE} You are a reasoning specialist. Think through complex problems step by step using extended thinking. Be thorough and precise.`,
     cwd: opts?.cwd,
   });
 }
@@ -87,10 +77,7 @@ export function createReasoningAgent(opts?: {
 /**
  * Pre-configured quick agent for simple tasks (Haiku)
  */
-export function createQuickAgent(opts?: {
-  cwd?: string;
-  tools?: string[];
-}) {
+export function createQuickAgent(opts?: { cwd?: string; tools?: string[] }) {
   return createAgent({
     model: CLAUDE_MODELS.HAIKU_3_5,
     tools: opts?.tools ?? TOOL_PRESETS.READONLY,

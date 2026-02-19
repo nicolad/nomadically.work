@@ -4,6 +4,11 @@
  * Handles creation, storage, and retrieval of evidence bundles for
  * classification and extraction decisions. Each bundle is an immutable
  * snapshot that enables debugging, reprocessing, and audit trails.
+ *
+ * HITL Safety: requireApproval — any bulk reprocessing that creates or
+ * supersedes bundles must go through the approval queue in the admin
+ * assistant before committing to D1. Individual bundle creation is safe;
+ * batch operations require human sign-off.
  */
 
 import { z } from "zod";

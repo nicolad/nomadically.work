@@ -1276,7 +1276,9 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
 
             is_eu       = classification.isRemoteEU
             confidence  = classification.confidence
-            reason      = f"[{source}] {classification.reason}"
+            # evidence: key text excerpts that informed this classification decision
+            evidence    = f"title:{job.get('title','')[:100]} | loc:{job.get('location','N/A')[:80]}"
+            reason      = f"[{source}] {classification.reason} | evidence:{evidence}"
             score       = {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence, 0.3)
             job_status  = JobStatus.EU_REMOTE.value if is_eu else JobStatus.NON_EU.value
 

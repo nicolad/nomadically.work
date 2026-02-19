@@ -80,9 +80,8 @@ export {
 // Export admin assistant for ops control plane
 export { adminAssistantAgent } from "./admin-assistant";
 
-// Export job search agent (Claude Agent SDK) for finding remote AI/React engineering roles
-export { createJobSearchAgent, buildJobSearchSystemPrompt } from "./job-search-agent";
-export type { JobSearchAgentOptions } from "./job-search-agent";
+// Export job search agent (Claude-backed Mastra Agent) for finding remote AI/React engineering roles
+export { jobSearchAgent, searchD1JobsTool } from "./job-search-agent";
 
 // Export strategy enforcer for optimization strategy validation
 export {

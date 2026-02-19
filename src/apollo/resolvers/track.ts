@@ -1,5 +1,4 @@
 import type { GraphQLContext } from "../context";
-import { BraveSearchAgent } from "@/brave/search-agent";
 
 // ── Prep resource data ───────────────────────────────────────────────
 
@@ -719,34 +718,7 @@ export const trackResolvers = {
       { goalDescription }: { goalDescription: string },
       _context: GraphQLContext,
     ): Promise<ResearchItem[]> => {
-      const braveApiKey =
-        process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY;
-
-      if (braveApiKey) {
-        try {
-          const agent = new BraveSearchAgent(braveApiKey);
-          const response = await agent.searchGet({
-            q: `${goalDescription} remote EU job career resources articles`,
-            count: 10,
-            maximum_number_of_urls: 8,
-            maximum_number_of_tokens: 4096,
-          });
-
-          const items = response.grounding.generic.map((item, index) => ({
-            id: `research-brave-${index}`,
-            title: item.title,
-            url: item.url,
-            summary: item.snippets[0] ?? "",
-            relevance: "high",
-          }));
-
-          if (items.length > 0) return items;
-        } catch {
-          // Fall through to curated results
-        }
-      }
-
-      // Return curated fallback resources
+      // Return curated resources (Brave Search removed — ATS scraping is the primary discovery channel)
       return CURATED_RESEARCH;
     },
 

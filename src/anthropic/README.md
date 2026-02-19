@@ -197,7 +197,6 @@ MCP_SERVERS.playwright(); // Browser automation
 MCP_SERVERS.postgres("postgresql://..."); // PostgreSQL
 MCP_SERVERS.filesystem("/app/src"); // Filesystem access
 MCP_SERVERS.github(process.env.GITHUB_TOKEN!); // GitHub API
-MCP_SERVERS.braveSearch(process.env.BRAVE_API_KEY!); // Brave Search
 ```
 
 ### Remote MCP servers (SSE / HTTP)

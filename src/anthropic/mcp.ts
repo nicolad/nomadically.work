@@ -149,7 +149,4 @@ export const MCP_SERVERS = {
   github: (token: string) =>
     mcpStdio('npx', ['@anthropic-ai/mcp-server-github'], { GITHUB_TOKEN: token }),
 
-  /** Brave Search */
-  braveSearch: (apiKey: string) =>
-    mcpStdio('npx', ['@anthropic-ai/mcp-server-brave-search'], { BRAVE_API_KEY: apiKey }),
 } as const;

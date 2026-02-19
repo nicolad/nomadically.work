@@ -413,7 +413,10 @@ function generateCounterfactual(bundle: JobClassificationBundle): string {
     if (reason.toLowerCase().includes("uk")) {
       return "Would be marked remote-EU if: includes EU countries in addition to UK, or states 'EU/EEA eligible'";
     }
-    return "Would be marked remote-EU if: location explicitly states 'Remote - EU' or lists EU countries";
+    if (reason.toLowerCase().includes("worldwide") || reason.toLowerCase().includes("global")) {
+      return "Worldwide/global remote roles should be marked remote-EU — EU workers can work these roles";
+    }
+    return "Would be marked remote-EU if: location explicitly states 'Remote - EU', lists EU countries, or is worldwide/global remote";
   }
 }
 

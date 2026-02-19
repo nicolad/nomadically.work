@@ -758,6 +758,31 @@ export type MutationUpsert_Company_Ats_BoardsArgs = {
   company_id: Scalars['Int']['input'];
 };
 
+export type PrepCategory = {
+  __typename?: 'PrepCategory';
+  description: Scalars['String']['output'];
+  emoji: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  resources: Array<PrepResource>;
+};
+
+export type PrepContent = {
+  __typename?: 'PrepContent';
+  categories: Array<PrepCategory>;
+  totalResources: Scalars['Int']['output'];
+};
+
+export type PrepResource = {
+  __typename?: 'PrepResource';
+  category: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  href: Scalars['URL']['output'];
+  id: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
 /** Response from triggering the classify-jobs Cloudflare Worker */
 export type ProcessAllJobsResponse = {
   __typename?: 'ProcessAllJobsResponse';
@@ -847,6 +872,8 @@ export type Query = {
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
   myPromptUsage: Array<PromptUsage>;
+  prepResources: PrepContent;
+  prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
@@ -937,6 +964,11 @@ export type QueryLangsmithPromptsArgs = {
 
 export type QueryMyPromptUsageArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryPrepResourcesByCategoryArgs = {
+  category: Scalars['String']['input'];
 };
 
 
@@ -1269,6 +1301,9 @@ export type ResolversTypes = {
   LeverCategories: ResolverTypeWrapper<Partial<LeverCategories>>;
   LeverList: ResolverTypeWrapper<Partial<LeverList>>;
   Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
+  PrepCategory: ResolverTypeWrapper<Partial<PrepCategory>>;
+  PrepContent: ResolverTypeWrapper<Partial<PrepContent>>;
+  PrepResource: ResolverTypeWrapper<Partial<PrepResource>>;
   ProcessAllJobsResponse: ResolverTypeWrapper<Partial<ProcessAllJobsResponse>>;
   Prompt: ResolverTypeWrapper<Partial<Prompt>>;
   PromptConfig: ResolverTypeWrapper<Partial<PromptConfig>>;
@@ -1352,6 +1387,9 @@ export type ResolversParentTypes = {
   LeverCategories: Partial<LeverCategories>;
   LeverList: Partial<LeverList>;
   Mutation: Record<PropertyKey, never>;
+  PrepCategory: Partial<PrepCategory>;
+  PrepContent: Partial<PrepContent>;
+  PrepResource: Partial<PrepResource>;
   ProcessAllJobsResponse: Partial<ProcessAllJobsResponse>;
   Prompt: Partial<Prompt>;
   PromptConfig: Partial<PromptConfig>;
@@ -1755,6 +1793,28 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   upsert_company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<MutationUpsert_Company_Ats_BoardsArgs, 'boards' | 'company_id'>>;
 };
 
+export type PrepCategoryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PrepCategory'] = ResolversParentTypes['PrepCategory']> = {
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  emoji?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  resources?: Resolver<Array<ResolversTypes['PrepResource']>, ParentType, ContextType>;
+};
+
+export type PrepContentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PrepContent'] = ResolversParentTypes['PrepContent']> = {
+  categories?: Resolver<Array<ResolversTypes['PrepCategory']>, ParentType, ContextType>;
+  totalResources?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
+export type PrepResourceResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PrepResource'] = ResolversParentTypes['PrepResource']> = {
+  category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  href?: Resolver<ResolversTypes['URL'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  tags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type ProcessAllJobsResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ProcessAllJobsResponse'] = ResolversParentTypes['ProcessAllJobsResponse']> = {
   enhanceErrors?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   enhanced?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
@@ -1812,6 +1872,8 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   langsmithPromptCommit?: Resolver<Maybe<ResolversTypes['LangSmithPromptCommit']>, ParentType, ContextType, RequireFields<QueryLangsmithPromptCommitArgs, 'promptIdentifier'>>;
   langsmithPrompts?: Resolver<Array<ResolversTypes['LangSmithPrompt']>, ParentType, ContextType, Partial<QueryLangsmithPromptsArgs>>;
   myPromptUsage?: Resolver<Array<ResolversTypes['PromptUsage']>, ParentType, ContextType, Partial<QueryMyPromptUsageArgs>>;
+  prepResources?: Resolver<ResolversTypes['PrepContent'], ParentType, ContextType>;
+  prepResourcesByCategory?: Resolver<Array<ResolversTypes['PrepResource']>, ParentType, ContextType, RequireFields<QueryPrepResourcesByCategoryArgs, 'category'>>;
   prompt?: Resolver<Maybe<ResolversTypes['Prompt']>, ParentType, ContextType, RequireFields<QueryPromptArgs, 'name'>>;
   prompts?: Resolver<Array<ResolversTypes['RegisteredPrompt']>, ParentType, ContextType>;
   resumeStatus?: Resolver<Maybe<ResolversTypes['ResumeStatus']>, ParentType, ContextType, RequireFields<QueryResumeStatusArgs, 'email'>>;
@@ -1967,6 +2029,9 @@ export type Resolvers<ContextType = GraphQLContext> = {
   LeverCategories?: LeverCategoriesResolvers<ContextType>;
   LeverList?: LeverListResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  PrepCategory?: PrepCategoryResolvers<ContextType>;
+  PrepContent?: PrepContentResolvers<ContextType>;
+  PrepResource?: PrepResourceResolvers<ContextType>;
   ProcessAllJobsResponse?: ProcessAllJobsResponseResolvers<ContextType>;
   Prompt?: PromptResolvers<ContextType>;
   PromptConfig?: PromptConfigResolvers<ContextType>;

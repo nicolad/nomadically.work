@@ -38,6 +38,7 @@
     "jobs:extract-skills": "tsx scripts/ingest-jobs.ts --extract-skills",
     "ccx:scrape": "tsx scripts/scrape-from-ccx.ts",
     "preferences:example": "tsx scripts/example-preferences.ts",
+    "jobs:find-remote": "tsx scripts/job-seeker.ts",
     "strategy:check": "tsx scripts/enforce-strategy.ts",
     "strategy:check:all": "tsx scripts/enforce-strategy.ts --all",
     "db:generate": "drizzle-kit generate",

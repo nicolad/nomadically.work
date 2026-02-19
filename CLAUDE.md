@@ -469,3 +469,22 @@ cd workers/resume-rag && wrangler deploy
 | `src/apollo/` | GraphQL server setup, resolvers, context with Clerk auth |
 | `src/mastra/` | Mastra framework — actions, workflows, Inngest integration, storage |
 | `src/trigger/` | Trigger.dev function definitions |
+
+---
+
+## AI Agent Skills & Subagents
+
+See **[SKILLS-REMOTE-WORK-EU.md](./SKILLS-REMOTE-WORK-EU.md)** for curated Claude Agent Skills and Subagents tailored to nomadically.work with a focus on **remote work in EU**.
+
+This document maps:
+- **Frontend & UI/UX Skills**: Next.js optimization, React design patterns, performance
+- **Backend & GraphQL Skills**: API architecture, database optimization, D1 Gateway
+- **AI/LLM Skills**: Job classification prompts, bias detection, skill extraction
+- **Data Engineering Skills**: ATS ingestion pipelines, ETL workflows, skill taxonomy
+- **Infrastructure Skills**: Cloudflare Workers (D1, Vectorize, Queues), Vercel deployment, DevOps
+- **QA/Testing Skills**: Classifier evaluation, regression tests, accessibility compliance
+- **Business/Product Skills**: Product management, SEO, content marketing for EU remote jobs
+- **Security/Compliance Skills**: GDPR compliance, security audits, PII protection
+- **EU-specific focus**: Remote work signals, timezone compliance, regional variations across EU markets
+
+Integration roadmap: Foundation → AI Pipeline → ML Evaluation → Deployment & Scale → Product & Growth

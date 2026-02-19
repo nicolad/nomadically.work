@@ -96,8 +96,7 @@ async function classifyRemoteEU(jobPosting: {
     // Check for non-EU countries in the same location
     const hasNonEU = location.includes("uk") ||
                     location.includes("switzerland") ||
-                    location.includes("emea") ||
-                    location.includes("worldwide");
+                    location.includes("emea");
 
     if (!hasNonEU) {
       return {
@@ -219,13 +218,13 @@ async function classifyRemoteEU(jobPosting: {
     };
   }
 
-  // Rule 13: Worldwide or global scope (unlikely to be EU-only)
+  // Rule 13: Worldwide or global scope — EU workers can work these roles
   if ((location.includes("worldwide") || location.includes("global")) &&
       !location.includes("eu")) {
     return {
-      isRemoteEU: false,
-      confidence: "high",
-      reason: "Worldwide scope does not restrict to EU",
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Worldwide/global remote roles are accessible to EU workers",
     };
   }
 

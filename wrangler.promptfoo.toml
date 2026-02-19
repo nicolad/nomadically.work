@@ -35,6 +35,10 @@ workers_dev = true
 # - REPLICATE_API_KEY
 # - XAI_API_KEY
 
+# Workers AI binding - enables native edge AI without API keys
+[ai]
+binding = "AI"
+
 # Observability - Enable logging
 [observability]
 enabled = true

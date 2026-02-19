@@ -11,6 +11,7 @@ import {
 import { BraveSearchAgent } from "../../brave/search-agent";
 import { createDeepSeekClient } from "../../deepseek/index";
 import { getAnswers } from "../../brave/answers";
+import { CloudflareWorkersAIProvider, CLOUDFLARE_AI_MODELS } from "../index";
 import { z } from "zod";
 import { ASHBY_JOBS_DOMAIN } from "../../constants/ats";
 // Note: @langfuse/client removed due to zlib dependency
@@ -203,8 +204,6 @@ function buildQueries(mode: "worldwide" | "europe", hint?: string) {
     `site:${ASHBY_JOBS_DOMAIN}`,
   ].join(" OR ");
 
-  // Removed job boards query - those are aggregator listing pages we filter out anyway
-
   const freshnessTerms = '("hours ago" OR today OR "just posted")';
   const maybeHint = hint?.trim() ? `(${hint.trim()})` : "";
 
@@ -224,7 +223,8 @@ function buildQueries(mode: "worldwide" | "europe", hint?: string) {
     remote,
     scope,
     freshnessTerms,
-    `(${boards})`,
+    `(${ats})`,
+    "careers",
     noHybrid,
     maybeHint,
   ]
@@ -520,8 +520,21 @@ async function extractJobsDirectly(
         });
         content = response.choices[0]?.message?.content || "{}";
       }
+    } else if (llmProvider === "cloudflare") {
+      // Use Cloudflare Workers AI (DeepSeek R1 Distill by default, configurable via cf_model var)
+      const cfModel = vars.cf_model ?? CLOUDFLARE_AI_MODELS.DEEPSEEK_R1_DISTILL_QWEN_32B;
+      console.log(`☁️  Using Cloudflare Workers AI (${cfModel}) for ${mode} extraction`);
+      const cfProvider = new CloudflareWorkersAIProvider({
+        model: cfModel,
+        temperature: 0.1,
+        max_tokens: 8000,
+      });
+      content = await cfProvider.chat(
+        substitutedMessages.find((m: any) => m.role === "user")?.content ?? "",
+        substitutedMessages.find((m: any) => m.role === "system")?.content,
+      );
     } else {
-      // Use DeepSeek
+      // Use DeepSeek (default)
       console.log(`🤖 Using DeepSeek for ${mode} extraction`);
       const client = createDeepSeekClient({
         apiKey: process.env.DEEPSEEK_API_KEY,
@@ -608,6 +621,19 @@ async function extractJobs(
         max_tokens: 8000,
       });
       content = braveResponse.choices[0]?.message?.content || "{}";
+    } else if (llmProvider === "cloudflare") {
+      // Use Cloudflare Workers AI
+      const cfModel = vars.cf_model ?? CLOUDFLARE_AI_MODELS.DEEPSEEK_R1_DISTILL_QWEN_32B;
+      console.log(`☁️  Using Cloudflare Workers AI (${cfModel}) for ${mode} extraction`);
+      const cfProvider = new CloudflareWorkersAIProvider({
+        model: cfModel,
+        temperature: 0.1,
+        max_tokens: 8000,
+      });
+      content = await cfProvider.chat(
+        substitutedMessages.find((m: any) => m.role === "user")?.content ?? "",
+        substitutedMessages.find((m: any) => m.role === "system")?.content,
+      );
     } else {
       // Use DeepSeek (default)
       console.log(`🤖 Using DeepSeek for ${mode} extraction`);

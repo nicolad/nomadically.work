@@ -287,6 +287,13 @@ export type CreatePromptInput = {
   type: PromptType;
 };
 
+export type CreateTrackInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  level?: InputMaybe<Scalars['String']['input']>;
+  slug: Scalars['String']['input'];
+  title: Scalars['String']['input'];
+};
+
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -575,6 +582,7 @@ export type Mutation = {
   createCompany: Company;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
+  createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
@@ -643,6 +651,11 @@ export type MutationCreateLangSmithPromptArgs = {
 
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
+};
+
+
+export type MutationCreateTrackArgs = {
+  input: CreateTrackInput;
 };
 
 
@@ -865,6 +878,8 @@ export type Query = {
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
   textToSql: TextToSqlResult;
+  track: Maybe<Track>;
+  tracks: Array<Track>;
   userSettings: Maybe<UserSettings>;
 };
 
@@ -974,6 +989,16 @@ export type QueryTextToSqlArgs = {
 };
 
 
+export type QueryTrackArgs = {
+  slug: Scalars['String']['input'];
+};
+
+
+export type QueryTracksArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryUserSettingsArgs = {
   userId: Scalars['String']['input'];
 };
@@ -1051,6 +1076,30 @@ export type TextToSqlResult = {
   explanation: Maybe<Scalars['String']['output']>;
   rows: Array<Maybe<Array<Maybe<Scalars['JSON']['output']>>>>;
   sql: Scalars['String']['output'];
+};
+
+export type Track = {
+  __typename?: 'Track';
+  description: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  items: Array<TrackItem>;
+  level: Maybe<Scalars['String']['output']>;
+  slug: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type TrackItem = {
+  __typename?: 'TrackItem';
+  children: Array<TrackItem>;
+  contentRef: Maybe<Scalars['String']['output']>;
+  difficulty: Maybe<Scalars['Int']['output']>;
+  id: Scalars['ID']['output'];
+  kind: Scalars['String']['output'];
+  position: Scalars['Int']['output'];
+  prereqs: Array<Scalars['ID']['output']>;
+  promptRef: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
 };
 
 export type UpdateCompanyInput = {
@@ -1469,6 +1518,27 @@ export type AskAboutResumeQueryVariables = Exact<{
 
 
 export type AskAboutResumeQuery = { __typename?: 'Query', askAboutResume: { __typename?: 'ResumeAnswer', answer: string, context_count: number } | null };
+
+export type CreateTrackMutationVariables = Exact<{
+  input: CreateTrackInput;
+}>;
+
+
+export type CreateTrackMutation = { __typename?: 'Mutation', createTrack: { __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null, items: Array<{ __typename?: 'TrackItem', id: string }> } };
+
+export type GetTracksQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetTracksQuery = { __typename?: 'Query', tracks: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null, items: Array<{ __typename?: 'TrackItem', id: string, kind: string, title: string, position: number, contentRef: string | null, promptRef: string | null, difficulty: number | null, tags: Array<string>, prereqs: Array<string>, children: Array<{ __typename?: 'TrackItem', id: string, kind: string, title: string, position: number, contentRef: string | null, promptRef: string | null, difficulty: number | null, tags: Array<string>, prereqs: Array<string> }> }> }> };
+
+export type GetTrackQueryVariables = Exact<{
+  slug: Scalars['String']['input'];
+}>;
+
+
+export type GetTrackQuery = { __typename?: 'Query', track: { __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null, items: Array<{ __typename?: 'TrackItem', id: string, kind: string, title: string, position: number, contentRef: string | null, promptRef: string | null, difficulty: number | null, tags: Array<string>, prereqs: Array<string>, children: Array<{ __typename?: 'TrackItem', id: string, kind: string, title: string, position: number, contentRef: string | null, promptRef: string | null, difficulty: number | null, tags: Array<string>, prereqs: Array<string>, children: Array<{ __typename?: 'TrackItem', id: string, kind: string, title: string, position: number, contentRef: string | null, promptRef: string | null, difficulty: number | null, tags: Array<string>, prereqs: Array<string> }> }> }> } | null };
 
 export const EvidenceFieldsFragmentDoc = gql`
     fragment EvidenceFields on Evidence {
@@ -3857,3 +3927,192 @@ export type AskAboutResumeQueryHookResult = ReturnType<typeof useAskAboutResumeQ
 export type AskAboutResumeLazyQueryHookResult = ReturnType<typeof useAskAboutResumeLazyQuery>;
 export type AskAboutResumeSuspenseQueryHookResult = ReturnType<typeof useAskAboutResumeSuspenseQuery>;
 export type AskAboutResumeQueryResult = Apollo.QueryResult<AskAboutResumeQuery, AskAboutResumeQueryVariables>;
+export const CreateTrackDocument = gql`
+    mutation CreateTrack($input: CreateTrackInput!) {
+  createTrack(input: $input) {
+    id
+    slug
+    title
+    description
+    level
+    items {
+      id
+    }
+  }
+}
+    `;
+export type CreateTrackMutationFn = Apollo.MutationFunction<CreateTrackMutation, CreateTrackMutationVariables>;
+
+/**
+ * __useCreateTrackMutation__
+ *
+ * To run a mutation, you first call `useCreateTrackMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateTrackMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createTrackMutation, { data, loading, error }] = useCreateTrackMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateTrackMutation(baseOptions?: Apollo.MutationHookOptions<CreateTrackMutation, CreateTrackMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateTrackMutation, CreateTrackMutationVariables>(CreateTrackDocument, options);
+      }
+export type CreateTrackMutationHookResult = ReturnType<typeof useCreateTrackMutation>;
+export type CreateTrackMutationResult = Apollo.MutationResult<CreateTrackMutation>;
+export type CreateTrackMutationOptions = Apollo.BaseMutationOptions<CreateTrackMutation, CreateTrackMutationVariables>;
+export const GetTracksDocument = gql`
+    query GetTracks($limit: Int) {
+  tracks(limit: $limit) {
+    id
+    slug
+    title
+    description
+    level
+    items {
+      id
+      kind
+      title
+      position
+      contentRef
+      promptRef
+      difficulty
+      tags
+      prereqs
+      children {
+        id
+        kind
+        title
+        position
+        contentRef
+        promptRef
+        difficulty
+        tags
+        prereqs
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetTracksQuery__
+ *
+ * To run a query within a React component, call `useGetTracksQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetTracksQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetTracksQuery({
+ *   variables: {
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetTracksQuery(baseOptions?: Apollo.QueryHookOptions<GetTracksQuery, GetTracksQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetTracksQuery, GetTracksQueryVariables>(GetTracksDocument, options);
+      }
+export function useGetTracksLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetTracksQuery, GetTracksQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetTracksQuery, GetTracksQueryVariables>(GetTracksDocument, options);
+        }
+// @ts-ignore
+export function useGetTracksSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetTracksQuery, GetTracksQueryVariables>): Apollo.UseSuspenseQueryResult<GetTracksQuery, GetTracksQueryVariables>;
+export function useGetTracksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetTracksQuery, GetTracksQueryVariables>): Apollo.UseSuspenseQueryResult<GetTracksQuery | undefined, GetTracksQueryVariables>;
+export function useGetTracksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetTracksQuery, GetTracksQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetTracksQuery, GetTracksQueryVariables>(GetTracksDocument, options);
+        }
+export type GetTracksQueryHookResult = ReturnType<typeof useGetTracksQuery>;
+export type GetTracksLazyQueryHookResult = ReturnType<typeof useGetTracksLazyQuery>;
+export type GetTracksSuspenseQueryHookResult = ReturnType<typeof useGetTracksSuspenseQuery>;
+export type GetTracksQueryResult = Apollo.QueryResult<GetTracksQuery, GetTracksQueryVariables>;
+export const GetTrackDocument = gql`
+    query GetTrack($slug: String!) {
+  track(slug: $slug) {
+    id
+    slug
+    title
+    description
+    level
+    items {
+      id
+      kind
+      title
+      position
+      contentRef
+      promptRef
+      difficulty
+      tags
+      prereqs
+      children {
+        id
+        kind
+        title
+        position
+        contentRef
+        promptRef
+        difficulty
+        tags
+        prereqs
+        children {
+          id
+          kind
+          title
+          position
+          contentRef
+          promptRef
+          difficulty
+          tags
+          prereqs
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetTrackQuery__
+ *
+ * To run a query within a React component, call `useGetTrackQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetTrackQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetTrackQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useGetTrackQuery(baseOptions: Apollo.QueryHookOptions<GetTrackQuery, GetTrackQueryVariables> & ({ variables: GetTrackQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetTrackQuery, GetTrackQueryVariables>(GetTrackDocument, options);
+      }
+export function useGetTrackLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetTrackQuery, GetTrackQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetTrackQuery, GetTrackQueryVariables>(GetTrackDocument, options);
+        }
+// @ts-ignore
+export function useGetTrackSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetTrackQuery, GetTrackQueryVariables>): Apollo.UseSuspenseQueryResult<GetTrackQuery, GetTrackQueryVariables>;
+export function useGetTrackSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetTrackQuery, GetTrackQueryVariables>): Apollo.UseSuspenseQueryResult<GetTrackQuery | undefined, GetTrackQueryVariables>;
+export function useGetTrackSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetTrackQuery, GetTrackQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetTrackQuery, GetTrackQueryVariables>(GetTrackDocument, options);
+        }
+export type GetTrackQueryHookResult = ReturnType<typeof useGetTrackQuery>;
+export type GetTrackLazyQueryHookResult = ReturnType<typeof useGetTrackLazyQuery>;
+export type GetTrackSuspenseQueryHookResult = ReturnType<typeof useGetTrackSuspenseQuery>;
+export type GetTrackQueryResult = Apollo.QueryResult<GetTrackQuery, GetTrackQueryVariables>;

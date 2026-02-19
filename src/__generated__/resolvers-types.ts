@@ -287,6 +287,13 @@ export type CreatePromptInput = {
   type: PromptType;
 };
 
+export type CreateTrackInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  level?: InputMaybe<Scalars['String']['input']>;
+  slug: Scalars['String']['input'];
+  title: Scalars['String']['input'];
+};
+
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -575,6 +582,7 @@ export type Mutation = {
   createCompany: Company;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
+  createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteJob: DeleteJobResponse;
@@ -643,6 +651,11 @@ export type MutationCreateLangSmithPromptArgs = {
 
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
+};
+
+
+export type MutationCreateTrackArgs = {
+  input: CreateTrackInput;
 };
 
 
@@ -865,6 +878,8 @@ export type Query = {
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
   textToSql: TextToSqlResult;
+  track: Maybe<Track>;
+  tracks: Array<Track>;
   userSettings: Maybe<UserSettings>;
 };
 
@@ -974,6 +989,16 @@ export type QueryTextToSqlArgs = {
 };
 
 
+export type QueryTrackArgs = {
+  slug: Scalars['String']['input'];
+};
+
+
+export type QueryTracksArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryUserSettingsArgs = {
   userId: Scalars['String']['input'];
 };
@@ -1051,6 +1076,30 @@ export type TextToSqlResult = {
   explanation: Maybe<Scalars['String']['output']>;
   rows: Array<Maybe<Array<Maybe<Scalars['JSON']['output']>>>>;
   sql: Scalars['String']['output'];
+};
+
+export type Track = {
+  __typename?: 'Track';
+  description: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  items: Array<TrackItem>;
+  level: Maybe<Scalars['String']['output']>;
+  slug: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type TrackItem = {
+  __typename?: 'TrackItem';
+  children: Array<TrackItem>;
+  contentRef: Maybe<Scalars['String']['output']>;
+  difficulty: Maybe<Scalars['Int']['output']>;
+  id: Scalars['ID']['output'];
+  kind: Scalars['String']['output'];
+  position: Scalars['Int']['output'];
+  prereqs: Array<Scalars['ID']['output']>;
+  promptRef: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
 };
 
 export type UpdateCompanyInput = {
@@ -1221,6 +1270,7 @@ export type ResolversTypes = {
   CreateCompanyInput: ResolverTypeWrapper<Partial<CreateCompanyInput>>;
   CreateLangSmithPromptInput: ResolverTypeWrapper<Partial<CreateLangSmithPromptInput>>;
   CreatePromptInput: ResolverTypeWrapper<Partial<CreatePromptInput>>;
+  CreateTrackInput: ResolverTypeWrapper<Partial<CreateTrackInput>>;
   DateTime: ResolverTypeWrapper<Partial<Scalars['DateTime']['output']>>;
   DeleteCompanyResponse: ResolverTypeWrapper<Partial<DeleteCompanyResponse>>;
   DeleteJobResponse: ResolverTypeWrapper<Partial<DeleteJobResponse>>;
@@ -1239,6 +1289,7 @@ export type ResolversTypes = {
   GreenhouseOffice: ResolverTypeWrapper<Partial<GreenhouseOffice>>;
   GreenhouseQuestion: ResolverTypeWrapper<Partial<GreenhouseQuestion>>;
   GreenhouseQuestionField: ResolverTypeWrapper<Partial<GreenhouseQuestionField>>;
+  ID: ResolverTypeWrapper<Partial<Scalars['ID']['output']>>;
   Int: ResolverTypeWrapper<Partial<Scalars['Int']['output']>>;
   JSON: ResolverTypeWrapper<Partial<Scalars['JSON']['output']>>;
   Job: ResolverTypeWrapper<Partial<Job>>;
@@ -1271,6 +1322,8 @@ export type ResolversTypes = {
   SourceType: ResolverTypeWrapper<Partial<SourceType>>;
   String: ResolverTypeWrapper<Partial<Scalars['String']['output']>>;
   TextToSqlResult: ResolverTypeWrapper<Partial<TextToSqlResult>>;
+  Track: ResolverTypeWrapper<Partial<Track>>;
+  TrackItem: ResolverTypeWrapper<Partial<TrackItem>>;
   URL: ResolverTypeWrapper<Partial<Scalars['URL']['output']>>;
   UpdateCompanyInput: ResolverTypeWrapper<Partial<UpdateCompanyInput>>;
   UpdateLangSmithPromptInput: ResolverTypeWrapper<Partial<UpdateLangSmithPromptInput>>;
@@ -1305,6 +1358,7 @@ export type ResolversParentTypes = {
   CreateCompanyInput: Partial<CreateCompanyInput>;
   CreateLangSmithPromptInput: Partial<CreateLangSmithPromptInput>;
   CreatePromptInput: Partial<CreatePromptInput>;
+  CreateTrackInput: Partial<CreateTrackInput>;
   DateTime: Partial<Scalars['DateTime']['output']>;
   DeleteCompanyResponse: Partial<DeleteCompanyResponse>;
   DeleteJobResponse: Partial<DeleteJobResponse>;
@@ -1322,6 +1376,7 @@ export type ResolversParentTypes = {
   GreenhouseOffice: Partial<GreenhouseOffice>;
   GreenhouseQuestion: Partial<GreenhouseQuestion>;
   GreenhouseQuestionField: Partial<GreenhouseQuestionField>;
+  ID: Partial<Scalars['ID']['output']>;
   Int: Partial<Scalars['Int']['output']>;
   JSON: Partial<Scalars['JSON']['output']>;
   Job: Partial<Job>;
@@ -1351,6 +1406,8 @@ export type ResolversParentTypes = {
   ResumeUploadResult: Partial<ResumeUploadResult>;
   String: Partial<Scalars['String']['output']>;
   TextToSqlResult: Partial<TextToSqlResult>;
+  Track: Partial<Track>;
+  TrackItem: Partial<TrackItem>;
   URL: Partial<Scalars['URL']['output']>;
   UpdateCompanyInput: Partial<UpdateCompanyInput>;
   UpdateLangSmithPromptInput: Partial<UpdateLangSmithPromptInput>;
@@ -1717,6 +1774,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationCreateCompanyArgs, 'input'>>;
   createLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationCreateLangSmithPromptArgs, 'promptIdentifier'>>;
   createPrompt?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationCreatePromptArgs, 'input'>>;
+  createTrack?: Resolver<ResolversTypes['Track'], ParentType, ContextType, RequireFields<MutationCreateTrackArgs, 'input'>>;
   deleteAllJobs?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType>;
   deleteCompany?: Resolver<ResolversTypes['DeleteCompanyResponse'], ParentType, ContextType, RequireFields<MutationDeleteCompanyArgs, 'id'>>;
   deleteJob?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType, RequireFields<MutationDeleteJobArgs, 'id'>>;
@@ -1820,6 +1878,8 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   prompts?: Resolver<Array<ResolversTypes['RegisteredPrompt']>, ParentType, ContextType>;
   resumeStatus?: Resolver<Maybe<ResolversTypes['ResumeStatus']>, ParentType, ContextType, RequireFields<QueryResumeStatusArgs, 'email'>>;
   textToSql?: Resolver<ResolversTypes['TextToSqlResult'], ParentType, ContextType, RequireFields<QueryTextToSqlArgs, 'question'>>;
+  track?: Resolver<Maybe<ResolversTypes['Track']>, ParentType, ContextType, RequireFields<QueryTrackArgs, 'slug'>>;
+  tracks?: Resolver<Array<ResolversTypes['Track']>, ParentType, ContextType, RequireFields<QueryTracksArgs, 'limit'>>;
   userSettings?: Resolver<Maybe<ResolversTypes['UserSettings']>, ParentType, ContextType, RequireFields<QueryUserSettingsArgs, 'userId'>>;
 };
 
@@ -1877,6 +1937,28 @@ export type TextToSqlResultResolvers<ContextType = GraphQLContext, ParentType ex
   explanation?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   rows?: Resolver<Array<Maybe<Array<Maybe<ResolversTypes['JSON']>>>>, ParentType, ContextType>;
   sql?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type TrackResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Track'] = ResolversParentTypes['Track']> = {
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  items?: Resolver<Array<ResolversTypes['TrackItem']>, ParentType, ContextType>;
+  level?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  slug?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type TrackItemResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TrackItem'] = ResolversParentTypes['TrackItem']> = {
+  children?: Resolver<Array<ResolversTypes['TrackItem']>, ParentType, ContextType>;
+  contentRef?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  difficulty?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  kind?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  position?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  prereqs?: Resolver<Array<ResolversTypes['ID']>, ParentType, ContextType>;
+  promptRef?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export interface UrlScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['URL'], any> {
@@ -1962,6 +2044,8 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ResumeStatus?: ResumeStatusResolvers<ContextType>;
   ResumeUploadResult?: ResumeUploadResultResolvers<ContextType>;
   TextToSqlResult?: TextToSqlResultResolvers<ContextType>;
+  Track?: TrackResolvers<ContextType>;
+  TrackItem?: TrackItemResolvers<ContextType>;
   URL?: GraphQLScalarType;
   Upload?: GraphQLScalarType;
   UserSettings?: UserSettingsResolvers<ContextType>;

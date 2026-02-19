@@ -28,6 +28,13 @@ providers:
   - id: file://./providers/direct-remote-jobs-provider.ts
     label: direct-remote-jobs
 
+  # Cloudflare Worker provider - routes extraction through the edge-deployed
+  # promptfoo-eval worker (workers/promptfoo-eval.ts). Requires PROMPTFOO_WORKER_URL.
+  # Uses native Workers AI binding on the edge — no API key needed at runtime.
+  # Uncomment to enable:
+  # - id: file://./providers/cloudflare-worker-provider.ts
+  #   label: cf-worker-llama-3.3-70b
+
 # Default assertions for all tests
 defaultTest:
   assert:
@@ -89,13 +96,32 @@ tests:
   #     llm_provider: "deepseek"
 
   # ----------------------------
-  # Live test with DeepSeek (fallback, requires BRAVE_SEARCH_API_KEY + DEEPSEEK_API_KEY)
+  # Live test with Cloudflare Workers AI (DeepSeek R1 32B at the edge)
+  # Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_KEY
+  # Change cf_model to any model from CLOUDFLARE_AI_MODELS in src/promptfoo/constants.ts
   # ----------------------------
-  # - description: "Live: DeepSeek + Brave Search, last-24h worldwide+europe"
+  # - description: "Live: Cloudflare Workers AI (DeepSeek-R1-32B), last-7d worldwide+europe"
   #   vars:
   #     mode: "live"
   #     queryHint: "agentic"
   #     maxCandidatesPerMode: 25
   #     verifyTopNWithContext: 8
   #     minConfidence: 0.6
-  #     llm_provider: "deepseek"
+  #     max_hours_ago: 168
+  #     llm_provider: "cloudflare"
+  #     cf_model: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b"
+
+  # ----------------------------
+  # Live test via deployed Cloudflare Worker (uses native Workers AI binding at edge)
+  # Requires PROMPTFOO_WORKER_URL (set after pnpm deploy:promptfoo)
+  # Provider: file://./providers/cloudflare-worker-provider.ts
+  # ----------------------------
+  # - description: "Live: Cloudflare Worker (Llama-3.3-70B native binding), last-7d"
+  #   vars:
+  #     mode: "live"
+  #     queryHint: "agentic"
+  #     maxCandidatesPerMode: 25
+  #     verifyTopNWithContext: 8
+  #     minConfidence: 0.6
+  #     max_hours_ago: 168
+  #     cf_model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"

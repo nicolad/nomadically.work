@@ -250,6 +250,13 @@ input CreatePromptInput {
   type: PromptType!
 }
 
+input CreateTrackInput {
+  description: String
+  level: String
+  slug: String!
+  title: String!
+}
+
 scalar DateTime
 
 type DeleteCompanyResponse {
@@ -525,6 +532,7 @@ type Mutation {
   createCompany(input: CreateCompanyInput!): Company!
   createLangSmithPrompt(input: CreateLangSmithPromptInput, promptIdentifier: String!): LangSmithPrompt!
   createPrompt(input: CreatePromptInput!): Prompt!
+  createTrack(input: CreateTrackInput!): Track!
   deleteAllJobs: DeleteJobResponse!
   deleteCompany(id: Int!): DeleteCompanyResponse!
   deleteJob(id: Int!): DeleteJobResponse!
@@ -657,6 +665,8 @@ type Query {
   prompts: [RegisteredPrompt!]!
   resumeStatus(email: String!): ResumeStatus
   textToSql(question: String!): TextToSqlResult!
+  track(slug: String!): Track
+  tracks(limit: Int = 50): [Track!]!
   userSettings(userId: String!): UserSettings
 }
 
@@ -727,6 +737,28 @@ type TextToSqlResult {
   explanation: String
   rows: [[JSON]]!
   sql: String!
+}
+
+type Track {
+  description: String
+  id: ID!
+  items: [TrackItem!]!
+  level: String
+  slug: String!
+  title: String!
+}
+
+type TrackItem {
+  children: [TrackItem!]!
+  contentRef: String
+  difficulty: Int
+  id: ID!
+  kind: String!
+  position: Int!
+  prereqs: [ID!]!
+  promptRef: String
+  tags: [String!]!
+  title: String!
 }
 
 scalar URL

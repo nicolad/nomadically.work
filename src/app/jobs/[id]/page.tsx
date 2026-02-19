@@ -7,6 +7,8 @@ import {
   useUpdateUserSettingsMutation,
   useDeleteJobMutation,
   useEnhanceJobFromAtsMutation,
+  useCreateApplicationMutation,
+  useGetApplicationsQuery,
 } from "@/__generated__/hooks";
 import { orderBy } from "lodash";
 import {
@@ -21,8 +23,9 @@ import {
   Button,
   Link as RadixLink,
   IconButton,
+  Tooltip,
 } from "@radix-ui/themes";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon, BookmarkIcon, BookmarkFilledIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-hooks";
@@ -48,6 +51,7 @@ function JobPageContent() {
   );
   const [hideCompanyLoading, setHideCompanyLoading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const { data, loading, error, refetch } = useGetJobQuery({
     variables: { id },
@@ -62,6 +66,8 @@ function JobPageContent() {
   const [updateSettings] = useUpdateUserSettingsMutation();
   const [deleteJobMutation] = useDeleteJobMutation();
   const [enhanceJobMutation] = useEnhanceJobFromAtsMutation();
+  const [createApplicationMutation] = useCreateApplicationMutation();
+  const { data: appsData } = useGetApplicationsQuery({ skip: !user });
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -220,6 +226,33 @@ function JobPageContent() {
     }
   };
 
+  const savedApp = appsData?.applications?.find(
+    (a) => a.jobId === job?.url || a.jobId === id,
+  );
+
+  const handleSaveJob = async () => {
+    if (!user || !job) return;
+    setSaving(true);
+    try {
+      await createApplicationMutation({
+        variables: {
+          input: {
+            jobId: job.url ?? id,
+            questions: [],
+            jobTitle: job.title ?? undefined,
+            companyName: job.company_key ?? undefined,
+          },
+        },
+        refetchQueries: ["GetApplications"],
+        awaitRefetchQueries: true,
+      });
+    } catch (err) {
+      console.error("Error saving job:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Container size="4" p="8" style={{ maxWidth: "1400px", width: "100%" }}>
       <Box mb="6">
@@ -232,17 +265,41 @@ function JobPageContent() {
       <Box mb="6">
         <Flex justify="between" align="start" mb="2">
           <Heading size="8">{job.title}</Heading>
-          {isAdmin && (
-            <IconButton
-              size="3"
-              color="red"
-              variant="soft"
-              onClick={handleDeleteJob}
-              style={{ cursor: "pointer" }}
-            >
-              <TrashIcon width="18" height="18" />
-            </IconButton>
-          )}
+          <Flex gap="2" align="center">
+            {user && job.url && (
+              <RadixLink href={job.url} target="_blank" rel="noopener noreferrer">
+                <Button size="2" variant="soft">
+                  Apply <ExternalLinkIcon />
+                </Button>
+              </RadixLink>
+            )}
+            {user && (
+              <Tooltip content={savedApp ? "Saved to pipeline" : "Save to application pipeline"}>
+                <Button
+                  size="2"
+                  variant={savedApp ? "solid" : "soft"}
+                  color={savedApp ? "green" : "gray"}
+                  onClick={savedApp ? () => router.push("/applications") : handleSaveJob}
+                  disabled={saving}
+                  loading={saving}
+                >
+                  {savedApp ? <BookmarkFilledIcon /> : <BookmarkIcon />}
+                  {savedApp ? "Saved" : "Save Job"}
+                </Button>
+              </Tooltip>
+            )}
+            {isAdmin && (
+              <IconButton
+                size="3"
+                color="red"
+                variant="soft"
+                onClick={handleDeleteJob}
+                style={{ cursor: "pointer" }}
+              >
+                <TrashIcon width="18" height="18" />
+              </IconButton>
+            )}
+          </Flex>
         </Flex>
         <Flex gap="4" mb="4" align="center">
           {job.company_key && (

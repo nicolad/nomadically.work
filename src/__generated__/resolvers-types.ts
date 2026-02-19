@@ -71,17 +71,36 @@ export type AtsVendor =
 
 export type Application = {
   __typename?: 'Application';
+  companyName: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
+  id: Scalars['Int']['output'];
   jobId: Scalars['String']['output'];
+  jobTitle: Maybe<Scalars['String']['output']>;
+  notes: Maybe<Scalars['String']['output']>;
   questions: Array<QuestionAnswer>;
   resume: Maybe<Scalars['Upload']['output']>;
+  status: ApplicationStatus;
 };
 
 export type ApplicationInput = {
+  companyName?: InputMaybe<Scalars['String']['input']>;
   jobId: Scalars['String']['input'];
+  jobTitle?: InputMaybe<Scalars['String']['input']>;
   questions: Array<QuestionAnswerInput>;
   resume?: InputMaybe<Scalars['Upload']['input']>;
 };
+
+/**
+ * Pipeline status for a tracked job application.
+ * Maps to a kanban column in the UI.
+ */
+export type ApplicationStatus =
+  | 'accepted'
+  | 'pending'
+  | 'rejected'
+  | 'reviewed'
+  | 'submitted';
 
 export type AshbyAddress = {
   __typename?: 'AshbyAddress';
@@ -618,6 +637,7 @@ export type Mutation = {
    */
   processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
+  updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
@@ -718,6 +738,12 @@ export type MutationProcessAllJobsArgs = {
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateApplicationArgs = {
+  id: Scalars['Int']['input'];
+  input: UpdateApplicationInput;
 };
 
 
@@ -1102,6 +1128,11 @@ export type TrackItem = {
   title: Scalars['String']['output'];
 };
 
+export type UpdateApplicationInput = {
+  notes?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<ApplicationStatus>;
+};
+
 export type UpdateCompanyInput = {
   canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
@@ -1250,6 +1281,7 @@ export type ResolversTypes = {
   ATSVendor: ResolverTypeWrapper<Partial<AtsVendor>>;
   Application: ResolverTypeWrapper<Partial<Application>>;
   ApplicationInput: ResolverTypeWrapper<Partial<ApplicationInput>>;
+  ApplicationStatus: ResolverTypeWrapper<Partial<ApplicationStatus>>;
   AshbyAddress: ResolverTypeWrapper<Partial<AshbyAddress>>;
   AshbyCompensation: ResolverTypeWrapper<Partial<AshbyCompensation>>;
   AshbyCompensationComponent: ResolverTypeWrapper<Partial<AshbyCompensationComponent>>;
@@ -1325,6 +1357,7 @@ export type ResolversTypes = {
   Track: ResolverTypeWrapper<Partial<Track>>;
   TrackItem: ResolverTypeWrapper<Partial<TrackItem>>;
   URL: ResolverTypeWrapper<Partial<Scalars['URL']['output']>>;
+  UpdateApplicationInput: ResolverTypeWrapper<Partial<UpdateApplicationInput>>;
   UpdateCompanyInput: ResolverTypeWrapper<Partial<UpdateCompanyInput>>;
   UpdateLangSmithPromptInput: ResolverTypeWrapper<Partial<UpdateLangSmithPromptInput>>;
   Upload: ResolverTypeWrapper<Partial<Scalars['Upload']['output']>>;
@@ -1409,6 +1442,7 @@ export type ResolversParentTypes = {
   Track: Partial<Track>;
   TrackItem: Partial<TrackItem>;
   URL: Partial<Scalars['URL']['output']>;
+  UpdateApplicationInput: Partial<UpdateApplicationInput>;
   UpdateCompanyInput: Partial<UpdateCompanyInput>;
   UpdateLangSmithPromptInput: Partial<UpdateLangSmithPromptInput>;
   Upload: Partial<Scalars['Upload']['output']>;
@@ -1434,10 +1468,16 @@ export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends R
 };
 
 export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Application'] = ResolversParentTypes['Application']> = {
+  companyName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['EmailAddress'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   jobId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  jobTitle?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  notes?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   questions?: Resolver<Array<ResolversTypes['QuestionAnswer']>, ParentType, ContextType>;
   resume?: Resolver<Maybe<ResolversTypes['Upload']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['ApplicationStatus'], ParentType, ContextType>;
 };
 
 export type AshbyAddressResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyAddress'] = ResolversParentTypes['AshbyAddress']> = {
@@ -1785,6 +1825,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
+  updateApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUpdateApplicationArgs, 'id' | 'input'>>;
   updateCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationUpdateCompanyArgs, 'id' | 'input'>>;
   updateLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationUpdateLangSmithPromptArgs, 'input' | 'promptIdentifier'>>;
   updatePromptLabel?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationUpdatePromptLabelArgs, 'label' | 'name' | 'version'>>;

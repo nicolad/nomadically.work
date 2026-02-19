@@ -4,6 +4,7 @@ extend type Query {
 
 extend type Mutation {
   createApplication(input: ApplicationInput!): Application!
+  updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
 }
 
 type QuestionAnswer {
@@ -12,12 +13,30 @@ type QuestionAnswer {
   answerText: String!
 }
 
+"""
+Pipeline status for a tracked job application.
+Maps to a kanban column in the UI.
+"""
+enum ApplicationStatus {
+  pending
+  submitted
+  reviewed
+  rejected
+  accepted
+}
+
 type Application {
+  id: Int!
   # Email of the currently authenticated user
   email: EmailAddress!
   jobId: String!
   resume: Upload
   questions: [QuestionAnswer!]!
+  status: ApplicationStatus!
+  notes: String
+  jobTitle: String
+  companyName: String
+  createdAt: String!
 }
 
 input QuestionAnswerInput {
@@ -30,4 +49,11 @@ input ApplicationInput {
   jobId: String!
   resume: Upload
   questions: [QuestionAnswerInput!]!
+  jobTitle: String
+  companyName: String
+}
+
+input UpdateApplicationInput {
+  status: ApplicationStatus
+  notes: String
 }

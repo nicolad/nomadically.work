@@ -2,6 +2,7 @@
 
 query GetApplications {
   applications {
+    id
     email
     jobId
     resume
@@ -10,11 +11,17 @@ query GetApplications {
       questionText
       answerText
     }
+    status
+    notes
+    jobTitle
+    companyName
+    createdAt
   }
 }
 
 mutation CreateApplication($input: ApplicationInput!) {
   createApplication(input: $input) {
+    id
     email
     jobId
     questions {
@@ -22,5 +29,21 @@ mutation CreateApplication($input: ApplicationInput!) {
       questionText
       answerText
     }
+    status
+    notes
+    jobTitle
+    companyName
+    createdAt
+  }
+}
+
+mutation UpdateApplication($id: Int!, $input: UpdateApplicationInput!) {
+  updateApplication(id: $id, input: $input) {
+    id
+    jobId
+    status
+    notes
+    jobTitle
+    companyName
   }
 }

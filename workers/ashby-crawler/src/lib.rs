@@ -876,6 +876,127 @@ async fn handle_stats(_req: Request, ctx: RouteContext<()>) -> Result<Response> 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SCHEDULED CRON HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Daily cron: crawl latest Common Crawl index for new Ashby job boards.
+///
+/// Strategy:
+///   - Runs daily at 02:00 UTC (configured in wrangler.toml [triggers])
+///   - Detects the latest CC index automatically via the collinfo API
+///   - Processes PAGES_PER_RUN pages per invocation (resumable across days)
+///   - Skips if the current index is already fully crawled
+///   - All progress persisted to D1 `crawl_progress` table
+///
+/// Each CC index has ~100 pages × 100 records = ~10 000 Ashby board URLs.
+/// At 10 pages/day the full index is covered in ~10 days.
+const PAGES_PER_CRON_RUN: u32 = 10;
+
+#[event(scheduled)]
+async fn cron_handler(_event: ScheduledEvent, env: Env, _ctx: ScheduleContext) -> Result<()> {
+    console_log!("[ashby-crawler cron] Starting scheduled crawl run...");
+
+    let db = env.d1("DB")?;
+
+    // 1. Discover latest Common Crawl index
+    let crawl_id = match list_cc_indexes().await {
+        Ok(indexes) if !indexes.is_empty() => {
+            let id = indexes[0].clone();
+            console_log!("[ashby-crawler cron] Latest CC index: {}", id);
+            id
+        }
+        Ok(_) => {
+            console_log!("[ashby-crawler cron] No CC indexes found, using fallback");
+            "CC-MAIN-2025-05".to_string()
+        }
+        Err(e) => {
+            console_log!("[ashby-crawler cron] Failed to list CC indexes: {:?}, using fallback", e);
+            "CC-MAIN-2025-05".to_string()
+        }
+    };
+
+    // 2. Check existing progress for this index
+    let (total_pages, start_page, mut boards_found) = match get_progress(&db, &crawl_id).await? {
+        Some((_, _, ref s, f)) if s == "done" => {
+            console_log!(
+                "[ashby-crawler cron] Index {} already fully crawled ({} boards). Done.",
+                crawl_id, f
+            );
+            return Ok(());
+        }
+        Some((t, c, ref s, f)) => {
+            console_log!(
+                "[ashby-crawler cron] Resuming {} from page {}/{} (status={}, boards={})",
+                crawl_id, c, t, s, f
+            );
+            (t, c, f)
+        }
+        None => {
+            // First run for this index — discover total page count
+            let total = match get_num_pages(&crawl_id).await {
+                Ok(n) => n,
+                Err(e) => {
+                    console_log!(
+                        "[ashby-crawler cron] Failed to get page count for {}: {:?}",
+                        crawl_id, e
+                    );
+                    return Err(e);
+                }
+            };
+            console_log!(
+                "[ashby-crawler cron] New index {} has {} pages total",
+                crawl_id, total
+            );
+            (total, 0, 0)
+        }
+    };
+
+    // 3. Save running status before processing
+    save_progress(&db, &crawl_id, total_pages, start_page, "running", boards_found).await?;
+
+    // 4. Process next batch of pages
+    let end_page = (start_page + PAGES_PER_CRON_RUN).min(total_pages);
+    let mut page_errors = 0u32;
+
+    for page in start_page..end_page {
+        match fetch_cdx_page(&crawl_id, page).await {
+            Ok(boards) => {
+                let upserted = upsert_boards(&db, &boards).await.unwrap_or(0);
+                boards_found += upserted as u32;
+                console_log!(
+                    "[ashby-crawler cron] Page {}/{}: {} discovered, {} upserted",
+                    page + 1, total_pages, boards.len(), upserted
+                );
+            }
+            Err(e) => {
+                page_errors += 1;
+                console_log!(
+                    "[ashby-crawler cron] Page {} error ({}): {:?}",
+                    page, page_errors, e
+                );
+                // Abort batch on repeated errors to avoid burning CPU
+                if page_errors >= 3 {
+                    console_log!("[ashby-crawler cron] Too many page errors, aborting batch");
+                    save_progress(&db, &crawl_id, total_pages, page, "error", boards_found).await?;
+                    return Err(Error::RustError(format!("Batch aborted after {} page errors", page_errors)));
+                }
+            }
+        }
+    }
+
+    // 5. Save final progress for this run
+    let status = if end_page >= total_pages { "done" } else { "running" };
+    save_progress(&db, &crawl_id, total_pages, end_page, status, boards_found).await?;
+
+    console_log!(
+        "[ashby-crawler cron] Run complete: pages {}-{} of {} processed, {} total boards, status={}",
+        start_page, end_page.saturating_sub(1), total_pages, boards_found, status
+    );
+
+    Ok(())
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ROUTER
 // ═══════════════════════════════════════════════════════════════════════════
 

@@ -77,9 +77,9 @@ function getOptionalEnv(key: string): string | undefined {
 export function loadEnvConfig(): EnvConfig {
   return {
     langfuse: {
-      secretKey: getRequiredEnv("LANGFUSE_SECRET_KEY"),
-      publicKey: getRequiredEnv("LANGFUSE_PUBLIC_KEY"),
-      baseUrl: getRequiredEnv("LANGFUSE_BASE_URL"),
+      secretKey: getOptionalEnv("LANGFUSE_SECRET_KEY") || "",
+      publicKey: getOptionalEnv("LANGFUSE_PUBLIC_KEY") || "",
+      baseUrl: getOptionalEnv("LANGFUSE_BASE_URL") || "",
     },
 
     llm: {
@@ -99,7 +99,7 @@ export function loadEnvConfig(): EnvConfig {
         : undefined,
 
     turso: {
-      url: getRequiredEnv("TURSO_DB_URL"),
+      url: getOptionalEnv("TURSO_DB_URL") || "",
       authToken: process.env.TURSO_DB_AUTH_TOKEN, // Optional for local dev
     },
 

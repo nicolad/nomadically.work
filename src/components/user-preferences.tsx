@@ -11,7 +11,7 @@ import {
 } from "@/__generated__/hooks";
 
 export function UserPreferences() {
-  const { userId } = useAuth();
+  const { userId, isLoaded } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [locations, setLocations] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -19,7 +19,7 @@ export function UserPreferences() {
   const [skillInput, setSkillInput] = useState("");
 
   // Fetch user settings
-  const { data: settingsData } = useQuery(
+  const { data: settingsData, loading: queryLoading, error: queryError } = useQuery(
     GetUserSettingsDocument,
     {
       variables: { userId: userId || "" },
@@ -103,8 +103,12 @@ export function UserPreferences() {
     });
   };
 
-  if (!userId) {
+  if (!isLoaded || !userId) {
     return null;
+  }
+
+  if (queryError) {
+    console.error("Error fetching user preferences:", queryError);
   }
 
   return (

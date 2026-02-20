@@ -44,10 +44,10 @@ Candidate profile:
 Workflow:
 1. Use TodoWrite to track your progress through each step
 2. Search for current remote ${roles} positions using multiple search queries:
-   - "remote AI engineer Europe 2025 site:linkedin.com OR site:greenhouse.io OR site:lever.co"
-   - "remote react engineer typescript EU timezone 2025"
-   - "fully remote LLM engineer next.js worldwide 2025"
-   - "remote AI agent developer anthropic claude 2025"
+   - "remote AI engineer Europe ${new Date().getFullYear()} site:linkedin.com OR site:greenhouse.io OR site:lever.co"
+   - "remote react engineer typescript EU timezone ${new Date().getFullYear()}"
+   - "fully remote LLM engineer next.js worldwide ${new Date().getFullYear()}"
+   - "remote AI agent developer anthropic claude ${new Date().getFullYear()}"
    - Search job boards: LinkedIn, Greenhouse, Lever, Ashby, RemoteOK, WeWorkRemotely, Otta, EuropeanRemote.com
 3. Fetch the top job listings to get full details (title, company, salary, requirements, apply URL)
 4. Score each job 1-10 on: remote authenticity, EU timezone compatibility, tech stack match, seniority fit, company quality

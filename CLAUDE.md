@@ -61,7 +61,7 @@ src/
   components/       # React components (providers, lists, search bars, admin)
   agents/           # AI agents (job classifier, SQL agent, admin assistant)
   anthropic/        # Anthropic Claude integration (client, MCP, sub-agents, architect)
-  brave/            # Brave Search API integration (job discovery, search agent)
+  # brave/ removed — ATS scraping is the primary job discovery channel
   deepseek/         # DeepSeek LLM client + utilities
   google/           # Google Search + GenAI agent
   openrouter/       # OpenRouter LLM provider
@@ -98,7 +98,7 @@ workers/
   process-jobs/           # Python/LangGraph CF Worker — DeepSeek job classification
     src/entry.py
     wrangler.jsonc
-  cron.ts                 # Daily job discovery via Brave Search (still uses Turso)
+  cron.ts                 # Daily ATS ingestion trigger (queries D1 for stale sources)
   d1-gateway.ts           # D1 database access gateway
   insert-jobs.ts          # Job insertion + queue (still uses Turso)
   promptfoo-eval.ts       # Promptfoo evaluation worker
@@ -213,7 +213,7 @@ Database schema is defined in `src/db/schema.ts` using Drizzle ORM. Migrations o
 ## Data flow
 
 ```
-1. Discovery:      Brave Search API --[Cron Worker]--> Job URLs
+1. Discovery:      ATS Sources (D1) --[Cron Worker]--> Trigger Ingestion
 2. Board Crawl:    Common Crawl CDX --[ashby-crawler (Rust)]--> Ashby boards → D1
 3. Ingestion:      ATS APIs (Greenhouse/Lever/Ashby) --[Insert Worker]--> D1
 4. Enhancement:    Job IDs --[Trigger.dev / GraphQL Mutation]--> ATS API --> D1
@@ -257,7 +257,7 @@ Vercel API routes have a 60-second max duration (`vercel.json`).
 
 | Worker | Schedule | Config | Runtime | Key Bindings |
 |---|---|---|---|---|
-| `cron` | Daily midnight UTC | `wrangler.toml` | TypeScript | D1, Brave API |
+| `cron` | Daily midnight UTC | `wrangler.toml` | TypeScript | D1 |
 | `d1-gateway` | On-demand HTTP | `wrangler.d1-gateway.toml` | TypeScript | D1 |
 | `insert-jobs` | On-demand + Queue | `wrangler.insert-jobs.toml` | TypeScript | D1, Queue |
 | `process-jobs` | Every 6 hours + Queue | `workers/process-jobs/wrangler.jsonc` | Python/LangGraph | D1, Workers AI, Queue |
@@ -407,7 +407,7 @@ ANTHROPIC_API_KEY=
 DEEPSEEK_API_KEY=
 OPENAI_API_KEY=
 GEMINI_API_KEY=               # Google ADK
-BRAVE_API_KEY=                # Brave Search (job discovery)
+# Brave Search removed — ATS scraping is the primary discovery channel
 
 # Observability (optional)
 LANGFUSE_PUBLIC_KEY=
@@ -474,7 +474,7 @@ cd workers/resume-rag && wrangler deploy
 | Module | Purpose | Key files |
 |---|---|---|
 | `src/anthropic/` | Claude API client, MCP, sub-agents, architect agent | `client.ts`, `mcp.ts`, `subagents.ts`, `agents/architect.ts` |
-| `src/brave/` | Brave Search for job discovery, LLM context extraction | `search-agent.ts`, `job-search-runner.ts`, `llm-context.ts` |
+| `src/ingestion/` | ATS platform fetchers (Greenhouse, Lever, Ashby) — primary job discovery | `greenhouse.ts`, `lever.ts`, `ashby.ts` |
 | `src/deepseek/` | DeepSeek LLM client for classification | `client.ts` |
 | `src/google/` | Google Search + GenAI agent | `search-agent.ts` |
 | `src/openrouter/` | OpenRouter multi-provider LLM access | `provider.ts`, `agents.ts` |

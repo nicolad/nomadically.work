@@ -57,7 +57,7 @@ async function setupPrompts() {
         "Discover and filter fully-remote AI/ML/LLM/GenAI engineering positions posted in the last 24 hours.",
         "",
         "WORKFLOW:",
-        "1. Search: Query Brave Search API for fresh remote AI job listings",
+        "1. Search: Ingest fresh remote AI job listings from ATS platforms (Greenhouse, Lever, Ashby)",
         "2. Extract: Parse job metadata (title, company, URL, region, posted date)",
         "3. Filter: Apply strict remote-only and recency criteria",
         "4. Classify: Categorize by region (worldwide vs europe)",

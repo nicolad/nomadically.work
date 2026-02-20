@@ -47,7 +47,6 @@ export interface EnvConfig {
   // Other APIs
   apis?: {
     resendApiKey?: string;
-    braveApiKey?: string;
   };
 }
 
@@ -106,7 +105,6 @@ export function loadEnvConfig(): EnvConfig {
 
     apis: {
       resendApiKey: getOptionalEnv("RESEND_API_KEY"),
-      braveApiKey: getOptionalEnv("BRAVE_API_KEY"),
     },
   };
 }

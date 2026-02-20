@@ -5,6 +5,11 @@ compatibility_date = "2026-02-01"
 [build]
 command = "cargo install -q worker-build && worker-build --release"
 
+# Cron trigger — run daily at 02:00 UTC (offset 2h from main cron to avoid contention)
+# Crawls the latest Common Crawl index for new Ashby job boards (10 pages/run, resumable)
+[triggers]
+crons = ["0 2 * * *"]
+
 # D1 Database — same database as the main app
 [[d1_databases]]
 binding = "DB"

@@ -536,7 +536,7 @@ export type JobSkill = {
 export type JobStatus =
   | 'enhanced'
   | 'error'
-  /** Classified as fully remote EU position */
+  /** Classified as fully remote EU position, or worldwide remote (accessible to EU workers) */
   | 'eu_remote'
   | 'new'
   /** Classified as NOT remote EU */

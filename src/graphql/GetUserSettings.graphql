@@ -1,7 +1,5 @@
 query GetUserSettings($userId: String!) {
   userSettings(userId: $userId) {
-    id
-    user_id
     preferred_locations
     preferred_skills
     excluded_companies

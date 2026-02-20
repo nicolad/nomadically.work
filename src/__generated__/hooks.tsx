@@ -536,7 +536,7 @@ export type JobSkill = {
 export type JobStatus =
   | 'enhanced'
   | 'error'
-  /** Classified as fully remote EU position */
+  /** Classified as fully remote EU position, or worldwide remote (accessible to EU workers) */
   | 'eu_remote'
   | 'new'
   /** Classified as NOT remote EU */
@@ -1265,7 +1265,7 @@ export type GetUserSettingsQueryVariables = Exact<{
 }>;
 
 
-export type GetUserSettingsQuery = { __typename?: 'Query', userSettings: { __typename?: 'UserSettings', id: number, user_id: string, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null } | null };
+export type GetUserSettingsQuery = { __typename?: 'Query', userSettings: { __typename?: 'UserSettings', preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null } | null };
 
 export type ProcessAllJobsMutationVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -2171,8 +2171,6 @@ export type GetJobsQueryResult = Apollo.QueryResult<GetJobsQuery, GetJobsQueryVa
 export const GetUserSettingsDocument = gql`
     query GetUserSettings($userId: String!) {
   userSettings(userId: $userId) {
-    id
-    user_id
     preferred_locations
     preferred_skills
     excluded_companies

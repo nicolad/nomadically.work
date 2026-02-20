@@ -18,7 +18,7 @@ export async function jobsQuery(
   _parent: any,
   args: {
     sourceType?: string;
-    status?: string;
+
     search?: string;
     limit?: number;
     offset?: number;
@@ -29,9 +29,6 @@ export async function jobsQuery(
   try {
     const conditions = [];
 
-    if (args.status) {
-      conditions.push(eq(jobs.status, args.status));
-    }
 
     if (args.search) {
       const searchPattern = `%${args.search}%`;
@@ -87,7 +84,7 @@ export async function jobsQuery(
           location: jobs.location,
           url: jobs.url,
           posted_at: jobs.posted_at,
-          status: jobs.status,
+
         })
         .from(jobs)
         .where(whereClause)

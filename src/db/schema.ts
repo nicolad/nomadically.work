@@ -35,6 +35,12 @@ export const companies = sqliteTable("companies", {
   score: real("score").notNull().default(0.5), // 0..1
   score_reasons: text("score_reasons"), // JSON array
 
+  // Ashby crawler enrichment (written by ashby-crawler worker, matched by key=slug)
+  ashby_industry_tags: text("ashby_industry_tags"), // JSON array
+  ashby_tech_signals: text("ashby_tech_signals"),   // JSON array
+  ashby_size_signal: text("ashby_size_signal"),     // "startup" | "mid" | "large"
+  ashby_enriched_at: text("ashby_enriched_at"),
+
   // Common Crawl / last-seen metadata
   last_seen_crawl_id: text("last_seen_crawl_id"),
   last_seen_capture_timestamp: text("last_seen_capture_timestamp"),

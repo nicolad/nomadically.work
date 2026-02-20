@@ -135,6 +135,15 @@ export type AshbyCompensationTier = {
   title: Scalars['String']['output'];
 };
 
+export type AshbyEnrichment = {
+  __typename?: 'AshbyEnrichment';
+  company_name: Maybe<Scalars['String']['output']>;
+  enriched_at: Maybe<Scalars['String']['output']>;
+  industry_tags: Array<Scalars['String']['output']>;
+  size_signal: Maybe<Scalars['String']['output']>;
+  tech_signals: Array<Scalars['String']['output']>;
+};
+
 export type AshbyPostalAddress = {
   __typename?: 'AshbyPostalAddress';
   addressCountry: Maybe<Scalars['String']['output']>;
@@ -167,6 +176,7 @@ export type CompaniesResponse = {
 
 export type Company = {
   __typename?: 'Company';
+  ashby_enrichment: Maybe<AshbyEnrichment>;
   ats_boards: Array<AtsBoard>;
   canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
@@ -251,6 +261,7 @@ export type CompanyFilterInput = {
 
 export type CompanyOrderBy =
   | 'CREATED_AT_DESC'
+  | 'NAME_ASC'
   | 'SCORE_DESC'
   | 'UPDATED_AT_DESC';
 
@@ -518,7 +529,6 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -532,15 +542,6 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
-
-export type JobStatus =
-  | 'enhanced'
-  | 'error'
-  /** Classified as fully remote EU position, or worldwide remote (accessible to EU workers) */
-  | 'eu_remote'
-  | 'new'
-  /** Classified as NOT remote EU */
-  | 'non_eu';
 
 export type JobsResponse = {
   __typename?: 'JobsResponse';
@@ -972,7 +973,6 @@ export type QueryJobsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<JobStatus>;
 };
 
 
@@ -1301,6 +1301,7 @@ export type ResolversTypes = {
   AshbyCompensation: ResolverTypeWrapper<Partial<AshbyCompensation>>;
   AshbyCompensationComponent: ResolverTypeWrapper<Partial<AshbyCompensationComponent>>;
   AshbyCompensationTier: ResolverTypeWrapper<Partial<AshbyCompensationTier>>;
+  AshbyEnrichment: ResolverTypeWrapper<Partial<AshbyEnrichment>>;
   AshbyPostalAddress: ResolverTypeWrapper<Partial<AshbyPostalAddress>>;
   AshbySecondaryLocation: ResolverTypeWrapper<Partial<AshbySecondaryLocation>>;
   Boolean: ResolverTypeWrapper<Partial<Scalars['Boolean']['output']>>;
@@ -1341,7 +1342,6 @@ export type ResolversTypes = {
   JSON: ResolverTypeWrapper<Partial<Scalars['JSON']['output']>>;
   Job: ResolverTypeWrapper<Partial<Job>>;
   JobSkill: ResolverTypeWrapper<Partial<JobSkill>>;
-  JobStatus: ResolverTypeWrapper<Partial<JobStatus>>;
   JobsResponse: ResolverTypeWrapper<Partial<JobsResponse>>;
   LangSmithPrompt: ResolverTypeWrapper<Partial<LangSmithPrompt>>;
   LangSmithPromptCommit: ResolverTypeWrapper<Partial<LangSmithPromptCommit>>;
@@ -1393,6 +1393,7 @@ export type ResolversParentTypes = {
   AshbyCompensation: Partial<AshbyCompensation>;
   AshbyCompensationComponent: Partial<AshbyCompensationComponent>;
   AshbyCompensationTier: Partial<AshbyCompensationTier>;
+  AshbyEnrichment: Partial<AshbyEnrichment>;
   AshbyPostalAddress: Partial<AshbyPostalAddress>;
   AshbySecondaryLocation: Partial<AshbySecondaryLocation>;
   Boolean: Partial<Scalars['Boolean']['output']>;
@@ -1526,6 +1527,14 @@ export type AshbyCompensationTierResolvers<ContextType = GraphQLContext, ParentT
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type AshbyEnrichmentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyEnrichment'] = ResolversParentTypes['AshbyEnrichment']> = {
+  company_name?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  enriched_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  industry_tags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  size_signal?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tech_signals?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
 export type AshbyPostalAddressResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyPostalAddress'] = ResolversParentTypes['AshbyPostalAddress']> = {
   addressCountry?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   addressLocality?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1548,6 +1557,7 @@ export type CompaniesResponseResolvers<ContextType = GraphQLContext, ParentType 
 };
 
 export type CompanyResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Company'] = ResolversParentTypes['Company']> = {
+  ashby_enrichment?: Resolver<Maybe<ResolversTypes['AshbyEnrichment']>, ParentType, ContextType>;
   ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType>;
   canonical_domain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['CompanyCategory'], ParentType, ContextType>;
@@ -1764,7 +1774,6 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   skills?: Resolver<Maybe<Array<ResolversTypes['JobSkill']>>, ParentType, ContextType>;
   source_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   source_kind?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  status?: Resolver<Maybe<ResolversTypes['JobStatus']>, ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updated_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2065,6 +2074,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   AshbyCompensation?: AshbyCompensationResolvers<ContextType>;
   AshbyCompensationComponent?: AshbyCompensationComponentResolvers<ContextType>;
   AshbyCompensationTier?: AshbyCompensationTierResolvers<ContextType>;
+  AshbyEnrichment?: AshbyEnrichmentResolvers<ContextType>;
   AshbyPostalAddress?: AshbyPostalAddressResolvers<ContextType>;
   AshbySecondaryLocation?: AshbySecondaryLocationResolvers<ContextType>;
   ChatMessage?: ChatMessageResolvers<ContextType>;

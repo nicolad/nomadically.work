@@ -8,15 +8,6 @@ import { enhanceJobFromATS } from "./enhance-job";
 import { processAllJobs } from "./process-all-jobs";
 
 export const jobResolvers = {
-  // Map GraphQL enum names ↔ DB values (hyphens ↔ underscores)
-  JobStatus: {
-    new: "new",
-    enhanced: "enhanced",
-    eu_remote: "eu-remote",
-    non_eu: "non-eu",
-    error: "error",
-  },
-
   Job: {
     async skills(parent: any, _args: any, context: GraphQLContext) {
       try {

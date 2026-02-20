@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   useGetJobQuery,
+  useGetJobsQuery,
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
   useDeleteJobMutation,
@@ -69,6 +70,11 @@ function JobPageContent() {
   const [createApplicationMutation] = useCreateApplicationMutation();
   const { data: appsData } = useGetApplicationsQuery({ skip: !user });
 
+  const { data: relatedJobsData } = useGetJobsQuery({
+    variables: { search: data?.job?.company_key ?? "", limit: 100 },
+    skip: !data?.job?.company_key,
+  });
+
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   const handleDeleteJob = async () => {
@@ -113,6 +119,10 @@ function JobPageContent() {
   }
 
   const job = data.job;
+
+  const relatedJobs = (relatedJobsData?.jobs?.jobs ?? []).filter(
+    (j) => j.id !== job.id,
+  );
 
   const handleClassify = async () => {
     if (!job.title || !job.location || !job.description) {
@@ -1737,6 +1747,42 @@ function JobPageContent() {
           </Card>
         </Box>
       </Box>
+
+      {relatedJobs.length > 0 && (
+        <Box mt="8">
+          <Heading size="5" mb="4">
+            More from {job.company_key}
+          </Heading>
+          <Flex direction="column" gap="3">
+            {relatedJobs.map((rj) => {
+              const rjId = rj.external_id?.split("/").pop() || rj.external_id || rj.id;
+              return (
+              <Card key={rj.id} asChild>
+                <Link href={`/jobs/${rjId}?company=${rj.company_key}&source=${rj.source_kind}`} style={{ textDecoration: "none" }}>
+                  <Flex justify="between" align="start" gap="4">
+                    <Flex direction="column" gap="1">
+                      <Text size="3" weight="medium">
+                        {rj.title}
+                      </Text>
+                      {rj.location && (
+                        <Text size="2" color="gray">
+                          {rj.location}
+                        </Text>
+                      )}
+                    </Flex>
+                    {rj.posted_at && (
+                      <Text size="1" color="gray" style={{ whiteSpace: "nowrap" }}>
+                        {new Date(rj.posted_at).toLocaleDateString()}
+                      </Text>
+                    )}
+                  </Flex>
+                </Link>
+              </Card>
+              );
+            })}
+          </Flex>
+        </Box>
+      )}
     </Container>
   );
 }

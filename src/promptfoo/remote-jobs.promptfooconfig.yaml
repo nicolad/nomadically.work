@@ -1,33 +1,12 @@
 # src/promptfoo/remote-jobs.promptfooconfig.yaml
 description: "Remote AI jobs pipeline evals (2 buckets, strict remote/region/freshness, dedupe) via Promptfoo + Cloudflare"
 
-# To enable LLM-graded rubric scoring, add this to a test case:
-#   assert:
-#     - type: llm-rubric
-#       provider: "cloudflare-ai:chat:@cf/openai/gpt-oss-120b"
-#       threshold: 0.9
-#       value: |
-#         You are auditing a JSON output containing two arrays: worldwide and europe.
-#         Every item must be a fully-remote AI/LLM/GenAI engineering job posted within the last 24 hours.
-#         Requirements:
-#         - worldwide bucket: must explicitly indicate worldwide/global/work-from-anywhere remote.
-#         - europe bucket: must explicitly indicate Europe/EU/EEA/UK/EMEA or CET/CEST/EET/EEST/UTC+0..3.
-#         - must not be hybrid/onsite/in-office.
-#         - must not be region-locked (e.g., US-only, Canada-only, or "authorized to work in the US" constraints).
-#         - must include freshness proof (postedHoursAgo <= 24 OR postedAtIso within 24h).
-#         Score 1.0 only if ALL items satisfy ALL requirements based on evidence fields; otherwise score lower.
-
 prompts:
   # Langfuse-managed prompt (production label)
   # Update prompts in Langfuse UI without changing this config
   - "langfuse://remote-ai-jobs-eval@production"
 
 providers:
-  # Custom JS/TS provider file - bypasses Mastra workflow engine to avoid stream bugs
-  # promptfoo supports loading providers from local files using file://
-  - id: file://./providers/direct-remote-jobs-provider.ts
-    label: direct-remote-jobs
-
   # Cloudflare Worker provider - routes extraction through the edge-deployed
   # promptfoo-eval worker (workers/promptfoo-eval.ts). Requires PROMPTFOO_WORKER_URL.
   # Uses native Workers AI binding on the edge — no API key needed at runtime.
@@ -59,42 +38,6 @@ defaultTest:
       value: file://./assertions/noAggregatorListingPages.js
 
 tests:
-  # ----------------------------
-  # Live test with Brave AI (requires BRAVE_SEARCH_API_KEY + BRAVE_API_KEY)
-  # Fetches fresh jobs from ATS platforms, filters aggregators, saves to results/
-  # ----------------------------
-  - description: "Live: Brave AI + Brave Search, last-7d worldwide+europe"
-    vars:
-      mode: "live"
-      queryHint: "agentic"
-      maxCandidatesPerMode: 25
-      verifyTopNWithContext: 8
-      minConfidence: 0.6
-      max_hours_ago: 168 # 7 days - more realistic for AI/ML roles
-      llm_provider: "brave"
-
-  # ----------------------------
-  # Saved mode (uses pre-generated Brave AI results from results/ folder)
-  # Fast, deterministic, no API costs - perfect for rapid iteration
-  # Uncomment after generating results with live mode
-  # ----------------------------
-  # - description: "Saved: Brave AI results from latest JSON file"
-  #   vars:
-  #     mode: "saved"
-  #     llm_provider: "brave"
-
-  # ----------------------------
-  # Live test with DeepSeek (fallback, requires BRAVE_SEARCH_API_KEY + DEEPSEEK_API_KEY)
-  # ----------------------------
-  # - description: "Live: DeepSeek + Brave Search, last-24h worldwide+europe"
-  #   vars:
-  #     mode: "live"
-  #     queryHint: "agentic"
-  #     maxCandidatesPerMode: 25
-  #     verifyTopNWithContext: 8
-  #     minConfidence: 0.6
-  #     llm_provider: "deepseek"
-
   # ----------------------------
   # Live test with Cloudflare Workers AI (DeepSeek R1 32B at the edge)
   # Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_KEY

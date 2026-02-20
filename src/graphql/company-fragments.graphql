@@ -102,15 +102,12 @@ fragment CompanyFields on Company {
   last_seen_capture_timestamp
   last_seen_source_url
 
-  # Related data
-  ats_boards {
-    id
-    url
-    vendor
-    board_type
-    confidence
-    is_active
-    first_seen_at
-    last_seen_at
+  # Ashby crawler enrichment
+  ashby_enrichment {
+    company_name
+    industry_tags
+    tech_signals
+    size_signal
+    enriched_at
   }
 }

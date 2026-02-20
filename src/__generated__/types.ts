@@ -132,6 +132,15 @@ export type AshbyCompensationTier = {
   title: Scalars['String']['output'];
 };
 
+export type AshbyEnrichment = {
+  __typename: 'AshbyEnrichment';
+  company_name: Maybe<Scalars['String']['output']>;
+  enriched_at: Maybe<Scalars['String']['output']>;
+  industry_tags: Array<Scalars['String']['output']>;
+  size_signal: Maybe<Scalars['String']['output']>;
+  tech_signals: Array<Scalars['String']['output']>;
+};
+
 export type AshbyPostalAddress = {
   __typename: 'AshbyPostalAddress';
   addressCountry: Maybe<Scalars['String']['output']>;
@@ -164,6 +173,7 @@ export type CompaniesResponse = {
 
 export type Company = {
   __typename: 'Company';
+  ashby_enrichment: Maybe<AshbyEnrichment>;
   ats_boards: Array<AtsBoard>;
   canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
@@ -248,6 +258,7 @@ export type CompanyFilterInput = {
 
 export type CompanyOrderBy =
   | 'CREATED_AT_DESC'
+  | 'NAME_ASC'
   | 'SCORE_DESC'
   | 'UPDATED_AT_DESC';
 
@@ -515,7 +526,6 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -529,15 +539,6 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
-
-export type JobStatus =
-  | 'enhanced'
-  | 'error'
-  /** Classified as fully remote EU position, or worldwide remote (accessible to EU workers) */
-  | 'eu_remote'
-  | 'new'
-  /** Classified as NOT remote EU */
-  | 'non_eu';
 
 export type JobsResponse = {
   __typename: 'JobsResponse';
@@ -969,7 +970,6 @@ export type QueryJobsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<JobStatus>;
 };
 
 

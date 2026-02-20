@@ -1,0 +1,1 @@
+/Users/vadimnicolai/Public/nomadically.work/workers/ashby-crawler/target/wasm32-unknown-unknown/release/ashby_crawler.wasm: /Users/vadimnicolai/Public/nomadically.work/workers/ashby-crawler/src/lib.rs

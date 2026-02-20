@@ -4,13 +4,23 @@ import {
   companySnapshots,
   atsBoards,
 } from "@/db/schema";
-import { eq, and, or, like, desc, count, gte, inArray } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, count, gte, inArray } from "drizzle-orm";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
 import { enhanceCompany } from "./enhance-company";
 
 export const companyResolvers = {
   Company: {
+    ashby_enrichment(parent: any) {
+      if (!parent.ashby_enriched_at) return null;
+      return {
+        company_name: parent.name ?? null,
+        industry_tags: parent.ashby_industry_tags ? JSON.parse(parent.ashby_industry_tags) : [],
+        tech_signals: parent.ashby_tech_signals ? JSON.parse(parent.ashby_tech_signals) : [],
+        size_signal: parent.ashby_size_signal ?? null,
+        enriched_at: parent.ashby_enriched_at,
+      };
+    },
     // Validate and sanitize category enum
     category(parent: any) {
       const validCategories = ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN"];
@@ -266,7 +276,9 @@ export const companyResolvers = {
 
         // Order by
         const orderBy = args.order_by ?? "SCORE_DESC";
-        if (orderBy === "SCORE_DESC") {
+        if (orderBy === "NAME_ASC") {
+          query = query.orderBy(asc(companies.name)) as any;
+        } else if (orderBy === "SCORE_DESC") {
           query = query.orderBy(desc(companies.score)) as any;
         } else if (orderBy === "UPDATED_AT_DESC") {
           query = query.orderBy(desc(companies.updated_at)) as any;

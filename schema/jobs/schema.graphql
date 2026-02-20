@@ -1,7 +1,6 @@
 extend type Query {
   jobs(
     sourceType: String
-    status: JobStatus
     search: String
     limit: Int
     offset: Int
@@ -172,19 +171,6 @@ type LeverList {
   content: String!
 }
 
-enum JobStatus {
-  new
-  enhanced
-  """
-  Classified as fully remote EU position, or worldwide remote (accessible to EU workers)
-  """
-  eu_remote
-  """
-  Classified as NOT remote EU
-  """
-  non_eu
-  error
-}
 
 type Job {
   id: Int!
@@ -201,7 +187,6 @@ type Job {
   posted_at: String!
   score: Float
   score_reason: String
-  status: JobStatus
   is_remote_eu: Boolean
   remote_eu_confidence: String
   remote_eu_reason: String

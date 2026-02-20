@@ -18,7 +18,6 @@ query GetJob($id: String!) {
     posted_at
     score
     score_reason
-    status
     is_remote_eu
     remote_eu_confidence
     remote_eu_reason

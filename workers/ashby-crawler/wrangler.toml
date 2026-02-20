@@ -10,11 +10,12 @@ command = "cargo install -q worker-build && worker-build --release"
 [triggers]
 crons = ["0 2 * * *"]
 
-# D1 Database — same database as the main app
+# D1 Database — same database as the main app (remote binding for local dev)
 [[d1_databases]]
 binding = "DB"
 database_name = "nomadically-work-db"
 database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
+remote = true
 
 # Observability
 [observability]

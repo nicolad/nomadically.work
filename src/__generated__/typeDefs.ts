@@ -117,6 +117,14 @@ type AshbyCompensationTier {
   title: String!
 }
 
+type AshbyEnrichment {
+  company_name: String
+  enriched_at: String
+  industry_tags: [String!]!
+  size_signal: String
+  tech_signals: [String!]!
+}
+
 type AshbyPostalAddress {
   addressCountry: String
   addressLocality: String
@@ -144,6 +152,7 @@ type CompaniesResponse {
 }
 
 type Company {
+  ashby_enrichment: AshbyEnrichment
   ats_boards: [ATSBoard!]!
   canonical_domain: String
   category: CompanyCategory!
@@ -215,6 +224,7 @@ input CompanyFilterInput {
 
 enum CompanyOrderBy {
   CREATED_AT_DESC
+  NAME_ASC
   SCORE_DESC
   UPDATED_AT_DESC
 }
@@ -475,7 +485,6 @@ type Job {
   skills: [JobSkill!]
   source_id: String
   source_kind: String!
-  status: JobStatus
   title: String!
   updated_at: String!
   url: String!
@@ -487,18 +496,6 @@ type JobSkill {
   evidence: String
   level: String!
   tag: String!
-}
-
-enum JobStatus {
-  enhanced
-  error
-  """
-  Classified as fully remote EU position, or worldwide remote (accessible to EU workers)
-  """
-  eu_remote
-  new
-  """Classified as NOT remote EU"""
-  non_eu
 }
 
 type JobsResponse {
@@ -702,7 +699,7 @@ type Query {
   company_snapshots(company_id: Int!, limit: Int, offset: Int): [CompanySnapshot!]!
   executeSql(sql: String!): TextToSqlResult!
   job(id: String!): Job
-  jobs(excludedCompanies: [String!], limit: Int, offset: Int, search: String, sourceType: String, status: JobStatus): JobsResponse!
+  jobs(excludedCompanies: [String!], limit: Int, offset: Int, search: String, sourceType: String): JobsResponse!
   langsmithPrompt(promptIdentifier: String!): LangSmithPrompt
   langsmithPromptCommit(includeModel: Boolean, promptIdentifier: String!): LangSmithPromptCommit
   langsmithPrompts(isArchived: Boolean, isPublic: Boolean, query: String): [LangSmithPrompt!]!

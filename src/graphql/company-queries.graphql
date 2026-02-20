@@ -10,8 +10,8 @@ query GetCompany($id: Int, $key: String) {
 }
 
 # Get list of companies with basic filtering
-query GetCompanies($text: String, $limit: Int, $offset: Int) {
-  companies(filter: { text: $text }, limit: $limit, offset: $offset) {
+query GetCompanies($text: String, $order_by: CompanyOrderBy, $limit: Int, $offset: Int) {
+  companies(filter: { text: $text }, order_by: $order_by, limit: $limit, offset: $offset) {
     companies {
       ...CompanyFields
     }

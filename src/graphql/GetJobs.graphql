@@ -1,6 +1,5 @@
 query GetJobs(
   $sourceType: String
-  $status: JobStatus
   $search: String
   $limit: Int
   $offset: Int
@@ -8,7 +7,6 @@ query GetJobs(
 ) {
   jobs(
     sourceType: $sourceType
-    status: $status
     search: $search
     limit: $limit
     offset: $offset
@@ -23,7 +21,6 @@ query GetJobs(
       location
       url
       posted_at
-      status
       skills {
         tag
         level

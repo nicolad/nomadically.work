@@ -83,6 +83,7 @@ enum ATSBoardType {
 }
 
 enum CompanyOrderBy {
+  NAME_ASC
   SCORE_DESC
   UPDATED_AT_DESC
   CREATED_AT_DESC
@@ -141,6 +142,15 @@ type CompanySnapshot {
   created_at: String!
 }
 
+# Enrichment produced by the ashby-crawler worker (SlugExtractor + ResultPipeline)
+type AshbyEnrichment {
+  company_name: String
+  industry_tags: [String!]!
+  tech_signals: [String!]!
+  size_signal: String
+  enriched_at: String
+}
+
 # ATS Boards
 type ATSBoard {
   id: Int!
@@ -183,6 +193,9 @@ type Company {
   last_seen_crawl_id: String
   last_seen_capture_timestamp: String
   last_seen_source_url: String
+
+  # Ashby crawler enrichment (matched by company key = ashby board slug)
+  ashby_enrichment: AshbyEnrichment
 
   # Related data
   ats_boards: [ATSBoard!]!

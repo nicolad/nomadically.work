@@ -5,7 +5,9 @@ import { useCallback, useMemo, useState } from "react";
 import {
   useGetCompanyQuery,
   useEnhanceCompanyMutation,
+  useGetJobsQuery,
 } from "@/__generated__/hooks";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import {
@@ -376,6 +378,11 @@ export function CompanyDetail({ companyKey }: Props) {
 
   const company = data?.company ?? null;
 
+  const { data: jobsData } = useGetJobsQuery({
+    variables: { search: companyKey, limit: 100, status: "active" },
+  });
+  const companyJobs = jobsData?.jobs?.jobs ?? [];
+
   const websiteHref = useMemo(
     () => coerceExternalUrl(company?.website),
     [company?.website]
@@ -617,6 +624,60 @@ export function CompanyDetail({ companyKey }: Props) {
           </Box>
         </Flex>
 
+        {/* Ashby crawler enrichment */}
+        {company.ashby_enrichment?.enriched_at ? (
+          <SectionCard title="Ashby Enrichment">
+            <Flex direction="column" gap="3">
+
+              {/* Row: Company · Size */}
+              <Flex gap="4" align="center" wrap="wrap">
+                {company.ashby_enrichment.company_name ? (
+                  <Flex gap="2" align="center">
+                    <Text size="2" color="gray">Company</Text>
+                    <Text size="2" weight="medium">{company.ashby_enrichment.company_name}</Text>
+                  </Flex>
+                ) : null}
+                {company.ashby_enrichment.size_signal ? (
+                  <Flex gap="2" align="center">
+                    <Text size="2" color="gray">Size signal</Text>
+                    <Badge color="amber" variant="soft" radius="full">
+                      {company.ashby_enrichment.size_signal}
+                    </Badge>
+                  </Flex>
+                ) : null}
+              </Flex>
+
+              {/* Industries */}
+              {company.ashby_enrichment.industry_tags.length ? (
+                <Flex gap="2" wrap="wrap" align="center">
+                  <Text size="2" color="gray" style={{ minWidth: 90 }}>Industries</Text>
+                  {company.ashby_enrichment.industry_tags.map((tag) => (
+                    <Badge key={tag} color="blue" variant="soft" radius="full">
+                      {tag}
+                    </Badge>
+                  ))}
+                </Flex>
+              ) : null}
+
+              {/* Tech signals */}
+              {company.ashby_enrichment.tech_signals.length ? (
+                <Flex gap="2" wrap="wrap" align="center">
+                  <Text size="2" color="gray" style={{ minWidth: 90 }}>Tech</Text>
+                  {company.ashby_enrichment.tech_signals.map((sig) => (
+                    <Badge key={sig} color="violet" variant="soft" radius="full">
+                      {sig}
+                    </Badge>
+                  ))}
+                </Flex>
+              ) : null}
+
+              <Text size="1" color="gray">
+                Enriched {new Date(company.ashby_enrichment.enriched_at).toLocaleDateString()}
+              </Text>
+            </Flex>
+          </SectionCard>
+        ) : null}
+
         {/* Full-width sections (prevents awkward column gaps) */}
         {company.ats_boards?.length ? (
           <SectionCard title={`Career pages (${company.ats_boards.length})`}>
@@ -696,6 +757,41 @@ export function CompanyDetail({ companyKey }: Props) {
                   • {reason}
                 </Text>
               ))}
+            </Flex>
+          </SectionCard>
+        ) : null}
+
+        {companyJobs.length > 0 ? (
+          <SectionCard title={`Jobs (${companyJobs.length})`}>
+            <Flex direction="column">
+              {companyJobs.map((job, idx) => {
+                const jobId = job.external_id?.split("/").pop() || job.external_id || job.id;
+                const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
+                return (
+                <Box key={job.id}>
+                  <Link href={jobHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
+                    <Flex justify="between" align="center" gap="4" py="2" style={{ cursor: "pointer" }}>
+                      <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
+                        <Text size="3" weight="medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {job.title}
+                        </Text>
+                        {job.location && (
+                          <Text size="2" color="gray">
+                            {job.location}
+                          </Text>
+                        )}
+                      </Flex>
+                      {job.posted_at && (
+                        <Text size="1" color="gray" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+                          {new Date(job.posted_at).toLocaleDateString()}
+                        </Text>
+                      )}
+                    </Flex>
+                  </Link>
+                  {idx < companyJobs.length - 1 ? <Separator size="4" /> : null}
+                </Box>
+                );
+              })}
             </Flex>
           </SectionCard>
         ) : null}

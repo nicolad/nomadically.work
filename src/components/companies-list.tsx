@@ -6,7 +6,7 @@ import {
   useGetCompaniesQuery,
   useDeleteCompanyMutation,
 } from "@/__generated__/hooks";
-import type { GetCompaniesQuery } from "@/__generated__/graphql";
+import type { GetCompaniesQuery, CompanyOrderBy } from "@/__generated__/graphql";
 import { useAuth } from "@/lib/auth-hooks";
 import {
   Box,
@@ -52,6 +52,7 @@ export function CompaniesList() {
   const { loading, error, data, refetch, fetchMore } = useGetCompaniesQuery({
     variables: {
       text: searchTerm || undefined,
+      order_by: "NAME_ASC" as CompanyOrderBy,
       limit: 20,
       offset: 0,
     },

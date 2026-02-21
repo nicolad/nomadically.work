@@ -359,6 +359,42 @@ function parsePromptReferences(text: string): PromptReference[] {
  * Handles both text and chat prompts.
  * Prevents infinite recursion by tracking visited prompts.
  */
+// ---------------------------------------------------------------------------
+// Batch ingestion (traces + generations) — Edge Runtime compatible
+// Uses POST /api/public/ingestion with fire-and-forget error handling.
+// ---------------------------------------------------------------------------
+
+type LangfuseEvent =
+  | { id: string; type: "trace-create"; body: Record<string, unknown> }
+  | { id: string; type: "observation-create"; body: Record<string, unknown> }
+  | { id: string; type: "observation-update"; body: Record<string, unknown> };
+
+/**
+ * Send a batch of trace/observation events to Langfuse.
+ * Fire-and-forget: never throws, only warns on failure.
+ */
+export async function ingestLangfuseEvents(
+  events: LangfuseEvent[],
+): Promise<void> {
+  if (!isLangfuseConfigured()) return;
+  const baseUrl = LANGFUSE_BASE_URL.replace(/\/+$/, "");
+  try {
+    const res = await fetch(`${baseUrl}/api/public/ingestion`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${btoa(`${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`)}`,
+      },
+      body: JSON.stringify({ batch: events }),
+    });
+    if (!res.ok) {
+      console.warn(`[langfuse] ingestion failed: ${res.status} ${res.statusText}`);
+    }
+  } catch (err) {
+    console.warn("[langfuse] ingestion error:", err);
+  }
+}
+
 export async function resolveComposedPrompt(
   prompt: any,
   visited: Set<string> = new Set(),

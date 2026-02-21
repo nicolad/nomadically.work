@@ -15,6 +15,7 @@ import {
 import type { GraphQLContext } from "../../context";
 import { EXCLUDED_LOCATIONS, EXCLUDED_COUNTRIES } from "./constants";
 import { SKILL_LABELS } from "@/lib/skills/taxonomy";
+import { JOB_STATUS } from "@/constants/job-status";
 
 /**
  * Map short skill inputs to LIKE keywords for title/description fallback.
@@ -82,7 +83,7 @@ export async function jobsQuery(
 
     // Filter to EU remote jobs: status is the canonical field set by the worker
     if (args.isRemoteEu === true) {
-      conditions.push(eq(jobs.status, "eu-remote"));
+      conditions.push(eq(jobs.status, JOB_STATUS.EU_REMOTE));
     }
 
     // Filter by minimum confidence level
@@ -190,7 +191,6 @@ export async function jobsQuery(
           url: jobs.url,
           posted_at: jobs.posted_at,
           status: jobs.status,
-          is_remote_eu: jobs.is_remote_eu,
           remote_eu_confidence: jobs.remote_eu_confidence,
         })
         .from(jobs)

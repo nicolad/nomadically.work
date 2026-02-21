@@ -165,6 +165,12 @@ export type ChatMessageInput = {
   role: Scalars['String']['input'];
 };
 
+/** Confidence level of a classification result. */
+export type ClassificationConfidence =
+  | 'high'
+  | 'low'
+  | 'medium';
+
 export type CompaniesResponse = {
   __typename: 'CompaniesResponse';
   companies: Array<Company>;
@@ -507,7 +513,8 @@ export type Job = {
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
   internal_job_id: Maybe<Scalars['String']['output']>;
-  is_remote_eu: Maybe<Scalars['Boolean']['output']>;
+  /** Derived from status — true when status is eu_remote. */
+  is_remote_eu: Scalars['Boolean']['output'];
   language: Maybe<Scalars['String']['output']>;
   lists: Maybe<Array<LeverList>>;
   location: Maybe<Scalars['String']['output']>;
@@ -518,7 +525,7 @@ export type Job = {
   opening_plain: Maybe<Scalars['String']['output']>;
   posted_at: Scalars['String']['output'];
   questions: Maybe<Array<GreenhouseQuestion>>;
-  remote_eu_confidence: Maybe<Scalars['String']['output']>;
+  remote_eu_confidence: Maybe<ClassificationConfidence>;
   remote_eu_reason: Maybe<Scalars['String']['output']>;
   requisition_id: Maybe<Scalars['String']['output']>;
   score: Maybe<Scalars['Float']['output']>;
@@ -540,6 +547,19 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
+
+/**
+ * Pipeline status for a job posting.
+ * Mirrors workers/process-jobs/src/entry.py JobStatus enum — values must stay in sync.
+ */
+export type JobStatus =
+  | 'enhanced'
+  | 'error'
+  | 'eu_remote'
+  | 'new'
+  | 'non_eu'
+  | 'role_match'
+  | 'role_nomatch';
 
 export type JobsResponse = {
   __typename: 'JobsResponse';

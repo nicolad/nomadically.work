@@ -854,7 +854,7 @@ const MIGRATIONS: &[(&str, &str)] = &[
         ALTER TABLE ashby_boards ADD COLUMN job_count      INTEGER;
         ALTER TABLE ashby_boards ADD COLUMN is_active      INTEGER DEFAULT 1;
     "),
-    ("0005_dedup_and_unique_external_id", "
+    ("0006_dedup_and_unique_external_id", "
         DELETE FROM jobs WHERE id NOT IN (SELECT MIN(id) FROM jobs GROUP BY external_id);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_external_id ON jobs(external_id);
     "),
@@ -1323,7 +1323,7 @@ async fn handle_crawl(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let url = req.url()?;
     let params: HashMap<String, String> = url.query_pairs().into_owned().collect();
 
-    let crawl_id = params.get("crawl_id").cloned().unwrap_or("CC-MAIN-2025-05".into());
+    let crawl_id = params.get("crawl_id").cloned().unwrap_or("CC-MAIN-2025-52".into());
     let pages_per_run: u32 = params.get("pages_per_run").and_then(|p| p.parse().ok()).unwrap_or(3);
 
     let (total_pages, start_page, _st, mut boards_found) = match get_progress(&db, &crawl_id).await? {
@@ -1799,8 +1799,8 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
             console_log!("[ashby-crawler cron] Latest CC index: {}", indexes[0]);
             indexes[0].clone()
         }
-        Ok(_) => { console_log!("[ashby-crawler cron] No CC indexes, using fallback"); "CC-MAIN-2025-05".to_string() }
-        Err(e) => { console_log!("[ashby-crawler cron] CC index list failed: {:?}, using fallback", e); "CC-MAIN-2025-05".to_string() }
+        Ok(_) => { console_log!("[ashby-crawler cron] No CC indexes, using fallback"); "CC-MAIN-2025-52".to_string() }
+        Err(e) => { console_log!("[ashby-crawler cron] CC index list failed: {:?}, using fallback", e); "CC-MAIN-2025-52".to_string() }
     };
     let slugs = slugs_result.unwrap_or_default();
 

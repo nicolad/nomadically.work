@@ -1616,12 +1616,20 @@ function JobPageContent() {
                   )}
                 </Flex>
                 {job.remote_eu_reason && (
-                  <Text size="2" color="gray">
-                    <Text weight="medium" as="span">
-                      Reason:
-                    </Text>{" "}
-                    {job.remote_eu_reason}
-                  </Text>
+                  <>
+                    <Text size="2" color="gray">
+                      <Text weight="medium" as="span">
+                        Reason:
+                      </Text>{" "}
+                      {job.remote_eu_reason}
+                    </Text>
+                    {job.remote_eu_reason.startsWith("Backfilled from") && (
+                      <Text size="1" color="orange" mt="1">
+                        Placeholder from migration — click Re-classify for AI
+                        analysis.
+                      </Text>
+                    )}
+                  </>
                 )}
               </Flex>
             )}
@@ -1683,6 +1691,52 @@ function JobPageContent() {
                 </Text>
               )}
           </Card>
+
+          {/* Skill Match Against User Preferences */}
+          {user && job.skills && job.skills.length > 0 && (() => {
+            const preferredSkills = userSettingsData?.userSettings?.preferred_skills ?? [];
+            if (preferredSkills.length === 0) return null;
+
+            const jobTags = new Set(job.skills.map((s) => s.tag.toLowerCase()));
+            const matched = preferredSkills.filter((s) => jobTags.has(s.toLowerCase()));
+            const unmatched = preferredSkills.filter((s) => !jobTags.has(s.toLowerCase()));
+            const pct = Math.round((matched.length / preferredSkills.length) * 100);
+
+            return (
+              <Card>
+                <Flex justify="between" align="center" mb="2">
+                  <Heading size="5">Skill Match</Heading>
+                  <Badge
+                    size="2"
+                    color={pct >= 75 ? "green" : pct >= 40 ? "orange" : "red"}
+                  >
+                    {matched.length}/{preferredSkills.length} ({pct}%)
+                  </Badge>
+                </Flex>
+                <Text size="1" color="gray" mb="3">
+                  Based on your preferred skills
+                </Text>
+                {matched.length > 0 && (
+                  <Flex gap="2" wrap="wrap" mb="2">
+                    {matched.map((s) => (
+                      <Badge key={s} size="2" color="green" variant="soft">
+                        {getSkillLabel(s)}
+                      </Badge>
+                    ))}
+                  </Flex>
+                )}
+                {unmatched.length > 0 && (
+                  <Flex gap="2" wrap="wrap">
+                    {unmatched.map((s) => (
+                      <Badge key={s} size="2" color="gray" variant="soft" style={{ opacity: 0.6 }}>
+                        {getSkillLabel(s)}
+                      </Badge>
+                    ))}
+                  </Flex>
+                )}
+              </Card>
+            );
+          })()}
 
           {/* Score Reason */}
           {job.score_reason && (

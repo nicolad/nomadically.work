@@ -1,7 +1,6 @@
 import { jobs, jobSkillTags, companies } from "@/db/schema";
 import { eq, like } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
-import { last, split } from "lodash";
 import { isAdminEmail } from "@/lib/admin";
 import { jobsQuery } from "./jobs-query";
 import { enhanceJobFromATS } from "./enhance-job";
@@ -270,42 +269,48 @@ export const jobResolvers = {
   Query: {
     jobs: jobsQuery,
 
+    /**
+     * Two-step lookup by external_id:
+     *  1. Exact match — handles Ashby jobs whose external_id is a bare UUID
+     *     (e.g. "17c321ec-8400-4de3-9a40-558a850b90e4").
+     *  2. Suffix match (`LIKE '%/<id>'`) — handles Greenhouse/Lever jobs whose
+     *     external_id is a full URL ending with the numeric ID
+     *     (e.g. "https://boards.greenhouse.io/.../jobs/7434532002").
+     *
+     * The URL slug shown in the browser is always `last(split(external_id, "/"))`,
+     * so both formats resolve to the same slug and are found by this resolver.
+     * Do NOT change either query to use the integer `id` column — the frontend
+     * never passes that value.
+     */
     async job(_parent: any, args: { id: string }, context: GraphQLContext) {
       try {
-        // Try to find the job by matching external_id pattern
-        // external_id typically contains the full URL like:
-        // https://job-boards.greenhouse.io/databricks/jobs/7434532002
-        // We need to match jobs where external_id ends with the provided id
-
-        const results = await context.db
+        // 1. Exact match on external_id (handles Ashby UUIDs stored as bare IDs)
+        const exactResults = await context.db
           .select()
           .from(jobs)
-          .where(like(jobs.external_id, `%/${args.id}`));
+          .where(eq(jobs.external_id, args.id))
+          .limit(1);
 
-        if (results.length > 0) {
-          return results[0];
+        if (exactResults.length > 0) {
+          return exactResults[0];
         }
 
-        // If no match found with trailing slash, try without it
-        // (in case it's a direct match or different format)
-        const directResults = await context.db
+        // 2. Suffix match on external_id (handles Greenhouse/Lever URL-based IDs)
+        //    e.g. id="7434532002" matches "https://...greenhouse.io/.../7434532002"
+        const suffixResults = await context.db
           .select()
           .from(jobs)
-          .where(like(jobs.external_id, `%${args.id}%`));
+          .where(like(jobs.external_id, `%/${args.id}`))
+          .limit(1);
 
-        if (directResults.length > 0) {
-          // Find the one where the id is actually at the end
-          const exactMatch = directResults.find((job) => {
-            const jobId = last(split(job.external_id, "/"));
-            return jobId === args.id;
-          });
-          return exactMatch || directResults[0];
+        if (suffixResults.length > 0) {
+          return suffixResults[0];
         }
 
-        console.log(`❌ [Job Resolver] No job found for ID: ${args.id}`);
+        console.log(`[Job Resolver] No job found for ID: ${args.id}`);
         return null;
       } catch (error) {
-        console.error("❌ [Job Resolver] Error fetching job:", error);
+        console.error("[Job Resolver] Error fetching job:", error);
         return null;
       }
     },

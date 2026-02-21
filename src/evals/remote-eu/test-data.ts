@@ -61,7 +61,7 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
   },
   {
     id: "timezone-cet-1",
-    description: "CET timezone requirement (ambiguous - includes non-EU)",
+    description: "CET timezone + European business hours (targets EU workers)",
     jobPosting: {
       title: "Frontend Developer",
       location: "Remote",
@@ -69,10 +69,10 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
         "Must work in CET timezone. Flexible hours but need to overlap with European business hours.",
     },
     expectedClassification: {
-      isRemoteEU: false,
+      isRemoteEU: true,
       confidence: "medium",
       reason:
-        "CET timezone is not exclusive to EU (includes Switzerland, some African countries)",
+        "European business hours requirement targets EU-based workers",
     },
   },
   {
@@ -343,6 +343,269 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
       isRemoteEU: true,
       confidence: "high",
       reason: "Spain, Italy, Greece, and Portugal are all EU members",
+    },
+  },
+  {
+    id: "eu-timezone-only-1",
+    description: "EU Timezone signal only — not explicit EU residency (Sweatpals real example)",
+    jobPosting: {
+      title: "Data & Growth Analyst",
+      location: "Remote | EU Timezone",
+      description:
+        "Sweatpals is the community-first fitness platform turning workouts into social experiences. Backed by a16z speedrun, Patron, Kevin Hart, Pear VC, founders of Instacart and Dreamworks Animations.\n\nThe Role\nRemote | EU Timezone\n\nWe're looking for a Data & Growth Analyst to own the analytics backbone of our marketplace. You'll sit within the AI Squad, reporting to the Head of AI, but your work will directly support Product and Growth decisions.\n\nThis is a high-ownership role where you'll shape how we measure success, run experiments, and make decisions. Use AI tools daily to accelerate analysis, debugging, and documentation.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "EU timezone requirement targets EU-based workers but does not require EU residency/work auth",
+    },
+  },
+
+  // --- New cases: worldwide + exclusion signals ---
+
+  {
+    id: "worldwide-us-only-exclusion-1",
+    description: "Worldwide posting but requires US work authorization",
+    jobPosting: {
+      title: "Senior Software Engineer",
+      location: "Remote - Worldwide",
+      description:
+        "We hire globally! However, this role requires US work authorization. Must be legally authorized to work in the United States. No visa sponsorship available.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Despite worldwide location, US work authorization requirement excludes EU workers",
+    },
+  },
+  {
+    id: "worldwide-us-only-exclusion-2",
+    description: "Global remote but US-only requirement in description",
+    jobPosting: {
+      title: "Product Designer",
+      location: "Remote",
+      description:
+        "Fully remote position. Must be based in the US. US citizens and permanent residents only. We do not hire outside the United States.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Explicit US-only requirement overrides remote status",
+    },
+  },
+  {
+    id: "worldwide-eu-office-present",
+    description: "Worldwide remote with EU office presence",
+    jobPosting: {
+      title: "Engineering Manager",
+      location: "Remote - Worldwide",
+      description:
+        "Fully remote role open to candidates worldwide. Our main offices are in Berlin, Germany and Amsterdam, Netherlands. Team syncs happen during European business hours.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Worldwide remote with EU office presence suggests EU-friendly",
+    },
+  },
+  {
+    id: "emea-eu-work-auth",
+    description: "EMEA with explicit EU work authorization requirement",
+    jobPosting: {
+      title: "Backend Engineer",
+      location: "Remote - EMEA",
+      description:
+        "EMEA-based position. Candidates must have EU work authorization or be a citizen of an EU member state. We operate primarily out of our Dublin office.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "EMEA + EU work authorization requirement = strong EU signal",
+    },
+  },
+  {
+    id: "cet-plus-minus-2-hours",
+    description: "CET ± 2 hours overlap requirement",
+    jobPosting: {
+      title: "Full Stack Developer",
+      location: "Remote",
+      description:
+        "Fully remote position. We require overlap with CET ± 2 hours for daily standups. European business hours preferred. Team is distributed across Europe.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "CET ± 2 hours overlap with European team targets EU-based workers",
+    },
+  },
+  {
+    id: "worldwide-cet-offset-in-location",
+    description: "Worldwide with ±N hours CET in location field (Ashby pattern, real Peec AI job)",
+    jobPosting: {
+      title: "Senior Design Engineer (Remote) @ Peec AI",
+      location: "Worldwide (±3 hours CET)",
+      description:
+        "Take ownership of complex frontend features end-to-end. One of Europe's fastest-growing Series A startups. Remote working (applicants must be located within ±3 hours of the Berlin (CET) time).",
+      workplace_type: "remote",
+      is_remote: true,
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "CET ± N hours timezone overlap in worldwide role targets EU-compatible workers",
+    },
+  },
+  {
+    id: "remote-us-based-required",
+    description: "Remote but US-based only",
+    jobPosting: {
+      title: "AI Engineer",
+      location: "Remote - US",
+      description:
+        "Remote position. Must be based in the United States. We offer competitive benefits for US employees. Work from home anywhere in the US.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Explicitly restricted to US-based candidates",
+    },
+  },
+  {
+    id: "eu-preferred-globally-open",
+    description: "EU preferred but globally open position",
+    jobPosting: {
+      title: "DevOps Engineer",
+      location: "Remote - Global",
+      description:
+        "Global remote role. EU-based candidates preferred for timezone alignment, but we welcome applications from anywhere in the world.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "EU preferred in a global role — EU workers can apply",
+    },
+  },
+  {
+    id: "global-no-eu-specifics",
+    description: "Global remote with no EU-specific mentions",
+    jobPosting: {
+      title: "Security Analyst",
+      location: "Remote - Global",
+      description:
+        "Work from anywhere in the world. No location requirements. We are a fully distributed company with team members across 30 countries.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "low",
+      reason: "Global remote with no EU-specific signals — EU workers can technically apply but no EU focus",
+    },
+  },
+  {
+    id: "explicit-no-eu-applicants",
+    description: "Explicit 'no EU applicants' restriction",
+    jobPosting: {
+      title: "Marketing Manager",
+      location: "Remote",
+      description:
+        "Remote position. Due to regulatory requirements, we cannot accept applications from EU member states. Candidates must be based outside the European Union.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Explicitly excludes EU applicants",
+    },
+  },
+  {
+    id: "dach-swiss-only-emphasis",
+    description: "DACH region but Swiss-only emphasis",
+    jobPosting: {
+      title: "Software Engineer",
+      location: "Remote - DACH",
+      description:
+        "DACH region position. Must be based in Switzerland with a valid Swiss work permit. Swiss employment contract. Office in Zurich for optional in-person collaboration.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Despite DACH label, explicitly requires Swiss work permit — Switzerland is not EU",
+    },
+  },
+  {
+    id: "conflicting-signals-eu-and-us",
+    description: "Conflicting signals — mentions both EU and US requirements",
+    jobPosting: {
+      title: "Staff Engineer",
+      location: "Remote - US, EU",
+      description:
+        "We have two open positions: one for US-based and one for EU-based candidates. This posting is for our EU team. Must have right to work in the EU.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "Despite US mention, this posting is explicitly for the EU team with EU work auth",
+    },
+  },
+  {
+    id: "conflicting-signals-remote-but-office-days",
+    description: "Conflicting signals — says remote but requires occasional office visits",
+    jobPosting: {
+      title: "Product Manager",
+      location: "Remote - EU",
+      description:
+        "Remote-first position based in EU. Quarterly visits to our Paris office required (company covers travel). Otherwise fully remote from any EU country.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "Remote-first EU role with only quarterly office visits — still classified as remote EU",
+    },
+  },
+  {
+    id: "onsite-disguised-as-remote",
+    description: "On-site role listed as remote in title",
+    jobPosting: {
+      title: "Remote Support Engineer",
+      location: "Munich, Germany",
+      description:
+        "Provide remote support to customers from our Munich office. This is an on-site position requiring 5 days per week in our Munich headquarters. German work authorization required.",
+    },
+    expectedClassification: {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "'Remote' refers to remote support, not remote work — this is an on-site position",
+    },
+  },
+  {
+    id: "eu-country-code-remote-flag",
+    description: "EU country code + explicit remote flag from ATS",
+    jobPosting: {
+      title: "Frontend Engineer",
+      location: "Remote - Netherlands",
+      description:
+        "Fully remote position based in the Netherlands. We are a Dutch company offering competitive local benefits. EU work permit required.",
+      country: "NL",
+      workplace_type: "remote",
+      is_remote: true,
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: "EU country code (NL) + ATS remote flag = high-confidence EU remote",
+    },
+  },
+  {
+    id: "european-business-hours",
+    description: "European business hours requirement without EU mention",
+    jobPosting: {
+      title: "Support Engineer",
+      location: "Remote",
+      description:
+        "Fully remote role. Must be available during European business hours (9am-6pm CET). Our customers are primarily based in Europe.",
+    },
+    expectedClassification: {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "European business hours requirement targets EU-timezone workers",
     },
   },
 ];

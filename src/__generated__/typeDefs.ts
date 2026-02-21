@@ -100,21 +100,21 @@ type AshbyCompensation {
 }
 
 type AshbyCompensationComponent {
-  compensationType: String!
+  compensationType: String
   currencyCode: String
-  id: String!
-  interval: String!
+  id: String
+  interval: String
   maxValue: Float
   minValue: Float
-  summary: String!
+  summary: String
 }
 
 type AshbyCompensationTier {
   additionalInformation: String
   components: [AshbyCompensationComponent!]!
-  id: String!
-  tierSummary: String!
-  title: String!
+  id: String
+  tierSummary: String
+  title: String
 }
 
 type AshbyEnrichment {
@@ -493,7 +493,7 @@ type Job {
   skills: [JobSkill!]
   source_id: String
   source_kind: String!
-  status: String
+  status: JobStatus
   title: String!
   updated_at: String!
   url: String!

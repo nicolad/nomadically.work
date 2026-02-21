@@ -24,7 +24,7 @@ async function main() {
       return;
     }
 
-    console.log("\n💾 Saving to Turso database...");
+    console.log("\n💾 Saving to D1 database...");
 
     let inserted = 0;
     let updated = 0;

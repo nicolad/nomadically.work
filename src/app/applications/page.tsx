@@ -353,7 +353,7 @@ export default function ApplicationsPage() {
       </Flex>
 
       {/* Loading */}
-      {loading && (
+      {user && loading && (
         <Table.Root variant="surface">
           <Table.Header>
             <Table.Row>
@@ -379,7 +379,7 @@ export default function ApplicationsPage() {
       )}
 
       {/* Empty state */}
-      {!loading && total === 0 && (
+      {user && !loading && total === 0 && (
         <Card size="3" style={{ textAlign: "center" }}>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5" color="gray">
@@ -397,7 +397,7 @@ export default function ApplicationsPage() {
       )}
 
       {/* Applications table */}
-      {!loading && total > 0 && (
+      {user && !loading && total > 0 && (
         <ApplicationsTable
           apps={apps}
           onMove={handleMove}

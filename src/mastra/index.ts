@@ -6,7 +6,6 @@ import {
   jobClassifierAgent,
   sqlAgent,
   adminAssistantAgent,
-  postgresAgent,
   sqlGenerationAgent,
 } from "@/agents";
 import { personalizationAgent, recommendationAgent } from "@/memory";
@@ -49,12 +48,8 @@ import {
   comprehensiveWorkflow,
 } from "@/workflows/flow-control";
 
-// Import database tools and workflow
-import { databaseIntrospectionTool } from "@/tools/database/database-introspection-tool";
-import { databaseSeedingTool } from "@/tools/database/database-seeding-tool";
+// Import database tools
 import { sqlGenerationTool } from "@/tools/database/sql-generation-tool";
-import { sqlExecutionTool } from "@/tools/database/sql-execution-tool";
-import { databaseQueryWorkflow } from "@/workflows/database-query";
 
 // Import custom Inngest functions
 import {
@@ -83,7 +78,6 @@ export const mastra = new Mastra({
     personalizationAgent,
     recommendationAgent,
     adminAssistantAgent,
-    postgresAgent,
     sqlGenerationAgent,
   },
   // Storage is optional - using in-memory for simplicity
@@ -108,8 +102,6 @@ export const mastra = new Mastra({
     orderProcessing: orderProcessingWorkflow,
     comprehensive: comprehensiveWorkflow,
 
-    // Database workflows
-    databaseQuery: databaseQueryWorkflow,
   },
   tools: {
     // Common Crawl tools - disabled (missing ccx-tools.ts)
@@ -123,10 +115,7 @@ export const mastra = new Mastra({
     diffSnapshots: diffSnapshotsTool,
 
     // Database tools
-    databaseIntrospection: databaseIntrospectionTool,
-    databaseSeeding: databaseSeedingTool,
     sqlGeneration: sqlGenerationTool,
-    sqlExecution: sqlExecutionTool,
   },
   server: {
     host: "0.0.0.0",

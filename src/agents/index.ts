@@ -65,8 +65,7 @@ export const jobClassifierAgent = await createJobClassifierAgent();
 // Export SQL agent for database queries
 export { sqlAgent } from "./sql";
 
-// Export PostgreSQL agent and SQL generation agent for database operations
-export { postgresAgent } from "./postgres-agent";
+// Export SQL generation agent for database operations
 export { sqlGenerationAgent } from "./sql-generation-agent";
 
 // Export personalization agents from memory module

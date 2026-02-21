@@ -1,0 +1,26 @@
+description: "EU remote classification — real D1 jobs × LLM"
+
+prompts:
+  - |
+    You are a remote job classifier for EU-based remote positions.
+    Given this job posting, determine whether it is a remote job open to
+    candidates based in the European Union.
+
+    Return JSON only — no markdown, no explanation outside the JSON:
+    {"isRemoteEU": boolean, "confidence": "high"|"medium"|"low", "reason": string}
+
+    Rules:
+    - isRemoteEU = true  if the role is remote AND explicitly open to EU residents
+    - isRemoteEU = false if it is on-site, US-only remote, or EU-residency unclear
+    - confidence = "high" if the posting makes it unambiguous
+    - confidence = "medium" if you had to infer from partial signals
+    - confidence = "low" if key details are missing or contradictory
+
+    Title: {{title}}
+    Location: {{location}}
+    Description: {{description}}
+
+providers:
+  - openai:gpt-4o-mini
+
+tests: file://./d1-test-generator.ts

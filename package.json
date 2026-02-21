@@ -23,6 +23,7 @@
     "eval:export-db": "tsx scripts/export-eval-data.ts",
     "test:openrouter": "tsx src/openrouter/test-integration.ts",
     "eval:promptfoo": "tsx scripts/setup-langfuse-prompts.ts && NODE_OPTIONS='--import tsx/esm' npx promptfoo eval -c src/promptfoo/remote-jobs.promptfooconfig.yaml",
+    "eval:d1": "NODE_OPTIONS='--import tsx/esm' npx promptfoo eval -c src/promptfoo/remote-eu-classification.promptfooconfig.yaml",
     "eval:promptfoo:setup": "tsx scripts/setup-langfuse-prompts.ts",
     "mastra:init": "pnpm dlx mastra init",
     "mastra:dev": "pnpm dlx mastra dev",

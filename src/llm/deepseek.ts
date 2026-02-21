@@ -1,14 +1,12 @@
 // src/llm/deepseek.ts
-// Note: @langfuse/openai removed due to zlib dependency (Edge Runtime incompatibility)
-// This file is only used in Node.js scripts/trigger tasks
 import OpenAI from "openai";
-// import { observeOpenAI } from "@langfuse/openai";
-// OTel removed - not needed without Langfuse tracing
 import {
   fetchLangfusePrompt,
   compilePrompt,
   defaultCacheTtlSeconds,
   extractPromptConfig,
+  ingestLangfuseEvents,
+  isLangfuseConfigured,
   type CompileInput,
 } from "@/langfuse";
 
@@ -88,37 +86,79 @@ export async function generateDeepSeekWithLangfuse(
   const temperature = input.temperature ?? cfg.temperature;
   const top_p = input.top_p ?? cfg.top_p;
 
-  // Langfuse tracing disabled - @langfuse/openai removed
-  // const traced = observeOpenAI(getDeepSeekClient(), {
-  //   langfusePrompt, // <-- links generations to prompt version
-  //   generationName: "deepseek-chat", // optional: label the generation type
-  //   userId: input.userId,
-  //   sessionId: input.sessionId,
-  //   tags: input.tags,
-  // });
-  const traced = getDeepSeekClient();
+  const client = getDeepSeekClient();
 
-  if (langfusePrompt.type === "chat") {
-    const messages = compiled as OpenAI.Chat.CompletionCreateParams["messages"];
-    const res = await traced.chat.completions.create({
-      model,
-      messages,
-      max_tokens,
-      temperature,
-      top_p,
-    });
-    return res.choices?.[0]?.message?.content ?? "";
+  const traceId = crypto.randomUUID();
+  const generationId = crypto.randomUUID();
+  const startTime = new Date().toISOString();
+
+  const messages: OpenAI.Chat.CompletionCreateParams["messages"] =
+    langfusePrompt.type === "chat"
+      ? (compiled as OpenAI.Chat.CompletionCreateParams["messages"])
+      : [{ role: "user", content: String(compiled) }];
+
+  if (isLangfuseConfigured()) {
+    void ingestLangfuseEvents([
+      {
+        id: crypto.randomUUID(),
+        type: "trace-create",
+        body: {
+          id: traceId,
+          name: "deepseek-generation",
+          userId: input.userId,
+          sessionId: input.sessionId,
+          tags: input.tags ?? [],
+        },
+      },
+      {
+        id: crypto.randomUUID(),
+        type: "observation-create",
+        body: {
+          id: generationId,
+          traceId,
+          type: "GENERATION",
+          name: "deepseek-chat",
+          model,
+          input: messages,
+          startTime,
+          promptName: langfusePrompt.name,
+          promptVersion: langfusePrompt.version,
+        },
+      },
+    ]);
   }
 
-  // text prompt → wrap into a single user message
-  const text = String(compiled);
-  const res = await traced.chat.completions.create({
+  const res = await client.chat.completions.create({
     model,
-    messages: [{ role: "user", content: text }],
+    messages,
     max_tokens,
     temperature,
     top_p,
   });
 
-  return res.choices?.[0]?.message?.content ?? "";
+  const output = res.choices?.[0]?.message?.content ?? "";
+
+  if (isLangfuseConfigured()) {
+    void ingestLangfuseEvents([
+      {
+        id: crypto.randomUUID(),
+        type: "observation-update",
+        body: {
+          id: generationId,
+          traceId,
+          type: "GENERATION",
+          output,
+          endTime: new Date().toISOString(),
+          usage: {
+            input: res.usage?.prompt_tokens,
+            output: res.usage?.completion_tokens,
+            total: res.usage?.total_tokens,
+            unit: "TOKENS",
+          },
+        },
+      },
+    ]);
+  }
+
+  return output;
 }

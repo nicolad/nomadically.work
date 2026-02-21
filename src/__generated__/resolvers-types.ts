@@ -168,6 +168,12 @@ export type ChatMessageInput = {
   role: Scalars['String']['input'];
 };
 
+/** Confidence level of a classification result. */
+export type ClassificationConfidence =
+  | 'high'
+  | 'low'
+  | 'medium';
+
 export type CompaniesResponse = {
   __typename?: 'CompaniesResponse';
   companies: Array<Company>;
@@ -510,7 +516,8 @@ export type Job = {
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
   internal_job_id: Maybe<Scalars['String']['output']>;
-  is_remote_eu: Maybe<Scalars['Boolean']['output']>;
+  /** Derived from status — true when status is eu_remote. */
+  is_remote_eu: Scalars['Boolean']['output'];
   language: Maybe<Scalars['String']['output']>;
   lists: Maybe<Array<LeverList>>;
   location: Maybe<Scalars['String']['output']>;
@@ -521,7 +528,7 @@ export type Job = {
   opening_plain: Maybe<Scalars['String']['output']>;
   posted_at: Scalars['String']['output'];
   questions: Maybe<Array<GreenhouseQuestion>>;
-  remote_eu_confidence: Maybe<Scalars['String']['output']>;
+  remote_eu_confidence: Maybe<ClassificationConfidence>;
   remote_eu_reason: Maybe<Scalars['String']['output']>;
   requisition_id: Maybe<Scalars['String']['output']>;
   score: Maybe<Scalars['Float']['output']>;
@@ -543,6 +550,19 @@ export type JobSkill = {
   level: Scalars['String']['output'];
   tag: Scalars['String']['output'];
 };
+
+/**
+ * Pipeline status for a job posting.
+ * Mirrors workers/process-jobs/src/entry.py JobStatus enum — values must stay in sync.
+ */
+export type JobStatus =
+  | 'enhanced'
+  | 'error'
+  | 'eu_remote'
+  | 'new'
+  | 'non_eu'
+  | 'role_match'
+  | 'role_nomatch';
 
 export type JobsResponse = {
   __typename?: 'JobsResponse';
@@ -1311,6 +1331,7 @@ export type ResolversTypes = {
   Boolean: ResolverTypeWrapper<Partial<Scalars['Boolean']['output']>>;
   ChatMessage: ResolverTypeWrapper<Partial<ChatMessage>>;
   ChatMessageInput: ResolverTypeWrapper<Partial<ChatMessageInput>>;
+  ClassificationConfidence: ResolverTypeWrapper<Partial<ClassificationConfidence>>;
   CompaniesResponse: ResolverTypeWrapper<Partial<CompaniesResponse>>;
   Company: ResolverTypeWrapper<Partial<Company>>;
   CompanyCategory: ResolverTypeWrapper<Partial<CompanyCategory>>;
@@ -1346,6 +1367,7 @@ export type ResolversTypes = {
   JSON: ResolverTypeWrapper<Partial<Scalars['JSON']['output']>>;
   Job: ResolverTypeWrapper<Partial<Job>>;
   JobSkill: ResolverTypeWrapper<Partial<JobSkill>>;
+  JobStatus: ResolverTypeWrapper<Partial<JobStatus>>;
   JobsResponse: ResolverTypeWrapper<Partial<JobsResponse>>;
   LangSmithPrompt: ResolverTypeWrapper<Partial<LangSmithPrompt>>;
   LangSmithPromptCommit: ResolverTypeWrapper<Partial<LangSmithPromptCommit>>;
@@ -1759,7 +1781,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   first_published?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   internal_job_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  is_remote_eu?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
+  is_remote_eu?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   language?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   lists?: Resolver<Maybe<Array<ResolversTypes['LeverList']>>, ParentType, ContextType>;
   location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1770,7 +1792,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   opening_plain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   posted_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   questions?: Resolver<Maybe<Array<ResolversTypes['GreenhouseQuestion']>>, ParentType, ContextType>;
-  remote_eu_confidence?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  remote_eu_confidence?: Resolver<Maybe<ResolversTypes['ClassificationConfidence']>, ParentType, ContextType>;
   remote_eu_reason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   requisition_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   score?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;

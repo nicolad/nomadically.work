@@ -6,9 +6,29 @@ import { isAdminEmail } from "@/lib/admin";
 import { jobsQuery } from "./jobs-query";
 import { enhanceJobFromATS } from "./enhance-job";
 import { processAllJobs } from "./process-all-jobs";
+import { JOB_STATUS } from "@/constants/job-status";
+
+/** Map DB hyphenated status values to GraphQL enum values (underscored) */
+const STATUS_TO_ENUM: Record<string, string> = {
+  [JOB_STATUS.NEW]: "new",
+  [JOB_STATUS.ENHANCED]: "enhanced",
+  [JOB_STATUS.ROLE_MATCH]: "role_match",
+  [JOB_STATUS.ROLE_NOMATCH]: "role_nomatch",
+  [JOB_STATUS.EU_REMOTE]: "eu_remote",
+  [JOB_STATUS.NON_EU]: "non_eu",
+  [JOB_STATUS.ERROR]: "error",
+};
 
 export const jobResolvers = {
   Job: {
+    // Map DB status (hyphenated) to GraphQL JobStatus enum (underscored)
+    status(parent: any) {
+      return STATUS_TO_ENUM[parent.status] ?? parent.status ?? null;
+    },
+    // Derived from status — single source of truth for EU remote classification
+    is_remote_eu(parent: any) {
+      return parent.status === JOB_STATUS.EU_REMOTE;
+    },
     async skills(parent: any, _args: any, context: GraphQLContext) {
       try {
         const skills = await context.db

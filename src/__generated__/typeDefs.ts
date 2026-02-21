@@ -146,6 +146,13 @@ input ChatMessageInput {
   role: String!
 }
 
+"""Confidence level of a classification result."""
+enum ClassificationConfidence {
+  high
+  low
+  medium
+}
+
 type CompaniesResponse {
   companies: [Company!]!
   totalCount: Int!
@@ -466,7 +473,8 @@ type Job {
   first_published: String
   id: Int!
   internal_job_id: String
-  is_remote_eu: Boolean
+  """Derived from status — true when status is eu_remote."""
+  is_remote_eu: Boolean!
   language: String
   lists: [LeverList!]
   location: String
@@ -477,7 +485,7 @@ type Job {
   opening_plain: String
   posted_at: String!
   questions: [GreenhouseQuestion!]
-  remote_eu_confidence: String
+  remote_eu_confidence: ClassificationConfidence
   remote_eu_reason: String
   requisition_id: String
   score: Float
@@ -497,6 +505,20 @@ type JobSkill {
   evidence: String
   level: String!
   tag: String!
+}
+
+"""
+Pipeline status for a job posting.
+Mirrors workers/process-jobs/src/entry.py JobStatus enum — values must stay in sync.
+"""
+enum JobStatus {
+  enhanced
+  error
+  eu_remote
+  new
+  non_eu
+  role_match
+  role_nomatch
 }
 
 type JobsResponse {

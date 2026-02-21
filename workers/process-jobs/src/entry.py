@@ -41,6 +41,48 @@ from js import JSON, fetch
 from pydantic import BaseModel, Field, validator
 from workers import Response, WorkerEntrypoint
 
+# ---------------------------------------------------------------------------
+# Skill taxonomy — canonical tags (mirrored from src/lib/skills/taxonomy.ts)
+# ---------------------------------------------------------------------------
+
+SKILL_TAGS: frozenset[str] = frozenset({
+    # Programming Languages
+    "javascript", "typescript", "python", "java", "csharp", "ruby", "php",
+    "go", "rust", "swift", "kotlin", "scala", "elixir",
+    # Frontend Frameworks
+    "react", "vue", "angular", "svelte", "nextjs",
+    # Backend Frameworks
+    "nodejs", "express", "django", "flask", "laravel", "fastapi", "spring-boot",
+    # Mobile
+    "react-native", "flutter", "ios", "android",
+    # Databases
+    "postgresql", "mysql", "mongodb", "redis", "elasticsearch", "cassandra",
+    "dynamodb", "sqlite", "sql",
+    # Cloud & DevOps
+    "aws", "gcp", "azure", "docker", "kubernetes", "terraform", "ansible",
+    "jenkins", "ci-cd", "circleci", "serverless",
+    # Architecture
+    "microservices", "rest-api", "graphql", "grpc", "websocket", "event-driven",
+    # Tools
+    "git", "linux", "agile", "tdd", "webpack", "jest", "pytest", "tailwind",
+    # Data Science & ML
+    "machine-learning", "deep-learning", "tensorflow", "pytorch", "pandas",
+    "numpy", "scikit", "nlp", "computer-vision",
+    # AI / LLM / GenAI
+    "llm", "rag", "prompt-engineering", "fine-tuning", "embeddings",
+    "transformers", "agents", "agentic-ai", "langchain", "langgraph",
+    "openai", "anthropic", "vercel-ai-sdk", "vector-db", "pinecone",
+    "weaviate", "chromadb", "mlops", "huggingface", "model-evaluation",
+    "structured-output", "function-calling", "mastra", "langfuse", "promptfoo",
+    # Cloudflare ecosystem
+    "cloudflare-workers", "cloudflare-workers-ai", "cloudflare-d1", "cloudflare-vectorize",
+    # Frontend (extended)
+    "next-auth", "radix-ui", "shadcn-ui", "storybook", "playwright", "cypress",
+    "vitest", "react-query", "zustand", "apollo-client", "remix", "astro",
+    # Backend (extended)
+    "drizzle-orm", "prisma", "trpc", "hono", "bun", "deno",
+})
+
 # langchain-cloudflare — Workers AI binding integration (PyPI)
 from langchain_cloudflare import ChatCloudflareWorkersAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -89,6 +131,23 @@ class JobRoleTags(BaseModel):
     def truncate_reason(cls, v):
         # Guard D1 TEXT column against oversized LLM explanations
         return str(v)[:500] if v else ""
+
+
+class ExtractedSkill(BaseModel):
+    """A single skill extracted from a job description."""
+    tag:        str
+    level:      Literal["required", "preferred", "nice"] = "preferred"
+    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    evidence:   str   = ""
+
+    @validator("evidence", pre=True, always=True)
+    def truncate_evidence(cls, v):
+        return str(v)[:300] if v else ""
+
+
+class JobSkillOutput(BaseModel):
+    """Structured output for Phase 4 skill extraction."""
+    skills: list[ExtractedSkill] = Field(default_factory=list)
 
 
 class JobClassification(BaseModel):
@@ -160,6 +219,35 @@ Return ONLY valid JSON (no markdown):
   "confidence": "high" | "medium" | "low",
   "reason": "Brief explanation of classification"
 }}""",
+    ),
+])
+
+# Phase 4 — Skill Extraction
+SKILL_EXTRACTION_PROMPT = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "You are a technical recruiter extracting skills from job descriptions. "
+        "Only output canonical skill tags from the provided list. "
+        "Do not invent tags. Return valid JSON only, no markdown.",
+    ),
+    (
+        "human",
+        """Extract technical skills from this job posting.
+
+ALLOWED TAGS (use ONLY these exact strings): {tags}
+
+JOB:
+- Title: {title}
+- Description: {description}
+
+For each skill found, output:
+- tag: exact string from the allowed list
+- level: "required" (must-have), "preferred" (nice-to-have but important), or "nice" (bonus)
+- confidence: 0.0-1.0 how certain you are this skill applies
+- evidence: short quote from the description that supports this skill (min 10 chars)
+
+Return ONLY valid JSON:
+{{"skills": [{{"tag": "...", "level": "required|preferred|nice", "confidence": 0.0, "evidence": "..."}}]}}""",
     ),
 ])
 
@@ -1323,16 +1411,211 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
 
 
 # =========================================================================
+# Phase 4 — Skill Extraction
+#   Extracts canonical skill tags from classified job descriptions.
+#   Runs on jobs that have been classified (eu-remote / non-eu / role-match)
+#   but have no entries yet in job_skill_tags.
+#
+#   Same two-tier strategy as Phase 2/3:
+#     Tier 1 — Workers AI via langchain  (free)
+#     Tier 2 — DeepSeek API              (paid fallback)
+# =========================================================================
+
+_TAGS_STR = ", ".join(sorted(SKILL_TAGS))
+
+
+async def _extract_with_workers_ai(
+    job: dict, ai_binding
+) -> list[ExtractedSkill] | None:
+    """Tier 1: skill extraction via Workers AI."""
+    if ai_binding is None:
+        return None
+    try:
+        llm   = ChatCloudflareWorkersAI(
+            model_name=WORKERS_AI_MODEL,
+            binding=ai_binding,
+            temperature=0.1,
+        )
+        chain = SKILL_EXTRACTION_PROMPT | llm
+        response = await chain.ainvoke({
+            "tags":        _TAGS_STR,
+            "title":       job.get("title", "N/A"),
+            "description": (job.get("description") or "")[:6000],
+        })
+        content_str = _guard_content(response.content)
+        if not content_str:
+            return None
+        json_str = _extract_json_object(content_str)
+        raw      = json.loads(json_str)
+        output   = JobSkillOutput.model_validate(raw)
+        return output.skills
+    except Exception as e:
+        print(f"   ⚠️  Workers AI skill extraction failed: {e}")
+        return None
+
+
+async def _extract_with_deepseek(
+    job: dict, api_key: str, base_url: str, model: str
+) -> list[ExtractedSkill] | None:
+    """Tier 2: skill extraction via DeepSeek fallback."""
+    prompt_msgs = SKILL_EXTRACTION_PROMPT.format_messages(
+        tags        = _TAGS_STR,
+        title       = job.get("title", "N/A"),
+        description = (job.get("description") or "")[:6000],
+    )
+    role_map = {"system": "system", "human": "user", "ai": "assistant"}
+    messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt_msgs]
+
+    try:
+        url     = f"{base_url.rstrip('/')}/chat/completions"
+        payload = json.dumps({
+            "model":           model,
+            "temperature":     0.1,
+            "max_tokens":      1000,
+            "response_format": {"type": "json_object"},
+            "messages":        messages,
+        })
+        data = await fetch_json(
+            url,
+            method  = "POST",
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type":  "application/json",
+            },
+            body    = payload,
+            retries = 2,
+        )
+        content = (
+            (data.get("choices") or [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        if not content.strip():
+            raise ValueError("Empty content in DeepSeek skill extraction response")
+        raw    = json.loads(content)
+        output = JobSkillOutput.model_validate(raw)
+        return output.skills
+    except Exception as e:
+        print(f"   ⚠️  DeepSeek skill extraction failed: {e}")
+        return None
+
+
+async def extract_skills_for_job(
+    db,
+    job: dict,
+    ai_binding,
+    api_key:  str | None,
+    base_url: str,
+    model:    str,
+) -> dict:
+    """Extract and persist skills for a single job into job_skill_tags."""
+    skills: list[ExtractedSkill] | None = None
+
+    # Tier 1 — Workers AI
+    if ai_binding:
+        skills = await _extract_with_workers_ai(job, ai_binding)
+
+    # Tier 2 — DeepSeek fallback
+    if not skills and api_key:
+        skills = await _extract_with_deepseek(job, api_key, base_url, model)
+
+    if not skills:
+        return {"extracted": 0}
+
+    # Validate: only canonical tags, evidence required (min 8 chars), max 30 skills
+    valid = [
+        s for s in skills
+        if s.tag in SKILL_TAGS and len(s.evidence.strip()) >= 8
+    ][:30]
+
+    if not valid:
+        return {"extracted": 0}
+
+    # Upsert: delete existing then insert fresh batch
+    await d1_run(db, "DELETE FROM job_skill_tags WHERE job_id = ?", [job["id"]])
+    for s in valid:
+        await d1_run(
+            db,
+            """INSERT OR REPLACE INTO job_skill_tags
+               (job_id, tag, level, confidence, evidence, extracted_at, version)
+               VALUES (?, ?, ?, ?, ?, datetime('now'), 'skills-v1')""",
+            [job["id"], s.tag, s.level, round(s.confidence, 3), s.evidence],
+        )
+
+    return {"extracted": len(valid)}
+
+
+async def extract_skills_for_classified_jobs(
+    db,
+    env,
+    limit: int = 50,
+) -> dict:
+    """Phase 4: Extract skills for classified jobs that have no skill tags yet.
+
+    Targets eu-remote, non-eu, and role-match jobs without existing job_skill_tags rows.
+    Runs after Phase 3 so the description has been enhanced by Phase 1.
+    """
+    api_key  = getattr(env, "DEEPSEEK_API_KEY", None) or getattr(env, "OPENAI_API_KEY", None)
+    base_url = getattr(env, "DEEPSEEK_BASE_URL", None) or "https://api.deepseek.com/beta"
+    model    = getattr(env, "DEEPSEEK_MODEL", None) or "deepseek-chat"
+    ai_binding = getattr(env, "AI", None)
+
+    print("🔍 Phase 4 — Finding classified jobs without skill tags...")
+
+    rows = await d1_all(
+        db,
+        """
+        SELECT j.id, j.title, j.description
+        FROM jobs j
+        LEFT JOIN job_skill_tags t ON t.job_id = j.id
+        WHERE j.status IN ('eu-remote', 'non-eu', 'role-match')
+          AND j.description IS NOT NULL
+          AND t.job_id IS NULL
+        ORDER BY j.created_at DESC
+        LIMIT ?
+        """,
+        [limit],
+    )
+
+    print(f"📋 Found {len(rows)} jobs needing skill extraction")
+
+    stats = {"processed": 0, "extracted": 0, "errors": 0}
+
+    for job in rows:
+        job_id = job.get("id", "unknown")
+        try:
+            print(f"🔬 Extracting skills for job {job_id}: {job.get('title')}")
+            result = await extract_skills_for_job(
+                db, job, ai_binding, api_key, base_url, model
+            )
+            stats["processed"] += 1
+            stats["extracted"] += result["extracted"]
+            print(f"   ✅ {result['extracted']} skills extracted")
+        except Exception as e:
+            print(f"   ❌ Error extracting skills for job {job_id}: {e}")
+            stats["errors"] += 1
+
+        await sleep_ms(200)
+
+    print(
+        f"✅ Skill extraction complete: {stats['extracted']} skills across "
+        f"{stats['processed']} jobs, {stats['errors']} errors"
+    )
+    return stats
+
+
+# =========================================================================
 # Worker Entrypoint
 # =========================================================================
 
 class Default(WorkerEntrypoint):
-    """Main Worker entrypoint for the three-phase job processing pipeline.
+    """Main Worker entrypoint for the four-phase job processing pipeline.
 
     Phases:
       1. enhance  — ATS data enrichment (new → enhanced)
       2. tag      — Role tagging (enhanced → role-match | role-nomatch)
       3. classify — EU-remote classification (role-match → eu-remote | non-eu)
+      4. extract  — Skill tag extraction (classified → job_skill_tags populated)
     """
 
     # MARK: - Request Routing
@@ -1379,6 +1662,8 @@ class Default(WorkerEntrypoint):
                 return await self.handle_tag(request, cors_headers)
             elif path == "classify":
                 return await self.handle_classify(request, cors_headers)
+            elif path == "extract":
+                return await self.handle_extract(request, cors_headers)
             elif path == "process-sync":
                 return await self.handle_process(request, cors_headers)
             else:
@@ -1396,13 +1681,13 @@ class Default(WorkerEntrypoint):
     # MARK: - Scheduled (Cron) Handler
 
     async def scheduled(self, event, env, ctx):
-        """Cron trigger — runs all three phases (enhance → tag → classify).
+        """Cron trigger — runs all four phases (enhance → tag → classify → extract).
 
         Configured via [triggers].crons in wrangler.jsonc.
         Runs every 6 hours. Phase 1/2 are fast (ATS fetch + keyword heuristic),
-        Phase 3 involves LLM calls so uses a smaller batch.
+        Phase 3/4 involve LLM calls so use smaller batches.
         """
-        print("🔄 Cron: Starting three-phase pipeline...")
+        print("🔄 Cron: Starting four-phase pipeline...")
         try:
             db = self.env.DB
 
@@ -1415,8 +1700,9 @@ class Default(WorkerEntrypoint):
                 limit             = 50,
             )
             classify_stats = await classify_unclassified_jobs(db, self.env, 30)
+            skill_stats    = await extract_skills_for_classified_jobs(db, self.env, 30)
 
-            stats = self._merge_stats(enhance_stats, tag_stats, classify_stats)
+            stats = self._merge_stats(enhance_stats, tag_stats, classify_stats, skill_stats)
             print(f"✅ Cron complete — {self._stats_summary(stats)}")
             self._save_run_checkpoint(stats)
 
@@ -1432,7 +1718,8 @@ class Default(WorkerEntrypoint):
           enhance  — Phase 1 only
           tag      — Phase 2 only
           classify — Phase 3 only
-          process  — All three phases (default)
+          extract  — Phase 4 only (skill extraction)
+          process  — All four phases (default)
         """
         for message in batch.messages:
             try:
@@ -1461,6 +1748,10 @@ class Default(WorkerEntrypoint):
                     stats = await classify_unclassified_jobs(db, self.env, limit)
                     print(f"   Classified: {stats['processed']}, EU: {stats['euRemote']}")
 
+                elif action == "extract":
+                    stats = await extract_skills_for_classified_jobs(db, self.env, limit)
+                    print(f"   Skills: {stats['extracted']} extracted across {stats['processed']} jobs")
+
                 else:  # "process" — full pipeline
                     enhance_stats  = await enhance_unenhanced_jobs(db, limit)
                     tag_stats      = await tag_roles_for_enhanced_jobs(
@@ -1471,7 +1762,8 @@ class Default(WorkerEntrypoint):
                         limit             = limit,
                     )
                     classify_stats = await classify_unclassified_jobs(db, self.env, limit)
-                    stats = self._merge_stats(enhance_stats, tag_stats, classify_stats)
+                    skill_stats    = await extract_skills_for_classified_jobs(db, self.env, limit)
+                    stats = self._merge_stats(enhance_stats, tag_stats, classify_stats, skill_stats)
                     print(f"\n✅ Queue pipeline complete — {self._stats_summary(stats)}")
                     self._save_run_checkpoint(stats)
 

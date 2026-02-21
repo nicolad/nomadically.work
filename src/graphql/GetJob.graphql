@@ -27,6 +27,19 @@ query GetJob($id: String!) {
       confidence
       evidence
     }
+    skillMatch {
+      score
+      userCoverage
+      jobCoverage
+      requiredCoverage
+      matchedCount
+      totalPreferred
+      details {
+        tag
+        level
+        matched
+      }
+    }
 
     # Greenhouse ATS fields
     absolute_url

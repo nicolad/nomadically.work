@@ -38,7 +38,7 @@ from typing import Literal
 from urllib.parse import quote
 
 from js import JSON, fetch
-from pydantic import BaseModel, Field, validator
+from dataclasses import dataclass, field
 from workers import Response, WorkerEntrypoint
 
 # ---------------------------------------------------------------------------
@@ -87,8 +87,8 @@ SKILL_TAGS: frozenset[str] = frozenset({
 from langchain_cloudflare import ChatCloudflareWorkersAI
 from langchain_core.prompts import ChatPromptTemplate
 
-# langgraph-checkpoint-cloudflare-d1 — pipeline run checkpointing (PyPI)
-from langgraph_checkpoint_cloudflare_d1 import CloudflareD1Saver
+# langgraph-checkpoint-cloudflare-d1 removed (saves ~8MB sqlalchemy).
+# CloudflareD1Saver checkpointing is best-effort and now a no-op.
 
 
 # ---------------------------------------------------------------------------
@@ -115,59 +115,80 @@ class JobStatus(str, Enum):
 # Pydantic models for structured output
 # ---------------------------------------------------------------------------
 
-class JobRoleTags(BaseModel):
-    """Role tagging result from Phase 2.
+@dataclass
+class JobRoleTags:
+    """Role tagging result from Phase 2."""
+    isFrontendReact: bool = False
+    isAIEngineer:    bool = False
+    confidence:      str  = "low"   # "high" | "medium" | "low"
+    reason:          str  = ""
 
-    isFrontendReact: True if the job is primarily a Frontend / React role.
-    isAIEngineer:    True if the job is primarily an AI / ML / LLM role.
-    Both can be True (e.g. AI-powered React app engineer).
-    """
-    isFrontendReact: bool = Field(default=False)
-    isAIEngineer:    bool = Field(default=False)
-    confidence:      Literal["high", "medium", "low"] = Field(default="low")
-    reason:          str = Field(default="")
+    def __post_init__(self):
+        self.reason = str(self.reason)[:500] if self.reason else ""
 
-    @validator("reason", pre=True, always=True)
-    def truncate_reason(cls, v):
-        # Guard D1 TEXT column against oversized LLM explanations
-        return str(v)[:500] if v else ""
+    @classmethod
+    def model_validate(cls, data: dict) -> "JobRoleTags":
+        return cls(
+            isFrontendReact=bool(data.get("isFrontendReact", False)),
+            isAIEngineer=bool(data.get("isAIEngineer", False)),
+            confidence=str(data.get("confidence", "low")),
+            reason=str(data.get("reason", "")),
+        )
 
 
-class ExtractedSkill(BaseModel):
+@dataclass
+class ExtractedSkill:
     """A single skill extracted from a job description."""
-    tag:        str
-    level:      Literal["required", "preferred", "nice"] = "preferred"
-    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    tag:        str  = ""
+    level:      str  = "preferred"  # "required" | "preferred" | "nice"
+    confidence: float = 0.7
     evidence:   str   = ""
 
-    @validator("evidence", pre=True, always=True)
-    def truncate_evidence(cls, v):
-        return str(v)[:300] if v else ""
+    def __post_init__(self):
+        self.evidence = str(self.evidence)[:300] if self.evidence else ""
+        self.confidence = max(0.0, min(1.0, float(self.confidence)))
 
 
-class JobSkillOutput(BaseModel):
+@dataclass
+class JobSkillOutput:
     """Structured output for Phase 4 skill extraction."""
-    skills: list[ExtractedSkill] = Field(default_factory=list)
+    skills: list = field(default_factory=list)
+
+    @classmethod
+    def model_validate(cls, data: dict) -> "JobSkillOutput":
+        raw_skills = data.get("skills") or []
+        skills = []
+        for s in raw_skills:
+            if isinstance(s, dict):
+                skills.append(ExtractedSkill(
+                    tag=str(s.get("tag", "")),
+                    level=str(s.get("level", "preferred")),
+                    confidence=float(s.get("confidence", 0.7)),
+                    evidence=str(s.get("evidence", "")),
+                ))
+            elif isinstance(s, ExtractedSkill):
+                skills.append(s)
+        return cls(skills=skills)
 
 
-class JobClassification(BaseModel):
+@dataclass
+class JobClassification:
     """EU-remote classification result from Phase 3.
 
-    Accepts both camelCase (isRemoteEU) and snake_case (is_remote_eu) keys
-    from different LLMs via populate_by_name + alias.
+    Accepts both camelCase (isRemoteEU) and snake_case (is_remote_eu) keys.
     """
-    model_config = {"populate_by_name": True}
+    isRemoteEU: bool = False
+    confidence: str  = "low"  # "high" | "medium" | "low"
+    reason:     str  = ""
 
-    isRemoteEU: bool = Field(
-        alias="is_remote_eu",
-        description="Whether this job is a fully remote EU position",
-    )
-    confidence: Literal["high", "medium", "low"] = Field(
-        description="Confidence level of the classification",
-    )
-    reason: str = Field(
-        description="Brief explanation for the classification decision",
-    )
+    @classmethod
+    def model_validate(cls, data: dict) -> "JobClassification":
+        is_eu = data.get("isRemoteEU", data.get("is_remote_eu", False))
+        return cls(
+            isRemoteEU=bool(is_eu),
+            confidence=str(data.get("confidence", "low")),
+            reason=str(data.get("reason", "")),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1228,21 +1249,44 @@ async def tag_roles_for_enhanced_jobs(
 #     Tier 2 — DeepSeek API                      (paid, fallback only)
 # =========================================================================
 
-# EU member state ISO 3166-1 alpha-2 codes
+# EU member state + EEA ISO 3166-1 alpha-2 codes
 EU_ISO_CODES: frozenset[str] = frozenset({
     "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
     "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
     "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+    # EEA (EU labour market access)
+    "NO", "IS", "LI",
 })
 
-# EU country names (lowercase) for text matching
+# EU + EEA country names (lowercase) for text matching
 EU_COUNTRY_NAMES: frozenset[str] = frozenset({
     "austria", "belgium", "bulgaria", "croatia", "cyprus", "czech republic",
     "czechia", "denmark", "estonia", "finland", "france", "germany", "greece",
     "hungary", "ireland", "italy", "latvia", "lithuania", "luxembourg", "malta",
     "netherlands", "poland", "portugal", "romania", "slovakia", "slovenia",
     "spain", "sweden",
+    # EEA
+    "norway", "iceland", "liechtenstein",
 })
+
+# Country name → ISO code mapping (covers common ATS values)
+_COUNTRY_NAME_TO_ISO: dict[str, str] = {
+    "austria": "AT", "belgium": "BE", "bulgaria": "BG", "croatia": "HR",
+    "cyprus": "CY", "czech republic": "CZ", "czechia": "CZ", "denmark": "DK",
+    "estonia": "EE", "finland": "FI", "france": "FR", "germany": "DE",
+    "greece": "GR", "hungary": "HU", "ireland": "IE", "italy": "IT",
+    "latvia": "LV", "lithuania": "LT", "luxembourg": "LU", "malta": "MT",
+    "netherlands": "NL", "poland": "PL", "portugal": "PT", "romania": "RO",
+    "slovakia": "SK", "slovenia": "SI", "spain": "ES", "sweden": "SE",
+    # EEA
+    "norway": "NO", "iceland": "IS", "liechtenstein": "LI",
+    # Non-EU (for correct negative classification)
+    "united states": "US", "united kingdom": "GB", "switzerland": "CH",
+    "canada": "CA", "australia": "AU", "new zealand": "NZ",
+    "japan": "JP", "singapore": "SG", "india": "IN", "brazil": "BR",
+    "israel": "IL", "south korea": "KR", "china": "CN",
+}
+
 
 # Negative signal patterns — US-only, no-EU, Swiss-only
 _NEGATIVE_EU_PATTERN = re.compile(
@@ -1290,16 +1334,58 @@ def _extract_eu_signals(job: dict) -> dict:
     # ATS remote flag — from ashby_is_remote or workplace_type
     ashby_remote = job.get("ashby_is_remote")
     workplace = (job.get("workplace_type") or "").lower()
-    if ashby_remote == 1 or ashby_remote is True or workplace == "remote":
+    location_lower = (job.get("location") or "").lower().strip()
+    if (ashby_remote == 1 or ashby_remote is True
+            or workplace == "remote"
+            or location_lower == "remote"
+            or location_lower.startswith("remote ")):
         signals["ats_remote"] = True
 
     # Country code → EU membership check
-    # Only accept valid ISO 3166-1 alpha-2 codes (2 uppercase letters)
-    country = (job.get("country") or "").strip().upper()
+    # Accept ISO codes (2-3 uppercase letters) or full country names
+    raw_country = (job.get("country") or "").strip()
+    country = raw_country.upper()
     if country and re.fullmatch(r"[A-Z]{2,3}", country):
+        # Already an ISO code
         signals["country_code"] = country
         if country in EU_ISO_CODES:
             signals["eu_country_code"] = True
+    elif raw_country:
+        # Try mapping full country name → ISO code
+        iso = _COUNTRY_NAME_TO_ISO.get(raw_country.lower())
+        if iso:
+            signals["country_code"] = iso
+            if iso in EU_ISO_CODES:
+                signals["eu_country_code"] = True
+
+    # Fallback: extract country from ashby_address if still no country_code
+    if not signals["country_code"]:
+        try:
+            addr = job.get("ashby_address")
+            if isinstance(addr, str):
+                addr = json.loads(addr)
+            if isinstance(addr, dict):
+                postal = addr.get("postalAddress") or addr
+                addr_country = (postal.get("addressCountry") or "").strip()
+                addr_locality = (postal.get("addressLocality") or "").strip()
+                # Try addressCountry first, then addressLocality as fallback
+                for candidate in [addr_country, addr_locality]:
+                    if not candidate:
+                        continue
+                    upper = candidate.upper()
+                    if re.fullmatch(r"[A-Z]{2,3}", upper):
+                        signals["country_code"] = upper
+                        if upper in EU_ISO_CODES:
+                            signals["eu_country_code"] = True
+                        break
+                    iso = _COUNTRY_NAME_TO_ISO.get(candidate.lower())
+                    if iso:
+                        signals["country_code"] = iso
+                        if iso in EU_ISO_CODES:
+                            signals["eu_country_code"] = True
+                        break
+        except Exception:
+            pass
 
     # Negative signals via regex on description
     desc = (job.get("description") or "")[:8000].lower()
@@ -1407,6 +1493,60 @@ def _keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
             confidence="high",
             reason="Heuristic: explicit 'Remote EU' in location",
         )
+
+    # EU country in location + remote → accept (e.g., "Oslo, Norway" + remote flag)
+    if signals["eu_countries_in_location"] and signals["ats_remote"]:
+        countries = ", ".join(signals["eu_countries_in_location"][:3])
+        return JobClassification(
+            isRemoteEU=True,
+            confidence="high",
+            reason=f"Heuristic: EU/EEA country in location ({countries}) + ATS remote flag",
+        )
+
+    # Worldwide remote: ATS remote flag + no country code + no negative signals
+    # Policy: worldwide remote jobs are available to EU workers
+    if signals["ats_remote"] and not signals["country_code"]:
+        return JobClassification(
+            isRemoteEU=True,
+            confidence="medium",
+            reason="Heuristic: worldwide remote (ATS remote flag, no country restriction)",
+        )
+
+    # Non-EU country but ATS remote + description signals worldwide/global scope
+    # → treat as worldwide remote
+    desc_lower = (job.get("description") or "").lower()
+    if signals["ats_remote"] and signals["country_code"] and not signals["eu_country_code"]:
+        _worldwide_pattern = re.compile(
+            r"\b(global(?:ly)?|worldwide|anywhere in the world|work from anywhere"
+            r"|distributed team|fully distributed|remote.first"
+            r"|remote.friendly|location.agnostic)\b",
+            re.IGNORECASE,
+        )
+        worldwide_match = _worldwide_pattern.search(desc_lower)
+        if worldwide_match:
+            return JobClassification(
+                isRemoteEU=True,
+                confidence="medium",
+                reason=f"Heuristic: non-EU HQ ({signals['country_code']}) but worldwide remote ({worldwide_match.group(0)})",
+            )
+
+    # Check description for explicit EU eligibility even without ATS signals
+    if signals["ats_remote"]:
+        eu_desc_match = re.search(
+            r"\b(eu\s+(?:based|eligible|residents?|citizens?|work\s*(?:authorization|permit))"
+            r"|european\s+(?:union|economic\s+area)"
+            r"|remote.*\beu\b"
+            r"|emea)"
+            r"\b",
+            desc_lower,
+            re.IGNORECASE,
+        )
+        if eu_desc_match:
+            return JobClassification(
+                isRemoteEU=True,
+                confidence="medium",
+                reason=f"Heuristic: EU signal in description ({eu_desc_match.group(0)})",
+            )
 
     return None  # Ambiguous — escalate to LLM
 
@@ -1552,7 +1692,7 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
             "Provide either the AI binding (Workers AI) or DEEPSEEK_API_KEY."
         )
 
-    print("🔍 Phase 3 — Fetching jobs with status='role-match'...")
+    print("🔍 Phase 3 — Fetching jobs ready for EU classification...")
 
     rows = await d1_all(
         db,
@@ -1560,8 +1700,9 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
                   country, workplace_type, offices, categories,
                   ashby_is_remote, ashby_secondary_locations, ashby_address,
                   source_kind
-           FROM jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?""",
-        [JobStatus.ROLE_MATCH.value, limit],
+           FROM jobs WHERE status IN (?, ?, ?) ORDER BY created_at DESC LIMIT ?""",
+        [JobStatus.ROLE_MATCH.value, JobStatus.ROLE_NOMATCH.value,
+         JobStatus.ENHANCED.value, limit],
     )
 
     print(f"📋 Found {len(rows)} jobs to classify")
@@ -2188,51 +2329,8 @@ class Default(WorkerEntrypoint):
         )
 
     def _save_run_checkpoint(self, stats: dict):
-        """Best-effort checkpoint via langgraph-checkpoint-cloudflare-d1.
-
-        Persists a lightweight record of each pipeline run for history
-        and resume-from-known-good-state functionality.
-
-        Requires CF_ACCOUNT_ID, CF_D1_DATABASE_ID, CF_D1_API_TOKEN env vars
-        (set via wrangler secret to avoid committing credentials).
-        """
-        try:
-            account_id  = getattr(self.env, "CF_ACCOUNT_ID", None)
-            database_id = getattr(self.env, "CF_D1_DATABASE_ID", None)
-            api_token   = getattr(self.env, "CF_D1_API_TOKEN", None)
-
-            if not all([account_id, database_id, api_token]):
-                print("   ℹ️  Checkpoint skipped (CF_ACCOUNT_ID/CF_D1_DATABASE_ID/CF_D1_API_TOKEN not set)")
-                return
-
-            saver = CloudflareD1Saver(
-                account_id=account_id,
-                database_id=database_id,
-                api_token=api_token,
-            )
-            saver.setup()
-
-            from langgraph.checkpoint.base import create_checkpoint, empty_checkpoint
-
-            checkpoint = create_checkpoint(empty_checkpoint(), None, 1)
-            run_ts     = datetime.now(timezone.utc).isoformat()
-            config     = {
-                "configurable": {
-                    "thread_id":     f"process-jobs-{run_ts[:10]}",
-                    "checkpoint_ns": "",
-                }
-            }
-            saver.put(
-                config,
-                checkpoint,
-                {"source": "process-jobs-worker", "step": 1, "writes": None, "run_ts": run_ts, **stats},
-                {},
-            )
-            print(f"   💾 Checkpoint saved (thread: {config['configurable']['thread_id']})")
-
-        except Exception as e:
-            # Checkpoint is best-effort — never block the pipeline
-            print(f"   ⚠️  Checkpoint save failed: {e}")
+        """No-op — langgraph-checkpoint-cloudflare-d1 removed to save ~8MB."""
+        print(f"   ℹ️  Checkpoint skipped (langgraph-checkpoint removed for size)")
 
     async def _parse_limit(self, request) -> int:
         """Parse optional limit from request body JSON, defaulting to 50."""

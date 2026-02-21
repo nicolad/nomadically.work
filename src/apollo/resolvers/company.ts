@@ -4,7 +4,7 @@ import {
   companySnapshots,
   atsBoards,
 } from "@/db/schema";
-import { eq, and, or, like, asc, desc, count, gte, inArray } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, gte, inArray } from "drizzle-orm";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
 import { enhanceCompany } from "./enhance-company";
@@ -45,11 +45,7 @@ export const companyResolvers = {
     },
     async ats_boards(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const boards = await context.db
-          .select()
-          .from(atsBoards)
-          .where(eq(atsBoards.company_id, parent.id));
-        return boards || [];
+        return context.loaders.atsBoardsByCompany.load(parent.id);
       } catch (error) {
         console.error("Error fetching ATS boards:", error);
         return [];
@@ -64,18 +60,11 @@ export const companyResolvers = {
         const limit = args.limit ?? 200;
         const offset = args.offset ?? 0;
 
-        const conditions = [eq(companyFacts.company_id, parent.id)];
+        let facts = await context.loaders.companyFacts.load(parent.id);
         if (args.field) {
-          conditions.push(eq(companyFacts.field, args.field));
+          facts = facts.filter((f) => f.field === args.field);
         }
-
-        const facts = await context.db
-          .select()
-          .from(companyFacts)
-          .where(and(...conditions)!)
-          .limit(limit)
-          .offset(offset);
-        return facts || [];
+        return facts.slice(offset, offset + limit);
       } catch (error) {
         console.error("Error fetching company facts:", error);
         return [];
@@ -83,11 +72,8 @@ export const companyResolvers = {
     },
     async facts_count(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const result = await context.db
-          .select({ count: count() })
-          .from(companyFacts)
-          .where(eq(companyFacts.company_id, parent.id));
-        return result[0]?.count || 0;
+        const facts = await context.loaders.companyFacts.load(parent.id);
+        return facts.length;
       } catch (error) {
         console.error("Error counting company facts:", error);
         return 0;
@@ -98,13 +84,8 @@ export const companyResolvers = {
         const limit = args.limit ?? 50;
         const offset = args.offset ?? 0;
 
-        const snapshots = await context.db
-          .select()
-          .from(companySnapshots)
-          .where(eq(companySnapshots.company_id, parent.id))
-          .limit(limit)
-          .offset(offset);
-        return snapshots || [];
+        const snapshots = await context.loaders.companySnapshots.load(parent.id);
+        return snapshots.slice(offset, offset + limit);
       } catch (error) {
         console.error("Error fetching company snapshots:", error);
         return [];
@@ -112,11 +93,8 @@ export const companyResolvers = {
     },
     async snapshots_count(parent: any, _args: any, context: GraphQLContext) {
       try {
-        const result = await context.db
-          .select({ count: count() })
-          .from(companySnapshots)
-          .where(eq(companySnapshots.company_id, parent.id));
-        return result[0]?.count || 0;
+        const snapshots = await context.loaders.companySnapshots.load(parent.id);
+        return snapshots.length;
       } catch (error) {
         console.error("Error counting company snapshots:", error);
         return 0;

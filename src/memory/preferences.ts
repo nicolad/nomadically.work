@@ -5,7 +5,6 @@
  * similar to the evidence-based MDM approach used for company facts.
  */
 
-// import { turso as db, type Client } from "@/db"; // Removed - migrated to D1
 // TODO: Update to use D1 database
 import { z } from "zod";
 

@@ -8,27 +8,19 @@ import {
   desc,
   notInArray,
   isNull,
-  sql,
   count,
 } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
+import type { QueryJobsArgs } from "@/__generated__/resolvers-types";
 import { EXCLUDED_LOCATIONS, EXCLUDED_COUNTRIES } from "./constants";
 
 export async function jobsQuery(
-  _parent: any,
-  args: {
-    sourceType?: string;
-
-    search?: string;
-    limit?: number;
-    offset?: number;
-    excludedCompanies?: string[];
-  },
+  _parent: unknown,
+  args: QueryJobsArgs,
   context: GraphQLContext,
 ) {
   try {
     const conditions = [];
-
 
     if (args.search) {
       const searchPattern = `%${args.search}%`;
@@ -40,6 +32,13 @@ export async function jobsQuery(
           like(jobs.description, searchPattern),
         )!,
       );
+    }
+
+    // Filter by is_remote_eu when requested
+    if (args.isRemoteEu === true) {
+      conditions.push(eq(jobs.is_remote_eu, true));
+    } else if (args.isRemoteEu === false) {
+      conditions.push(eq(jobs.is_remote_eu, false));
     }
 
     // Exclude companies at SQL level
@@ -84,7 +83,10 @@ export async function jobsQuery(
           location: jobs.location,
           url: jobs.url,
           posted_at: jobs.posted_at,
-
+          status: jobs.status,
+          is_remote_eu: jobs.is_remote_eu,
+          score: jobs.score,
+          remote_eu_confidence: jobs.remote_eu_confidence,
         })
         .from(jobs)
         .where(whereClause)

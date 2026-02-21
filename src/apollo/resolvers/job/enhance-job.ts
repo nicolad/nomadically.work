@@ -1,6 +1,6 @@
 import { jobs } from "@/db/schema";
 import type { GraphQLContext } from "../../context";
-import { last, split } from "lodash";
+import { extractJobSlug } from "@/lib/job-utils";
 import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
@@ -50,7 +50,7 @@ export async function enhanceJobFromATS(
     // Find the job in the database first
     const allJobs = await context.db.select().from(jobs);
     const job = allJobs.find((job) => {
-      const jobIdFromUrl = last(split(job.external_id, "/"));
+      const jobIdFromUrl = extractJobSlug(job.external_id, job.id);
       return jobIdFromUrl === jobId;
     });
 

@@ -1,6 +1,5 @@
 import { deepseek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
-// import { executeSqlQuery } from "@/tools/libsql-query"; // Removed - migrated to D1
 import { sqlWorkspace } from "@/workspace";
 import { GOAL_PROMPT_FRAGMENT } from "@/constants/goal";
 

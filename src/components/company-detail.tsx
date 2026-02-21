@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
+import { extractJobSlug } from "@/lib/job-utils";
 import {
   Avatar,
   Badge,
@@ -765,7 +766,7 @@ export function CompanyDetail({ companyKey }: Props) {
           <SectionCard title={`Jobs (${companyJobs.length})`}>
             <Flex direction="column">
               {companyJobs.map((job, idx) => {
-                const jobId = job.external_id?.split("/").pop() || job.external_id || job.id;
+                const jobId = extractJobSlug(job.external_id, job.id);
                 const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
                 return (
                 <Box key={job.id}>

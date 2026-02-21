@@ -14,7 +14,6 @@ import {
   PREFERENCE_FIELDS,
   PREFERENCE_SOURCES,
 } from "@/memory";
-// import { turso as db } from "@/db"; // Removed - migrated to D1
 // TODO: Update to use D1 database
 
 // ============================================================================

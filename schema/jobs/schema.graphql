@@ -62,6 +62,22 @@ type JobSkill {
   evidence: String
 }
 
+type SkillMatchDetail {
+  tag: String!
+  level: String!
+  matched: Boolean!
+}
+
+type SkillMatch {
+  score: Float!
+  userCoverage: Float!
+  jobCoverage: Float!
+  requiredCoverage: Float!
+  matchedCount: Int!
+  totalPreferred: Int!
+  details: [SkillMatchDetail!]!
+}
+
 type GreenhouseDepartment {
   id: String!
   name: String!
@@ -214,11 +230,12 @@ type Job {
   score: Float
   score_reason: String
   status: JobStatus
-  """Derived from status — true when status is eu_remote."""
+  """Whether this job is classified as Remote EU — read directly from the DB column."""
   is_remote_eu: Boolean!
   remote_eu_confidence: ClassificationConfidence
   remote_eu_reason: String
   skills: [JobSkill!]
+  skillMatch: SkillMatch
 
   # Greenhouse ATS fields (parsed from ats_data)
   absolute_url: String

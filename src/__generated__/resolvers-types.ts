@@ -516,7 +516,7 @@ export type Job = {
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
   internal_job_id: Maybe<Scalars['String']['output']>;
-  /** Derived from status — true when status is eu_remote. */
+  /** Whether this job is classified as Remote EU — read directly from the DB column. */
   is_remote_eu: Scalars['Boolean']['output'];
   language: Maybe<Scalars['String']['output']>;
   lists: Maybe<Array<LeverList>>;
@@ -533,6 +533,7 @@ export type Job = {
   requisition_id: Maybe<Scalars['String']['output']>;
   score: Maybe<Scalars['Float']['output']>;
   score_reason: Maybe<Scalars['String']['output']>;
+  skillMatch: Maybe<SkillMatch>;
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
@@ -1128,6 +1129,24 @@ export type ResumeUploadResult = {
   tier: Scalars['String']['output'];
 };
 
+export type SkillMatch = {
+  __typename?: 'SkillMatch';
+  details: Array<SkillMatchDetail>;
+  jobCoverage: Scalars['Float']['output'];
+  matchedCount: Scalars['Int']['output'];
+  requiredCoverage: Scalars['Float']['output'];
+  score: Scalars['Float']['output'];
+  totalPreferred: Scalars['Int']['output'];
+  userCoverage: Scalars['Float']['output'];
+};
+
+export type SkillMatchDetail = {
+  __typename?: 'SkillMatchDetail';
+  level: Scalars['String']['output'];
+  matched: Scalars['Boolean']['output'];
+  tag: Scalars['String']['output'];
+};
+
 export type SourceType =
   | 'COMMONCRAWL'
   | 'LIVE_FETCH'
@@ -1393,6 +1412,8 @@ export type ResolversTypes = {
   ResumeIngestResult: ResolverTypeWrapper<Partial<ResumeIngestResult>>;
   ResumeStatus: ResolverTypeWrapper<Partial<ResumeStatus>>;
   ResumeUploadResult: ResolverTypeWrapper<Partial<ResumeUploadResult>>;
+  SkillMatch: ResolverTypeWrapper<Partial<SkillMatch>>;
+  SkillMatchDetail: ResolverTypeWrapper<Partial<SkillMatchDetail>>;
   SourceType: ResolverTypeWrapper<Partial<SourceType>>;
   String: ResolverTypeWrapper<Partial<Scalars['String']['output']>>;
   TextToSqlResult: ResolverTypeWrapper<Partial<TextToSqlResult>>;
@@ -1481,6 +1502,8 @@ export type ResolversParentTypes = {
   ResumeIngestResult: Partial<ResumeIngestResult>;
   ResumeStatus: Partial<ResumeStatus>;
   ResumeUploadResult: Partial<ResumeUploadResult>;
+  SkillMatch: Partial<SkillMatch>;
+  SkillMatchDetail: Partial<SkillMatchDetail>;
   String: Partial<Scalars['String']['output']>;
   TextToSqlResult: Partial<TextToSqlResult>;
   Track: Partial<Track>;
@@ -1797,6 +1820,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   requisition_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   score?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
   score_reason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  skillMatch?: Resolver<Maybe<ResolversTypes['SkillMatch']>, ParentType, ContextType>;
   skills?: Resolver<Maybe<Array<ResolversTypes['JobSkill']>>, ParentType, ContextType>;
   source_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   source_kind?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2034,6 +2058,22 @@ export type ResumeUploadResultResolvers<ContextType = GraphQLContext, ParentType
   tier?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type SkillMatchResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SkillMatch'] = ResolversParentTypes['SkillMatch']> = {
+  details?: Resolver<Array<ResolversTypes['SkillMatchDetail']>, ParentType, ContextType>;
+  jobCoverage?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  matchedCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  requiredCoverage?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  score?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  totalPreferred?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  userCoverage?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+};
+
+export type SkillMatchDetailResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SkillMatchDetail'] = ResolversParentTypes['SkillMatchDetail']> = {
+  level?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  matched?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  tag?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type TextToSqlResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TextToSqlResult'] = ResolversParentTypes['TextToSqlResult']> = {
   columns?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   drilldownSearchQuery?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -2148,6 +2188,8 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ResumeIngestResult?: ResumeIngestResultResolvers<ContextType>;
   ResumeStatus?: ResumeStatusResolvers<ContextType>;
   ResumeUploadResult?: ResumeUploadResultResolvers<ContextType>;
+  SkillMatch?: SkillMatchResolvers<ContextType>;
+  SkillMatchDetail?: SkillMatchDetailResolvers<ContextType>;
   TextToSqlResult?: TextToSqlResultResolvers<ContextType>;
   Track?: TrackResolvers<ContextType>;
   TrackItem?: TrackItemResolvers<ContextType>;

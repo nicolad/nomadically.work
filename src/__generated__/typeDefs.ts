@@ -473,7 +473,9 @@ type Job {
   first_published: String
   id: Int!
   internal_job_id: String
-  """Derived from status — true when status is eu_remote."""
+  """
+  Whether this job is classified as Remote EU — read directly from the DB column.
+  """
   is_remote_eu: Boolean!
   language: String
   lists: [LeverList!]
@@ -490,6 +492,7 @@ type Job {
   requisition_id: String
   score: Float
   score_reason: String
+  skillMatch: SkillMatch
   skills: [JobSkill!]
   source_id: String
   source_kind: String!
@@ -798,6 +801,22 @@ type ResumeUploadResult {
   status: String!
   success: Boolean!
   tier: String!
+}
+
+type SkillMatch {
+  details: [SkillMatchDetail!]!
+  jobCoverage: Float!
+  matchedCount: Int!
+  requiredCoverage: Float!
+  score: Float!
+  totalPreferred: Int!
+  userCoverage: Float!
+}
+
+type SkillMatchDetail {
+  level: String!
+  matched: Boolean!
+  tag: String!
 }
 
 enum SourceType {

@@ -38,12 +38,6 @@ export interface EnvConfig {
     apiToken: string;
   };
 
-  // Turso Database Configuration
-  turso: {
-    url: string;
-    authToken?: string; // Optional for local development
-  };
-
   // Other APIs
   apis?: {
     resendApiKey?: string;
@@ -99,11 +93,6 @@ export function loadEnvConfig(): EnvConfig {
           }
         : undefined,
 
-    turso: {
-      url: getRequiredEnv("TURSO_DB_URL"),
-      authToken: process.env.TURSO_DB_AUTH_TOKEN, // Optional for local dev
-    },
-
     apis: {
       resendApiKey: getOptionalEnv("RESEND_API_KEY"),
       braveApiKey: getOptionalEnv("BRAVE_API_KEY"),
@@ -148,10 +137,6 @@ export const CLOUDFLARE_D1_DATABASE_ID = env.d1?.databaseId?.trim();
 export const CLOUDFLARE_WORKERS_AI_KEY = getOptionalEnv(
   "CLOUDFLARE_WORKERS_AI_KEY",
 );
-
-// Turso database configuration
-export const TURSO_DB_URL = env.turso.url?.trim();
-export const TURSO_DB_AUTH_TOKEN = env.turso.authToken?.trim();
 
 /**
  * Ensure environment is loaded (call this at the start of scripts)

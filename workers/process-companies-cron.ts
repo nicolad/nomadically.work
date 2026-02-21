@@ -73,6 +73,8 @@ interface Job {
 interface AshbyJobPosting {
   id: string;
   title: string;
+  location: string;
+  locationName?: string;
   jobUrl: string;
   applyUrl?: string;
   description: string;
@@ -138,7 +140,13 @@ async function fetchAshbyJobs(boardName: string): Promise<Job[]> {
     for (const posting of data.jobs) {
       if (!posting.isListed) continue;
 
-      const location = posting.secondaryLocations?.[0]?.location || "";
+      let location = posting.locationName || posting.location ||
+               posting.secondaryLocations?.[0]?.location || "";
+      if (posting.isRemote && !location) {
+        location = "Remote";
+      } else if (posting.isRemote && location && !location.toLowerCase().includes("remote")) {
+        location = `Remote - ${location}`;
+      }
 
       jobs.push({
         external_id: posting.id,
@@ -437,6 +445,20 @@ async function processCompanies(
 
         // Insert jobs into D1
         for (const job of jobsToInsert) {
+          // Skip board-only URLs stored as external_id
+          if (job.external_id.includes("://")) {
+            try {
+              const url = new URL(job.external_id);
+              const segments = url.pathname.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+              if (segments.length < 2) {
+                console.warn(`Skipping board-only URL as external_id: ${job.external_id}`);
+                continue;
+              }
+            } catch {
+              // Not a valid URL — proceed normally
+            }
+          }
+
           try {
             await upsertJob(env.DB, job);
             stats.jobsInserted++;

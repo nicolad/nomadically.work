@@ -16,6 +16,13 @@ const fakeGreenhouseJob = {
   status: "eu-remote",
 };
 
+const fakeBoardOnlyJob = {
+  id: 505,
+  external_id: "https://jobs.ashbyhq.com/Union/",
+  title: "Product Designer",
+  status: "new",
+};
+
 /**
  * Build a chainable Drizzle mock:
  *   db.select().from().where().limit() → resolves to `rows`
@@ -29,7 +36,7 @@ function makeDbMock(rows: object[]) {
   return { select: vi.fn().mockReturnValue(chain), _chain: chain };
 }
 
-describe("job resolver — two-step lookup", () => {
+describe("job resolver — three-step lookup", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -72,6 +79,25 @@ describe("job resolver — two-step lookup", () => {
     expect(select).toHaveBeenCalledTimes(2);
   });
 
+  it("returns a job on numeric id fallback (board-only external_id)", async () => {
+    const { select, _chain } = makeDbMock([]);
+    _chain.limit
+      .mockResolvedValueOnce([])              // exact match miss
+      .mockResolvedValueOnce([])              // suffix match miss
+      .mockResolvedValueOnce([fakeBoardOnlyJob]); // numeric id hit
+
+    const context = { db: { select } } as any;
+
+    const result = await jobResolvers.Query.job(
+      null,
+      { id: "505" },
+      context
+    );
+
+    expect(result).toEqual(fakeBoardOnlyJob);
+    expect(select).toHaveBeenCalledTimes(3);
+  });
+
   it("returns null when no job is found", async () => {
     const { select, _chain } = makeDbMock([]);
     _chain.limit
@@ -87,6 +113,7 @@ describe("job resolver — two-step lookup", () => {
     );
 
     expect(result).toBeNull();
+    // Only 2 calls — "nonexistent-uuid" is not numeric, so step 3 is skipped
     expect(select).toHaveBeenCalledTimes(2);
   });
 

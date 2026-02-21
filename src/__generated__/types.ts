@@ -513,7 +513,7 @@ export type Job = {
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
   internal_job_id: Maybe<Scalars['String']['output']>;
-  /** Derived from status — true when status is eu_remote. */
+  /** Whether this job is classified as Remote EU — read directly from the DB column. */
   is_remote_eu: Scalars['Boolean']['output'];
   language: Maybe<Scalars['String']['output']>;
   lists: Maybe<Array<LeverList>>;
@@ -530,6 +530,7 @@ export type Job = {
   requisition_id: Maybe<Scalars['String']['output']>;
   score: Maybe<Scalars['Float']['output']>;
   score_reason: Maybe<Scalars['String']['output']>;
+  skillMatch: Maybe<SkillMatch>;
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
@@ -1123,6 +1124,24 @@ export type ResumeUploadResult = {
   status: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
   tier: Scalars['String']['output'];
+};
+
+export type SkillMatch = {
+  __typename: 'SkillMatch';
+  details: Array<SkillMatchDetail>;
+  jobCoverage: Scalars['Float']['output'];
+  matchedCount: Scalars['Int']['output'];
+  requiredCoverage: Scalars['Float']['output'];
+  score: Scalars['Float']['output'];
+  totalPreferred: Scalars['Int']['output'];
+  userCoverage: Scalars['Float']['output'];
+};
+
+export type SkillMatchDetail = {
+  __typename: 'SkillMatchDetail';
+  level: Scalars['String']['output'];
+  matched: Scalars['Boolean']['output'];
+  tag: Scalars['String']['output'];
 };
 
 export type SourceType =

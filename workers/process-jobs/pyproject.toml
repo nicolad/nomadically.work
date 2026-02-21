@@ -8,10 +8,12 @@ dependencies = [
     "webtypy>=0.1.7",
     "langchain-cloudflare",
     "langchain-core>=0.3.81,<2.0.0",
-    "langsmith>=0.1.0",
-    "langgraph-checkpoint-cloudflare-d1",
     # NOTE: Do NOT include pydantic — use Pyodide's built-in version.
     # pydantic_core requires compiled Rust binaries unavailable for WebAssembly.
+    # NOTE: langsmith is NOT included — it's unused, only a transitive dep of
+    # langchain-core. A stub env.py is provided in python_modules/langsmith/.
+    # NOTE: langgraph-checkpoint-cloudflare-d1 removed — pulls in sqlalchemy (8MB).
+    # Checkpointing is best-effort and disabled when env vars aren't set.
 ]
 
 [dependency-groups]

@@ -1860,8 +1860,21 @@ class Default(WorkerEntrypoint):
             headers=cors_headers,
         )
 
+    async def handle_extract(self, request, cors_headers: dict):
+        """Run Phase 4 only — skill extraction for classified jobs."""
+        limit = await self._parse_limit(request)
+        stats = await extract_skills_for_classified_jobs(self.env.DB, self.env, limit)
+        return Response.json(
+            {
+                "success": True,
+                "message": f"Extracted {stats['extracted']} skills across {stats['processed']} jobs",
+                "stats":   stats,
+            },
+            headers=cors_headers,
+        )
+
     async def handle_process(self, request, cors_headers: dict):
-        """Run the full three-phase pipeline synchronously (useful for debugging).
+        """Run the full four-phase pipeline synchronously (useful for debugging).
 
         For production use the queue endpoint instead to avoid hitting
         CF Worker CPU/wall-clock limits on large batches.
@@ -1878,8 +1891,9 @@ class Default(WorkerEntrypoint):
             limit             = limit,
         )
         classify_stats = await classify_unclassified_jobs(db, self.env, limit)
+        skill_stats    = await extract_skills_for_classified_jobs(db, self.env, limit)
 
-        stats   = self._merge_stats(enhance_stats, tag_stats, classify_stats)
+        stats   = self._merge_stats(enhance_stats, tag_stats, classify_stats, skill_stats)
         message = self._stats_summary(stats)
 
         print(f"\n✅ Pipeline complete — {message}")
@@ -1892,21 +1906,25 @@ class Default(WorkerEntrypoint):
 
     # MARK: - Utilities
 
-    def _merge_stats(self, enhance: dict, tag: dict, classify: dict) -> dict:
+    def _merge_stats(self, enhance: dict, tag: dict, classify: dict, skills: dict | None = None) -> dict:
         """Merge per-phase stats dicts into a single flat summary dict."""
+        s = skills or {}
         return {
-            "enhanced":       enhance.get("enhanced", 0),
-            "enhanceErrors":  enhance.get("errors", 0),
-            "tagged":         tag.get("processed", 0),
-            "targetRole":     tag.get("targetRole", 0),
-            "irrelevant":     tag.get("irrelevant", 0),
-            "tagErrors":      tag.get("errors", 0),
-            "processed":      classify.get("processed", 0),
-            "euRemote":       classify.get("euRemote", 0),
-            "nonEuRemote":    classify.get("nonEuRemote", 0),
-            "classifyErrors": classify.get("errors", 0),
-            "workersAI":      tag.get("workersAI", 0) + classify.get("workersAI", 0),
-            "deepseek":       tag.get("deepseek", 0)  + classify.get("deepseek", 0),
+            "enhanced":        enhance.get("enhanced", 0),
+            "enhanceErrors":   enhance.get("errors", 0),
+            "tagged":          tag.get("processed", 0),
+            "targetRole":      tag.get("targetRole", 0),
+            "irrelevant":      tag.get("irrelevant", 0),
+            "tagErrors":       tag.get("errors", 0),
+            "processed":       classify.get("processed", 0),
+            "euRemote":        classify.get("euRemote", 0),
+            "nonEuRemote":     classify.get("nonEuRemote", 0),
+            "classifyErrors":  classify.get("errors", 0),
+            "skillsExtracted": s.get("extracted", 0),
+            "skillJobs":       s.get("processed", 0),
+            "skillErrors":     s.get("errors", 0),
+            "workersAI":       tag.get("workersAI", 0) + classify.get("workersAI", 0),
+            "deepseek":        tag.get("deepseek", 0)  + classify.get("deepseek", 0),
         }
 
     def _stats_summary(self, stats: dict) -> str:
@@ -1916,6 +1934,7 @@ class Default(WorkerEntrypoint):
             f"tagged={stats['tagged']} (skip={stats['irrelevant']}) "
             f"classified={stats['processed']} "
             f"eu={stats['euRemote']} "
+            f"skills={stats.get('skillsExtracted', 0)} "
             f"workersAI={stats['workersAI']} deepseek={stats['deepseek']}"
         )
 

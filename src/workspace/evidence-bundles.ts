@@ -15,7 +15,6 @@ import { z } from "zod";
 import { createHash } from "crypto";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { join, dirname } from "path";
-// import { db, turso } from "@/db"; // Removed - migrated to D1
 // import { sql } from "drizzle-orm"; // Removed - migrated to D1
 // TODO: Update to use D1 database
 

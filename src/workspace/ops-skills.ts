@@ -14,7 +14,6 @@ import {
   createEvidenceBundle,
   JobClassificationBundle,
 } from "./evidence-bundles";
-// import { db, turso } from "@/db"; // Removed - migrated to D1
 // import { jobs } from "@/db/schema"; // Removed - migrated to D1
 // import { eq, sql } from "drizzle-orm"; // Removed - migrated to D1
 import { randomUUID } from "crypto";

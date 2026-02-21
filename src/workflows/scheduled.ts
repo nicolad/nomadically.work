@@ -11,7 +11,6 @@
 import { z } from "zod";
 import { init } from "@mastra/inngest";
 import { inngest } from "../mastra/inngest";
-// import { turso as db } from "@/db"; // Removed - migrated to D1
 // TODO: Update to use D1 database
 
 const { createWorkflow, createStep } = init(inngest);

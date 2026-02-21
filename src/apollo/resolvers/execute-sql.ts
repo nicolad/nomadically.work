@@ -1,4 +1,3 @@
-// import { getTursoClient } from "@/db"; // Removed - migrated to D1
 import type { GraphQLContext } from "../context";
 
 // TODO: Re-implement with D1 database access

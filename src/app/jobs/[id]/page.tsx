@@ -12,6 +12,7 @@ import {
   useGetApplicationsQuery,
 } from "@/__generated__/hooks";
 import { orderBy } from "lodash";
+import { extractJobSlug } from "@/lib/job-utils";
 import {
   Card,
   Badge,
@@ -404,7 +405,11 @@ function JobPageContent() {
                     (skill) => skill.confidence || 0,
                   ],
                   ["asc", "desc"],
-                ).map((skill) => (
+                ).map((skill) => {
+                  const isMatched = job.skillMatch?.details.some(
+                    (d) => d.tag.toLowerCase() === skill.tag.toLowerCase() && d.matched
+                  );
+                  return (
                   <Box
                     key={skill.tag}
                     style={{
@@ -416,13 +421,15 @@ function JobPageContent() {
                     <Badge
                       size="2"
                       color={
-                        skill.level === "required"
-                          ? "red"
-                          : skill.level === "preferred"
-                            ? "blue"
-                            : "gray"
+                        isMatched
+                          ? "green"
+                          : skill.level === "required"
+                            ? "red"
+                            : skill.level === "preferred"
+                              ? "blue"
+                              : "gray"
                       }
-                      variant="soft"
+                      variant={isMatched ? "solid" : "soft"}
                       style={{
                         fontSize: "14px",
                         padding: "6px 10px",
@@ -449,9 +456,18 @@ function JobPageContent() {
                       )}
                     </Badge>
                   </Box>
-                ))}
+                  );
+                })}
               </Flex>
               <Flex gap="4" style={{ fontSize: "12px", opacity: 0.7 }}>
+                {job.skillMatch && (
+                  <Flex align="center" gap="1">
+                    <Badge size="1" color="green" variant="solid">
+                      ✓ You
+                    </Badge>
+                    <Text size="1">Your skill</Text>
+                  </Flex>
+                )}
                 <Flex align="center" gap="1">
                   <Badge size="1" color="red" variant="soft">
                     Required
@@ -1693,14 +1709,11 @@ function JobPageContent() {
           </Card>
 
           {/* Skill Match Against User Preferences */}
-          {user && job.skills && job.skills.length > 0 && (() => {
-            const preferredSkills = userSettingsData?.userSettings?.preferred_skills ?? [];
-            if (preferredSkills.length === 0) return null;
-
-            const jobTags = new Set(job.skills.map((s) => s.tag.toLowerCase()));
-            const matched = preferredSkills.filter((s) => jobTags.has(s.toLowerCase()));
-            const unmatched = preferredSkills.filter((s) => !jobTags.has(s.toLowerCase()));
-            const pct = Math.round((matched.length / preferredSkills.length) * 100);
+          {user && job.skillMatch && (() => {
+            const { score, matchedCount, totalPreferred, details } = job.skillMatch;
+            const pct = Math.round(score);
+            const matched = details.filter((d) => d.matched);
+            const unmatched = details.filter((d) => !d.matched);
 
             return (
               <Card>
@@ -1710,7 +1723,7 @@ function JobPageContent() {
                     size="2"
                     color={pct >= 75 ? "green" : pct >= 40 ? "orange" : "red"}
                   >
-                    {matched.length}/{preferredSkills.length} ({pct}%)
+                    {matchedCount}/{totalPreferred} ({pct}%)
                   </Badge>
                 </Flex>
                 <Text size="1" color="gray" mb="3">
@@ -1718,18 +1731,18 @@ function JobPageContent() {
                 </Text>
                 {matched.length > 0 && (
                   <Flex gap="2" wrap="wrap" mb="2">
-                    {matched.map((s) => (
-                      <Badge key={s} size="2" color="green" variant="soft">
-                        {getSkillLabel(s)}
+                    {matched.map((d) => (
+                      <Badge key={d.tag} size="2" color="green" variant="soft">
+                        {getSkillLabel(d.tag)}
                       </Badge>
                     ))}
                   </Flex>
                 )}
                 {unmatched.length > 0 && (
                   <Flex gap="2" wrap="wrap">
-                    {unmatched.map((s) => (
-                      <Badge key={s} size="2" color="gray" variant="soft" style={{ opacity: 0.6 }}>
-                        {getSkillLabel(s)}
+                    {unmatched.map((d) => (
+                      <Badge key={d.tag} size="2" color="gray" variant="soft" style={{ opacity: 0.6 }}>
+                        {getSkillLabel(d.tag)}
                       </Badge>
                     ))}
                   </Flex>
@@ -1809,7 +1822,7 @@ function JobPageContent() {
           </Heading>
           <Flex direction="column" gap="3">
             {relatedJobs.map((rj) => {
-              const rjId = rj.external_id?.split("/").pop() || rj.external_id || rj.id;
+              const rjId = extractJobSlug(rj.external_id, rj.id);
               return (
               <Card key={rj.id} asChild>
                 <Link href={`/jobs/${rjId}?company=${rj.company_key}&source=${rj.source_kind}`} style={{ textDecoration: "none" }}>

@@ -104,6 +104,20 @@ function validateJob(job: JobInput): { valid: boolean; errors: string[] } {
   if (!job.url?.trim()) errors.push("url is required");
   if (!job.externalId?.trim()) errors.push("externalId is required");
   if (!job.sourceKind?.trim()) errors.push("sourceKind is required");
+
+  // Reject board-only URLs as external_id (e.g. "https://jobs.ashbyhq.com/company/")
+  if (job.externalId && job.externalId.includes("://")) {
+    try {
+      const url = new URL(job.externalId);
+      const segments = url.pathname.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+      if (segments.length < 2) {
+        errors.push("externalId is a board URL, not a job-specific ID");
+      }
+    } catch {
+      // Not a valid URL — that's fine, treat as opaque ID
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 

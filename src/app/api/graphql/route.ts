@@ -6,6 +6,7 @@ import { GraphQLContext } from "@/apollo/context";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { getDb } from "@/db";
 import { createD1HttpClient } from "@/db/d1-http";
+import { createLoaders } from "@/apollo/loaders";
 
 // Use Node.js runtime - better performance for I/O operations like D1 gateway calls
 // See: https://vercel.com/docs/functions/runtimes/node-js
@@ -26,8 +27,10 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
         const d1Client = createD1HttpClient();
         const db = getDb(d1Client as any); // Cast to D1Database type
 
+        const loaders = createLoaders(db);
+
         if (!userId) {
-          return { userId: null, userEmail: null, db };
+          return { userId: null, userEmail: null, db, loaders };
         }
 
         // Fetch user email from Clerk for admin checks and prompt access
@@ -40,7 +43,7 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
           console.warn("⚠️ Could not fetch user email from Clerk:", e);
         }
 
-        return { userId, userEmail, db };
+        return { userId, userEmail, db, loaders };
       } catch (error) {
         console.error("❌ [GraphQL] Error in context setup:", error);
         console.error("❌ [GraphQL] Make sure environment variables are set in .env.local");

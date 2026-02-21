@@ -661,6 +661,89 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
     Ok(())
 }
 
+/// GET /seed-lever — Seed Lever companies by probing the API directly.
+/// Lever blocks CCBot in robots.txt, so CC discovery doesn't work.
+/// ?sites=stripe,netlify,cloudflare,... (comma-separated site slugs)
+/// Each site is probed via the Lever Postings API; valid ones are inserted
+/// as companies with ats_provider='lever' and their jobs are synced.
+async fn handle_seed_lever(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db_handle = ctx.env.d1("DB")?;
+    let url = req.url()?;
+    let params: HashMap<String, String> = url.query_pairs().into_owned().collect();
+
+    let sites_param = match params.get("sites") {
+        Some(s) if !s.is_empty() => s.clone(),
+        _ => return error_response("?sites= required (comma-separated lever site slugs, e.g. sites=stripe,netlify)"),
+    };
+
+    let sites: Vec<&str> = sites_param.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    if sites.is_empty() {
+        return error_response("No valid sites provided");
+    }
+
+    let runner = rig_compat::ConcurrentRunner::new();
+    let (results, errors) = runner.run_all(
+        sites.iter().map(|s| s.to_string()).collect(),
+        |site| async move {
+            let postings = lever::fetch_lever_board_jobs(&site).await?;
+            Ok((site, postings))
+        },
+    ).await;
+
+    let mut seeded = Vec::new();
+    let mut total_jobs = 0usize;
+    let mut skipped = Vec::new();
+
+    for (site, postings) in results {
+        if postings.is_empty() {
+            skipped.push(serde_json::json!({ "site": site, "reason": "no postings (404 or empty)" }));
+            continue;
+        }
+
+        // Insert company
+        let company_name: String = site
+            .split(|c: char| c == '-' || c == '_')
+            .map(|w| {
+                let mut chars = w.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let _ = db_handle.prepare(
+            "INSERT INTO companies (key, name, website, category, score, ats_provider)
+             VALUES (?1, ?2, ?3, 'PRODUCT', 0.5, 'lever')
+             ON CONFLICT(key) DO UPDATE SET
+               name=COALESCE(NULLIF(companies.name,''),excluded.name),
+               website=excluded.website,
+               ats_provider='lever',
+               updated_at=datetime('now')"
+        ).bind(&[
+            site.clone().into(),
+            company_name.into(),
+            format!("https://jobs.lever.co/{}", site).into(),
+        ])?.run().await;
+
+        let count = lever::upsert_lever_jobs_to_d1(&db_handle, &postings, &site).await.unwrap_or(0);
+        total_jobs += count;
+        seeded.push(serde_json::json!({ "site": site, "jobs": count }));
+    }
+
+    let error_details: Vec<String> = errors.iter().map(|e: &worker::Error| format!("{:?}", e)).collect();
+
+    Response::from_json(&ApiResponse::success(serde_json::json!({
+        "seeded": seeded.len(),
+        "total_jobs": total_jobs,
+        "skipped": skipped,
+        "errors": error_details.len(),
+        "error_details": &error_details[..error_details.len().min(10)],
+        "boards": seeded,
+    })))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTER
 // ═══════════════════════════════════════════════════════════════════════════
@@ -682,6 +765,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .delete_async("/progress", handle_reset_progress)
         .get_async("/stats", handle_stats)
         .get_async("/sync-jobs", handle_sync_jobs)
+        .get_async("/seed-lever", handle_seed_lever)
         // Rig-powered endpoints
         .get_async("/search", handle_search)
         .get_async("/enrich", handle_enrich)
@@ -700,6 +784,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                     "DELETE /progress": "Reset a crawl. ?crawl_id=",
                     "GET /stats":       "Summary stats (per-provider breakdown)",
                     "GET /sync-jobs":   "Bulk job sync. ?provider=ashby|greenhouse|lever&limit=50&concurrency=10",
+                    "GET /seed-lever":  "Seed Lever companies (CC blocked). ?sites=stripe,netlify,cloudflare",
                 },
                 "rig_endpoints": {
                     "GET /search":      "Okapi BM25 search over enriched corpus (both providers). ?q=&top_n=",

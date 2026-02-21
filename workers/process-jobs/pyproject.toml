@@ -8,6 +8,7 @@ dependencies = [
     "webtypy>=0.1.7",
     "langchain-cloudflare",
     "langchain-core>=0.3.81,<2.0.0",
+    "langsmith>=0.1.0",
     "langgraph-checkpoint-cloudflare-d1",
     # NOTE: Do NOT include pydantic — use Pyodide's built-in version.
     # pydantic_core requires compiled Rust binaries unavailable for WebAssembly.

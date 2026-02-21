@@ -114,22 +114,22 @@ export type AshbyCompensation = {
 
 export type AshbyCompensationComponent = {
   __typename: 'AshbyCompensationComponent';
-  compensationType: Scalars['String']['output'];
+  compensationType: Maybe<Scalars['String']['output']>;
   currencyCode: Maybe<Scalars['String']['output']>;
-  id: Scalars['String']['output'];
-  interval: Scalars['String']['output'];
+  id: Maybe<Scalars['String']['output']>;
+  interval: Maybe<Scalars['String']['output']>;
   maxValue: Maybe<Scalars['Float']['output']>;
   minValue: Maybe<Scalars['Float']['output']>;
-  summary: Scalars['String']['output'];
+  summary: Maybe<Scalars['String']['output']>;
 };
 
 export type AshbyCompensationTier = {
   __typename: 'AshbyCompensationTier';
   additionalInformation: Maybe<Scalars['String']['output']>;
   components: Array<AshbyCompensationComponent>;
-  id: Scalars['String']['output'];
-  tierSummary: Scalars['String']['output'];
-  title: Scalars['String']['output'];
+  id: Maybe<Scalars['String']['output']>;
+  tierSummary: Maybe<Scalars['String']['output']>;
+  title: Maybe<Scalars['String']['output']>;
 };
 
 export type AshbyEnrichment = {
@@ -533,7 +533,7 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<Scalars['String']['output']>;
+  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];

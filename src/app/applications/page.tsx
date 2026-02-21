@@ -15,6 +15,7 @@ import {
   IconButton,
   Tooltip,
   DropdownMenu,
+  Table,
 } from "@radix-ui/themes";
 import {
   PlusIcon,
@@ -67,210 +68,119 @@ function formatDate(iso: string) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Application Card
+// Applications Table
 // ──────────────────────────────────────────────────────────────────────────────
-function AppCard({
-  app,
-  onMove,
-  onReject,
-}: {
-  app: Application;
-  onMove: (id: number, status: ApplicationStatus) => void;
-  onReject: (id: number) => void;
-}) {
-  const displayName = app.companyName ?? app.jobId;
-  const displayTitle = app.jobTitle ?? "Job application";
-  const initials = companyInitials(displayName);
-  const nextStatus = NEXT_STATUS[app.status];
-  const nextLabel = COLUMNS.find((c) => c.status === nextStatus)?.label;
-
-  return (
-    <Card
-      size="1"
-      style={{
-        cursor: "default",
-        transition: "box-shadow 0.15s ease",
-      }}
-    >
-      <Flex direction="column" gap="2">
-        {/* Company + title row */}
-        <Flex gap="2" align="start">
-          <Box
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              backgroundColor: "var(--accent-3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              fontWeight: 700,
-              fontSize: 12,
-              color: "var(--accent-11)",
-            }}
-          >
-            {initials}
-          </Box>
-          <Box style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              size="2"
-              weight="medium"
-              style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                display: "block",
-              }}
-            >
-              {displayTitle}
-            </Text>
-            <Text size="1" color="gray" style={{ display: "block" }}>
-              {app.companyName ?? "—"}
-            </Text>
-          </Box>
-        </Flex>
-
-        {/* Date + actions row */}
-        <Flex justify="between" align="center" gap="1">
-          <Text size="1" color="gray">
-            {formatDate(app.createdAt)}
-          </Text>
-          <Flex gap="1" align="center">
-            {app.jobId.startsWith("http") && (
-              <Tooltip content="Open job posting">
-                <IconButton
-                  size="1"
-                  variant="ghost"
-                  color="gray"
-                  asChild
-                >
-                  <a href={app.jobId} target="_blank" rel="noopener noreferrer">
-                    <ExternalLinkIcon />
-                  </a>
-                </IconButton>
-              </Tooltip>
-            )}
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger>
-                <IconButton size="1" variant="ghost" color="gray">
-                  <DotsHorizontalIcon />
-                </IconButton>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content size="1">
-                {nextStatus && nextLabel && (
-                  <DropdownMenu.Item
-                    onClick={() => onMove(app.id, nextStatus)}
-                  >
-                    <ArrowRightIcon />
-                    Move to {nextLabel}
-                  </DropdownMenu.Item>
-                )}
-                {app.status !== "rejected" && (
-                  <DropdownMenu.Item
-                    color="red"
-                    onClick={() => onReject(app.id)}
-                  >
-                    Mark Rejected
-                  </DropdownMenu.Item>
-                )}
-                {app.status === "rejected" && (
-                  <DropdownMenu.Item
-                    onClick={() => onMove(app.id, "pending")}
-                  >
-                    Move back to Saved
-                  </DropdownMenu.Item>
-                )}
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
-          </Flex>
-        </Flex>
-
-        {/* Notes preview */}
-        {app.notes && (
-          <Text
-            size="1"
-            color="gray"
-            style={{
-              overflow: "hidden",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              lineHeight: "1.4",
-            }}
-          >
-            {app.notes}
-          </Text>
-        )}
-      </Flex>
-    </Card>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Kanban Column
-// ──────────────────────────────────────────────────────────────────────────────
-function KanbanColumn({
-  status,
-  label,
-  color,
+function ApplicationsTable({
   apps,
   onMove,
   onReject,
 }: {
-  status: ApplicationStatus;
-  label: string;
-  color: "gray" | "blue" | "orange" | "green" | "red" | "purple";
   apps: Application[];
   onMove: (id: number, status: ApplicationStatus) => void;
   onReject: (id: number) => void;
 }) {
   return (
-    <Box
-      style={{
-        flex: "0 0 240px",
-        minWidth: 240,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-      }}
-    >
-      {/* Column header */}
-      <Flex align="center" gap="2" mb="2">
-        <Badge color={color} variant="soft" size="1">
-          {label}
-        </Badge>
-        <Text size="1" color="gray">
-          {apps.length}
-        </Text>
-      </Flex>
+    <Table.Root variant="surface">
+      <Table.Header>
+        <Table.Row>
+          <Table.ColumnHeaderCell>Company</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Role</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Applied</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell />
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {apps.map((app) => {
+          const displayName = app.companyName ?? app.jobId;
+          const displayTitle = app.jobTitle ?? "Job application";
+          const initials = companyInitials(displayName);
+          const nextStatus = NEXT_STATUS[app.status];
+          const nextLabel = COLUMNS.find((c) => c.status === nextStatus)?.label;
+          const statusCol = COLUMNS.find((c) => c.status === app.status);
 
-      {/* Cards */}
-      <Flex direction="column" gap="2" style={{ flex: 1 }}>
-        {apps.map((app) => (
-          <AppCard
-            key={app.id}
-            app={app}
-            onMove={onMove}
-            onReject={onReject}
-          />
-        ))}
-        {apps.length === 0 && (
-          <Box
-            p="3"
-            style={{
-              border: "1px dashed var(--gray-6)",
-              borderRadius: 8,
-              textAlign: "center",
-            }}
-          >
-            <Text size="1" color="gray">
-              Empty
-            </Text>
-          </Box>
-        )}
-      </Flex>
-    </Box>
+          return (
+            <Table.Row key={app.id}>
+              <Table.Cell>
+                <Flex align="center" gap="2">
+                  <Box
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 6,
+                      backgroundColor: "var(--accent-3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      fontWeight: 700,
+                      fontSize: 11,
+                      color: "var(--accent-11)",
+                    }}
+                  >
+                    {initials}
+                  </Box>
+                  <Text size="2" weight="medium">
+                    {app.companyName ?? "—"}
+                  </Text>
+                </Flex>
+              </Table.Cell>
+              <Table.Cell>
+                <Flex align="center" gap="1">
+                  <Text size="2">{displayTitle}</Text>
+                  {app.jobId.startsWith("http") && (
+                    <Tooltip content="Open job posting">
+                      <IconButton size="1" variant="ghost" color="gray" asChild>
+                        <a href={app.jobId} target="_blank" rel="noopener noreferrer">
+                          <ExternalLinkIcon />
+                        </a>
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Flex>
+              </Table.Cell>
+              <Table.Cell>
+                <Badge color={statusCol?.color ?? "gray"} variant="soft" size="1">
+                  {statusCol?.label ?? app.status}
+                </Badge>
+              </Table.Cell>
+              <Table.Cell>
+                <Text size="2" color="gray">
+                  {formatDate(app.createdAt)}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    <IconButton size="1" variant="ghost" color="gray">
+                      <DotsHorizontalIcon />
+                    </IconButton>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content size="1">
+                    {nextStatus && nextLabel && (
+                      <DropdownMenu.Item onClick={() => onMove(app.id, nextStatus)}>
+                        <ArrowRightIcon />
+                        Move to {nextLabel}
+                      </DropdownMenu.Item>
+                    )}
+                    {app.status !== "rejected" && (
+                      <DropdownMenu.Item color="red" onClick={() => onReject(app.id)}>
+                        Mark Rejected
+                      </DropdownMenu.Item>
+                    )}
+                    {app.status === "rejected" && (
+                      <DropdownMenu.Item onClick={() => onMove(app.id, "pending")}>
+                        Restore to Saved
+                      </DropdownMenu.Item>
+                    )}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              </Table.Cell>
+            </Table.Row>
+          );
+        })}
+      </Table.Body>
+    </Table.Root>
   );
 }
 
@@ -417,24 +327,11 @@ export default function ApplicationsPage() {
   const handleReject = (id: number) => handleMove(id, "rejected");
 
   const apps = data?.applications ?? [];
-  const byStatus = Object.fromEntries(
-    COLUMNS.map(({ status }) => [
-      status,
-      apps.filter((a) => a.status === status),
-    ]),
-  ) as Record<ApplicationStatus, Application[]>;
-
   const total = apps.length;
-  const activeCount = apps.filter(
-    (a) => a.status !== "rejected",
-  ).length;
+  const activeCount = apps.filter((a) => a.status !== "rejected").length;
 
   return (
-    <Container
-      size="4"
-      p={{ initial: "4", md: "8" }}
-      style={{ maxWidth: "100%", overflowX: "auto" }}
-    >
+    <Container size="4" p={{ initial: "4", md: "8" }}>
       {/* Header */}
       <Flex justify="between" align="center" mb="6" wrap="wrap" gap="3">
         <Box>
@@ -457,15 +354,28 @@ export default function ApplicationsPage() {
 
       {/* Loading */}
       {loading && (
-        <Flex gap="4" style={{ overflowX: "auto", paddingBottom: 8 }}>
-          {COLUMNS.map(({ status }) => (
-            <Box key={status} style={{ flex: "0 0 240px" }}>
-              <Skeleton height="32px" mb="3" />
-              <Skeleton height="80px" mb="2" />
-              <Skeleton height="80px" />
-            </Box>
-          ))}
-        </Flex>
+        <Table.Root variant="surface">
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeaderCell>Company</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Role</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Applied</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell />
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Table.Row key={i}>
+                <Table.Cell><Skeleton height="20px" width="120px" /></Table.Cell>
+                <Table.Cell><Skeleton height="20px" width="180px" /></Table.Cell>
+                <Table.Cell><Skeleton height="20px" width="80px" /></Table.Cell>
+                <Table.Cell><Skeleton height="20px" width="60px" /></Table.Cell>
+                <Table.Cell><Skeleton height="20px" width="24px" /></Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
       )}
 
       {/* Empty state */}
@@ -486,21 +396,13 @@ export default function ApplicationsPage() {
         </Card>
       )}
 
-      {/* Kanban board */}
+      {/* Applications table */}
       {!loading && total > 0 && (
-        <Flex gap="4" style={{ overflowX: "auto", paddingBottom: 8 }}>
-          {COLUMNS.map(({ status, label, color }) => (
-            <KanbanColumn
-              key={status}
-              status={status}
-              label={label}
-              color={color}
-              apps={byStatus[status] ?? []}
-              onMove={handleMove}
-              onReject={handleReject}
-            />
-          ))}
-        </Flex>
+        <ApplicationsTable
+          apps={apps}
+          onMove={handleMove}
+          onReject={handleReject}
+        />
       )}
 
       {/* Sign-in prompt */}

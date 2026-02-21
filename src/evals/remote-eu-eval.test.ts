@@ -45,16 +45,58 @@ async function classifyRemoteEU(jobPosting: {
   title: string;
   location: string;
   description: string;
+  country?: string;
+  workplace_type?: string;
+  is_remote?: boolean;
 }): Promise<RemoteEUClassification> {
   const location = jobPosting.location.toLowerCase().trim();
   const description = jobPosting.description.toLowerCase();
   const title = jobPosting.title.toLowerCase();
   const fullText = `${title} ${location} ${description}`;
 
+  // --- Negative signal detection (runs early, can override later rules) ---
+  const negativeSignals = {
+    usOnly: /\b(us only|us-only|united states only|must be based in the us|must be based in the united states)\b/.test(description),
+    usWorkAuth: /\b(us work authorization|authorized to work in the united states|us citizens? (and|or) permanent residents?)\b/.test(description),
+    noEU: /\b(no eu applicants?|cannot accept applications? from eu|outside the european union)\b/.test(description),
+    swissOnly: /\b(must be based in switzerland|swiss work permit|swiss employment)\b/.test(description),
+  };
+  const hasNegativeSignal = negativeSignals.usOnly || negativeSignals.usWorkAuth || negativeSignals.noEU || negativeSignals.swissOnly;
+
+  // --- EU country set for ATS country code checks ---
+  const EU_ISO_CODES = new Set([
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
+    "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
+    "PL", "PT", "RO", "SK", "SI", "ES", "SE"
+  ]);
+  const atsCountry = (jobPosting.country || "").toUpperCase();
+  const atsIsRemote = jobPosting.is_remote === true || jobPosting.workplace_type === "remote";
+  const isEUCountryCode = EU_ISO_CODES.has(atsCountry);
+
+  // --- European timezone / business hours detection ---
+  const hasEuropeanBusinessHours = /\b(european business hours|cet\s*[±+-]\s*\d|overlap with (cet|european))\b/.test(description) ||
+                                    /(cet\s*[±+-]\s*\d|[±+-]\s*\d\s*hours?\s*cet)/.test(location);
+
   // Rule 0: Not fully remote (check first, highest priority for rejection)
   const isRemote = location.includes("remote") ||
                    description.includes("fully remote") ||
-                   location.includes("work from");
+                   description.includes("remote-first") ||
+                   location.includes("work from") ||
+                   atsIsRemote;
+
+  // On-site disguised as remote: "remote" in title but on-site in description
+  const isOnSite = description.includes("on-site position") ||
+                   description.includes("onsite position") ||
+                   /\b5\s*days?\s*(?:per\s*)?week\s*in\b/.test(description) ||
+                   description.includes("this is an on-site");
+
+  if (isOnSite) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Position is on-site despite remote-sounding title/location",
+    };
+  }
 
   if (!isRemote && (location.includes("hybrid") ||
                      location.includes("office") ||
@@ -70,14 +112,51 @@ async function classifyRemoteEU(jobPosting: {
     };
   }
 
+  // Rule 0a: Explicit negative signals override everything (even EU mentions)
+  if (negativeSignals.noEU) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Explicitly excludes EU applicants",
+    };
+  }
+
+  if (negativeSignals.swissOnly && location.includes("dach")) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "DACH label but Swiss-only work permit requirement — Switzerland is not EU",
+    };
+  }
+
+  // US-only / US work auth — blocks worldwide/global roles
+  if (negativeSignals.usOnly || negativeSignals.usWorkAuth) {
+    // Unless this posting explicitly says "EU team"
+    if (!description.includes("eu team") && !description.includes("for our eu")) {
+      return {
+        isRemoteEU: false,
+        confidence: "high",
+        reason: "US work authorization or US-only requirement excludes EU workers",
+      };
+    }
+  }
+
+  // Rule 0b: ATS remote flag + EU country code → high confidence shortcut
+  if (atsIsRemote && isEUCountryCode) {
+    return {
+      isRemoteEU: true,
+      confidence: "high",
+      reason: `EU country code (${atsCountry}) + ATS remote flag`,
+    };
+  }
+
   // Rule 1: Explicit EU-only remote mentions (highest priority)
-  // Use word boundaries to distinguish "eu" from "europe"
   const isExplicitEURemote =
     location.includes("remote - eu") ||
     location.includes("remote eu") ||
     location.includes("eu only") ||
     location.match(/\beu\b.*\bonly\b/) ||
-    (location.includes("remote") && location.includes(" eu") && !location.includes("remote - europe"));
+    (location.includes("remote") && location.match(/\beu\b(?!\s*timezone)/i) && !location.includes("remote - europe"));
 
   if (isExplicitEURemote) {
     return {
@@ -113,7 +192,9 @@ async function classifyRemoteEU(jobPosting: {
     description.includes("eu passport") ||
     description.includes("eu citizen") ||
     description.includes("right to work in the eu") ||
-    description.includes("eu residency")
+    description.includes("eu residency") ||
+    description.includes("eu work permit") ||
+    description.includes("citizen of an eu member state")
   ) {
     return {
       isRemoteEU: true,
@@ -179,14 +260,34 @@ async function classifyRemoteEU(jobPosting: {
     };
   }
 
-  // Rule 9: CET/CEST timezone mention (ambiguous - not exclusive to EU)
+  // Rule 9: CET/CEST timezone mention in LOCATION (ambiguous - not exclusive to EU)
+  // But NOT when CET appears in a "±N hours CET" pattern — that's a timezone overlap signal (Rule 9b)
   if ((location.includes("cet") || location.includes("cest")) &&
       !location.includes("eu") &&
-      !mentionedCountries.length) {
+      !mentionedCountries.length &&
+      !hasEuropeanBusinessHours) {
     return {
       isRemoteEU: false,
       confidence: "medium",
       reason: "CET timezone is not exclusive to EU (includes Switzerland, some African countries)",
+    };
+  }
+
+  // Rule 9a: "EU Timezone" mention — targets EU workers but is not a hard residency requirement
+  if (location.match(/eu\s*timezone/i) && !location.includes("eu only") && !location.includes("eu member")) {
+    return {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "EU timezone requirement targets EU-based workers but is not an explicit EU residency requirement",
+    };
+  }
+
+  // Rule 9b: European business hours / CET ± N hours in description (not location)
+  if (hasEuropeanBusinessHours && isRemote) {
+    return {
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "European business hours / CET overlap requirement targets EU-based workers",
     };
   }
 
@@ -217,13 +318,44 @@ async function classifyRemoteEU(jobPosting: {
     };
   }
 
-  // Rule 13: Worldwide or global scope — EU workers can work these roles
+  // Rule 13: Worldwide or global scope
   if ((location.includes("worldwide") || location.includes("global")) &&
       !location.includes("eu")) {
+    // Check for EU office presence in description — upgrades confidence
+    const hasEUOfficeMention = mentionedCountries.length > 0 ||
+      /\b(berlin|amsterdam|paris|dublin|munich|barcelona|stockholm|vienna|warsaw|lisbon)\b/.test(description);
+
+    if (hasEUOfficeMention) {
+      return {
+        isRemoteEU: true,
+        confidence: "medium",
+        reason: "Worldwide/global remote with EU office presence",
+      };
+    }
+
+    // EU preferred in global role
+    if (description.includes("eu") && (description.includes("preferred") || description.includes("preference"))) {
+      return {
+        isRemoteEU: true,
+        confidence: "medium",
+        reason: "Global role with EU preference — EU workers can apply",
+      };
+    }
+
+    // No EU specifics → low confidence
     return {
       isRemoteEU: true,
-      confidence: "medium",
-      reason: "Worldwide/global remote roles are accessible to EU workers",
+      confidence: "low",
+      reason: "Global remote with no EU-specific signals — EU workers can technically apply",
+    };
+  }
+
+  // US-location remote (explicit US in location, no EU signal)
+  if (location.includes("us") && !location.includes("eu") && !location.includes("emea")) {
+    return {
+      isRemoteEU: false,
+      confidence: "high",
+      reason: "Remote position restricted to US",
     };
   }
 

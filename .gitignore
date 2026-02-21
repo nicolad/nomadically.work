@@ -53,6 +53,7 @@ next-env.d.ts
 
 # python workers
 python_modules/
+workers/process-jobs/node_modules/
 *.pyc
 __pycache__/
 .venv/
@@ -72,3 +73,7 @@ src/workspace/skills/*
 results/*.json
 
 .trigger
+
+# MCP / Playwright MCP
+.mcp.json
+.playwright-mcp/

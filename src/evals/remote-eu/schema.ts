@@ -29,6 +29,9 @@ export type RemoteEUScoreInput = {
     title: string;
     location: string;
     description: string;
+    country?: string;
+    workplace_type?: string;
+    is_remote?: boolean;
   };
   expectedClassification: RemoteEUClassification;
   actualClassification: RemoteEUClassification;
@@ -63,6 +66,12 @@ export type RemoteEUTestCase = {
     title: string;
     location: string;
     description: string;
+    /** ISO 3166 country code from ATS enrichment (e.g. "DE", "US") */
+    country?: string;
+    /** ATS workplace type (e.g. "remote", "hybrid", "on-site") */
+    workplace_type?: string;
+    /** ATS remote flag (from any ATS provider) */
+    is_remote?: boolean;
   };
   expectedClassification: RemoteEUClassification;
 };

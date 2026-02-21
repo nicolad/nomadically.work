@@ -135,19 +135,19 @@ type AshbySecondaryLocation {
 }
 
 type AshbyCompensationComponent {
-  id: String!
-  summary: String!
-  compensationType: String!
-  interval: String!
+  id: String
+  summary: String
+  compensationType: String
+  interval: String
   currencyCode: String
   minValue: Float
   maxValue: Float
 }
 
 type AshbyCompensationTier {
-  id: String!
-  tierSummary: String!
-  title: String!
+  id: String
+  tierSummary: String
+  title: String
   additionalInformation: String
   components: [AshbyCompensationComponent!]!
 }
@@ -213,7 +213,7 @@ type Job {
   posted_at: String!
   score: Float
   score_reason: String
-  status: String
+  status: JobStatus
   """Derived from status — true when status is eu_remote."""
   is_remote_eu: Boolean!
   remote_eu_confidence: ClassificationConfidence

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { Agent } from "@mastra/core/agent";
-import { createWorkflow, createStep } from "@/mastra/workflows";
+import { createStep } from "@/mastra/workflows";
 import { createScorer } from "@mastra/core/evals";
 
 import {
@@ -40,7 +40,7 @@ const deepseek = createDeepSeek({
 /**
  * AGENT_MODEL uses SDK object for Agent, JUDGE_MODEL_STRING for scorers
  */
-const AGENT_MODEL = deepseek("deepseek-reasoner");
+const AGENT_MODEL = deepseek("deepseek-chat");
 const JUDGE_MODEL_STRING = "deepseek-chat"; // Direct SDK, not routed through OpenRouter
 const JUDGE_MODEL = deepseek("deepseek-chat");
 
@@ -548,14 +548,6 @@ const classifyJobStep = createStep({
   },
 });
 
-const classifyJobWorkflow = createWorkflow({
-  id: "classify-job-workflow",
-  inputSchema: JobClassificationInputSchema,
-  outputSchema: JobClassificationOutputSchema,
-})
-  .then(classifyJobStep)
-  .commit();
-
 /* ------------------------------------------------------------------------------------------------
  * Public API
  * ---------------------------------------------------------------------------------------------- */
@@ -569,19 +561,18 @@ export const classifyJob = async (
   error?: string;
 }> => {
   try {
-    const run = await classifyJobWorkflow.createRun();
-    const result = await run.start({
+    const result = await classifyJobStep.execute({
       inputData: { title, location, description },
     });
 
     if (result.status !== "success") {
       return {
         ok: false,
-        error: `Could not classify job (workflow status: ${result.status})`,
+        error: `Could not classify job (step status: ${result.status})`,
       };
     }
 
-    const classification = result.result as JobClassificationResponse;
+    const classification = result.output as JobClassificationResponse;
 
     // Fast deterministic business mapping (do NOT wait for async scorer results)
     if (jobId) {
@@ -613,7 +604,8 @@ export const classifyJob = async (
 
     return { ok: true, data: classification };
   } catch (err) {
-    console.error("Error classifying job:", err);
-    return { ok: false, error: "Could not classify job" };
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Error classifying job:", message, err);
+    return { ok: false, error: `Classification failed: ${message}` };
   }
 };

@@ -117,22 +117,22 @@ export type AshbyCompensation = {
 
 export type AshbyCompensationComponent = {
   __typename?: 'AshbyCompensationComponent';
-  compensationType: Scalars['String']['output'];
+  compensationType: Maybe<Scalars['String']['output']>;
   currencyCode: Maybe<Scalars['String']['output']>;
-  id: Scalars['String']['output'];
-  interval: Scalars['String']['output'];
+  id: Maybe<Scalars['String']['output']>;
+  interval: Maybe<Scalars['String']['output']>;
   maxValue: Maybe<Scalars['Float']['output']>;
   minValue: Maybe<Scalars['Float']['output']>;
-  summary: Scalars['String']['output'];
+  summary: Maybe<Scalars['String']['output']>;
 };
 
 export type AshbyCompensationTier = {
   __typename?: 'AshbyCompensationTier';
   additionalInformation: Maybe<Scalars['String']['output']>;
   components: Array<AshbyCompensationComponent>;
-  id: Scalars['String']['output'];
-  tierSummary: Scalars['String']['output'];
-  title: Scalars['String']['output'];
+  id: Maybe<Scalars['String']['output']>;
+  tierSummary: Maybe<Scalars['String']['output']>;
+  title: Maybe<Scalars['String']['output']>;
 };
 
 export type AshbyEnrichment = {
@@ -536,7 +536,7 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
-  status: Maybe<Scalars['String']['output']>;
+  status: Maybe<JobStatus>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -1536,21 +1536,21 @@ export type AshbyCompensationResolvers<ContextType = GraphQLContext, ParentType 
 };
 
 export type AshbyCompensationComponentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyCompensationComponent'] = ResolversParentTypes['AshbyCompensationComponent']> = {
-  compensationType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  compensationType?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   currencyCode?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  interval?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  interval?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   maxValue?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
   minValue?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
-  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  summary?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type AshbyCompensationTierResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyCompensationTier'] = ResolversParentTypes['AshbyCompensationTier']> = {
   additionalInformation?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   components?: Resolver<Array<ResolversTypes['AshbyCompensationComponent']>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  tierSummary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tierSummary?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type AshbyEnrichmentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyEnrichment'] = ResolversParentTypes['AshbyEnrichment']> = {
@@ -1800,7 +1800,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   skills?: Resolver<Maybe<Array<ResolversTypes['JobSkill']>>, ParentType, ContextType>;
   source_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   source_kind?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  status?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<Maybe<ResolversTypes['JobStatus']>, ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updated_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;

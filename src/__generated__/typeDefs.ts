@@ -485,6 +485,7 @@ type Job {
   skills: [JobSkill!]
   source_id: String
   source_kind: String!
+  status: String
   title: String!
   updated_at: String!
   url: String!
@@ -699,7 +700,7 @@ type Query {
   company_snapshots(company_id: Int!, limit: Int, offset: Int): [CompanySnapshot!]!
   executeSql(sql: String!): TextToSqlResult!
   job(id: String!): Job
-  jobs(excludedCompanies: [String!], limit: Int, offset: Int, search: String, sourceType: String): JobsResponse!
+  jobs(excludedCompanies: [String!], isRemoteEu: Boolean, limit: Int, offset: Int, remoteEuConfidence: String, search: String, sourceType: String): JobsResponse!
   langsmithPrompt(promptIdentifier: String!): LangSmithPrompt
   langsmithPromptCommit(includeModel: Boolean, promptIdentifier: String!): LangSmithPromptCommit
   langsmithPrompts(isArchived: Boolean, isPublic: Boolean, query: String): [LangSmithPrompt!]!

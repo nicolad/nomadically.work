@@ -7,6 +7,7 @@ import {
   notLike,
   desc,
   notInArray,
+  inArray,
   isNull,
   sql,
   count,
@@ -18,11 +19,12 @@ export async function jobsQuery(
   _parent: any,
   args: {
     sourceType?: string;
-
     search?: string;
     limit?: number;
     offset?: number;
     excludedCompanies?: string[];
+    isRemoteEu?: boolean;
+    remoteEuConfidence?: string;
   },
   context: GraphQLContext,
 ) {
@@ -45,6 +47,26 @@ export async function jobsQuery(
     // Exclude companies at SQL level
     if (args.excludedCompanies && args.excludedCompanies.length > 0) {
       conditions.push(notInArray(jobs.company_key, args.excludedCompanies));
+    }
+
+    // Filter to EU remote jobs only
+    if (args.isRemoteEu === true) {
+      conditions.push(eq(jobs.is_remote_eu, true));
+    }
+
+    // Filter by minimum confidence level
+    if (args.remoteEuConfidence) {
+      const confidenceMap: Record<string, string[]> = {
+        high: ["high"],
+        medium: ["high", "medium"],
+        low: ["high", "medium", "low"],
+      };
+      const allowed = confidenceMap[args.remoteEuConfidence] ?? [
+        "high",
+        "medium",
+        "low",
+      ];
+      conditions.push(inArray(jobs.remote_eu_confidence, allowed));
     }
 
     // Exclude locations at SQL level
@@ -84,7 +106,9 @@ export async function jobsQuery(
           location: jobs.location,
           url: jobs.url,
           posted_at: jobs.posted_at,
-
+          status: jobs.status,
+          is_remote_eu: jobs.is_remote_eu,
+          remote_eu_confidence: jobs.remote_eu_confidence,
         })
         .from(jobs)
         .where(whereClause)

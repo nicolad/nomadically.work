@@ -92,7 +92,7 @@ export function JobsSearchBar({
     <TextField.Root
       ref={inputRef}
       size="3"
-      radius="full"
+      radius="none"
       variant="surface"
       value={value}
       placeholder={placeholder}

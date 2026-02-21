@@ -28,6 +28,7 @@ type Job = GetJobsQuery["jobs"]["jobs"][number];
 
 interface JobsListProps {
   searchFilter?: string;
+  isRemoteEu?: boolean;
 }
 
 const getStatusLabel = (status: Job["status"]): string => {
@@ -54,7 +55,7 @@ function companyInitials(key: string): string {
     .slice(0, 2);
 }
 
-export function JobsList({ searchFilter = "" }: JobsListProps) {
+export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
@@ -91,8 +92,9 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
       offset: 0,
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
+      isRemoteEu: isRemoteEu || undefined,
     }),
-    [searchFilter, excludedCompanies],
+    [searchFilter, excludedCompanies, isRemoteEu],
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
@@ -239,18 +241,15 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
                     </span>
                   )}
                   {job.posted_at && (
-                    <span
-                      className="job-row-meta-item"
-                      style={{ color: "var(--gray-8)" }}
-                    >
-                      {new Date(job.posted_at).toLocaleDateString()}
+                    <span className="job-row-meta-item">
+                      {new Date(job.posted_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                      })}
                     </span>
                   )}
                   {job.skills && job.skills.length > 0 && (
-                    <span
-                      className="job-row-meta-item"
-                      style={{ color: "var(--gray-8)" }}
-                    >
+                    <span className="job-row-meta-item">
                       {sortBy(job.skills, [(s) => s.level !== "required"])
                         .slice(0, 3)
                         .map((s) => getSkillLabel(s.tag))
@@ -265,8 +264,8 @@ export function JobsList({ searchFilter = "" }: JobsListProps) {
               <div className="job-row-actions">
                 {job.url && (
                   <span
-                    className="yc-cta"
-                    style={{ fontSize: 11, padding: "3px 10px" }}
+                    className="yc-cta-ghost"
+                    style={{ fontSize: 12, padding: "4px 12px" }}
                   >
                     apply
                   </span>

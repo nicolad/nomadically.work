@@ -4,6 +4,7 @@ query GetJobs(
   $limit: Int
   $offset: Int
   $excludedCompanies: [String!]
+  $isRemoteEu: Boolean
 ) {
   jobs(
     sourceType: $sourceType
@@ -11,6 +12,7 @@ query GetJobs(
     limit: $limit
     offset: $offset
     excludedCompanies: $excludedCompanies
+    isRemoteEu: $isRemoteEu
   ) {
     jobs {
       id
@@ -21,6 +23,9 @@ query GetJobs(
       location
       url
       posted_at
+      status
+      is_remote_eu
+      remote_eu_confidence
       skills {
         tag
         level

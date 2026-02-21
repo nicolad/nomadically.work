@@ -17,7 +17,7 @@ const Page = async () => {
         </Container>
       }
     >
-      <Container size="4" p="8" className={styles.content}>
+      <Container size="4" className={styles.content}>
         {isAdmin && <AdminBar userEmail={userEmail} />}
         <UnifiedJobsProvider />
       </Container>

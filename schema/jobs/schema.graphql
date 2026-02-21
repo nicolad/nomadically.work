@@ -5,6 +5,8 @@ extend type Query {
     limit: Int
     offset: Int
     excludedCompanies: [String!]
+    isRemoteEu: Boolean
+    remoteEuConfidence: String
   ): JobsResponse!
   job(id: String!): Job
   userSettings(userId: String!): UserSettings
@@ -187,6 +189,7 @@ type Job {
   posted_at: String!
   score: Float
   score_reason: String
+  status: String
   is_remote_eu: Boolean
   remote_eu_confidence: String
   remote_eu_reason: String

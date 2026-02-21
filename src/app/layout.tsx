@@ -8,6 +8,13 @@ import Link from "next/link";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AuthHeader } from "@/components/auth-header";
 import { Providers } from "@/components/providers";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Nomadically.Work",
@@ -23,7 +30,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body>
+        <body className={inter.variable}>
           <Theme appearance="dark">
             <Providers>
               {/* ── nav strip with logo ── */}

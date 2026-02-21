@@ -529,6 +529,7 @@ export type Job = {
   skills: Maybe<Array<JobSkill>>;
   source_id: Maybe<Scalars['String']['output']>;
   source_kind: Scalars['String']['output'];
+  status: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
@@ -969,8 +970,10 @@ export type QueryJobArgs = {
 
 export type QueryJobsArgs = {
   excludedCompanies?: InputMaybe<Array<Scalars['String']['input']>>;
+  isRemoteEu?: InputMaybe<Scalars['Boolean']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+  remoteEuConfidence?: InputMaybe<Scalars['String']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
 };
@@ -1254,10 +1257,11 @@ export type GetJobsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   excludedCompanies?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+  isRemoteEu?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
 
 
-export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_kind: string, company_key: string, title: string, location: string | null, url: string, posted_at: string, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null }> } };
+export type GetJobsQuery = { __typename?: 'Query', jobs: { __typename?: 'JobsResponse', totalCount: number, jobs: Array<{ __typename?: 'Job', id: number, external_id: string, source_kind: string, company_key: string, title: string, location: string | null, url: string, posted_at: string, status: string | null, is_remote_eu: boolean | null, remote_eu_confidence: string | null, skills: Array<{ __typename?: 'JobSkill', tag: string, level: string }> | null }> } };
 
 export type GetUserSettingsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -2095,13 +2099,14 @@ export type GetJobLazyQueryHookResult = ReturnType<typeof useGetJobLazyQuery>;
 export type GetJobSuspenseQueryHookResult = ReturnType<typeof useGetJobSuspenseQuery>;
 export type GetJobQueryResult = Apollo.QueryResult<GetJobQuery, GetJobQueryVariables>;
 export const GetJobsDocument = gql`
-    query GetJobs($sourceType: String, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!]) {
+    query GetJobs($sourceType: String, $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!], $isRemoteEu: Boolean) {
   jobs(
     sourceType: $sourceType
     search: $search
     limit: $limit
     offset: $offset
     excludedCompanies: $excludedCompanies
+    isRemoteEu: $isRemoteEu
   ) {
     jobs {
       id
@@ -2112,6 +2117,9 @@ export const GetJobsDocument = gql`
       location
       url
       posted_at
+      status
+      is_remote_eu
+      remote_eu_confidence
       skills {
         tag
         level
@@ -2139,6 +2147,7 @@ export const GetJobsDocument = gql`
  *      limit: // value for 'limit'
  *      offset: // value for 'offset'
  *      excludedCompanies: // value for 'excludedCompanies'
+ *      isRemoteEu: // value for 'isRemoteEu'
  *   },
  * });
  */

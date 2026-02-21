@@ -36,6 +36,7 @@
 
 /* ---------- base resets ---------- */
 body {
+  font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   color: var(--gray-12);
   background: var(--color-background);
   -webkit-font-smoothing: antialiased;
@@ -81,19 +82,21 @@ a:hover svg {
 .yc-nav {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
+  gap: 20px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--gray-6);
   background: var(--gray-2);
+  font-size: 14px;
+  letter-spacing: 0.01em;
 }
 .yc-nav a {
-  color: var(--gray-12);
+  color: var(--gray-11);
   text-decoration: none;
   text-transform: lowercase;
   transition: color 0.15s;
 }
 .yc-nav a:hover {
-  color: var(--accent-9);
+  color: var(--gray-12);
 }
 
 /* ---------- flat rows (jobs, companies) ---------- */
@@ -141,8 +144,8 @@ a:hover svg {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--gray-4);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gray-5);
   background: transparent;
   transition: background 0.12s;
   text-decoration: none;
@@ -159,17 +162,18 @@ a:hover svg {
 /* company initial avatar */
 .job-row-avatar {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  background: var(--gray-4);
-  color: var(--gray-11);
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  background: var(--gray-5);
+  color: var(--gray-12);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
 }
 
 /* stacked content */
@@ -178,7 +182,7 @@ a:hover svg {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 /* line 1: title + badge */
@@ -189,22 +193,24 @@ a:hover svg {
   flex-wrap: wrap;
 }
 .job-row-title {
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--gray-12);
   line-height: 1.35;
+  letter-spacing: -0.015em;
 }
 
 /* line 2: company */
 .job-row-company {
-  font-size: 13px;
-  color: var(--gray-11);
+  font-size: 14px;
+  color: var(--gray-10);
   cursor: pointer;
   text-decoration: none;
   transition: color 0.12s;
+  line-height: 1.4;
 }
 .job-row-company:hover {
-  color: var(--accent-9);
+  color: var(--gray-12);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -213,24 +219,32 @@ a:hover svg {
 .job-row-meta-line {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: 3px;
+}
+/* dot separator between meta items */
+.job-row-meta-line > * + *::before {
+  content: "·";
+  margin-right: 8px;
+  color: var(--gray-7);
+  font-size: 11px;
 }
 .job-row-meta-item {
-  font-size: 11px;
-  color: var(--gray-10);
+  font-size: 13px;
+  color: var(--gray-9);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 .job-row-meta-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border: 1px solid var(--gray-6);
-  color: var(--gray-11);
+  font-size: 12px;
+  padding: 1px 6px;
+  border: 1px solid var(--gray-5);
+  color: var(--gray-9);
   border-radius: 3px;
   text-transform: lowercase;
+  background: var(--gray-3);
 }
 
 /* right actions column */
@@ -240,6 +254,7 @@ a:hover svg {
   gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
+  padding-top: 1px;
 }
 
 /* ---------- CTA buttons ---------- */
@@ -437,7 +452,7 @@ a:hover svg {
     font-size: 11px;
   }
   .job-row-title {
-    font-size: 13px;
+    font-size: 15px;
   }
   .job-row-actions {
     gap: 4px;

@@ -12,7 +12,7 @@
  */
 
 import { config } from "dotenv";
-config({ path: ".env.local" });
+config({ path: ".env.local", override: true });
 
 import { createD1HttpClient } from "../db/d1-http";
 
@@ -44,50 +44,6 @@ function trimDesc(raw: string | null, maxLen = 600): string {
 function toConfidence(raw: string | null): "high" | "medium" | "low" {
   if (raw === "high" || raw === "medium" || raw === "low") return raw;
   return "medium";
-}
-
-/**
- * Build the inline JavaScript assertion string.
- *
- * Scores:
- *   1.0 — correct classification AND confidence band matches
- *   0.5 — correct classification, wrong confidence
- *   0.0 — wrong classification (or unparseable output)
- */
-function buildAssertion(
-  expectedIsRemoteEU: boolean,
-  expectedConfidence: "high" | "medium" | "low",
-): string {
-  return `
-(output) => {
-  let parsed;
-  try {
-    const jsonMatch = output.match(/\\{[\\s\\S]*\\}/);
-    parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(output);
-  } catch {
-    return { pass: false, score: 0, reason: 'Failed to parse JSON from LLM output' };
-  }
-
-  const gotClass = parsed.isRemoteEU === ${expectedIsRemoteEU};
-  const gotConf  = parsed.confidence === ${JSON.stringify(expectedConfidence)};
-
-  if (!gotClass) {
-    return {
-      pass: false,
-      score: 0,
-      reason: \`Wrong classification: expected isRemoteEU=${expectedIsRemoteEU}, got \${parsed.isRemoteEU}\`,
-    };
-  }
-  if (!gotConf) {
-    return {
-      pass: true,
-      score: 0.5,
-      reason: \`Correct class but wrong confidence: expected ${expectedConfidence}, got \${parsed.confidence}\`,
-    };
-  }
-  return { pass: true, score: 1, reason: 'Exact match' };
-}
-`.trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -192,11 +148,13 @@ export default async function generateTests() {
         title: row.title ?? "",
         location: row.location ?? "",
         description: trimDesc(row.description),
+        expectedIsRemoteEU: isRemoteEU,
+        expectedConfidence: confidence,
       },
       assert: [
         {
           type: "javascript",
-          value: buildAssertion(isRemoteEU, confidence),
+          value: "file://./assertions/remoteEuClassification.js",
         },
       ],
     };

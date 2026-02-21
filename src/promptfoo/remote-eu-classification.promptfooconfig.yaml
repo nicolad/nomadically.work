@@ -2,25 +2,77 @@ description: "EU remote classification — real D1 jobs × LLM"
 
 prompts:
   - |
-    You are a remote job classifier for EU-based remote positions.
-    Given this job posting, determine whether it is a remote job open to
-    candidates based in the European Union.
+    You are an expert at classifying job postings for Remote EU eligibility.
+    A Remote EU position must be FULLY REMOTE and allow work from EU member countries.
+    Return structured JSON output with clear reasoning.
 
-    Return JSON only — no markdown, no explanation outside the JSON:
-    {"isRemoteEU": boolean, "confidence": "high"|"medium"|"low", "reason": string}
+    Classify this job posting as Remote EU or not.
 
-    Rules:
-    - isRemoteEU = true  if the role is remote AND explicitly open to EU residents
-    - isRemoteEU = false if it is on-site, US-only remote, or EU-residency unclear
-    - confidence = "high" if the posting makes it unambiguous
-    - confidence = "medium" if you had to infer from partial signals
-    - confidence = "low" if key details are missing or contradictory
+    JOB DETAILS:
+    - Title: {{title}}
+    - Location: {{location}}
+    - Description: {{description}}
 
-    Title: {{title}}
-    Location: {{location}}
-    Description: {{description}}
+    CLASSIFICATION RULES (apply in order):
+
+    0. NEGATIVE SIGNALS (highest priority — override all other rules):
+       - "US only", "must be based in US", "US work authorization required" → isRemoteEU: false (high confidence)
+       - "No EU applicants", "cannot accept from EU" → isRemoteEU: false (high confidence)
+       - Swiss-only work permit in DACH context → isRemoteEU: false (high confidence)
+       - These override worldwide/EMEA/EU timezone when present
+
+    1. FULLY REMOTE REQUIREMENT: Must explicitly state "remote", "fully remote", or similar.
+       - Hybrid, office-based, or on-site positions → isRemoteEU: false
+       - "Remote support" (providing remote support from an office) is NOT remote work
+
+    2. EXPLICIT EU MENTIONS:
+       - "Remote - EU", "EU only", "EU members only" → isRemoteEU: true (high confidence)
+       - Specific EU countries only (e.g., "Germany, France, Spain") → isRemoteEU: true
+
+    3. WORK AUTHORIZATION: Strong signal for EU remote:
+       - "EU work authorization", "EU passport", "EU residency" → isRemoteEU: true
+
+    4. REGIONAL SHORTHANDS:
+       - "DACH" (Germany, Austria, Switzerland) → isRemoteEU: true (medium confidence)
+       - "Nordics" (Sweden, Finland, Denmark + Norway, Iceland) → isRemoteEU: true (medium confidence)
+       - "Benelux" (Belgium, Netherlands, Luxembourg) → isRemoteEU: true (high confidence)
+       - "CEE" / "Central & Eastern Europe" → isRemoteEU: true (medium confidence)
+
+    5. BROADER REGIONS (EU workers are generally eligible):
+       - "EMEA" + EU work auth → isRemoteEU: true (high confidence)
+       - "EMEA" alone → isRemoteEU: true (medium confidence)
+       - "Europe" without EU specification → isRemoteEU: true (medium confidence)
+       - "EU + UK + Switzerland" (mixed) → isRemoteEU: true (medium confidence)
+
+    6. TIMEZONE SIGNALS:
+       - "EU Timezone" → isRemoteEU: true (medium confidence)
+       - "CET ± N hours", "European business hours" → isRemoteEU: true (medium confidence)
+       - "CET timezone" alone (no EU context) → isRemoteEU: false (medium)
+
+    7. WORLDWIDE / GLOBAL:
+       - Worldwide + negative signals (US only etc.) → isRemoteEU: false (high confidence)
+       - Worldwide + EU country/office in signals → isRemoteEU: true (medium confidence)
+       - Worldwide + no EU specifics → isRemoteEU: true (low confidence)
+
+    8. SPECIFIC COUNTRIES/REGIONS:
+       - UK only (post-Brexit) → isRemoteEU: false
+       - Switzerland only → isRemoteEU: false
+       - EEA countries (Norway, Iceland, Liechtenstein) count as EU-eligible
+
+    9. CONFIDENCE LEVELS:
+       - HIGH: Explicit EU mention, clear remote status, work authorization required, all-EU region, negative signals
+       - MEDIUM: Mixed regions (includes EU), EEA, Europe, EMEA, DACH, Nordics, EU timezone, CET±N
+       - LOW: Too vague, worldwide with no EU specifics
+
+    RESPOND ONLY WITH VALID JSON:
+    {"isRemoteEU": true/false, "confidence": "high"|"medium"|"low", "reason": "Brief explanation"}
 
 providers:
-  - openai:gpt-4o-mini
+  - id: deepseek:deepseek-chat
+    config:
+      apiBaseUrl: https://api.deepseek.com/v1
+      apiKeyEnvar: DEEPSEEK_API_KEY
+      response_format:
+        type: json_object
 
 tests: file://./d1-test-generator.ts

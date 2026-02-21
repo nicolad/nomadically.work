@@ -1302,6 +1302,22 @@ _NEGATIVE_EU_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# US-implicit signal patterns — salary in USD, US benefits, US government
+_US_IMPLICIT_PATTERN = re.compile(
+    r"("
+    r"\$\d{2,3}k"                          # $100k, $200K
+    r"|\$\d{3},?\d{3}"                     # $100,000 or $100000
+    r"|USD\s*\d"                            # USD 100...
+    r"|401\(?k\)?"                          # 401k, 401(k)
+    r"|medical,?\s*dental,?\s*(?:and\s*)?vision"  # US benefits trio
+    r"|\bDoD\b|\bSBIR\b"                   # US defense
+    r"|\bsecurity clearance\b"             # US clearance
+    r"|\bW-?2\b"                           # W2 employment
+    r"|\bUS\s*(?:holidays?|PTO)\b"         # US time off
+    r")",
+    re.IGNORECASE,
+)
+
 # EU timezone / business hours patterns
 _EU_TIMEZONE_PATTERN = re.compile(
     r"("
@@ -1326,6 +1342,7 @@ def _extract_eu_signals(job: dict) -> dict:
         "eu_country_code": False,
         "country_code": None,
         "negative_signals": [],
+        "us_implicit_signals": [],
         "eu_timezone": False,
         "eu_countries_in_location": [],
         "all_locations": [],
@@ -1393,6 +1410,12 @@ def _extract_eu_signals(job: dict) -> dict:
     full_text = f"{location} {desc}"
     for m in _NEGATIVE_EU_PATTERN.finditer(full_text):
         signals["negative_signals"].append(m.group(0))
+
+    # US-implicit signals via regex on description
+    us_implicit: list[str] = []
+    for m in _US_IMPLICIT_PATTERN.finditer(full_text):
+        us_implicit.append(m.group(0))
+    signals["us_implicit_signals"] = us_implicit
 
     # EU timezone / business hours
     if _EU_TIMEZONE_PATTERN.search(full_text):
@@ -1502,6 +1525,13 @@ def _keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
             confidence="high",
             reason=f"Heuristic: EU/EEA country in location ({countries}) + ATS remote flag",
         )
+
+    # US-implicit signals + no EU signals → escalate to LLM (don't auto-accept)
+    if (signals.get("us_implicit_signals")
+            and not signals["eu_country_code"]
+            and not signals["eu_timezone"]
+            and not signals["eu_countries_in_location"]):
+        return None  # Ambiguous — let Workers AI / DeepSeek reason about full context
 
     # Worldwide remote: ATS remote flag + no country code + no negative signals
     # Policy: worldwide remote jobs are available to EU workers

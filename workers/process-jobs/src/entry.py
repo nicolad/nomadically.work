@@ -191,22 +191,28 @@ CLASSIFICATION RULES (apply in order):
 3. WORK AUTHORIZATION: Strong signal for EU remote:
    - "EU work authorization", "EU passport", "EU residency" → isRemoteEU: true
 
-4. AMBIGUOUS/MIXED REGIONS:
-   - "EMEA" (includes UK, Switzerland, Middle East) → isRemoteEU: false
-   - "Europe" without EU specification → isRemoteEU: false
-   - "EU + UK + Switzerland" (mixed) → isRemoteEU: true with medium confidence
+4. REGIONAL SHORTHANDS:
+   - "DACH" (Germany, Austria, Switzerland) → isRemoteEU: true (medium confidence — 2 of 3 are EU)
+   - "Nordics" (Sweden, Finland, Denmark + Norway, Iceland) → isRemoteEU: true (medium confidence — 3 of 5 are EU)
+   - "Benelux" (Belgium, Netherlands, Luxembourg) → isRemoteEU: true (high confidence — all EU)
+   - "CEE" / "Central & Eastern Europe" → isRemoteEU: true (medium confidence — mostly EU)
 
-5. TIMEZONE-ONLY: NOT sufficient for EU classification:
+5. BROADER REGIONS (EU workers are generally eligible):
+   - "EMEA" → isRemoteEU: true (medium confidence — EU is the primary work region within EMEA)
+   - "Europe" without EU specification → isRemoteEU: true (medium confidence — most European remote roles accept EU candidates)
+   - "EU + UK + Switzerland" (mixed) → isRemoteEU: true (medium confidence)
+
+6. TIMEZONE-ONLY: NOT sufficient for EU classification:
    - "CET timezone" or "European timezone" alone → isRemoteEU: false
 
-6. SPECIFIC COUNTRIES/REGIONS:
+7. SPECIFIC COUNTRIES/REGIONS:
    - UK only (post-Brexit) → isRemoteEU: false
-   - Switzerland → isRemoteEU: false
+   - Switzerland only → isRemoteEU: false
    - Worldwide/global/anywhere → isRemoteEU: true (medium confidence — EU workers can work these roles)
 
-7. CONFIDENCE LEVELS:
-   - HIGH: Explicit EU mention, clear remote status, work authorization required
-   - MEDIUM: Mixed regions (includes EU), EEA, ambiguous language, worldwide/global remote
+8. CONFIDENCE LEVELS:
+   - HIGH: Explicit EU mention, clear remote status, work authorization required, all-EU region (Benelux)
+   - MEDIUM: Mixed regions (includes EU), EEA, Europe, EMEA, DACH, Nordics, worldwide/global remote
    - LOW: Too vague to determine, timezone-based, preference (not requirement)
 
 RESPOND ONLY WITH VALID JSON:
@@ -714,8 +720,8 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
                 print("   ⏩ Advanced to 'enhanced' despite ATS error")
             except Exception as advance_err:
                 print(f"   ⚠️  Could not advance status: {advance_err}")
-        # Pace to avoid ATS rate-limits
-        await sleep_ms(500)
+        # Pace to avoid ATS rate-limits (Lever: 2 req/sec)
+        await sleep_ms(300)
 
     print(
         f"✅ Enhancement complete: {stats['enhanced']} enhanced, "
@@ -860,7 +866,7 @@ async def _tag_with_workers_ai(job: dict, ai_binding) -> JobRoleTags | None:
         response = await chain.ainvoke({
             "title":       job.get("title", "N/A"),
             "location":    job.get("location") or "Not specified",
-            "description": (job.get("description") or "")[:3000],
+            "description": (job.get("description") or "")[:6000],
         })
 
         content_str = _guard_content(response.content)
@@ -890,7 +896,7 @@ async def _tag_with_deepseek(
     prompt_msgs = ROLE_TAGGING_PROMPT.format_messages(
         title       = job.get("title", "N/A"),
         location    = job.get("location") or "Not specified",
-        description = (job.get("description") or "")[:3000],
+        description = (job.get("description") or "")[:6000],
     )
     role_map = {"system": "system", "human": "user", "ai": "assistant"}
     messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt_msgs]
@@ -1088,7 +1094,8 @@ async def tag_roles_for_enhanced_jobs(
             print(f"   ❌ Unhandled error tagging job {job_id}: {e}")
             stats["errors"] += 1
 
-        await sleep_ms(500)
+        # Most jobs handled by keyword heuristic (no API call)
+        await sleep_ms(100)
 
     print(
         f"✅ Role tagging complete: {stats['targetRole']} target, "
@@ -1130,7 +1137,7 @@ async def classify_with_workers_ai(job: dict, ai_binding) -> JobClassification |
         response = await chain.ainvoke({
             "title":       job.get("title", "N/A"),
             "location":    job.get("location") or "Not specified",
-            "description": (job.get("description") or "")[:3000],
+            "description": (job.get("description") or "")[:6000],
         })
 
         content_str = _guard_content(response.content)
@@ -1160,7 +1167,7 @@ async def classify_with_deepseek(
     prompt_msgs = CLASSIFICATION_PROMPT.format_messages(
         title       = job.get("title", "N/A"),
         location    = job.get("location") or "Not specified",
-        description = (job.get("description") or "")[:3000],
+        description = (job.get("description") or "")[:6000],
     )
     role_map = {"system": "system", "human": "user", "ai": "assistant"}
     messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt_msgs]
@@ -1289,10 +1296,13 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
                 """
                 UPDATE jobs
                 SET score = ?, score_reason = ?, status = ?,
+                    is_remote_eu = ?, remote_eu_confidence = ?, remote_eu_reason = ?,
                     updated_at = datetime('now')
                 WHERE id = ?
                 """,
-                [score, reason, job_status, job["id"]],
+                [score, reason, job_status,
+                 1 if is_eu else 0, confidence, classification.reason,
+                 job["id"]],
             )
 
             stats["processed"] += 1
@@ -1301,7 +1311,9 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
             else:
                 stats["nonEuRemote"] += 1
 
-            await sleep_ms(1000)
+            # Workers AI: same-machine binding, no rate limit
+            # DeepSeek: 200ms sufficient to stay under rate limits
+            await sleep_ms(200 if source == "deepseek" else 50)
 
         except Exception as e:
             print(f"   ❌ Error classifying job {job['id']}: {e}")
@@ -1387,22 +1399,22 @@ class Default(WorkerEntrypoint):
         """Cron trigger — runs all three phases (enhance → tag → classify).
 
         Configured via [triggers].crons in wrangler.jsonc.
-        Runs every 6 hours with a conservative limit of 20 jobs per phase.
+        Runs every 6 hours. Phase 1/2 are fast (ATS fetch + keyword heuristic),
+        Phase 3 involves LLM calls so uses a smaller batch.
         """
         print("🔄 Cron: Starting three-phase pipeline...")
         try:
-            db    = self.env.DB
-            limit = 20
+            db = self.env.DB
 
-            enhance_stats  = await enhance_unenhanced_jobs(db, limit)
+            enhance_stats  = await enhance_unenhanced_jobs(db, 50)
             tag_stats      = await tag_roles_for_enhanced_jobs(
                 db, getattr(self.env, "AI", None),
                 deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
                 deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
                 deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
-                limit             = limit,
+                limit             = 50,
             )
-            classify_stats = await classify_unclassified_jobs(db, self.env, limit)
+            classify_stats = await classify_unclassified_jobs(db, self.env, 30)
 
             stats = self._merge_stats(enhance_stats, tag_stats, classify_stats)
             print(f"✅ Cron complete — {self._stats_summary(stats)}")

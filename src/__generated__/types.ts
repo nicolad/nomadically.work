@@ -972,6 +972,7 @@ export type QueryJobsArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   remoteEuConfidence?: InputMaybe<Scalars['String']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
+  skills?: InputMaybe<Array<Scalars['String']['input']>>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
 };
 

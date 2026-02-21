@@ -5,6 +5,7 @@ query GetJobs(
   $offset: Int
   $excludedCompanies: [String!]
   $isRemoteEu: Boolean
+  $skills: [String!]
 ) {
   jobs(
     sourceType: $sourceType
@@ -13,6 +14,7 @@ query GetJobs(
     offset: $offset
     excludedCompanies: $excludedCompanies
     isRemoteEu: $isRemoteEu
+    skills: $skills
   ) {
     jobs {
       id

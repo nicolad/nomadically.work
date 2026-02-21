@@ -70,6 +70,8 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
 
   const excludedCompanies =
     userSettingsData?.userSettings?.excluded_companies || [];
+  const preferredSkills =
+    userSettingsData?.userSettings?.preferred_skills || [];
 
   const handleDeleteJob = async (jobId: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -93,8 +95,9 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
       isRemoteEu: isRemoteEu || undefined,
+      skills: preferredSkills.length > 0 ? preferredSkills : undefined,
     }),
-    [searchFilter, excludedCompanies, isRemoteEu],
+    [searchFilter, excludedCompanies, isRemoteEu, preferredSkills],
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({

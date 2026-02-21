@@ -15,7 +15,6 @@ import {
   IconButton,
   Tooltip,
   DropdownMenu,
-  Table,
 } from "@radix-ui/themes";
 import {
   PlusIcon,
@@ -68,9 +67,9 @@ function formatDate(iso: string) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Applications Table
+// Applications List
 // ──────────────────────────────────────────────────────────────────────────────
-function ApplicationsTable({
+function ApplicationsList({
   apps,
   onMove,
   onReject,
@@ -80,107 +79,102 @@ function ApplicationsTable({
   onReject: (id: number) => void;
 }) {
   return (
-    <Table.Root variant="surface">
-      <Table.Header>
-        <Table.Row>
-          <Table.ColumnHeaderCell>Company</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>Role</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>Applied</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell />
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
-        {apps.map((app) => {
-          const displayName = app.companyName ?? app.jobId;
-          const displayTitle = app.jobTitle ?? "Job application";
-          const initials = companyInitials(displayName);
-          const nextStatus = NEXT_STATUS[app.status];
-          const nextLabel = COLUMNS.find((c) => c.status === nextStatus)?.label;
-          const statusCol = COLUMNS.find((c) => c.status === app.status);
+    <Flex direction="column" style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
+      {apps.map((app, i) => {
+        const displayName = app.companyName ?? app.jobId;
+        const displayTitle = app.jobTitle ?? "Job application";
+        const initials = companyInitials(displayName);
+        const nextStatus = NEXT_STATUS[app.status];
+        const nextLabel = COLUMNS.find((c) => c.status === nextStatus)?.label;
+        const statusCol = COLUMNS.find((c) => c.status === app.status);
 
-          return (
-            <Table.Row key={app.id}>
-              <Table.Cell>
-                <Flex align="center" gap="2">
-                  <Box
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 6,
-                      backgroundColor: "var(--accent-3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      fontWeight: 700,
-                      fontSize: 11,
-                      color: "var(--accent-11)",
-                    }}
-                  >
-                    {initials}
-                  </Box>
-                  <Text size="2" weight="medium">
-                    {app.companyName ?? "—"}
-                  </Text>
-                </Flex>
-              </Table.Cell>
-              <Table.Cell>
-                <Flex align="center" gap="1">
-                  <Text size="2">{displayTitle}</Text>
-                  {app.jobId.startsWith("http") && (
-                    <Tooltip content="Open job posting">
-                      <IconButton size="1" variant="ghost" color="gray" asChild>
-                        <a href={app.jobId} target="_blank" rel="noopener noreferrer">
-                          <ExternalLinkIcon />
-                        </a>
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Flex>
-              </Table.Cell>
-              <Table.Cell>
-                <Badge color={statusCol?.color ?? "gray"} variant="soft" size="1">
-                  {statusCol?.label ?? app.status}
-                </Badge>
-              </Table.Cell>
-              <Table.Cell>
-                <Text size="2" color="gray">
-                  {formatDate(app.createdAt)}
+        return (
+          <Flex
+            key={app.id}
+            align="center"
+            gap="3"
+            px="4"
+            py="3"
+            style={{
+              borderTop: i > 0 ? "1px solid var(--gray-6)" : undefined,
+              backgroundColor: "var(--color-surface)",
+            }}
+          >
+            {/* Avatar */}
+            <Box
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                backgroundColor: "var(--accent-3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                fontWeight: 700,
+                fontSize: 11,
+                color: "var(--accent-11)",
+              }}
+            >
+              {initials}
+            </Box>
+
+            {/* Company + role */}
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Flex align="center" gap="1">
+                <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {displayTitle}
                 </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger>
-                    <IconButton size="1" variant="ghost" color="gray">
-                      <DotsHorizontalIcon />
+                {app.jobId.startsWith("http") && (
+                  <Tooltip content="Open job posting">
+                    <IconButton size="1" variant="ghost" color="gray" asChild>
+                      <a href={app.jobId} target="_blank" rel="noopener noreferrer">
+                        <ExternalLinkIcon />
+                      </a>
                     </IconButton>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content size="1">
-                    {nextStatus && nextLabel && (
-                      <DropdownMenu.Item onClick={() => onMove(app.id, nextStatus)}>
-                        <ArrowRightIcon />
-                        Move to {nextLabel}
-                      </DropdownMenu.Item>
-                    )}
-                    {app.status !== "rejected" && (
-                      <DropdownMenu.Item color="red" onClick={() => onReject(app.id)}>
-                        Mark Rejected
-                      </DropdownMenu.Item>
-                    )}
-                    {app.status === "rejected" && (
-                      <DropdownMenu.Item onClick={() => onMove(app.id, "pending")}>
-                        Restore to Saved
-                      </DropdownMenu.Item>
-                    )}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
-              </Table.Cell>
-            </Table.Row>
-          );
-        })}
-      </Table.Body>
-    </Table.Root>
+                  </Tooltip>
+                )}
+              </Flex>
+              <Text size="1" color="gray">
+                {app.companyName ?? "—"} · {formatDate(app.createdAt)}
+              </Text>
+            </Box>
+
+            {/* Status badge */}
+            <Badge color={statusCol?.color ?? "gray"} variant="soft" size="1" style={{ flexShrink: 0 }}>
+              {statusCol?.label ?? app.status}
+            </Badge>
+
+            {/* Actions */}
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                <IconButton size="1" variant="ghost" color="gray">
+                  <DotsHorizontalIcon />
+                </IconButton>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content size="1">
+                {nextStatus && nextLabel && (
+                  <DropdownMenu.Item onClick={() => onMove(app.id, nextStatus)}>
+                    <ArrowRightIcon />
+                    Move to {nextLabel}
+                  </DropdownMenu.Item>
+                )}
+                {app.status !== "rejected" && (
+                  <DropdownMenu.Item color="red" onClick={() => onReject(app.id)}>
+                    Mark Rejected
+                  </DropdownMenu.Item>
+                )}
+                {app.status === "rejected" && (
+                  <DropdownMenu.Item onClick={() => onMove(app.id, "pending")}>
+                    Restore to Saved
+                  </DropdownMenu.Item>
+                )}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </Flex>
+        );
+      })}
+    </Flex>
   );
 }
 
@@ -354,28 +348,11 @@ export default function ApplicationsPage() {
 
       {/* Loading */}
       {user && loading && (
-        <Table.Root variant="surface">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Company</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Role</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Applied</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell />
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Table.Row key={i}>
-                <Table.Cell><Skeleton height="20px" width="120px" /></Table.Cell>
-                <Table.Cell><Skeleton height="20px" width="180px" /></Table.Cell>
-                <Table.Cell><Skeleton height="20px" width="80px" /></Table.Cell>
-                <Table.Cell><Skeleton height="20px" width="60px" /></Table.Cell>
-                <Table.Cell><Skeleton height="20px" width="24px" /></Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+        <Flex direction="column" gap="3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} height="52px" />
+          ))}
+        </Flex>
       )}
 
       {/* Empty state */}
@@ -396,9 +373,9 @@ export default function ApplicationsPage() {
         </Card>
       )}
 
-      {/* Applications table */}
+      {/* Applications list */}
       {user && !loading && total > 0 && (
-        <ApplicationsTable
+        <ApplicationsList
           apps={apps}
           onMove={handleMove}
           onReject={handleReject}

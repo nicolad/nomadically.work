@@ -13,7 +13,6 @@ import {
   Badge,
   Skeleton,
   IconButton,
-  Tooltip,
   DropdownMenu,
 } from "@radix-ui/themes";
 import {
@@ -121,20 +120,25 @@ function ApplicationsList({
 
             {/* Company + role */}
             <Box style={{ flex: 1, minWidth: 0 }}>
-              <Flex align="center" gap="1">
+              {app.jobId.startsWith("http") ? (
+                <a
+                  href={app.jobId}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: "none" }}
+                >
+                  <Flex align="center" gap="1">
+                    <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {displayTitle}
+                    </Text>
+                    <ExternalLinkIcon style={{ flexShrink: 0, color: "var(--gray-9)" }} />
+                  </Flex>
+                </a>
+              ) : (
                 <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {displayTitle}
                 </Text>
-                {app.jobId.startsWith("http") && (
-                  <Tooltip content="Open job posting">
-                    <IconButton size="1" variant="ghost" color="gray" asChild>
-                      <a href={app.jobId} target="_blank" rel="noopener noreferrer">
-                        <ExternalLinkIcon />
-                      </a>
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Flex>
+              )}
               <Text size="1" color="gray">
                 {app.companyName ?? "—"} · {formatDate(app.createdAt)}
               </Text>

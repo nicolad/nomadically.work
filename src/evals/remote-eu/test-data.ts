@@ -30,7 +30,7 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
   },
   {
     id: "emea-vs-eu-1",
-    description: "EMEA includes non-EU countries (should be false)",
+    description: "EMEA includes EU as primary work region",
     jobPosting: {
       title: "Product Manager",
       location: "Remote - EMEA",
@@ -38,10 +38,10 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
         "Looking for candidates across EMEA region including UK, Switzerland, and Middle East.",
     },
     expectedClassification: {
-      isRemoteEU: false,
-      confidence: "high",
+      isRemoteEU: true,
+      confidence: "medium",
       reason:
-        "EMEA includes non-EU countries like UK post-Brexit, Switzerland, Middle East",
+        "EU is the primary work region within EMEA",
     },
   },
   {
@@ -167,16 +167,16 @@ export const remoteEUTestCases: RemoteEUTestCase[] = [
   },
   {
     id: "europe-ambiguous-1",
-    description: "Europe (too ambiguous without context)",
+    description: "Europe (most European remote roles accept EU candidates)",
     jobPosting: {
       title: "Product Designer",
       location: "Remote - Europe",
       description: "Looking for talented designers based anywhere in Europe.",
     },
     expectedClassification: {
-      isRemoteEU: false,
-      confidence: "low",
-      reason: "Europe is too broad - includes non-EU countries",
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Most European remote roles accept EU candidates",
     },
   },
   {

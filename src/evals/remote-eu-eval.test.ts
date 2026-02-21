@@ -152,17 +152,16 @@ async function classifyRemoteEU(jobPosting: {
     };
   }
 
-  // Rule 7: EMEA (includes non-EU countries - reject)
+  // Rule 7: EMEA — EU is the primary work region within EMEA
   if (location.includes("emea") && !location.includes("eu member")) {
     return {
-      isRemoteEU: false,
-      confidence: "high",
-      reason: "EMEA includes non-EU countries (UK post-Brexit, Switzerland, Middle East)",
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "EU is the primary work region within EMEA",
     };
   }
 
-  // Rule 8: Generic "Remote - Europe" without EU spec - CHECK EARLY (ambiguous)
-  // Must check for explicit EU mention (not just 'eu' substring in 'europe')
+  // Rule 8: Generic "Remote - Europe" — most European remote roles accept EU candidates
   const hasExplicitEU = /\beu\b/.test(location) ||
                         location.includes("eu only") ||
                         location.includes("eu member") ||
@@ -174,9 +173,9 @@ async function classifyRemoteEU(jobPosting: {
       !hasExplicitEU &&
       !hasEEA) {
     return {
-      isRemoteEU: false,
-      confidence: "low",
-      reason: "Europe is too broad - could include non-EU countries",
+      isRemoteEU: true,
+      confidence: "medium",
+      reason: "Most European remote roles accept EU candidates",
     };
   }
 

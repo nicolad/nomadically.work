@@ -1,4 +1,4 @@
-import { jobs } from "@/db/schema";
+import { jobs, jobSkillTags, skillAliases } from "@/db/schema";
 import {
   eq,
   and,
@@ -14,6 +14,36 @@ import {
 } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import { EXCLUDED_LOCATIONS, EXCLUDED_COUNTRIES } from "./constants";
+import { SKILL_LABELS } from "@/lib/skills/taxonomy";
+
+/**
+ * Map short skill inputs to LIKE keywords for title/description fallback.
+ * Used when job_skill_tags table has no matching data yet.
+ */
+const SKILL_KEYWORDS: Record<string, string[]> = {
+  react: ["react"],
+  ai: ["ai ", " ai,", " ai/", "artificial intelligence", "machine learning", " ml ", " ml,", "llm", "genai", "gen ai", "deep learning"],
+  typescript: ["typescript"],
+  javascript: ["javascript"],
+  python: ["python"],
+  java: [" java ", " java,"],
+  go: [" go ", " go,", "golang"],
+  rust: [" rust ", " rust,"],
+  vue: ["vue.js", "vuejs", " vue "],
+  angular: ["angular"],
+  nextjs: ["next.js", "nextjs"],
+  nodejs: ["node.js", "nodejs"],
+  graphql: ["graphql"],
+  docker: ["docker"],
+  kubernetes: ["kubernetes", "k8s"],
+  aws: [" aws ", " aws,", "amazon web services"],
+  gcp: [" gcp ", " gcp,", "google cloud"],
+  azure: ["azure"],
+  terraform: ["terraform"],
+  postgresql: ["postgresql", "postgres"],
+  mongodb: ["mongodb"],
+  redis: ["redis"],
+};
 
 export async function jobsQuery(
   _parent: any,
@@ -25,6 +55,7 @@ export async function jobsQuery(
     excludedCompanies?: string[];
     isRemoteEu?: boolean;
     remoteEuConfidence?: string;
+    skills?: string[];
   },
   context: GraphQLContext,
 ) {
@@ -49,9 +80,9 @@ export async function jobsQuery(
       conditions.push(notInArray(jobs.company_key, args.excludedCompanies));
     }
 
-    // Filter to EU remote jobs only
+    // Filter to EU remote jobs: status is the canonical field set by the worker
     if (args.isRemoteEu === true) {
-      conditions.push(eq(jobs.is_remote_eu, true));
+      conditions.push(eq(jobs.status, "eu-remote"));
     }
 
     // Filter by minimum confidence level
@@ -81,6 +112,58 @@ export async function jobsQuery(
       conditions.push(
         or(isNull(jobs.country), notInArray(jobs.country, EXCLUDED_COUNTRIES))!,
       );
+    }
+
+    // Filter by skill tags: try job_skill_tags first, fall back to keyword LIKE
+    if (args.skills && args.skills.length > 0) {
+      const normalizedSkills = args.skills.map((s) => s.trim().toLowerCase());
+
+      // Resolve aliases to canonical tags
+      const aliasRows = await context.db
+        .select({ tag: skillAliases.tag })
+        .from(skillAliases)
+        .where(inArray(skillAliases.alias, normalizedSkills));
+
+      const canonicalTags = [
+        ...new Set([
+          ...aliasRows.map((r) => r.tag),
+          ...normalizedSkills,
+        ]),
+      ];
+
+      // Check if job_skill_tags has any matching data
+      const tagCount = await context.db
+        .select({ value: count() })
+        .from(jobSkillTags)
+        .where(inArray(jobSkillTags.tag, canonicalTags))
+        .then((r) => r[0]?.value ?? 0);
+
+      if (tagCount > 0) {
+        // Primary: subquery on job_skill_tags (precise, extracted skills)
+        const matchingJobIds = context.db
+          .selectDistinct({ job_id: jobSkillTags.job_id })
+          .from(jobSkillTags)
+          .where(inArray(jobSkillTags.tag, canonicalTags));
+
+        conditions.push(inArray(jobs.id, matchingJobIds));
+      } else {
+        // Fallback: keyword LIKE on title + description
+        const likeConditions: ReturnType<typeof like>[] = [];
+        for (const skill of normalizedSkills) {
+          const keywords = SKILL_KEYWORDS[skill] ?? [skill];
+          const label = SKILL_LABELS[skill];
+          if (label && !keywords.includes(label.toLowerCase())) {
+            keywords.push(label.toLowerCase());
+          }
+          for (const kw of keywords) {
+            likeConditions.push(like(jobs.title, `%${kw}%`));
+            likeConditions.push(like(jobs.description, `%${kw}%`));
+          }
+        }
+        if (likeConditions.length > 0) {
+          conditions.push(or(...likeConditions)!);
+        }
+      }
     }
 
     const whereClause =

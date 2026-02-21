@@ -86,6 +86,7 @@ SKILL_TAGS: frozenset[str] = frozenset({
 # langchain-cloudflare — Workers AI binding integration (PyPI)
 from langchain_cloudflare import ChatCloudflareWorkersAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
 
 # langgraph-checkpoint-cloudflare-d1 removed (saves ~8MB sqlalchemy).
 # CloudflareD1Saver checkpointing is best-effort and now a no-op.
@@ -1281,11 +1282,26 @@ _COUNTRY_NAME_TO_ISO: dict[str, str] = {
     # EEA
     "norway": "NO", "iceland": "IS", "liechtenstein": "LI",
     # Non-EU (for correct negative classification)
-    "united states": "US", "united kingdom": "GB", "switzerland": "CH",
+    "united states": "US", "usa": "US", "u.s.a.": "US", "u.s.": "US",
+    "united kingdom": "GB", "uk": "GB", "switzerland": "CH",
     "canada": "CA", "australia": "AU", "new zealand": "NZ",
     "japan": "JP", "singapore": "SG", "india": "IN", "brazil": "BR",
     "israel": "IL", "south korea": "KR", "china": "CN",
 }
+
+
+def _normalize_text_for_signals(text: str) -> str:
+    """Generic text normalization: dehyphenate compound words for regex matching.
+
+    Converts e.g. "work-from-anywhere" → "work from anywhere",
+    "remote-first" → "remote first", "location-agnostic" → "location agnostic".
+    Preserves actual hyphenated tokens like "on-site" which are also in patterns.
+    """
+    return re.sub(r"(?<=\w)-(?=\w)", " ", text)
+
+
+# Reusable langchain runnable for text normalization in LCEL chains
+normalize_signal_text = RunnableLambda(_normalize_text_for_signals)
 
 
 # Negative signal patterns — US-only, no-EU, Swiss-only
@@ -1404,10 +1420,31 @@ def _extract_eu_signals(job: dict) -> dict:
         except Exception:
             pass
 
+    # Fallback: extract country from location string (e.g. "USA | Remote", "US - Remote")
+    if not signals["country_code"] and location_lower:
+        for token in re.split(r"[|,/\-–—]+", location_lower):
+            token = token.strip().rstrip(".")
+            if not token or token == "remote":
+                continue
+            # Try dict lookup first (handles "usa" → "US", "uk" → "GB", etc.)
+            iso = _COUNTRY_NAME_TO_ISO.get(token)
+            if iso:
+                signals["country_code"] = iso
+                if iso in EU_ISO_CODES:
+                    signals["eu_country_code"] = True
+                break
+            # Then try raw 2-letter ISO code (e.g. "DE", "FR")
+            upper = token.upper()
+            if re.fullmatch(r"[A-Z]{2}", upper):
+                signals["country_code"] = upper
+                if upper in EU_ISO_CODES:
+                    signals["eu_country_code"] = True
+                break
+
     # Negative signals via regex on description
     desc = (job.get("description") or "")[:8000].lower()
     location = (job.get("location") or "").lower()
-    full_text = f"{location} {desc}"
+    full_text = _normalize_text_for_signals(f"{location} {desc}")
     for m in _NEGATIVE_EU_PATTERN.finditer(full_text):
         signals["negative_signals"].append(m.group(0))
 
@@ -1543,22 +1580,33 @@ def _keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
         )
 
     # Non-EU country but ATS remote + description signals worldwide/global scope
-    # → treat as worldwide remote
-    desc_lower = (job.get("description") or "").lower()
+    # Two tiers: explicit phrases auto-accept, vague phrases escalate to LLM
+    desc_lower = _normalize_text_for_signals((job.get("description") or "").lower())
     if signals["ats_remote"] and signals["country_code"] and not signals["eu_country_code"]:
-        _worldwide_pattern = re.compile(
-            r"\b(global(?:ly)?|worldwide|anywhere in the world|work from anywhere"
-            r"|distributed team|fully distributed|remote.first"
-            r"|remote.friendly|location.agnostic)\b",
+        # Tier A: Explicit "work from anywhere" phrases → auto-accept
+        _explicit_worldwide_pattern = re.compile(
+            r"\b(anywhere in the world|work from anywhere"
+            r"|location.agnostic|digital nomad)\b",
             re.IGNORECASE,
         )
-        worldwide_match = _worldwide_pattern.search(desc_lower)
-        if worldwide_match:
+        explicit_match = _explicit_worldwide_pattern.search(desc_lower)
+        if explicit_match:
             return JobClassification(
                 isRemoteEU=True,
                 confidence="medium",
-                reason=f"Heuristic: non-EU HQ ({signals['country_code']}) but worldwide remote ({worldwide_match.group(0)})",
+                reason=f"Heuristic: non-EU HQ ({signals['country_code']}) but worldwide remote ({explicit_match.group(0)})",
             )
+
+        # Tier B: Vague phrases (global, distributed, remote-first, etc.)
+        # → escalate to LLM for proper reasoning about EU eligibility
+        _vague_worldwide_pattern = re.compile(
+            r"\b(global(?:ly)?|worldwide|distributed team|fully distributed"
+            r"|remote.first|remote.friendly)\b",
+            re.IGNORECASE,
+        )
+        vague_match = _vague_worldwide_pattern.search(desc_lower)
+        if vague_match:
+            return None  # Ambiguous — let LLM reason about EU eligibility
 
     # Check description for explicit EU eligibility even without ATS signals
     if signals["ats_remote"]:
@@ -2082,6 +2130,8 @@ class Default(WorkerEntrypoint):
                 return await self.handle_tag(request, cors_headers)
             elif path == "classify":
                 return await self.handle_classify(request, cors_headers)
+            elif path == "classify-one":
+                return await self.handle_classify_one(request, cors_headers)
             elif path == "extract":
                 return await self.handle_extract(request, cors_headers)
             elif path == "process-sync":
@@ -2277,6 +2327,120 @@ class Default(WorkerEntrypoint):
         stats = await classify_unclassified_jobs(self.env.DB, self.env, limit)
         return Response.json(
             {"success": True, "message": f"Classified {stats['processed']} jobs", "stats": stats},
+            headers=cors_headers,
+        )
+
+    async def handle_classify_one(self, request, cors_headers: dict):
+        """Classify a single job by ID — called from the Next.js Re-classify button.
+
+        POST /classify-one
+        Body: { "job_id": <number> }
+        Response: { "success": true, "isRemoteEU": bool, "confidence": "...", "reason": "..." }
+
+        Runs the full signal-extraction + heuristic + LLM pipeline on the
+        requested job regardless of its current status, and saves the result
+        to D1 before returning.
+        """
+        try:
+            body   = to_py(await request.json())
+            job_id = body.get("job_id")
+        except Exception:
+            return Response.json(
+                {"success": False, "error": "Invalid JSON body — expected { job_id }"},
+                status=400,
+                headers=cors_headers,
+            )
+
+        if not job_id:
+            return Response.json(
+                {"success": False, "error": "Missing required field: job_id"},
+                status=400,
+                headers=cors_headers,
+            )
+
+        rows = await d1_all(
+            self.env.DB,
+            """SELECT id, title, location, description,
+                      country, workplace_type, offices, categories,
+                      ashby_is_remote, ashby_secondary_locations, ashby_address,
+                      source_kind
+               FROM jobs WHERE id = ? LIMIT 1""",
+            [job_id],
+        )
+
+        if not rows:
+            return Response.json(
+                {"success": False, "error": f"Job {job_id} not found"},
+                status=404,
+                headers=cors_headers,
+            )
+
+        job = rows[0]
+
+        api_key    = getattr(self.env, "DEEPSEEK_API_KEY", None) or getattr(self.env, "OPENAI_API_KEY", None)
+        base_url   = getattr(self.env, "DEEPSEEK_BASE_URL", None) or "https://api.deepseek.com/beta"
+        model      = getattr(self.env, "DEEPSEEK_MODEL", None) or "deepseek-chat"
+        ai_binding = getattr(self.env, "AI", None)
+
+        eu_signals   = _extract_eu_signals(job)
+        signals_text = _format_signals(eu_signals)
+
+        classification: JobClassification | None = None
+        wa_result:      JobClassification | None = None
+        source = "workers-ai"
+
+        heuristic_result = _keyword_eu_classify(job, eu_signals)
+        if heuristic_result is not None:
+            classification = heuristic_result
+            source = "heuristic"
+
+        if classification is None and ai_binding:
+            wa_result = await classify_with_workers_ai(job, ai_binding, signals_text)
+            if wa_result and wa_result.confidence == "high":
+                classification = wa_result
+
+        if classification is None and api_key:
+            classification = await classify_with_deepseek(job, api_key, base_url, model, signals_text)
+            source = "deepseek"
+
+        if classification is None and wa_result is not None:
+            classification = wa_result
+
+        if classification is None:
+            return Response.json(
+                {"success": False, "error": "Classification produced no result"},
+                status=500,
+                headers=cors_headers,
+            )
+
+        is_eu      = classification.isRemoteEU
+        confidence = classification.confidence
+        evidence   = f"title:{job.get('title','')[:100]} | loc:{job.get('location','N/A')[:80]}"
+        reason     = f"[{source}] {classification.reason} | evidence:{evidence}"
+        score      = {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence, 0.3)
+        job_status = JobStatus.EU_REMOTE.value if is_eu else JobStatus.NON_EU.value
+
+        await d1_run(
+            self.env.DB,
+            """
+            UPDATE jobs
+            SET score = ?, score_reason = ?, status = ?,
+                is_remote_eu = ?, remote_eu_confidence = ?, remote_eu_reason = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            [score, reason, job_status,
+             1 if is_eu else 0, confidence, classification.reason,
+             job_id],
+        )
+
+        return Response.json(
+            {
+                "success":    True,
+                "isRemoteEU": is_eu,
+                "confidence": confidence,
+                "reason":     classification.reason,
+            },
             headers=cors_headers,
         )
 

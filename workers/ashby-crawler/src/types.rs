@@ -9,6 +9,7 @@ pub enum AtsProvider {
     Ashby,
     Greenhouse,
     Lever,
+    Workable,
 }
 
 impl AtsProvider {
@@ -18,6 +19,7 @@ impl AtsProvider {
             AtsProvider::Ashby => "jobs.ashbyhq.com%2F*",
             AtsProvider::Greenhouse => "job-boards.greenhouse.io%2F*",
             AtsProvider::Lever => "jobs.lever.co%2F*",
+            AtsProvider::Workable => "apply.workable.com%2F*",
         }
     }
 
@@ -27,6 +29,7 @@ impl AtsProvider {
             AtsProvider::Ashby => "jobs.ashbyhq.com",
             AtsProvider::Greenhouse => "job-boards.greenhouse.io",
             AtsProvider::Lever => "jobs.lever.co",
+            AtsProvider::Workable => "apply.workable.com",
         }
     }
 
@@ -36,6 +39,7 @@ impl AtsProvider {
             AtsProvider::Ashby => format!("https://jobs.ashbyhq.com/{}", token),
             AtsProvider::Greenhouse => format!("https://job-boards.greenhouse.io/{}", token),
             AtsProvider::Lever => format!("https://jobs.lever.co/{}", token),
+            AtsProvider::Workable => format!("https://apply.workable.com/{}", token),
         }
     }
 
@@ -44,6 +48,7 @@ impl AtsProvider {
             AtsProvider::Ashby => "ashby",
             AtsProvider::Greenhouse => "greenhouse",
             AtsProvider::Lever => "lever",
+            AtsProvider::Workable => "workable",
         }
     }
 
@@ -52,6 +57,7 @@ impl AtsProvider {
             "ashby" => Some(AtsProvider::Ashby),
             "greenhouse" | "gh" => Some(AtsProvider::Greenhouse),
             "lever" | "lv" => Some(AtsProvider::Lever),
+            "workable" | "wb" => Some(AtsProvider::Workable),
             _ => None,
         }
     }

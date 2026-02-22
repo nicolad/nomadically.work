@@ -1,6 +1,7 @@
 import { jobs } from "@/db/schema";
 import type { GraphQLContext } from "../../context";
 import { eq, like } from "drizzle-orm";
+import { GraphQLError } from "graphql";
 import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
@@ -37,12 +38,10 @@ export async function enhanceJobFromATS(
     // Validate source
     const supportedSources = ["greenhouse", "ashby"];
     if (!supportedSources.includes(source.toLowerCase())) {
-      return {
-        success: false,
-        message: `ATS source "${source}" is not supported. Supported sources: ${supportedSources.join(", ")}`,
-        job: null,
-        enhancedData: null,
-      };
+      throw new GraphQLError(
+        `ATS source "${source}" is not supported. Supported sources: ${supportedSources.join(", ")}`,
+        { extensions: { code: "BAD_USER_INPUT" } },
+      );
     }
 
     // Find the job using indexed lookups (same strategy as the job query resolver)
@@ -74,15 +73,13 @@ export async function enhanceJobFromATS(
     const job = jobResults[0];
 
     if (!job) {
-      return {
-        success: false,
-        message: `Job not found with ID: ${jobId}`,
-        job: null,
-        enhancedData: null,
-      };
+      throw new GraphQLError(
+        `Job not found with ID: ${jobId}`,
+        { extensions: { code: "NOT_FOUND" } },
+      );
     }
 
-    let enhancedData: any;
+    let atsData: any;
     let updatedJob: any;
 
     // Fetch and save enhanced data based on ATS source
@@ -93,13 +90,13 @@ export async function enhanceJobFromATS(
         `🔄 [Enhance Job] Fetching Greenhouse data for job ${jobId} from ${jobBoardUrl}`,
       );
 
-      enhancedData = await fetchGreenhouseJobPost(jobBoardUrl);
+      atsData = await fetchGreenhouseJobPost(jobBoardUrl);
 
       // Save the enhanced data to the database
       updatedJob = await saveGreenhouseJobData(
         context.db,
         job.id,
-        enhancedData,
+        atsData,
       );
 
       console.log(
@@ -113,7 +110,7 @@ export async function enhanceJobFromATS(
         `🔄 [Enhance Job] Fetching Ashby data for job ${jobId} from board ${company}`,
       );
 
-      enhancedData = await fetchAshbyJobPostFromUrl(ashbyUrl, {
+      atsData = await fetchAshbyJobPostFromUrl(ashbyUrl, {
         includeCompensation: true,
       });
 
@@ -121,7 +118,7 @@ export async function enhanceJobFromATS(
       updatedJob = await saveAshbyJobData(
         context.db,
         job.id,
-        enhancedData,
+        atsData,
         company,
       );
 
@@ -132,44 +129,41 @@ export async function enhanceJobFromATS(
       success: true,
       message: `Job enhanced successfully from ${source}`,
       job: updatedJob,
-      enhancedData,
     };
   } catch (error) {
+    // Re-throw GraphQLErrors as-is (validation / not-found above)
+    if (error instanceof GraphQLError) throw error;
+
     console.error("❌ [Enhance Job] Error enhancing job:", error);
     if (error instanceof Error && error.cause) {
       console.error("❌ [Enhance Job] Root cause:", error.cause);
     }
 
-    // Provide more specific error messages — surface root cause from Drizzle wrapper
+    // Map ATS HTTP errors to GraphQL errors with codes
     let errorMessage = "Failed to enhance job";
+    let code = "ATS_ERROR";
+
     if (error instanceof Error) {
-      // DrizzleQueryError wraps the actual D1 error as `cause`
       const rootCause = error.cause instanceof Error ? error.cause.message : String(error.cause ?? "");
       errorMessage = rootCause || error.message;
 
-      // Handle specific error cases
       if (error.message.includes("404")) {
         errorMessage = `Job not found in ${args.source} ATS. Please verify the job ID and company name.`;
-      } else if (
-        error.message.includes("403") ||
-        error.message.includes("401")
-      ) {
+        code = "NOT_FOUND";
+      } else if (error.message.includes("403") || error.message.includes("401")) {
         errorMessage = `Access denied by ${args.source} ATS. The job may be private or the API credentials may be invalid.`;
+        code = "FORBIDDEN";
       } else if (error.message.includes("429")) {
         errorMessage = `Rate limit exceeded on ${args.source} ATS. Please try again later.`;
-      } else if (
-        error.message.includes("500") ||
-        error.message.includes("503")
-      ) {
+        code = "RATE_LIMITED";
+      } else if (error.message.includes("500") || error.message.includes("503")) {
         errorMessage = `${args.source} ATS is experiencing issues. Please try again later.`;
+        code = "ATS_UNAVAILABLE";
       }
     }
 
-    return {
-      success: false,
-      message: errorMessage,
-      job: null,
-      enhancedData: null,
-    };
+    throw new GraphQLError(errorMessage, {
+      extensions: { code, source: args.source, jobId: args.jobId },
+    });
   }
 }

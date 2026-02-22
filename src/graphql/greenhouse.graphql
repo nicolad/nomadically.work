@@ -23,7 +23,7 @@ query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
       location
       url
       description
-      posted_at
+      publishedAt
       score
       score_reason
       is_remote_eu
@@ -59,7 +59,7 @@ query GetGreenhouseJobById($id: String!) {
     location
     url
     description
-    posted_at
+    publishedAt
     score
     score_reason
     is_remote_eu
@@ -99,7 +99,7 @@ mutation EnhanceJobFromATS(
       location
       url
       description
-      posted_at
+      publishedAt
       score
       score_reason
       is_remote_eu
@@ -117,7 +117,7 @@ mutation EnhanceJobFromATS(
       internal_job_id
       requisition_id
       company_name
-      first_published
+      publishedAt
       language
       metadata {
         id
@@ -194,6 +194,5 @@ mutation EnhanceJobFromATS(
       created_at
       updated_at
     }
-    enhancedData
   }
 }

@@ -353,25 +353,6 @@ export type EnhanceCompanyResponse = {
 /** Response from enhancing a job with ATS data */
 export type EnhanceJobResponse = {
   __typename?: 'EnhanceJobResponse';
-  /**
-   * Raw enhanced data from the ATS API (Greenhouse or Ashby).
-   *
-   * Greenhouse data includes:
-   * - content: Full HTML job description
-   * - departments: Array of department objects with id, name, child_ids, parent_id
-   * - offices: Array of office objects with id, name, location, child_ids, parent_id
-   * - questions: Application form questions
-   * - metadata: Custom fields
-   * - compliance: Compliance questions
-   * - demographic_questions: EEOC/diversity questions
-   *
-   * Ashby data includes:
-   * - department, team, employment type
-   * - compensation tiers and summary
-   * - secondary locations and address
-   * - remote status
-   */
-  enhancedData: Maybe<Scalars['JSON']['output']>;
   /** The updated job record with enhanced data from the ATS */
   job: Maybe<Job>;
   /** Human-readable message about the operation result */
@@ -490,7 +471,6 @@ export type Job = {
   ashby_is_listed: Maybe<Scalars['Boolean']['output']>;
   ashby_is_remote: Maybe<Scalars['Boolean']['output']>;
   ashby_job_url: Maybe<Scalars['String']['output']>;
-  ashby_published_at: Maybe<Scalars['String']['output']>;
   ashby_secondary_locations: Maybe<Array<AshbySecondaryLocation>>;
   ashby_team: Maybe<Scalars['String']['output']>;
   company: Maybe<Company>;
@@ -504,7 +484,6 @@ export type Job = {
   departments: Maybe<Array<GreenhouseDepartment>>;
   description: Maybe<Scalars['String']['output']>;
   external_id: Scalars['String']['output'];
-  first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
   internal_job_id: Maybe<Scalars['String']['output']>;
   /** Whether this job is classified as Remote EU — read directly from the DB column. */
@@ -514,7 +493,12 @@ export type Job = {
   location_questions: Maybe<Array<GreenhouseQuestion>>;
   metadata: Maybe<Array<GreenhouseMetadata>>;
   offices: Maybe<Array<GreenhouseOffice>>;
-  posted_at: Scalars['String']['output'];
+  /**
+   * Canonical publication date. All ATS sources (Greenhouse, Ashby)
+   * write to the unified first_published DB column at ingestion time.
+   * Falls back to posted_at (ingestion timestamp) when no ATS date exists.
+   */
+  publishedAt: Scalars['String']['output'];
   questions: Maybe<Array<GreenhouseQuestion>>;
   remote_eu_confidence: Maybe<ClassificationConfidence>;
   remote_eu_reason: Maybe<Scalars['String']['output']>;
@@ -1671,7 +1655,6 @@ export type EnhanceCompanyResponseResolvers<ContextType = GraphQLContext, Parent
 };
 
 export type EnhanceJobResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EnhanceJobResponse'] = ResolversParentTypes['EnhanceJobResponse']> = {
-  enhancedData?: Resolver<Maybe<ResolversTypes['JSON']>, ParentType, ContextType>;
   job?: Resolver<Maybe<ResolversTypes['Job']>, ParentType, ContextType>;
   message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -1760,7 +1743,6 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   ashby_is_listed?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
   ashby_is_remote?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
   ashby_job_url?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  ashby_published_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   ashby_secondary_locations?: Resolver<Maybe<Array<ResolversTypes['AshbySecondaryLocation']>>, ParentType, ContextType>;
   ashby_team?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   company?: Resolver<Maybe<ResolversTypes['Company']>, ParentType, ContextType>;
@@ -1774,7 +1756,6 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   departments?: Resolver<Maybe<Array<ResolversTypes['GreenhouseDepartment']>>, ParentType, ContextType>;
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   external_id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  first_published?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   internal_job_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   is_remote_eu?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -1783,7 +1764,7 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   location_questions?: Resolver<Maybe<Array<ResolversTypes['GreenhouseQuestion']>>, ParentType, ContextType>;
   metadata?: Resolver<Maybe<Array<ResolversTypes['GreenhouseMetadata']>>, ParentType, ContextType>;
   offices?: Resolver<Maybe<Array<ResolversTypes['GreenhouseOffice']>>, ParentType, ContextType>;
-  posted_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  publishedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   questions?: Resolver<Maybe<Array<ResolversTypes['GreenhouseQuestion']>>, ParentType, ContextType>;
   remote_eu_confidence?: Resolver<Maybe<ResolversTypes['ClassificationConfidence']>, ParentType, ContextType>;
   remote_eu_reason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;

@@ -101,8 +101,8 @@ const Job: JobResolvers<GraphQLContext, Job> = {
   company_name(parent) {
     return parent.company_name || null;
   },
-  first_published(parent) {
-    return parent.first_published || null;
+  publishedAt(parent) {
+    return parent.first_published || parent.posted_at;
   },
   language(parent) {
     return parent.language || null;
@@ -194,9 +194,6 @@ const Job: JobResolvers<GraphQLContext, Job> = {
   },
   ashby_is_listed(parent) {
     return parent.ashby_is_listed ?? null;
-  },
-  ashby_published_at(parent) {
-    return parent.ashby_published_at || null;
   },
   ashby_job_url(parent) {
     return parent.ashby_job_url || null;

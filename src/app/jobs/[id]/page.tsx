@@ -27,8 +27,9 @@ import {
   Link as RadixLink,
   IconButton,
   Tooltip,
+  Callout,
 } from "@radix-ui/themes";
-import { TrashIcon, BookmarkIcon, BookmarkFilledIcon, ExternalLinkIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { TrashIcon, BookmarkIcon, BookmarkFilledIcon, ExternalLinkIcon, ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-hooks";
@@ -54,6 +55,7 @@ function JobPageContent() {
   );
   const [hideCompanyLoading, setHideCompanyLoading] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [enhanceError, setEnhanceError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const { data, loading, error, refetch } = useGetJobQuery({
@@ -174,8 +176,8 @@ function JobPageContent() {
     }
 
     setEnhancing(true);
+    setEnhanceError(null);
     try {
-      // Use GraphQL mutation to enhance the job
       const result = await enhanceJobMutation({
         variables: {
           jobId: id,
@@ -185,14 +187,18 @@ function JobPageContent() {
       });
 
       if (result.data?.enhanceJobFromATS?.success) {
-        // Refetch the job to get updated data from the backend
         await refetch();
       } else {
-        const errorMsg =
-          result.data?.enhanceJobFromATS?.message || "Failed to enhance job";
+        setEnhanceError(
+          result.data?.enhanceJobFromATS?.message || "Failed to enhance job",
+        );
       }
-    } catch (error) {
-      console.error("Error enhancing job:", error);
+    } catch (error: any) {
+      const gqlMessage =
+        error?.graphQLErrors?.[0]?.message ??
+        error?.message ??
+        "Failed to enhance job";
+      setEnhanceError(gqlMessage);
     } finally {
       setEnhancing(false);
     }
@@ -541,6 +547,14 @@ function JobPageContent() {
               {enhancing ? "Enhancing..." : `Enhance Job (${source})`}
             </Button>
           )}
+          {enhanceError && (
+            <Callout.Root color="red" size="1">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text>{enhanceError}</Callout.Text>
+            </Callout.Root>
+          )}
           {(job.ashby_job_url || job.url) && (
             <Button asChild size="3" variant="outline">
               <a
@@ -639,15 +653,6 @@ function JobPageContent() {
                           isRemote:
                         </Text>{" "}
                         {job.ashby_is_remote ? "Yes ✅" : "No"}
-                      </Text>
-                    )}
-
-                    {job.ashby_published_at && (
-                      <Text size="2">
-                        <Text weight="bold" as="span">
-                          publishedAt:
-                        </Text>{" "}
-                        {new Date(job.ashby_published_at).toLocaleDateString()}
                       </Text>
                     )}
 
@@ -979,14 +984,6 @@ function JobPageContent() {
                             Language:
                           </Text>{" "}
                           {job.language?.toUpperCase()}
-                        </Text>
-                      )}
-                      {job.first_published && (
-                        <Text size="2">
-                          <Text weight="bold" as="span">
-                            First Published:
-                          </Text>{" "}
-                          {new Date(job.first_published).toLocaleString()}
                         </Text>
                       )}
                       {job.updated_at && (
@@ -1542,12 +1539,12 @@ function JobPageContent() {
                   </Text>{" "}
                   {job.source_kind}
                 </Text>
-                {job.posted_at && (
+                {job.publishedAt && (
                   <Text size="2" color="gray">
                     <Text weight="medium" as="span">
-                      Posted:
+                      Published:
                     </Text>{" "}
-                    {new Date(job.posted_at).toLocaleDateString()}
+                    {new Date(job.publishedAt).toLocaleDateString()}
                   </Text>
                 )}
                 {job.created_at && (
@@ -1603,9 +1600,9 @@ function JobPageContent() {
                         </Text>
                       )}
                     </Flex>
-                    {rj.posted_at && (
+                    {rj.publishedAt && (
                       <Text size="1" color="gray" style={{ whiteSpace: "nowrap" }}>
-                        {new Date(rj.posted_at).toLocaleDateString()}
+                        {new Date(rj.publishedAt).toLocaleDateString()}
                       </Text>
                     )}
                   </Flex>

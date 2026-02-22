@@ -24,7 +24,7 @@ query GetJobs(
       title
       location
       url
-      posted_at
+      publishedAt
       status
       is_remote_eu
       remote_eu_confidence

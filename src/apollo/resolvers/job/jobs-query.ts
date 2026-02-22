@@ -11,6 +11,7 @@ import {
   inArray,
   isNull,
   count,
+  sql,
 } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import type { QueryJobsArgs } from "@/__generated__/resolvers-types";
@@ -102,6 +103,7 @@ export async function jobsQuery(
         location: jobs.location,
         url: jobs.url,
         posted_at: jobs.posted_at,
+        first_published: jobs.first_published,
         status: jobs.status,
         is_remote_eu: jobs.is_remote_eu,
         score: jobs.score,
@@ -109,7 +111,7 @@ export async function jobsQuery(
       })
       .from(jobs)
       .where(whereClause)
-      .orderBy(desc(jobs.posted_at), desc(jobs.created_at))
+      .orderBy(desc(sql`COALESCE(${jobs.first_published}, ${jobs.posted_at})`), desc(jobs.created_at))
       .limit(fetchLimit)
       .offset(offset);
 

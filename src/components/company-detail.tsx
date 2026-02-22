@@ -379,10 +379,12 @@ export function CompanyDetail({ companyKey }: Props) {
 
   const company = data?.company ?? null;
 
-  const { data: jobsData } = useGetJobsQuery({
+  const { data: jobsData, loading: jobsLoading } = useGetJobsQuery({
     variables: { search: companyKey, limit: 100, status: "active" },
   });
-  const companyJobs = jobsData?.jobs?.jobs ?? [];
+  const companyJobs = (jobsData?.jobs?.jobs ?? []).filter(
+    (j) => j.company_key === companyKey,
+  );
 
   const websiteHref = useMemo(
     () => coerceExternalUrl(company?.website),
@@ -437,14 +439,92 @@ export function CompanyDetail({ companyKey }: Props) {
   }
 
   if (!company) {
+    if (jobsLoading) {
+      return (
+        <Container size="3" p={{ initial: "4", md: "6" }}>
+          <Text color="gray">Loading company details…</Text>
+        </Container>
+      );
+    }
+
+    if (companyJobs.length === 0) {
+      return (
+        <Container size="3" p={{ initial: "4", md: "6" }}>
+          <Callout.Root>
+            <Callout.Icon>
+              <InfoCircledIcon />
+            </Callout.Icon>
+            <Callout.Text>Company not found.</Callout.Text>
+          </Callout.Root>
+        </Container>
+      );
+    }
+
+    // No company record but jobs exist — show a minimal page
     return (
       <Container size="3" p={{ initial: "4", md: "6" }}>
-        <Callout.Root>
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>Company not found.</Callout.Text>
-        </Callout.Root>
+        <Flex direction="column" gap="5">
+          <Heading size="8" style={{ textTransform: "capitalize" }}>
+            {companyKey}
+          </Heading>
+          <SectionCard title={`Jobs (${companyJobs.length})`}>
+            <Flex direction="column">
+              {companyJobs.map((job, idx) => {
+                const jobId = extractJobSlug(job.external_id, job.id);
+                const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
+                return (
+                  <Box key={job.id}>
+                    <Link
+                      href={jobHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none", color: "inherit" }}
+                    >
+                      <Flex
+                        justify="between"
+                        align="center"
+                        gap="4"
+                        py="2"
+                        style={{ cursor: "pointer" }}
+                      >
+                        <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
+                          <Text
+                            size="3"
+                            weight="medium"
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {job.title}
+                          </Text>
+                          {job.location && (
+                            <Text size="2" color="gray">
+                              {job.location}
+                            </Text>
+                          )}
+                        </Flex>
+                        {job.publishedAt && (
+                          <Text
+                            size="1"
+                            color="gray"
+                            style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                          >
+                            {new Date(job.publishedAt).toLocaleDateString()}
+                          </Text>
+                        )}
+                      </Flex>
+                    </Link>
+                    {idx < companyJobs.length - 1 ? (
+                      <Separator size="4" />
+                    ) : null}
+                  </Box>
+                );
+              })}
+            </Flex>
+          </SectionCard>
+        </Flex>
       </Container>
     );
   }
@@ -782,9 +862,9 @@ export function CompanyDetail({ companyKey }: Props) {
                           </Text>
                         )}
                       </Flex>
-                      {job.posted_at && (
+                      {job.publishedAt && (
                         <Text size="1" color="gray" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {new Date(job.posted_at).toLocaleDateString()}
+                          {new Date(job.publishedAt).toLocaleDateString()}
                         </Text>
                       )}
                     </Flex>

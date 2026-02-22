@@ -732,6 +732,7 @@ def build_ashby_update(data: dict, board_name: str) -> tuple[list[str], list]:
     is_listed = data.get("isListed")
     _add("ashby_is_listed", (1 if is_listed else 0) if is_listed is not None else None)
     _add("ashby_published_at", data.get("publishedAt"))
+    _add("first_published", data.get("publishedAt"))
     _add("ashby_job_url", data.get("jobUrl"))
     _add("ashby_apply_url", data.get("applyUrl"))
     _add("ashby_secondary_locations", _json_col(data.get("secondaryLocations")))
@@ -858,6 +859,80 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
     print(
         f"✅ Enhancement complete: {stats['enhanced']} enhanced, "
         f"{stats['errors']} errors"
+    )
+    return stats
+
+
+async def backfill_first_published(db, limit: int = 100) -> dict:
+    """Backfill first_published for jobs that have ATS dates but are missing it.
+
+    Two steps:
+      1. SQL backfill: copy ashby_published_at → first_published (instant).
+      2. API backfill: fetch first_published from Greenhouse Board API
+         for Greenhouse jobs still missing it.
+    Does NOT change job status — safe to run on already-classified jobs.
+    """
+    stats = {"ashby_copied": 0, "greenhouse_fetched": 0, "errors": 0}
+
+    # Step 1 — Ashby: copy ashby_published_at → first_published
+    try:
+        result = await d1_run(
+            db,
+            """UPDATE jobs SET first_published = ashby_published_at,
+                              updated_at = datetime('now')
+               WHERE source_kind = 'ashby'
+                 AND ashby_published_at IS NOT NULL
+                 AND first_published IS NULL""",
+            [],
+        )
+        stats["ashby_copied"] = result.get("changes", 0) if isinstance(result, dict) else 0
+        print(f"✅ Ashby backfill: {stats['ashby_copied']} rows updated")
+    except Exception as e:
+        print(f"❌ Ashby backfill failed: {e}")
+        stats["errors"] += 1
+
+    # Step 2 — Greenhouse: fetch from API
+    rows = await d1_all(
+        db,
+        """SELECT id, external_id, company_key
+           FROM jobs
+           WHERE source_kind = 'greenhouse'
+             AND first_published IS NULL
+             AND status <> 'stale'
+           LIMIT ?""",
+        [limit],
+    )
+    print(f"📋 Found {len(rows)} Greenhouse jobs to backfill")
+
+    for job in rows:
+        parsed = parse_greenhouse_url(job["external_id"])
+        if not parsed:
+            print(f"  ⏭ {job['id']}: cannot parse external_id")
+            stats["errors"] += 1
+            continue
+
+        try:
+            data = await fetch_greenhouse_data(parsed["board_token"], parsed["job_post_id"])
+            fp = data.get("first_published")
+            if not fp:
+                print(f"  ⏭ {job['id']}: no first_published in API response")
+                continue
+
+            await d1_run(
+                db,
+                "UPDATE jobs SET first_published = ?, updated_at = datetime('now') WHERE id = ?",
+                [fp, job["id"]],
+            )
+            stats["greenhouse_fetched"] += 1
+            print(f"  ✓ {job['id']} → {fp}")
+            await sleep_ms(300)
+        except Exception as e:
+            print(f"  ✗ {job['id']}: {e}")
+            stats["errors"] += 1
+
+    print(
+        f"✅ Backfill complete: {stats['ashby_copied']} Ashby, "
+        f"{stats['greenhouse_fetched']} Greenhouse, {stats['errors']} errors"
     )
     return stats
 
@@ -2124,7 +2199,9 @@ class Default(WorkerEntrypoint):
                         headers=cors_headers,
                     )
 
-            if path == "enhance":
+            if path == "backfill-published":
+                return await self.handle_backfill_published(request, cors_headers)
+            elif path == "enhance":
                 return await self.handle_enhance(request, cors_headers)
             elif path == "tag":
                 return await self.handle_tag(request, cors_headers)
@@ -2289,6 +2366,16 @@ class Default(WorkerEntrypoint):
 
         return Response.json(
             {"success": True, "message": f"Queued '{action}' for up to {limit} jobs", "queued": True},
+            headers=cors_headers,
+        )
+
+    async def handle_backfill_published(self, request, cors_headers: dict):
+        """Backfill first_published for jobs missing it (Ashby SQL copy + Greenhouse API fetch)."""
+        limit = await self._parse_limit(request)
+        stats = await backfill_first_published(self.env.DB, limit)
+        total = stats["ashby_copied"] + stats["greenhouse_fetched"]
+        return Response.json(
+            {"success": True, "message": f"Backfilled {total} jobs", "stats": stats},
             headers=cors_headers,
         )
 

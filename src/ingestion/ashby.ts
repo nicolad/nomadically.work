@@ -482,6 +482,7 @@ export async function saveAshbyJobData(
       ashby_is_remote: ashbyData.isRemote ?? undefined,
       ashby_is_listed: ashbyData.isListed ?? undefined,
       ashby_published_at: ashbyData.publishedAt || undefined,
+      first_published: ashbyData.publishedAt || undefined,
       ashby_job_url: ashbyData.jobUrl || undefined,
       ashby_apply_url: ashbyData.applyUrl || undefined,
       ashby_secondary_locations: ashbyData.secondaryLocations

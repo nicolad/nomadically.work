@@ -317,25 +317,6 @@ type EnhanceCompanyResponse {
 
 """Response from enhancing a job with ATS data"""
 type EnhanceJobResponse {
-  """
-  Raw enhanced data from the ATS API (Greenhouse or Ashby).
-  
-  Greenhouse data includes:
-  - content: Full HTML job description
-  - departments: Array of department objects with id, name, child_ids, parent_id
-  - offices: Array of office objects with id, name, location, child_ids, parent_id
-  - questions: Application form questions
-  - metadata: Custom fields
-  - compliance: Compliance questions
-  - demographic_questions: EEOC/diversity questions
-  
-  Ashby data includes:
-  - department, team, employment type
-  - compensation tiers and summary
-  - secondary locations and address
-  - remote status
-  """
-  enhancedData: JSON
   """The updated job record with enhanced data from the ATS"""
   job: Job
   """Human-readable message about the operation result"""
@@ -447,7 +428,6 @@ type Job {
   ashby_is_listed: Boolean
   ashby_is_remote: Boolean
   ashby_job_url: String
-  ashby_published_at: String
   ashby_secondary_locations: [AshbySecondaryLocation!]
   ashby_team: String
   company: Company
@@ -461,7 +441,6 @@ type Job {
   departments: [GreenhouseDepartment!]
   description: String
   external_id: String!
-  first_published: String
   id: Int!
   internal_job_id: String
   """
@@ -473,7 +452,12 @@ type Job {
   location_questions: [GreenhouseQuestion!]
   metadata: [GreenhouseMetadata!]
   offices: [GreenhouseOffice!]
-  posted_at: String!
+  """
+  Canonical publication date. All ATS sources (Greenhouse, Ashby)
+  write to the unified first_published DB column at ingestion time.
+  Falls back to posted_at (ingestion timestamp) when no ATS date exists.
+  """
+  publishedAt: String!
   questions: [GreenhouseQuestion!]
   remote_eu_confidence: ClassificationConfidence
   remote_eu_reason: String

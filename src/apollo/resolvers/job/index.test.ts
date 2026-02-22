@@ -1,5 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { GraphQLError } from "graphql";
 import { jobResolvers } from "./index";
+import { enhanceJobFromATS } from "./enhance-job";
+
+vi.mock("@/ingestion/ashby", () => ({
+  fetchAshbyJobPostFromUrl: vi.fn(),
+  saveAshbyJobData: vi.fn(),
+  parseAshbyJobUrl: vi.fn(),
+}));
+
+vi.mock("@/ingestion/greenhouse", () => ({
+  fetchGreenhouseJobPost: vi.fn(),
+  saveGreenhouseJobData: vi.fn(),
+}));
 
 // Minimal fake row returned by the DB mock
 const fakeJob = {
@@ -142,5 +155,143 @@ describe("job resolver — three-step lookup", () => {
       "[Job Resolver] Error fetching job:",
       dbError
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// publishedAt resolver
+// ---------------------------------------------------------------------------
+
+describe("Job.publishedAt field resolver", () => {
+  const resolve = (parent: any) =>
+    (jobResolvers.Job as any).publishedAt(parent);
+
+  it("returns first_published when available (Greenhouse)", () => {
+    expect(
+      resolve({
+        first_published: "2026-02-04T04:16:43-05:00",
+        posted_at: "2026-02-20T06:17:25.713Z",
+      }),
+    ).toBe("2026-02-04T04:16:43-05:00");
+  });
+
+  it("returns first_published for Ashby jobs (mapped from ashby publishedAt)", () => {
+    expect(
+      resolve({
+        first_published: "2023-03-09T17:44:00.817+00:00",
+        posted_at: "2026-02-20T06:17:25.713Z",
+      }),
+    ).toBe("2023-03-09T17:44:00.817+00:00");
+  });
+
+  it("falls back to posted_at when first_published is null", () => {
+    expect(
+      resolve({ first_published: null, posted_at: "2026-02-20T06:17:25.713Z" }),
+    ).toBe("2026-02-20T06:17:25.713Z");
+  });
+
+  it("falls back to posted_at when first_published is undefined", () => {
+    expect(resolve({ posted_at: "2026-01-01T00:00:00Z" })).toBe(
+      "2026-01-01T00:00:00Z",
+    );
+  });
+
+  it("falls back to posted_at when first_published is empty string", () => {
+    expect(
+      resolve({ first_published: "", posted_at: "2026-01-15T12:00:00Z" }),
+    ).toBe("2026-01-15T12:00:00Z");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// enhanceJobFromATS — GraphQL error handling
+// ---------------------------------------------------------------------------
+
+describe("enhanceJobFromATS error handling", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  it("throws BAD_USER_INPUT for unsupported ATS source", async () => {
+    const context = { db: {} } as any;
+    await expect(
+      enhanceJobFromATS(null, { jobId: "1", company: "x", source: "workday" }, context),
+    ).rejects.toThrow(GraphQLError);
+
+    try {
+      await enhanceJobFromATS(null, { jobId: "1", company: "x", source: "workday" }, context);
+    } catch (e: any) {
+      expect(e.extensions.code).toBe("BAD_USER_INPUT");
+    }
+  });
+
+  it("throws NOT_FOUND when job does not exist in DB", async () => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    const context = { db: { select: vi.fn().mockReturnValue(chain) } } as any;
+
+    await expect(
+      enhanceJobFromATS(null, { jobId: "nonexistent", company: "x", source: "ashby" }, context),
+    ).rejects.toThrow(GraphQLError);
+
+    try {
+      await enhanceJobFromATS(null, { jobId: "nonexistent", company: "x", source: "ashby" }, context);
+    } catch (e: any) {
+      expect(e.extensions.code).toBe("NOT_FOUND");
+      expect(e.message).toContain("nonexistent");
+    }
+  });
+
+  it("throws NOT_FOUND for 404 ATS errors", async () => {
+    const { fetchAshbyJobPostFromUrl } = await import("@/ingestion/ashby");
+    (fetchAshbyJobPostFromUrl as any).mockRejectedValue(
+      new Error("Ashby API failed: 404 Not Found"),
+    );
+
+    const fakeRow = { id: 1, external_id: "abc" };
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([fakeRow]),
+    };
+    const context = { db: { select: vi.fn().mockReturnValue(chain) } } as any;
+
+    try {
+      await enhanceJobFromATS(null, { jobId: "abc", company: "test", source: "ashby" }, context);
+      expect.unreachable("should have thrown");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(GraphQLError);
+      expect(e.extensions.code).toBe("NOT_FOUND");
+      expect(e.extensions.source).toBe("ashby");
+      expect(e.extensions.jobId).toBe("abc");
+    }
+  });
+
+  it("throws RATE_LIMITED for 429 ATS errors", async () => {
+    const { fetchAshbyJobPostFromUrl } = await import("@/ingestion/ashby");
+    (fetchAshbyJobPostFromUrl as any).mockRejectedValue(
+      new Error("429 Too Many Requests"),
+    );
+
+    const fakeRow = { id: 1, external_id: "abc" };
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([fakeRow]),
+    };
+    const context = { db: { select: vi.fn().mockReturnValue(chain) } } as any;
+
+    try {
+      await enhanceJobFromATS(null, { jobId: "abc", company: "test", source: "ashby" }, context);
+      expect.unreachable("should have thrown");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(GraphQLError);
+      expect(e.extensions.code).toBe("RATE_LIMITED");
+    }
   });
 });

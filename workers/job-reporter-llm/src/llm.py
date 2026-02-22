@@ -59,10 +59,13 @@ def _user_prompt(job: dict) -> str:
 
 def _parse(raw: str) -> dict:
     cleaned = re.sub(r"```(?:json)?|```", "", raw).strip()
-    match   = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if not match:
+    start   = cleaned.find("{")
+    if start == -1:
         raise ValueError(f"No JSON in response: {raw[:150]}")
-    p          = json.loads(match.group())
+    try:
+        p, _ = json.JSONDecoder().raw_decode(cleaned, start)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON decode failed: {exc} in: {raw[:150]}")
     reason     = p.get("reason", "").lower().strip()
     confidence = max(0.0, min(1.0, float(p.get("confidence", 0.5))))
     reasoning  = str(p.get("reasoning", "")).strip()[:500]
@@ -79,14 +82,18 @@ async def _call(gateway_url: str, api_key: str, model: str,
                 system: str, user: str) -> tuple[dict, str]:
     """Returns (parsed_result, raw_content)."""
     is_reasoner = model == MODEL_REASONER
+    extra = {"response_format": {"type": "json_object"}, "temperature": 0.1}
+    if is_reasoner:
+        # deepseek-reasoner doesn't support response_format; use temperature=1
+        # (only accepted value) to keep outputs deterministic
+        extra = {"temperature": 1}
     payload     = json.dumps({
         "model":    model,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user",   "content": user},
         ],
-        **({"response_format": {"type": "json_object"}, "temperature": 0.1}
-           if not is_reasoner else {}),
+        **extra,
         "max_tokens": 600 if is_reasoner else 400,
     })
 
@@ -201,7 +208,8 @@ async def analyze_reported_job(env, job: dict, lf: LangfuseClient) -> dict:
             result = result2
             result["tags"] = list(set(result.get("tags", []) + ["second_opinion"]))
 
-        except Exception:
+        except Exception as exc:
+            print(f"[llm] pass2 reasoner failed: {exc!s:.200}")
             result["tags"].append("reasoner_failed")
 
     # ── Scores (label_accuracy = 0.5 until admin decides) ─────────────────

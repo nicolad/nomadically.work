@@ -191,28 +191,6 @@ mutation EnhanceJobFromATS(
         demographic_data_consent_applies
       }
 
-      # Lever ATS fields
-      categories {
-        commitment
-        location
-        team
-        department
-        allLocations
-      }
-      workplace_type
-      country
-      opening
-      opening_plain
-      description_body
-      description_body_plain
-      additional
-      additional_plain
-      lists {
-        text
-        content
-      }
-      ats_created_at
-
       created_at
       updated_at
     }

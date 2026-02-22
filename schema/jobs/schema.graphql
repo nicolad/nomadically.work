@@ -33,15 +33,15 @@ extend type Mutation {
 
   Supported ATS sources:
   - greenhouse: Greenhouse ATS (https://greenhouse.io)
-  - lever: Lever ATS (https://lever.co)
+  - ashby: Ashby ATS (https://ashbyhq.com)
 
   For Greenhouse:
   - jobId: The job posting ID from the URL (e.g., "5802159004" from https://job-boards.greenhouse.io/grafanalabs/jobs/5802159004)
   - company: The board token (e.g., "grafanalabs")
 
-  For Lever:
-  - jobId: The posting ID (e.g., "5ac21346-8e0c-4494-8e7a-3eb92ff77902")
-  - company: The site name (e.g., "leverdemo")
+  For Ashby:
+  - jobId: The posting ID
+  - company: The board name
 
   The mutation will:
   1. Fetch comprehensive job data from the ATS API
@@ -50,9 +50,15 @@ extend type Mutation {
   """
   enhanceJobFromATS(
     jobId: String! # The unique job/posting ID from the ATS
-    company: String! # The company identifier (board_token for Greenhouse, site name for Lever)
-    source: String! # ATS source: "greenhouse" or "lever"
+    company: String! # The company identifier (board_token for Greenhouse, board name for Ashby)
+    source: String! # ATS source: "greenhouse" or "ashby"
   ): EnhanceJobResponse!
+  """
+  Report a job as irrelevant, spam, or incorrectly classified.
+  Sets the job status to "reported" so it can be reviewed or excluded.
+  Requires authentication.
+  """
+  reportJob(id: Int!): Job
 }
 
 type JobSkill {
@@ -81,7 +87,7 @@ type SkillMatch {
 type GreenhouseDepartment {
   id: String!
   name: String!
-  child_ids: [String!]!
+  child_ids: [String!]
   parent_id: String
 }
 
@@ -89,7 +95,7 @@ type GreenhouseOffice {
   id: String!
   name: String!
   location: String
-  child_ids: [String!]!
+  child_ids: [String!]
   parent_id: String
 }
 
@@ -102,14 +108,14 @@ type GreenhouseQuestion {
   description: String
   label: String!
   required: Boolean!
-  fields: [GreenhouseQuestionField!]!
+  fields: [GreenhouseQuestionField!]
 }
 
 type GreenhouseMetadata {
   id: String!
   name: String!
-  value: String!
-  value_type: String!
+  value: String
+  value_type: String
 }
 
 type GreenhouseDataCompliance {
@@ -175,22 +181,6 @@ type AshbyCompensation {
   summaryComponents: [AshbyCompensationComponent!]!
 }
 
-# Lever ATS types
-
-type LeverCategories {
-  commitment: String
-  location: String
-  team: String
-  department: String
-  allLocations: [String!]
-}
-
-type LeverList {
-  text: String!
-  content: String!
-}
-
-
 """
 Pipeline status for a job posting.
 Mirrors workers/process-jobs/src/entry.py JobStatus enum — values must stay in sync.
@@ -203,6 +193,7 @@ enum JobStatus {
   eu_remote
   non_eu
   error
+  reported
 }
 
 """
@@ -266,18 +257,6 @@ type Job {
   ashby_compensation: AshbyCompensation
   ashby_address: AshbyAddress
 
-  # Lever ATS fields (parsed from ats_data)
-  categories: LeverCategories
-  workplace_type: String # on-site, remote, hybrid, or unspecified
-  country: String # ISO 3166-1 alpha-2 country code
-  opening: String # Job description opening (HTML)
-  opening_plain: String # Job description opening (plaintext)
-  description_body: String # Job description body without opening (HTML)
-  description_body_plain: String # Job description body without opening (plaintext)
-  additional: String # Optional closing content (HTML)
-  additional_plain: String # Optional closing content (plaintext)
-  lists: [LeverList!] # Requirements, benefits, etc.
-  ats_created_at: String # When the posting was created in the ATS
   created_at: String!
   updated_at: String!
 }
@@ -375,7 +354,7 @@ type EnhanceJobResponse {
   """
   job: Job
   """
-  Raw enhanced data from the ATS API (Greenhouse or Lever).
+  Raw enhanced data from the ATS API (Greenhouse or Ashby).
 
   Greenhouse data includes:
   - content: Full HTML job description
@@ -386,13 +365,11 @@ type EnhanceJobResponse {
   - compliance: Compliance questions
   - demographic_questions: EEOC/diversity questions
 
-  Lever data includes:
-  - description: Combined job description (HTML)
-  - descriptionPlain: Description as plaintext
-  - categories: location, commitment, team, department
-  - lists: Requirements, benefits, etc.
-  - workplaceType: on-site, remote, hybrid, or unspecified
-  - salaryRange: Currency, interval, min, max
+  Ashby data includes:
+  - department, team, employment type
+  - compensation tiers and summary
+  - secondary locations and address
+  - remote status
   """
   enhancedData: JSON
 }

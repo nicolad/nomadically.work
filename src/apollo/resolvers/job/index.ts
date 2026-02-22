@@ -1,6 +1,6 @@
 import { jobs } from "@/db/schema";
 import type { Job } from "@/db/schema";
-import { eq, like } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import { isAdminEmail } from "@/lib/admin";
 import { jobsQuery } from "./jobs-query";
@@ -13,6 +13,26 @@ import type {
   MutationResolvers,
 } from "@/__generated__/resolvers-types";
 
+async function dispatchToReporter(payload: {
+  jobId: number;
+  reportedBy: string;
+  prevStatus: string;
+}): Promise<void> {
+  const url    = process.env.JOB_REPORTER_WORKER_URL;
+  const secret = process.env.JOB_REPORTER_WORKER_SECRET;
+  if (!url || !secret) return;
+  try {
+    await fetch(`${url}/api/report-job`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "X-Worker-Secret": secret },
+      body:    JSON.stringify(payload),
+      signal:  AbortSignal.timeout(3_000),
+    });
+  } catch (err) {
+    console.error("[reporter] dispatch failed:", err);
+  }
+}
+
 /** Map DB hyphenated status values to GraphQL enum values (underscored) */
 const STATUS_TO_ENUM: Record<string, string> = {
   [JOB_STATUS.NEW]: "new",
@@ -22,6 +42,7 @@ const STATUS_TO_ENUM: Record<string, string> = {
   [JOB_STATUS.EU_REMOTE]: "eu_remote",
   [JOB_STATUS.NON_EU]: "non_eu",
   [JOB_STATUS.ERROR]: "error",
+  [JOB_STATUS.REPORTED]: "reported",
 };
 
 /**
@@ -89,7 +110,12 @@ const Job: JobResolvers<GraphQLContext, Job> = {
   metadata(parent) {
     if (!parent.metadata) return [];
     try {
-      return JSON.parse(parent.metadata);
+      const parsed = JSON.parse(parent.metadata);
+      // Coerce non-string `value` fields to strings for GraphQL
+      return parsed.map((m: any) => ({
+        ...m,
+        value: m.value == null ? null : typeof m.value === 'string' ? m.value : JSON.stringify(m.value),
+      }));
     } catch {
       return [];
     }
@@ -222,54 +248,6 @@ const Job: JobResolvers<GraphQLContext, Job> = {
     }
   },
 
-  // Lever ATS field resolvers - read from individual columns
-  categories(parent) {
-    if (!parent.categories) return null;
-    try {
-      return typeof parent.categories === "string"
-        ? JSON.parse(parent.categories)
-        : parent.categories;
-    } catch {
-      return null;
-    }
-  },
-  workplace_type(parent) {
-    return parent.workplace_type || null;
-  },
-  country(parent) {
-    return parent.country || null;
-  },
-  opening(parent) {
-    return parent.opening || null;
-  },
-  opening_plain(parent) {
-    return parent.opening_plain || null;
-  },
-  description_body(parent) {
-    return parent.description_body || null;
-  },
-  description_body_plain(parent) {
-    return parent.description_body_plain || null;
-  },
-  additional(parent) {
-    return parent.additional || null;
-  },
-  additional_plain(parent) {
-    return parent.additional_plain || null;
-  },
-  lists(parent) {
-    if (!parent.lists) return [];
-    try {
-      return typeof parent.lists === "string"
-        ? JSON.parse(parent.lists)
-        : parent.lists;
-    } catch {
-      return [];
-    }
-  },
-  ats_created_at(parent) {
-    return parent.ats_created_at || null;
-  },
   async skillMatch(parent, _args, context) {
     if (!context.userId) return null;
 
@@ -326,7 +304,7 @@ const Query: QueryResolvers = {
   /**
    * Three-step lookup:
    *  1. Exact match on external_id — bare UUIDs (Ashby)
-   *  2. Suffix match on external_id — full URL IDs (Greenhouse/Lever)
+   *  2. Suffix match on external_id — full URL IDs (Greenhouse)
    *  3. Numeric match on integer `id` column — fallback for jobs whose
    *     external_id is a board-only URL (extractJobSlug falls back to job.id)
    */
@@ -343,11 +321,12 @@ const Query: QueryResolvers = {
         return exactResults[0] as any;
       }
 
-      // 2. Suffix match on external_id (Greenhouse/Lever URL-based IDs)
+      // 2. Suffix match on external_id (Greenhouse URL-based IDs)
+      //    Also handles external_ids with query strings (e.g. .../5040710007?gh_jid=...)
       const suffixResults = await context.db
         .select()
         .from(jobs)
-        .where(like(jobs.external_id, `%/${args.id}`))
+        .where(like(jobs.external_id, `%/${args.id}%`))
         .limit(1);
 
       if (suffixResults.length > 0) {
@@ -400,6 +379,37 @@ const Mutation: MutationResolvers = {
   enhanceJobFromATS: enhanceJobFromATS as MutationResolvers["enhanceJobFromATS"],
 
   processAllJobs: processAllJobs as MutationResolvers["processAllJobs"],
+
+  async reportJob(_parent, args, context) {
+    if (!context.userId) {
+      throw new Error("Unauthorized — sign in to report a job");
+    }
+
+    const [existing] = await context.db
+      .select({ status: jobs.status })
+      .from(jobs)
+      .where(eq(jobs.id, args.id))
+      .limit(1);
+
+    const result = await context.db
+      .update(jobs)
+      .set({ status: JOB_STATUS.REPORTED, updated_at: sql`datetime('now')` })
+      .where(eq(jobs.id, args.id))
+      .returning();
+
+    const updated = result[0] ?? null;
+
+    // Fire-and-forget — GraphQL response is not blocked
+    if (updated) {
+      dispatchToReporter({
+        jobId:      args.id,
+        reportedBy: context.userId,
+        prevStatus: existing?.status ?? "enhanced",
+      });
+    }
+
+    return updated as any;
+  },
 };
 
 export const jobResolvers = {

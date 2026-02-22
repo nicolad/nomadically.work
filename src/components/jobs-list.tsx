@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useGetJobsQuery,
   useDeleteJobMutation,
   useGetUserSettingsQuery,
+  useReportJobMutation,
 } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
 import { sortBy } from "lodash";
@@ -21,7 +22,7 @@ import {
   Spinner,
   IconButton,
 } from "@radix-ui/themes";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon, ExclamationTriangleIcon, EyeOpenIcon, EyeNoneIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSkillLabel } from "@/lib/skills/taxonomy";
 
@@ -40,6 +41,8 @@ const getStatusLabel = (status: Job["status"]): string => {
       return "not remote eu";
     case "enhanced":
       return "enhanced";
+    case "reported":
+      return "reported";
     default:
       return status ?? "unknown";
   }
@@ -61,8 +64,21 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteJobMutation] = useDeleteJobMutation();
+  const [reportJobMutation] = useReportJobMutation();
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const [hiddenCompanies, setHiddenCompanies] = useState<Set<string>>(new Set());
+
+  const toggleCompany = useCallback((key: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setHiddenCompanies((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const { data: userSettingsData } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
@@ -88,15 +104,28 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
     }
   };
 
+  const handleReportJob = async (jobId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await reportJobMutation({
+        variables: { id: jobId },
+        refetchQueries: ["GetJobs"],
+        awaitRefetchQueries: true,
+      });
+    } catch (error) {
+      console.error("Error reporting job:", error);
+    }
+  };
+
   const queryVariables = useMemo(
     () => ({
       search: searchFilter || undefined,
       limit: 20,
       offset: 0,
+      isRemoteEu: isRemoteEu || undefined,
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
-      isRemoteEu: isRemoteEu || undefined,
-      skills: preferredSkills.length > 0 ? preferredSkills : undefined,
     }),
     [searchFilter, excludedCompanies, isRemoteEu, preferredSkills],
   );
@@ -158,10 +187,7 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
         <Text size="2" weight="medium" style={{ color: "var(--gray-11)" }}>
           jobs
         </Text>
-        <Text
-          size="1"
-          style={{ color: "var(--gray-9)" }}
-        >
+        <Text size="1" style={{ color: "var(--gray-9)" }}>
           {jobs.length}/{totalCount}
         </Text>
       </Flex>
@@ -179,9 +205,11 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
               className="job-row"
             >
               {/* company avatar */}
-              <div className="job-row-avatar">
-                {companyInitials(job.company_key || "?")}
-              </div>
+              {!hiddenCompanies.has(job.company_key || "") && (
+                <div className="job-row-avatar">
+                  {companyInitials(job.company_key || "?")}
+                </div>
+              )}
 
               {/* content — stacked: title, company, meta */}
               <div className="job-row-content">
@@ -197,7 +225,9 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
                           ? "green"
                           : job.status === "non_eu"
                             ? "amber"
-                            : "gray"
+                            : job.status === "reported"
+                              ? "orange"
+                              : "gray"
                       }
                       style={{ fontSize: 10, textTransform: "lowercase" }}
                     >
@@ -207,13 +237,13 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
                 </div>
 
                 {/* line 2: company name */}
-                {job.company_key && (
+                {job.company_key && !hiddenCompanies.has(job.company_key) && (
                   <span
                     className="job-row-company"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      router.push(`/boards/${job.company_key}`);
+                      router.push(`/companies/${job.company_key}`);
                     }}
                   >
                     {job.company_key}
@@ -275,15 +305,41 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
                   </span>
                 )}
 
+                {isAdmin && job.company_key && (
+                  <IconButton
+                    size="3"
+                    color="gray"
+                    variant="soft"
+                    onClick={(e) => toggleCompany(job.company_key!, e)}
+                    title={hiddenCompanies.has(job.company_key) ? "Show company" : "Hide company"}
+                  >
+                    {hiddenCompanies.has(job.company_key)
+                      ? <EyeOpenIcon width={16} height={16} />
+                      : <EyeNoneIcon width={16} height={16} />}
+                  </IconButton>
+                )}
                 {isAdmin && (
                   <IconButton
-                    size="1"
+                    size="3"
+                    color="orange"
+                    variant="soft"
+                    onClick={(e) => handleReportJob(job.id, e)}
+                    disabled={job.status === "reported"}
+                    style={{ cursor: job.status === "reported" ? "default" : "pointer" }}
+                    title={job.status === "reported" ? "Already reported" : "Report job"}
+                  >
+                    <ExclamationTriangleIcon width={16} height={16} />
+                  </IconButton>
+                )}
+                {isAdmin && (
+                  <IconButton
+                    size="3"
                     color="red"
-                    variant="ghost"
+                    variant="soft"
                     onClick={(e) => handleDeleteJob(job.id, e)}
                     style={{ cursor: "pointer" }}
                   >
-                    <TrashIcon width={12} height={12} />
+                    <TrashIcon width={16} height={16} />
                   </IconButton>
                 )}
               </div>

@@ -12,7 +12,6 @@ mod search;
 mod tools;
 mod ashby;
 mod greenhouse;
-mod lever;
 mod workable;
 
 use types::{AtsProvider, ApiResponse, DiscoveredBoard, error_response};
@@ -384,15 +383,6 @@ async fn handle_sync_jobs(req: Request, ctx: RouteContext<()>) -> Result<Respons
                     total_jobs += greenhouse::upsert_greenhouse_jobs_to_d1(&db_handle, &board.jobs, &token, &name).await.unwrap_or(0);
                 }
             }
-            AtsProvider::Lever => {
-                let (ok, err) = runner.run_all(batch_vec, |site| async move {
-                    lever::fetch_lever_board_jobs(&site).await.map(|postings| (site, postings))
-                }).await;
-                for e in err { errors.push(format!("{:?}", e)); }
-                for (site, postings) in ok {
-                    total_jobs += lever::upsert_lever_jobs_to_d1(&db_handle, &postings, &site).await.unwrap_or(0);
-                }
-            }
             AtsProvider::Workable => {
                 let (ok, err) = runner.run_all(batch_vec, |shortcode| async move {
                     workable::fetch_workable_board_jobs(&shortcode).await.map(|resp| (shortcode, resp))
@@ -445,14 +435,13 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
     }
 
     // ── Step 1: concurrent reads — CC index list + slug queues for all providers ──
-    let (cc_result, ashby_slugs_result, gh_slugs_result, lv_slugs_result, wb_slugs_result) = {
+    let (cc_result, ashby_slugs_result, gh_slugs_result, wb_slugs_result) = {
         let cc = common_crawl::list_cc_indexes();
         let a = db::get_company_slugs_by_provider(&db_handle, AtsProvider::Ashby, BOARDS_PER_PROVIDER);
         let g = db::get_company_slugs_by_provider(&db_handle, AtsProvider::Greenhouse, BOARDS_PER_PROVIDER);
-        let l = db::get_company_slugs_by_provider(&db_handle, AtsProvider::Lever, BOARDS_PER_PROVIDER);
         let w = db::get_company_slugs_by_provider(&db_handle, AtsProvider::Workable, BOARDS_PER_PROVIDER);
-        let ((cc_r, a_r), (g_r, (l_r, w_r))) = join(join(cc, a), join(g, join(l, w))).await;
-        (cc_r, a_r, g_r, l_r, w_r)
+        let ((cc_r, a_r), (g_r, w_r)) = join(join(cc, a), join(g, w)).await;
+        (cc_r, a_r, g_r, w_r)
     };
 
     let base_crawl_id = match cc_result {
@@ -465,22 +454,17 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
     };
     let ashby_slugs = ashby_slugs_result.unwrap_or_default();
     let gh_slugs = gh_slugs_result.unwrap_or_default();
-    let lv_slugs = lv_slugs_result.unwrap_or_default();
     let wb_slugs = wb_slugs_result.unwrap_or_default();
 
     // ── Step 2: check progress for all providers ──
     let ashby_crawl_id = AtsProvider::Ashby.crawl_id(&base_crawl_id);
     let gh_crawl_id = AtsProvider::Greenhouse.crawl_id(&base_crawl_id);
-    let lv_crawl_id = AtsProvider::Lever.crawl_id(&base_crawl_id);
     let wb_crawl_id = AtsProvider::Workable.crawl_id(&base_crawl_id);
 
-    let ((ashby_progress, gh_progress), (lv_progress, wb_progress)) = join(
+    let (ashby_progress, (gh_progress, wb_progress)) = join(
+        db::get_progress(&db_handle, &ashby_crawl_id),
         join(
-            db::get_progress(&db_handle, &ashby_crawl_id),
             db::get_progress(&db_handle, &gh_crawl_id),
-        ),
-        join(
-            db::get_progress(&db_handle, &lv_crawl_id),
             db::get_progress(&db_handle, &wb_crawl_id),
         ),
     ).await;
@@ -496,7 +480,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
 
     let (mut ashby_total, ashby_start, mut ashby_found, ashby_done) = resolve_progress(ashby_progress);
     let (mut gh_total, gh_start, mut gh_found, gh_done) = resolve_progress(gh_progress);
-    let (mut lv_total, lv_start, mut lv_found, lv_done) = resolve_progress(lv_progress);
     let (mut wb_total, wb_start, mut wb_found, wb_done) = resolve_progress(wb_progress);
 
     // Get page counts for new crawls
@@ -507,10 +490,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
     if !gh_done && gh_total == 0 {
         gh_total = common_crawl::get_num_pages(&base_crawl_id, AtsProvider::Greenhouse).await.unwrap_or(0);
         console_log!("[ats-crawler cron] Greenhouse: {} pages total", gh_total);
-    }
-    if !lv_done && lv_total == 0 {
-        lv_total = common_crawl::get_num_pages(&base_crawl_id, AtsProvider::Lever).await.unwrap_or(0);
-        console_log!("[ats-crawler cron] Lever: {} pages total", lv_total);
     }
     if !wb_done && wb_total == 0 {
         wb_total = common_crawl::get_num_pages(&base_crawl_id, AtsProvider::Workable).await.unwrap_or(0);
@@ -527,11 +506,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
         (gh_start + PAGES_PER_PROVIDER).min(gh_total)
     } else { 0 };
 
-    let lv_end = if !lv_done && lv_total > 0 {
-        db::save_progress(&db_handle, &lv_crawl_id, lv_total, lv_start, "running", lv_found).await?;
-        (lv_start + PAGES_PER_PROVIDER).min(lv_total)
-    } else { 0 };
-
     let wb_end = if !wb_done && wb_total > 0 {
         db::save_progress(&db_handle, &wb_crawl_id, wb_total, wb_start, "running", wb_found).await?;
         (wb_start + PAGES_PER_PROVIDER).min(wb_total)
@@ -544,9 +518,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
     let gh_cdx_futures: Vec<_> = (gh_start..gh_end)
         .map(|page| { let cid = base_crawl_id.clone(); async move { (page, common_crawl::fetch_cdx_page(&cid, page, AtsProvider::Greenhouse).await) } })
         .collect();
-    let lv_cdx_futures: Vec<_> = (lv_start..lv_end)
-        .map(|page| { let cid = base_crawl_id.clone(); async move { (page, common_crawl::fetch_cdx_page(&cid, page, AtsProvider::Lever).await) } })
-        .collect();
     let wb_cdx_futures: Vec<_> = (wb_start..wb_end)
         .map(|page| { let cid = base_crawl_id.clone(); async move { (page, common_crawl::fetch_cdx_page(&cid, page, AtsProvider::Workable).await) } })
         .collect();
@@ -554,10 +525,9 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
     let runner = rig_compat::ConcurrentRunner::new();
 
     // All HTTP requests concurrently: CDX pages for all + board job fetches for all
-    let (ashby_cdx, gh_cdx, lv_cdx, wb_cdx, (ashby_jobs_ok, ashby_jobs_err), (gh_jobs_ok, gh_jobs_err), (lv_jobs_ok, lv_jobs_err), (wb_jobs_ok, wb_jobs_err)) = {
+    let (ashby_cdx, gh_cdx, wb_cdx, (ashby_jobs_ok, ashby_jobs_err), (gh_jobs_ok, gh_jobs_err), (wb_jobs_ok, wb_jobs_err)) = {
         let a_cdx = join_all(ashby_cdx_futures);
         let g_cdx = join_all(gh_cdx_futures);
-        let l_cdx = join_all(lv_cdx_futures);
         let w_cdx = join_all(wb_cdx_futures);
         let a_jobs = runner.run_all(ashby_slugs.clone(), |slug| async move {
             ashby::fetch_ashby_board_jobs(&slug).await.map(|board| (slug, board))
@@ -565,24 +535,20 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
         let g_jobs = runner.run_all(gh_slugs.clone(), |token| async move {
             greenhouse::fetch_greenhouse_board_jobs(&token).await.map(|board| (token, board))
         });
-        let l_jobs = runner.run_all(lv_slugs.clone(), |site| async move {
-            lever::fetch_lever_board_jobs(&site).await.map(|postings| (site, postings))
-        });
         let w_jobs = runner.run_all(wb_slugs.clone(), |shortcode| async move {
             workable::fetch_workable_board_jobs(&shortcode).await.map(|resp| (shortcode, resp))
         });
 
-        // join8 via nested joins
-        let (((a, g), (l, w)), ((aj, gj), (lj, wj))) = join(
-            join(join(a_cdx, g_cdx), join(l_cdx, w_cdx)),
-            join(join(a_jobs, g_jobs), join(l_jobs, w_jobs)),
+        // join6 via nested joins
+        let ((a, (g, w)), (aj, (gj, wj))) = join(
+            join(a_cdx, join(g_cdx, w_cdx)),
+            join(a_jobs, join(g_jobs, w_jobs)),
         ).await;
-        (a, g, l, w, aj, gj, lj, wj)
+        (a, g, w, aj, gj, wj)
     };
 
     for e in &ashby_jobs_err { console_log!("[job-sync:ashby] board fetch error: {:?}", e); }
     for e in &gh_jobs_err { console_log!("[job-sync:greenhouse] board fetch error: {:?}", e); }
-    for e in &lv_jobs_err { console_log!("[job-sync:lever] board fetch error: {:?}", e); }
     for e in &wb_jobs_err { console_log!("[job-sync:workable] board fetch error: {:?}", e); }
 
     // ── Step 4: process CDX results ──
@@ -607,16 +573,14 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
 
     let (ashby_boards, _) = process_cdx(ashby_cdx, "ashby");
     let (gh_boards, _) = process_cdx(gh_cdx, "greenhouse");
-    let (lv_boards, _) = process_cdx(lv_cdx, "lever");
     let (wb_boards, _) = process_cdx(wb_cdx, "workable");
 
     // ── Step 5: concurrent D1 writes ──
     let ashby_boards_ref = &ashby_boards;
     let gh_boards_ref = &gh_boards;
-    let lv_boards_ref = &lv_boards;
     let wb_boards_ref = &wb_boards;
 
-    let ((ashby_upserted, ashby_enriched), (gh_upserted, gh_enriched), (lv_upserted, lv_enriched), (wb_upserted, wb_enriched), ashby_synced, gh_synced, lv_synced, wb_synced) = {
+    let ((ashby_upserted, ashby_enriched), (gh_upserted, gh_enriched), (wb_upserted, wb_enriched), ashby_synced, gh_synced, wb_synced) = {
         let a_write = async {
             let u = if !ashby_boards_ref.is_empty() { db::upsert_boards(&db_handle, ashby_boards_ref).await.unwrap_or(0) } else { 0 };
             let e = if !ashby_boards_ref.is_empty() { enrichment::auto_enrich_boards(&db_handle, ashby_boards_ref).await.unwrap_or(0) } else { 0 };
@@ -625,11 +589,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
         let g_write = async {
             let u = if !gh_boards_ref.is_empty() { db::upsert_boards(&db_handle, gh_boards_ref).await.unwrap_or(0) } else { 0 };
             let e = if !gh_boards_ref.is_empty() { enrichment::auto_enrich_boards(&db_handle, gh_boards_ref).await.unwrap_or(0) } else { 0 };
-            (u, e)
-        };
-        let l_write = async {
-            let u = if !lv_boards_ref.is_empty() { db::upsert_boards(&db_handle, lv_boards_ref).await.unwrap_or(0) } else { 0 };
-            let e = if !lv_boards_ref.is_empty() { enrichment::auto_enrich_boards(&db_handle, lv_boards_ref).await.unwrap_or(0) } else { 0 };
             (u, e)
         };
         let w_write = async {
@@ -653,13 +612,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
             }
             total
         };
-        let l_sync = async {
-            let mut total = 0usize;
-            for (site, postings) in lv_jobs_ok {
-                total += lever::upsert_lever_jobs_to_d1(&db_handle, &postings, &site).await.unwrap_or(0);
-            }
-            total
-        };
         let w_sync = async {
             let mut total = 0usize;
             for (shortcode, resp) in wb_jobs_ok {
@@ -668,11 +620,11 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
             total
         };
 
-        let (((a, g), (l, w)), ((as_, gs), (ls, ws))) = join(
-            join(join(a_write, g_write), join(l_write, w_write)),
-            join(join(a_sync, g_sync), join(l_sync, w_sync)),
+        let ((a, (g, w)), (as_, (gs, ws))) = join(
+            join(a_write, join(g_write, w_write)),
+            join(a_sync, join(g_sync, w_sync)),
         ).await;
-        (a, g, l, w, as_, gs, ls, ws)
+        (a, g, w, as_, gs, ws)
     };
 
     // ── Step 6: save final progress ──
@@ -694,15 +646,6 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
             gh_start, gh_end.saturating_sub(1), gh_total, gh_upserted, gh_enriched, status
         );
     }
-    if lv_end > 0 {
-        lv_found += lv_upserted as u32;
-        let status = if lv_end >= lv_total { "done" } else { "running" };
-        db::save_progress(&db_handle, &lv_crawl_id, lv_total, lv_end, status, lv_found).await?;
-        console_log!(
-            "[ats-crawler cron] Lever Phase 1: pages {}-{}/{}, {} upserted, {} enriched, status={}",
-            lv_start, lv_end.saturating_sub(1), lv_total, lv_upserted, lv_enriched, status
-        );
-    }
     if wb_end > 0 {
         wb_found += wb_upserted as u32;
         let status = if wb_end >= wb_total { "done" } else { "running" };
@@ -713,16 +656,15 @@ async fn cron_handler_inner(env: Env) -> Result<()> {
         );
     }
     console_log!(
-        "[ats-crawler cron] Phase 2: {} Ashby jobs from {} boards, {} Greenhouse jobs from {} boards, {} Lever jobs from {} boards, {} Workable jobs from {} boards",
-        ashby_synced, ashby_slugs.len(), gh_synced, gh_slugs.len(), lv_synced, lv_slugs.len(), wb_synced, wb_slugs.len()
+        "[ats-crawler cron] Phase 2: {} Ashby jobs from {} boards, {} Greenhouse jobs from {} boards, {} Workable jobs from {} boards",
+        ashby_synced, ashby_slugs.len(), gh_synced, gh_slugs.len(), wb_synced, wb_slugs.len()
     );
 
     Ok(())
 }
 
 /// GET /seed — Seed companies by probing the ATS API directly.
-/// ?provider=lever|workable&sites=stripe,netlify,... (comma-separated slugs)
-/// Lever blocks CCBot in robots.txt, so CC discovery doesn't work.
+/// ?provider=workable&sites=stripe,netlify,... (comma-separated slugs)
 /// Workable CC works, but direct seeding is a convenience.
 async fn handle_seed(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let db_handle = ctx.env.d1("DB")?;
@@ -731,11 +673,11 @@ async fn handle_seed(req: Request, ctx: RouteContext<()>) -> Result<Response> {
 
     let provider = params.get("provider")
         .and_then(|p| AtsProvider::from_str(p))
-        .unwrap_or(AtsProvider::Lever);
+        .unwrap_or(AtsProvider::Workable);
 
-    // Only Lever and Workable support direct seeding
-    if provider != AtsProvider::Lever && provider != AtsProvider::Workable {
-        return error_response("?provider= must be lever or workable for seeding");
+    // Only Workable supports direct seeding
+    if provider != AtsProvider::Workable {
+        return error_response("?provider= must be workable for seeding");
     }
 
     let sites_param = match params.get("sites") {
@@ -755,36 +697,6 @@ async fn handle_seed(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let mut error_details = Vec::new();
 
     match provider {
-        AtsProvider::Lever => {
-            let (results, errors) = runner.run_all(
-                sites.iter().map(|s| s.to_string()).collect(),
-                |site| async move {
-                    lever::fetch_lever_board_jobs(&site).await.map(|postings| (site, postings))
-                },
-            ).await;
-            for e in &errors { error_details.push(format!("{:?}", e)); }
-
-            for (site, postings) in results {
-                if postings.is_empty() {
-                    skipped.push(serde_json::json!({ "site": site, "reason": "no postings (404 or empty)" }));
-                    continue;
-                }
-                let company_name: String = site
-                    .split(|c: char| c == '-' || c == '_')
-                    .map(|w| { let mut chars = w.chars(); match chars.next() { None => String::new(), Some(c) => c.to_uppercase().to_string() + chars.as_str() } })
-                    .collect::<Vec<_>>().join(" ");
-                let _ = db_handle.prepare(
-                    "INSERT INTO companies (key, name, website, category, score, ats_provider)
-                     VALUES (?1, ?2, ?3, 'PRODUCT', 0.5, 'lever')
-                     ON CONFLICT(key) DO UPDATE SET
-                       name=COALESCE(NULLIF(companies.name,''),excluded.name),
-                       website=excluded.website, ats_provider='lever', updated_at=datetime('now')"
-                ).bind(&[site.clone().into(), company_name.into(), format!("https://jobs.lever.co/{}", site).into()])?.run().await;
-                let count = lever::upsert_lever_jobs_to_d1(&db_handle, &postings, &site).await.unwrap_or(0);
-                total_jobs += count;
-                seeded.push(serde_json::json!({ "site": site, "jobs": count }));
-            }
-        }
         AtsProvider::Workable => {
             let (results, errors) = runner.run_all(
                 sites.iter().map(|s| s.to_string()).collect(),
@@ -851,7 +763,6 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .delete_async("/progress", handle_reset_progress)
         .get_async("/stats", handle_stats)
         .get_async("/sync-jobs", handle_sync_jobs)
-        .get_async("/seed-lever", handle_seed)
         .get_async("/seed", handle_seed)
         // Rig-powered endpoints
         .get_async("/search", handle_search)
@@ -861,18 +772,17 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         // Root
         .get("/", |_, _| {
             Response::from_json(&serde_json::json!({
-                "service": "ats-crawler v0.7 (multi-ats: ashby + greenhouse + lever + workable)",
-                "providers": ["ashby", "greenhouse", "lever", "workable"],
+                "service": "ats-crawler v0.8 (multi-ats: ashby + greenhouse + workable)",
+                "providers": ["ashby", "greenhouse", "workable"],
                 "core_endpoints": {
-                    "GET /crawl":       "Crawl CC index → D1. ?provider=ashby|greenhouse|lever|workable&crawl_id=&pages_per_run=",
+                    "GET /crawl":       "Crawl CC index → D1. ?provider=ashby|greenhouse|workable&crawl_id=&pages_per_run=",
                     "GET /boards":      "List/search boards. ?provider=&limit=&offset=&search=",
                     "GET /indexes":     "Available CC indexes",
-                    "GET /progress":    "Crawl progress (prefixed crawl IDs: CC-MAIN-YYYY-WW:ashby|greenhouse|lever|workable)",
+                    "GET /progress":    "Crawl progress (prefixed crawl IDs: CC-MAIN-YYYY-WW:ashby|greenhouse|workable)",
                     "DELETE /progress": "Reset a crawl. ?crawl_id=",
                     "GET /stats":       "Summary stats (per-provider breakdown)",
-                    "GET /sync-jobs":   "Bulk job sync. ?provider=ashby|greenhouse|lever|workable&limit=50&concurrency=10",
-                    "GET /seed":        "Seed companies directly. ?provider=lever|workable&sites=stripe,netlify,io-global",
-                    "GET /seed-lever":  "(alias for /seed?provider=lever) ?sites=stripe,netlify,cloudflare",
+                    "GET /sync-jobs":   "Bulk job sync. ?provider=ashby|greenhouse|workable&limit=50&concurrency=10",
+                    "GET /seed":        "Seed companies directly. ?provider=workable&sites=stripe,netlify,io-global",
                 },
                 "rig_endpoints": {
                     "GET /search":      "Okapi BM25 search over enriched corpus (all providers). ?q=&top_n=",

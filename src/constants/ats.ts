@@ -34,16 +34,6 @@ export const GREENHOUSE_BOARDS_DOMAIN = `boards.${GREENHOUSE_DOMAIN}`;
 export const GREENHOUSE_API_DOMAIN = `boards-api.${GREENHOUSE_DOMAIN}`;
 
 /**
- * Lever ATS domain
- */
-export const LEVER_DOMAIN = "lever.co";
-
-/**
- * Lever jobs domain
- */
-export const LEVER_JOBS_DOMAIN = `jobs.${LEVER_DOMAIN}`;
-
-/**
  * Workable ATS domain
  */
 export const WORKABLE_DOMAIN = "workable.com";
@@ -54,17 +44,10 @@ export const WORKABLE_DOMAIN = "workable.com";
 export const WORKABLE_APPLY_DOMAIN = `apply.${WORKABLE_DOMAIN}`;
 
 /**
- * Breezy HR domain
- */
-export const BREEZY_DOMAIN = "breezy.hr";
-
-/**
  * Applicant Tracking System (ATS) sites to search
  */
 export const ATS_SITES = [
   `site:${GREENHOUSE_BOARDS_DOMAIN}`,
-  `site:${LEVER_JOBS_DOMAIN}`,
   `site:${ASHBY_JOBS_DOMAIN}`,
   `site:${WORKABLE_APPLY_DOMAIN}`,
-  `site:${BREEZY_DOMAIN}`,
 ];

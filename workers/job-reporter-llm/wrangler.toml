@@ -1,0 +1,43 @@
+name = "job-reporter-llm"
+main = "src/worker.py"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["python_workers"]
+
+[placement]
+mode = "smart"
+
+# Migrations run automatically:
+#   • on_scheduled fires daily at 04:00 UTC → applies pending migrations
+#   • on_fetch also runs them once per worker instance (first request after deploy)
+[triggers]
+crons = ["0 4 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nomadically-db"
+database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
+
+[[queues.producers]]
+binding = "JOB_REPORT_QUEUE"
+queue   = "job-report-queue"
+
+[[queues.consumers]]
+queue             = "job-report-queue"
+max_batch_size    = 10
+max_batch_timeout = 30
+max_retries       = 3
+dead_letter_queue = "job-report-dlq"
+
+# wrangler secret put WORKER_SECRET
+# wrangler secret put DEEPSEEK_API_KEY
+# wrangler secret put LANGFUSE_PUBLIC_KEY    (pk-lf-...)
+# wrangler secret put LANGFUSE_SECRET_KEY    (sk-lf-...)
+
+[vars]
+# Route DeepSeek through CF AI Gateway → free caching + analytics
+# dash.cloudflare.com → AI → AI Gateway → Create gateway → copy URL
+DEEPSEEK_GATEWAY_URL      = "https://api.deepseek.com/v1"
+LANGFUSE_HOST             = "https://cloud.langfuse.com"
+CONFIDENCE_SECOND_OPINION = "0.60"
+AUTO_RESTORE_THRESHOLD    = "0.85"
+CONFIDENCE_ESCALATE       = "0.40"

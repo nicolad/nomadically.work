@@ -35,6 +35,10 @@
       },
     ],
   },
+  "vars": {
+    "LANGCHAIN_TRACING_V2": "true",
+    "LANGCHAIN_PROJECT": "nomadically-work-process-jobs",
+  },
   "observability": {
     "enabled": true,
     "logs": {

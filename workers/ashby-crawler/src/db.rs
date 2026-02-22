@@ -49,22 +49,6 @@ const MIGRATIONS: &[(&str, &str)] = &[
         CREATE INDEX IF NOT EXISTS idx_gh_boards_token ON greenhouse_boards(token);
         ALTER TABLE companies ADD COLUMN ats_provider TEXT DEFAULT 'ashby';
     "),
-    ("0009_lever_boards", "
-        CREATE TABLE IF NOT EXISTS lever_boards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            site TEXT NOT NULL UNIQUE,
-            url TEXT NOT NULL,
-            first_seen TEXT NOT NULL DEFAULT (datetime('now')),
-            last_seen TEXT NOT NULL DEFAULT (datetime('now')),
-            crawl_id TEXT,
-            last_synced_at TEXT,
-            job_count INTEGER,
-            is_active INTEGER DEFAULT 1,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_lv_boards_site ON lever_boards(site)
-    "),
     ("0008_gh_external_id_to_url", "
         UPDATE jobs
            SET external_id = absolute_url,
@@ -270,24 +254,6 @@ pub async fn get_company_slugs_by_provider(db: &D1Database, provider: AtsProvide
                      LEFT JOIN greenhouse_boards gb ON gb.token = c.key
                      WHERE c.ats_provider = 'greenhouse'
                        AND gb.last_synced_at IS NULL
-                     ORDER BY c.key
-                     LIMIT ?1"
-                )
-                .bind(&[(limit as f64).into()])?
-                .all()
-                .await?
-                .results::<serde_json::Value>()?;
-            Ok(rows.iter()
-                .filter_map(|r| r["key"].as_str().map(String::from))
-                .collect())
-        }
-        AtsProvider::Lever => {
-            let rows = db
-                .prepare(
-                    "SELECT c.key FROM companies c
-                     LEFT JOIN lever_boards lb ON lb.site = c.key
-                     WHERE c.ats_provider = 'lever'
-                       AND lb.last_synced_at IS NULL
                      ORDER BY c.key
                      LIMIT ?1"
                 )

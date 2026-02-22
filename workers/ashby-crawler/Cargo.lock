@@ -3,16 +3,6 @@
 version = 4
 
 [[package]]
-name = "ashby-crawler"
-version = "0.2.0"
-dependencies = [
- "futures",
- "serde",
- "serde_json",
- "worker",
-]
-
-[[package]]
 name = "async-trait"
 version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -21,6 +11,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "ats-crawler"
+version = "0.3.0"
+dependencies = [
+ "futures",
+ "serde",
+ "serde_json",
+ "worker",
 ]
 
 [[package]]

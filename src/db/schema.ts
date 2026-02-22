@@ -99,19 +99,6 @@ export const jobs = sqliteTable("jobs", {
   demographic_questions: text("demographic_questions"), // JSON object
   data_compliance: text("data_compliance"), // JSON array
 
-  // Lever ATS-specific fields
-  categories: text("categories"), // JSON object: { commitment, location, team, department, allLocations }
-  workplace_type: text("workplace_type"), // on-site, remote, hybrid, unspecified
-  country: text("country"), // ISO 3166-1 alpha-2 country code
-  opening: text("opening"), // Job description opening (HTML)
-  opening_plain: text("opening_plain"), // Job description opening (plaintext)
-  description_body: text("description_body"), // Job description body without opening (HTML)
-  description_body_plain: text("description_body_plain"), // Job description body without opening (plaintext)
-  additional: text("additional"), // Optional closing content (HTML)
-  additional_plain: text("additional_plain"), // Optional closing content (plaintext)
-  lists: text("lists"), // JSON array of { text, content }
-  ats_created_at: text("ats_created_at"), // When the posting was created in the ATS
-
   // Ashby ATS-specific fields
   ashby_department: text("ashby_department"),
   ashby_team: text("ashby_team"),
@@ -125,6 +112,15 @@ export const jobs = sqliteTable("jobs", {
   ashby_compensation: text("ashby_compensation"), // JSON object
   ashby_address: text("ashby_address"), // JSON object
 
+  // Report pipeline columns (written by job-reporter-llm worker)
+  report_reason: text("report_reason"),
+  report_confidence: real("report_confidence"),
+  report_reasoning: text("report_reasoning"),
+  report_tags: text("report_tags"), // JSON array
+  report_action: text("report_action"), // pending|auto_restored|escalated|confirmed
+  report_trace_id: text("report_trace_id"), // Langfuse trace ID for score updates
+  report_reviewed_at: text("report_reviewed_at"),
+
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -134,6 +130,9 @@ export const jobs = sqliteTable("jobs", {
 }, (table) => ({
   postedAtIdx: index("idx_jobs_posted_at_created_at").on(table.posted_at, table.created_at),
   isRemoteEuIdx: index("idx_jobs_is_remote_eu").on(table.is_remote_eu),
+  companyKeyIdx: index("idx_jobs_company_key").on(table.company_key),
+  sourceKindIdx: index("idx_jobs_source_kind").on(table.source_kind),
+  remoteEuPostedIdx: index("idx_jobs_remote_eu_posted").on(table.is_remote_eu, table.posted_at, table.created_at),
 }));
 
 export type Job = typeof jobs.$inferSelect;
@@ -481,3 +480,26 @@ export const applications = sqliteTable("applications", {
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
+
+// Job report audit log (written by job-reporter-llm worker)
+export const jobReportEvents = sqliteTable(
+  "job_report_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    job_id: integer("job_id")
+      .notNull()
+      .references(() => jobs.id),
+    event_type: text("event_type").notNull(), // reported|llm_analyzed|auto_restored|escalated|confirmed|restored
+    actor: text("actor"), // "system:llm" | "admin:<userId>"
+    payload: text("payload"), // JSON
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    jobIdx: index("idx_report_events_job").on(table.job_id),
+  }),
+);
+
+export type JobReportEvent = typeof jobReportEvents.$inferSelect;
+export type NewJobReportEvent = typeof jobReportEvents.$inferInsert;

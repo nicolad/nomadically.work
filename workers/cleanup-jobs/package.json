@@ -1,0 +1,13 @@
+{
+  "name": "nomadically-work-cleanup-jobs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy",
+    "tail": "npx wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.58.0"
+  }
+}

@@ -1,4 +1,4 @@
-name = "ashby-crawler"
+name = "ats-crawler"
 main = "build/worker/shim.mjs"
 compatibility_date = "2026-02-01"
 
@@ -6,7 +6,7 @@ compatibility_date = "2026-02-01"
 command = "cargo install -q worker-build && worker-build --release"
 
 # Cron trigger — run daily at 02:00 UTC (offset 2h from main cron to avoid contention)
-# Crawls the latest Common Crawl index for new Ashby job boards (10 pages/run, resumable)
+# Crawls the latest Common Crawl index for Ashby + Greenhouse boards (5 pages/provider/run, resumable)
 [triggers]
 crons = ["0 2 * * *"]
 

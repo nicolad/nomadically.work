@@ -28,6 +28,7 @@ for mod_name in [
     "langchain_cloudflare",
     "langchain_core",
     "langchain_core.prompts",
+    "langchain_core.runnables",
     "langgraph_checkpoint_cloudflare_d1",
 ]:
     mock = types.ModuleType(mod_name)
@@ -39,6 +40,8 @@ for mod_name in [
             "ChatPromptTemplate", (),
             {"from_messages": classmethod(lambda cls, *a, **kw: None)},
         )
+    elif mod_name == "langchain_core.runnables":
+        mock.RunnableLambda = lambda fn: fn  # pass-through for tests
     elif mod_name == "langgraph_checkpoint_cloudflare_d1":
         mock.CloudflareD1Saver = type("CloudflareD1Saver", (), {})
     sys.modules[mod_name] = mock

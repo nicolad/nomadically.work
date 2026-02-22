@@ -7,7 +7,6 @@ import styles from "./page.module.css";
 
 const Page = async () => {
   const { isAdmin, userEmail } = await checkIsAdmin();
-  console.log("Admin status:", isAdmin, "User email:", userEmail);
 
   return (
     <Suspense

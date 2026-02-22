@@ -65,8 +65,7 @@ export const enhanceJobTask = task({
       // discovery records, not individual job postings, and cannot be enhanced.
       const urlParts = new URL(url).pathname.split("/").filter(Boolean);
       if (urlParts.length < 2) {
-        logger.warn(`Skipping board-level Ashby URL for job ${jobId}: ${url}`);
-        return { success: false, skipped: true, jobId, source: sourceLower, reason: "board-level URL" };
+        throw new Error(`Board-level Ashby URL cannot be enhanced (no posting ID in path): ${url}`);
       }
 
       const data = await fetchAshbyJobPostFromUrl(url, {

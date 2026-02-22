@@ -377,6 +377,24 @@ const Mutation: MutationResolvers = {
 
   processAllJobs: processAllJobs as MutationResolvers["processAllJobs"],
 
+  async deleteAllJobs(_parent, _args, context) {
+    if (!context.userId) {
+      throw new Error("Unauthorized");
+    }
+    if (!isAdminEmail(context.userEmail)) {
+      throw new Error("Forbidden - Admin access required");
+    }
+    // Delete dependent rows first (job_report_events FK has no CASCADE),
+    // then jobs. Use raw sql.raw() via Drizzle's run to avoid D1 driver issues.
+    await context.db.run(sql`DELETE FROM job_report_events`);
+    await context.db.run(sql`DELETE FROM job_skill_tags`);
+    await context.db.run(sql`DELETE FROM jobs`);
+    return {
+      success: true,
+      message: "All jobs deleted successfully",
+    };
+  },
+
   async reportJob(_parent, args, context) {
     if (!context.userId) {
       throw new Error("Unauthorized — sign in to report a job");

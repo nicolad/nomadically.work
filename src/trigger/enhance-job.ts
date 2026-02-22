@@ -80,7 +80,7 @@ export const enhanceJobTask = task({
     logger.warn(`Unsupported ATS source: ${source}`);
     return { success: false, jobId, source: sourceLower, error: "Unsupported source" };
   },
-  handleError: async (payload, error) => {
+  catchError: async ({ payload, error }) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const is404 =
       errorMessage.includes("404") ||
@@ -92,7 +92,6 @@ export const enhanceJobTask = task({
       try {
         const db = getDb();
         // Set absolute_url to sentinel so the scheduler's `IS NULL` filter skips it forever.
-        // Using status='closed' proved unreliable (field used for classification).
         await db
           .update(jobs)
           .set({ absolute_url: "[not-found]", updated_at: new Date().toISOString() })

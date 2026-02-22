@@ -346,7 +346,7 @@ function JobPageContent() {
           {job.company_key && (
             <>
               <Link
-                href={`/companies/${job.company_key}`}
+                href={`/companies/${job.company?.key ?? job.company_key}${job.source_kind ? `?source=${job.source_kind}` : ""}`}
                 style={{
                   textDecoration: "none",
                   color: "inherit",

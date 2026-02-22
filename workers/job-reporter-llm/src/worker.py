@@ -20,6 +20,7 @@ Migrations:
 
 import json
 from datetime import datetime, timezone
+from urllib.parse import parse_qs, unquote
 from js import Response, Headers
 
 import db
@@ -50,8 +51,11 @@ def _err(msg: str, status: int = 400) -> Response:
 
 
 def _qs(url: str) -> dict:
-    return ({k: v for p in url.split("?", 1)[1].split("&")
-             for k, v in [p.split("=", 1)]} if "?" in url else {})
+    if "?" not in url:
+        return {}
+    qs = url.split("?", 1)[1]
+    parsed = parse_qs(qs, keep_blank_values=False)
+    return {k: unquote(v[0]) for k, v in parsed.items() if v}
 
 
 def _now() -> str:
@@ -115,8 +119,8 @@ async def _handle_admin_decision(
                 value=human_label,
                 comment=f"final after admin {event_type}",
             )
-        except Exception:
-            pass  # don't fail the HTTP response if Langfuse is down
+        except Exception as exc:
+            print(f"[langfuse] score post failed for job_id={job_id}: {exc!s:.200}")
 
     # ── Add to Langfuse dataset (ground truth for future evals) ───────────
     if expected_reason:
@@ -141,8 +145,8 @@ async def _handle_admin_decision(
                     "decided_at": _now(),
                 },
             )
-        except Exception:
-            pass  # dataset write failure is non-fatal
+        except Exception as exc:
+            print(f"[langfuse] dataset write failed for job_id={job_id}: {exc!s:.200}")
 
     await db.log_event(env.DB, job_id, event_type, actor=actor)
     return _json({"ok": True, "jobId": job_id, "action": event_type})
@@ -167,15 +171,26 @@ async def handle_report_job(request, env) -> Response:
     if not job:
         return _err(f"Job {job_id} not found", 404)
 
+    # Guard against duplicate reports flooding the queue
+    if job.get("status") == "reported":
+        return _json({"ok": True, "jobId": job_id, "status": "already_reported"}, 200)
+
     await db.log_event(env.DB, job_id, "reported", actor=reported_by,
                        payload={"prev_status": prev_status, "reported_at": _now()})
 
-    await env.JOB_REPORT_QUEUE.send({
+    # Truncate description to avoid approaching CF queue message size limits
+    snapshot = {**job, "prev_status": prev_status}
+    if snapshot.get("description"):
+        snapshot["description"] = snapshot["description"][:2000]
+
+    # Serialize to JSON string — CF Python Workers Queue bindings don't
+    # deep-convert nested Python dicts; the consumer uses json.loads() to decode.
+    await env.JOB_REPORT_QUEUE.send(json.dumps({
         "jobId":       job_id,
         "reportedBy":  reported_by,
-        "jobSnapshot": {**job, "prev_status": prev_status},
+        "jobSnapshot": snapshot,
         "enqueuedAt":  _now(),
-    })
+    }))
 
     return _json({"ok": True, "jobId": job_id, "status": "queued"}, 202)
 
@@ -192,6 +207,29 @@ async def handle_stats(env) -> Response:
     return _json({"stats": await db.get_stats(env.DB)})
 
 
+async def handle_debug_process(request, env) -> Response:
+    """Runs the full consumer pipeline over HTTP for synchronous debugging."""
+    import traceback as tb
+    try:
+        body    = json.loads(await request.text())
+        job_id  = body.get("jobId")
+        job     = await db.get_job(env.DB, job_id)
+        if not job:
+            return _err(f"Job {job_id} not found", 404)
+        snapshot = {**job, "prev_status": "enhanced"}
+        lf       = LangfuseClient(env)
+        analysis = await llm.analyze_reported_job(env, snapshot, lf)
+        await db.save_analysis(env.DB, job_id, analysis)
+        await db.log_event(env.DB, job_id, "llm_analyzed",
+                           actor=f"system:llm:{analysis['model_used']}",
+                           payload={"reason": analysis["reason"],
+                                    "confidence": analysis["confidence"],
+                                    "action": analysis["action"]})
+        return _json({"ok": True, "analysis": analysis})
+    except Exception as exc:
+        return _json({"error": str(exc), "trace": tb.format_exc()}, 500)
+
+
 # ── Router ─────────────────────────────────────────────────────────────────
 
 async def on_fetch(request, env):
@@ -201,10 +239,11 @@ async def on_fetch(request, env):
             applied = await migrations.run(env.DB)
             if applied:
                 print(f"[migrations] applied: {applied}")
+            _migrations_done = True
         except Exception as exc:
-            # Log but don't block traffic — migrations may already be applied
+            # Log but don't block traffic — migrations may already be applied.
+            # _migrations_done stays False so next request retries.
             print(f"[migrations] startup check failed: {exc}")
-        _migrations_done = True
 
     if not _auth(request, env):
         return _err("Unauthorized", 401)
@@ -224,6 +263,8 @@ async def on_fetch(request, env):
         return await handle_reported_jobs(request, env)
     if path.endswith("/api/report-stats")   and method == "GET":
         return await handle_stats(env)
+    if path.endswith("/api/debug-process")  and method == "POST":
+        return await handle_debug_process(request, env)
 
     return _err("Not found", 404)
 
@@ -241,18 +282,23 @@ async def on_queue(batch, env):
     lf = LangfuseClient(env)
 
     for message in batch.messages:
-        body     = message.body
+        raw = message.body
+        if hasattr(raw, "to_py"):
+            raw = raw.to_py()
+        body = json.loads(raw) if isinstance(raw, str) else (raw if isinstance(raw, dict) else {})
+        print(f"[on_queue] body type={type(raw).__name__} keys={list(body.keys()) if body else None}")
         job_id   = body.get("jobId")
         snapshot = body.get("jobSnapshot", {})
 
         try:
+            print(f"[on_queue] processing job_id={job_id} snapshot_keys={list(snapshot.keys()) if snapshot else None}")
             analysis = await llm.analyze_reported_job(env, snapshot, lf)
+            print(f"[on_queue] analysis done: action={analysis.get('action')} reason={analysis.get('reason')} conf={analysis.get('confidence')}")
             await db.save_analysis(env.DB, job_id, analysis)
+            print(f"[on_queue] save_analysis done")
 
             if analysis["action"] == "auto_restored":
                 await db.restore_job(env.DB, job_id)
-                # Auto-restore = LLM confident it's a false positive
-                # Update label_accuracy to 1.0 (we trust above AUTO_RESTORE_THRESHOLD)
                 await lf.post_score(
                     trace_id=analysis["trace_id"],
                     name="label_accuracy",
@@ -271,14 +317,17 @@ async def on_queue(batch, env):
                                    "action":     analysis["action"],
                                    "trace_id":   analysis["trace_id"],
                                })
+            print(f"[on_queue] log_event done: {event}")
             message.ack()
 
         except Exception as exc:
+            import traceback
+            print(f"[on_queue] ERROR job_id={job_id}: {exc}\n{traceback.format_exc()}")
             try:
                 await db.log_event(env.DB, job_id, "llm_error",
                                    payload={"error": str(exc)[:400]})
-            except Exception:
-                pass
+            except Exception as log_exc:
+                print(f"[on_queue] log_event also failed: {log_exc}")
             message.retry()
 
 

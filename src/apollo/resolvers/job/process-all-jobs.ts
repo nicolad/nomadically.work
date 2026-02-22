@@ -56,7 +56,7 @@ export async function processAllJobs(
   try {
     const handle = await tasks.trigger<typeof enhanceJobsOnDemand>(
       "enhance-jobs-on-demand",
-      { limit: args.limit ?? 200 },
+      {},
     );
     console.log(`[ProcessAllJobs] Enhancement triggered: ${handle.id}`);
     messages.push(`Enhancement triggered (run ${handle.id})`);
@@ -75,10 +75,7 @@ export async function processAllJobs(
       headers["Authorization"] = `Bearer ${cronSecret}`;
     }
 
-    const body: Record<string, unknown> = {};
-    if (args.limit != null) {
-      body.limit = args.limit;
-    }
+    const body: Record<string, unknown> = { limit: args.limit ?? 10000 };
 
     const response = await fetch(workerUrl, {
       method: "POST",

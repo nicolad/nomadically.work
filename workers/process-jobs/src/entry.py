@@ -2238,16 +2238,16 @@ class Default(WorkerEntrypoint):
         try:
             db = self.env.DB
 
-            enhance_stats  = await enhance_unenhanced_jobs(db, 50)
+            enhance_stats  = await enhance_unenhanced_jobs(db, 10000)
             tag_stats      = await tag_roles_for_enhanced_jobs(
                 db, getattr(self.env, "AI", None),
                 deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
                 deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
                 deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
-                limit             = 50,
+                limit             = 10000,
             )
-            classify_stats = await classify_unclassified_jobs(db, self.env, 30)
-            skill_stats    = await extract_skills_for_classified_jobs(db, self.env, 30)
+            classify_stats = await classify_unclassified_jobs(db, self.env, 10000)
+            skill_stats    = await extract_skills_for_classified_jobs(db, self.env, 10000)
 
             stats = self._merge_stats(enhance_stats, tag_stats, classify_stats, skill_stats)
             print(f"✅ Cron complete — {self._stats_summary(stats)}")
@@ -2272,7 +2272,7 @@ class Default(WorkerEntrypoint):
             try:
                 body   = to_py(message.body)
                 action = body.get("action", "process")
-                limit  = body.get("limit", 50)
+                limit  = body.get("limit", 10000)
                 db     = self.env.DB
 
                 print(f"📨 Queue message: action={action}, limit={limit}")
@@ -2343,7 +2343,7 @@ class Default(WorkerEntrypoint):
     async def handle_enqueue(self, request, cors_headers: dict):
         """Enqueue a processing job to the CF Queue — returns immediately."""
         action = "process"
-        limit  = 50
+        limit  = 10000
         try:
             body   = to_py(await request.json())
             action = body.get("action", "process")
@@ -2614,7 +2614,7 @@ class Default(WorkerEntrypoint):
         print(f"   ℹ️  Checkpoint skipped (langgraph-checkpoint removed for size)")
 
     async def _parse_limit(self, request) -> int:
-        """Parse optional limit from request body JSON, defaulting to 50."""
+        """Parse optional limit from request body JSON, defaulting to 10000 (all)."""
         try:
             body  = to_py(await request.json())
             limit = body.get("limit")
@@ -2622,4 +2622,4 @@ class Default(WorkerEntrypoint):
                 return int(limit)
         except Exception:
             pass
-        return 50
+        return 10000

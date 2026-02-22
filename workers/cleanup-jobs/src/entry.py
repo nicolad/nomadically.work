@@ -48,7 +48,7 @@ async def d1_run(db, sql: str, params: list | None = None):
 # Core cleanup logic
 # ---------------------------------------------------------------------------
 
-BATCH_SIZE = 500
+BATCH_SIZE = 50
 CUTOFF_DAYS = 30
 
 # Columns NULLed on stale — everything except identity/conflict keys.
@@ -119,21 +119,24 @@ async def cleanup_old_jobs(db, dry_run: bool = False) -> dict:
     Processes in batches of BATCH_SIZE to stay within D1 limits.
     """
     cutoff = (datetime.now(timezone.utc) - timedelta(days=CUTOFF_DAYS)).isoformat()
+    # Exclude jobs touched (enhanced/updated) within the last 7 days so recently-enhanced
+    # long-running listings (e.g. Kraken on Ashby) are not immediately wiped.
+    recent_cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     now = datetime.now(timezone.utc).isoformat()
 
-    # Count eligible jobs (not already stale)
+    # Count eligible jobs (not already stale, not recently updated)
     rows = await d1_all(
         db,
-        "SELECT count(*) as cnt FROM jobs WHERE posted_at < ? AND (status IS NULL OR status != 'stale')",
-        [cutoff],
+        "SELECT count(*) as cnt FROM jobs WHERE posted_at < ? AND (updated_at IS NULL OR updated_at < ?) AND (status IS NULL OR status != 'stale')",
+        [cutoff, recent_cutoff],
     )
     stale_count = rows[0]["cnt"] if rows else 0
 
     if dry_run:
-        return {"would_mark_stale": stale_count, "cutoff": cutoff}
+        return {"would_mark_stale": stale_count, "cutoff": cutoff, "recent_cutoff": recent_cutoff}
 
     if stale_count == 0:
-        print(f"No active jobs older than {CUTOFF_DAYS} days found.")
+        print(f"No active jobs older than {CUTOFF_DAYS} days (and not updated in 7 days) found.")
         return {"marked_stale": 0, "cutoff": cutoff}
 
     print(f"Found {stale_count} jobs older than {CUTOFF_DAYS} days (cutoff: {cutoff}). Marking stale...")
@@ -142,8 +145,8 @@ async def cleanup_old_jobs(db, dry_run: bool = False) -> dict:
     while True:
         batch = await d1_all(
             db,
-            "SELECT id FROM jobs WHERE posted_at < ? AND (status IS NULL OR status != 'stale') LIMIT ?",
-            [cutoff, BATCH_SIZE],
+            "SELECT id FROM jobs WHERE posted_at < ? AND (updated_at IS NULL OR updated_at < ?) AND (status IS NULL OR status != 'stale') LIMIT ?",
+            [cutoff, recent_cutoff, BATCH_SIZE],
         )
         if not batch:
             break
@@ -172,10 +175,11 @@ async def cleanup_old_jobs(db, dry_run: bool = False) -> dict:
 async def get_stale_stats(db) -> dict:
     """Return counts of stale-eligible and already-stale jobs."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=CUTOFF_DAYS)).isoformat()
+    recent_cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     eligible = await d1_all(
         db,
-        "SELECT count(*) as cnt FROM jobs WHERE posted_at < ? AND (status IS NULL OR status != 'stale')",
-        [cutoff],
+        "SELECT count(*) as cnt FROM jobs WHERE posted_at < ? AND (updated_at IS NULL OR updated_at < ?) AND (status IS NULL OR status != 'stale')",
+        [cutoff, recent_cutoff],
     )
     already_stale = await d1_all(
         db,

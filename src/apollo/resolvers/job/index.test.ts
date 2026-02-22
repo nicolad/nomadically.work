@@ -204,6 +204,107 @@ describe("Job.publishedAt field resolver", () => {
 });
 
 // ---------------------------------------------------------------------------
+// enhanceJobFromATS — stored URL preference (Fix 4)
+// ---------------------------------------------------------------------------
+
+describe("enhanceJobFromATS — Ashby URL resolution", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  function makeChain(rows: object[]) {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue(rows),
+    };
+    return { select: vi.fn().mockReturnValue(chain) };
+  }
+
+  it("uses ashby_job_url when it contains a posting ID (two path segments)", async () => {
+    const { fetchAshbyJobPostFromUrl, saveAshbyJobData } = await import("@/ingestion/ashby");
+    (fetchAshbyJobPostFromUrl as any).mockResolvedValue({});
+    (saveAshbyJobData as any).mockResolvedValue({ title: "Senior Engineer" });
+
+    const jobRow = {
+      id: 66,
+      external_id: "66",
+      ashby_job_url: "https://jobs.ashbyhq.com/kraken/real-posting-uuid",
+      url: "https://jobs.ashbyhq.com/kraken.com", // board-level fallback
+    };
+    const db = makeChain([jobRow]);
+
+    await enhanceJobFromATS(null, { jobId: "66", company: "kraken.com", source: "ashby" }, { db } as any);
+
+    expect(fetchAshbyJobPostFromUrl).toHaveBeenCalledWith(
+      "https://jobs.ashbyhq.com/kraken/real-posting-uuid",
+      { includeCompensation: true },
+    );
+  });
+
+  it("uses job.url when ashby_job_url is null and url has a posting ID", async () => {
+    const { fetchAshbyJobPostFromUrl, saveAshbyJobData } = await import("@/ingestion/ashby");
+    (fetchAshbyJobPostFromUrl as any).mockResolvedValue({});
+    (saveAshbyJobData as any).mockResolvedValue({ title: "Engineer" });
+
+    const jobRow = {
+      id: 66,
+      external_id: "66",
+      ashby_job_url: null,
+      url: "https://jobs.ashbyhq.com/kraken/stored-uuid",
+    };
+    const db = makeChain([jobRow]);
+
+    await enhanceJobFromATS(null, { jobId: "66", company: "kraken.com", source: "ashby" }, { db } as any);
+
+    expect(fetchAshbyJobPostFromUrl).toHaveBeenCalledWith(
+      "https://jobs.ashbyhq.com/kraken/stored-uuid",
+      { includeCompensation: true },
+    );
+  });
+
+  it("falls back to constructing URL when ashby_job_url is board-level (one segment)", async () => {
+    const { fetchAshbyJobPostFromUrl, saveAshbyJobData } = await import("@/ingestion/ashby");
+    (fetchAshbyJobPostFromUrl as any).mockResolvedValue({});
+    (saveAshbyJobData as any).mockResolvedValue({ title: "Engineer" });
+
+    const jobRow = {
+      id: 66,
+      external_id: "66",
+      ashby_job_url: "https://jobs.ashbyhq.com/kraken.com", // board-level — 1 segment
+      url: null,
+    };
+    const db = makeChain([jobRow]);
+
+    await enhanceJobFromATS(null, { jobId: "my-posting-id", company: "kraken.com", source: "ashby" }, { db } as any);
+
+    // Falls back to constructed URL from args
+    expect(fetchAshbyJobPostFromUrl).toHaveBeenCalledWith(
+      "https://jobs.ashbyhq.com/kraken.com/my-posting-id",
+      { includeCompensation: true },
+    );
+  });
+
+  it("falls back to constructing URL when both ashby_job_url and url are null", async () => {
+    const { fetchAshbyJobPostFromUrl, saveAshbyJobData } = await import("@/ingestion/ashby");
+    (fetchAshbyJobPostFromUrl as any).mockResolvedValue({});
+    (saveAshbyJobData as any).mockResolvedValue({ title: "Engineer" });
+
+    const jobRow = { id: 66, external_id: "66", ashby_job_url: null, url: null };
+    const db = makeChain([jobRow]);
+
+    await enhanceJobFromATS(null, { jobId: "my-uuid", company: "kraken", source: "ashby" }, { db } as any);
+
+    expect(fetchAshbyJobPostFromUrl).toHaveBeenCalledWith(
+      "https://jobs.ashbyhq.com/kraken/my-uuid",
+      { includeCompensation: true },
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // enhanceJobFromATS — GraphQL error handling
 // ---------------------------------------------------------------------------
 

@@ -103,11 +103,17 @@ export async function enhanceJobFromATS(
         `✅ [Enhance Job] Successfully enhanced Greenhouse job ${jobId}`,
       );
     } else if (source.toLowerCase() === "ashby") {
-      // For Ashby, construct the URL from company (board name) and jobId
-      const ashbyUrl = `https://jobs.ashbyhq.com/${company}/${jobId}`;
+      // Prefer the canonical URL already stored on the job row (ashby_job_url or url)
+      // over constructing one from user-supplied query params, which may be a DB integer
+      // ID (not an Ashby posting UUID) or a company name with a TLD suffix (e.g.
+      // "kraken.com" instead of the Ashby board slug "kraken").
+      const storedUrl = job.ashby_job_url || job.url;
+      const ashbyUrl = storedUrl && new URL(storedUrl).pathname.split("/").filter(Boolean).length >= 2
+        ? storedUrl
+        : `https://jobs.ashbyhq.com/${company}/${jobId}`;
 
       console.log(
-        `🔄 [Enhance Job] Fetching Ashby data for job ${jobId} from board ${company}`,
+        `🔄 [Enhance Job] Fetching Ashby data for job ${jobId} from ${ashbyUrl}`,
       );
 
       atsData = await fetchAshbyJobPostFromUrl(ashbyUrl, {

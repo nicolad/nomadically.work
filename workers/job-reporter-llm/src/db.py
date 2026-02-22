@@ -6,13 +6,13 @@ import json
 async def get_job(db, job_id: int) -> dict | None:
     row = await db.prepare(
         "SELECT id,title,company_key AS company,location,url,status,"
-        "description,report_trace_id,is_remote_eu,tags FROM jobs WHERE id=?"
+        "description,report_trace_id,is_remote_eu FROM jobs WHERE id=?"
     ).bind(job_id).first()
     if not row:
         return None
     result = {k: getattr(row, k, None)
               for k in ["id","title","company","location","url",
-                        "status","description","report_trace_id","tags"]}
+                        "status","description","report_trace_id"]}
     result["remote"] = bool(getattr(row, "is_remote_eu", False))
     return result
 

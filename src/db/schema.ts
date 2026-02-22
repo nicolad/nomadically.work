@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const companies = sqliteTable("companies", {
@@ -128,6 +128,7 @@ export const jobs = sqliteTable("jobs", {
     .notNull()
     .default(sql`(datetime('now'))`),
 }, (table) => ({
+  sourceCompanyExternalIdx: uniqueIndex("idx_jobs_source_company_external").on(table.source_kind, table.company_key, table.external_id),
   postedAtIdx: index("idx_jobs_posted_at_created_at").on(table.posted_at, table.created_at),
   isRemoteEuIdx: index("idx_jobs_is_remote_eu").on(table.is_remote_eu),
   companyKeyIdx: index("idx_jobs_company_key").on(table.company_key),

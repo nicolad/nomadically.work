@@ -354,7 +354,7 @@ export type EnhanceCompanyResponse = {
 export type EnhanceJobResponse = {
   __typename?: 'EnhanceJobResponse';
   /**
-   * Raw enhanced data from the ATS API (Greenhouse or Lever).
+   * Raw enhanced data from the ATS API (Greenhouse or Ashby).
    *
    * Greenhouse data includes:
    * - content: Full HTML job description
@@ -365,13 +365,11 @@ export type EnhanceJobResponse = {
    * - compliance: Compliance questions
    * - demographic_questions: EEOC/diversity questions
    *
-   * Lever data includes:
-   * - description: Combined job description (HTML)
-   * - descriptionPlain: Description as plaintext
-   * - categories: location, commitment, team, department
-   * - lists: Requirements, benefits, etc.
-   * - workplaceType: on-site, remote, hybrid, or unspecified
-   * - salaryRange: Currency, interval, min, max
+   * Ashby data includes:
+   * - department, team, employment type
+   * - compensation tiers and summary
+   * - secondary locations and address
+   * - remote status
    */
   enhancedData: Maybe<Scalars['JSON']['output']>;
   /** The updated job record with enhanced data from the ATS */
@@ -444,7 +442,7 @@ export type GreenhouseDemographicQuestions = {
 
 export type GreenhouseDepartment = {
   __typename?: 'GreenhouseDepartment';
-  child_ids: Array<Scalars['String']['output']>;
+  child_ids: Maybe<Array<Scalars['String']['output']>>;
   id: Scalars['String']['output'];
   name: Scalars['String']['output'];
   parent_id: Maybe<Scalars['String']['output']>;
@@ -454,13 +452,13 @@ export type GreenhouseMetadata = {
   __typename?: 'GreenhouseMetadata';
   id: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  value: Scalars['String']['output'];
-  value_type: Scalars['String']['output'];
+  value: Maybe<Scalars['String']['output']>;
+  value_type: Maybe<Scalars['String']['output']>;
 };
 
 export type GreenhouseOffice = {
   __typename?: 'GreenhouseOffice';
-  child_ids: Array<Scalars['String']['output']>;
+  child_ids: Maybe<Array<Scalars['String']['output']>>;
   id: Scalars['String']['output'];
   location: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
@@ -470,7 +468,7 @@ export type GreenhouseOffice = {
 export type GreenhouseQuestion = {
   __typename?: 'GreenhouseQuestion';
   description: Maybe<Scalars['String']['output']>;
-  fields: Array<GreenhouseQuestionField>;
+  fields: Maybe<Array<GreenhouseQuestionField>>;
   label: Scalars['String']['output'];
   required: Scalars['Boolean']['output'];
 };
@@ -484,8 +482,6 @@ export type GreenhouseQuestionField = {
 export type Job = {
   __typename?: 'Job';
   absolute_url: Maybe<Scalars['String']['output']>;
-  additional: Maybe<Scalars['String']['output']>;
-  additional_plain: Maybe<Scalars['String']['output']>;
   ashby_address: Maybe<AshbyAddress>;
   ashby_apply_url: Maybe<Scalars['String']['output']>;
   ashby_compensation: Maybe<AshbyCompensation>;
@@ -497,21 +493,16 @@ export type Job = {
   ashby_published_at: Maybe<Scalars['String']['output']>;
   ashby_secondary_locations: Maybe<Array<AshbySecondaryLocation>>;
   ashby_team: Maybe<Scalars['String']['output']>;
-  ats_created_at: Maybe<Scalars['String']['output']>;
-  categories: Maybe<LeverCategories>;
   company: Maybe<Company>;
   company_id: Maybe<Scalars['Int']['output']>;
   company_key: Scalars['String']['output'];
   company_name: Maybe<Scalars['String']['output']>;
   compliance: Maybe<Array<GreenhouseCompliance>>;
-  country: Maybe<Scalars['String']['output']>;
   created_at: Scalars['String']['output'];
   data_compliance: Maybe<Array<GreenhouseDataCompliance>>;
   demographic_questions: Maybe<GreenhouseDemographicQuestions>;
   departments: Maybe<Array<GreenhouseDepartment>>;
   description: Maybe<Scalars['String']['output']>;
-  description_body: Maybe<Scalars['String']['output']>;
-  description_body_plain: Maybe<Scalars['String']['output']>;
   external_id: Scalars['String']['output'];
   first_published: Maybe<Scalars['String']['output']>;
   id: Scalars['Int']['output'];
@@ -519,13 +510,10 @@ export type Job = {
   /** Whether this job is classified as Remote EU — read directly from the DB column. */
   is_remote_eu: Scalars['Boolean']['output'];
   language: Maybe<Scalars['String']['output']>;
-  lists: Maybe<Array<LeverList>>;
   location: Maybe<Scalars['String']['output']>;
   location_questions: Maybe<Array<GreenhouseQuestion>>;
   metadata: Maybe<Array<GreenhouseMetadata>>;
   offices: Maybe<Array<GreenhouseOffice>>;
-  opening: Maybe<Scalars['String']['output']>;
-  opening_plain: Maybe<Scalars['String']['output']>;
   posted_at: Scalars['String']['output'];
   questions: Maybe<Array<GreenhouseQuestion>>;
   remote_eu_confidence: Maybe<ClassificationConfidence>;
@@ -541,7 +529,6 @@ export type Job = {
   title: Scalars['String']['output'];
   updated_at: Scalars['String']['output'];
   url: Scalars['String']['output'];
-  workplace_type: Maybe<Scalars['String']['output']>;
 };
 
 export type JobSkill = {
@@ -562,6 +549,7 @@ export type JobStatus =
   | 'eu_remote'
   | 'new'
   | 'non_eu'
+  | 'reported'
   | 'role_match'
   | 'role_nomatch';
 
@@ -602,21 +590,6 @@ export type LangSmithPromptCommit = {
   promptName: Scalars['String']['output'];
 };
 
-export type LeverCategories = {
-  __typename?: 'LeverCategories';
-  allLocations: Maybe<Array<Scalars['String']['output']>>;
-  commitment: Maybe<Scalars['String']['output']>;
-  department: Maybe<Scalars['String']['output']>;
-  location: Maybe<Scalars['String']['output']>;
-  team: Maybe<Scalars['String']['output']>;
-};
-
-export type LeverList = {
-  __typename?: 'LeverList';
-  content: Scalars['String']['output'];
-  text: Scalars['String']['output'];
-};
-
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
@@ -635,15 +608,15 @@ export type Mutation = {
    *
    * Supported ATS sources:
    * - greenhouse: Greenhouse ATS (https://greenhouse.io)
-   * - lever: Lever ATS (https://lever.co)
+   * - ashby: Ashby ATS (https://ashbyhq.com)
    *
    * For Greenhouse:
    * - jobId: The job posting ID from the URL (e.g., "5802159004" from https://job-boards.greenhouse.io/grafanalabs/jobs/5802159004)
    * - company: The board token (e.g., "grafanalabs")
    *
-   * For Lever:
-   * - jobId: The posting ID (e.g., "5ac21346-8e0c-4494-8e7a-3eb92ff77902")
-   * - company: The site name (e.g., "leverdemo")
+   * For Ashby:
+   * - jobId: The posting ID
+   * - company: The board name
    *
    * The mutation will:
    * 1. Fetch comprehensive job data from the ATS API
@@ -661,6 +634,12 @@ export type Mutation = {
    */
   processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
+  /**
+   * Report a job as irrelevant, spam, or incorrectly classified.
+   * Sets the job status to "reported" so it can be reviewed or excluded.
+   * Requires authentication.
+   */
+  reportJob: Maybe<Job>;
   updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -767,6 +746,11 @@ export type MutationProcessAllJobsArgs = {
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationReportJobArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -1390,8 +1374,6 @@ export type ResolversTypes = {
   JobsResponse: ResolverTypeWrapper<Partial<JobsResponse>>;
   LangSmithPrompt: ResolverTypeWrapper<Partial<LangSmithPrompt>>;
   LangSmithPromptCommit: ResolverTypeWrapper<Partial<LangSmithPromptCommit>>;
-  LeverCategories: ResolverTypeWrapper<Partial<LeverCategories>>;
-  LeverList: ResolverTypeWrapper<Partial<LeverList>>;
   Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
   PrepCategory: ResolverTypeWrapper<Partial<PrepCategory>>;
   PrepContent: ResolverTypeWrapper<Partial<PrepContent>>;
@@ -1481,8 +1463,6 @@ export type ResolversParentTypes = {
   JobsResponse: Partial<JobsResponse>;
   LangSmithPrompt: Partial<LangSmithPrompt>;
   LangSmithPromptCommit: Partial<LangSmithPromptCommit>;
-  LeverCategories: Partial<LeverCategories>;
-  LeverList: Partial<LeverList>;
   Mutation: Record<PropertyKey, never>;
   PrepCategory: Partial<PrepCategory>;
   PrepContent: Partial<PrepContent>;
@@ -1733,7 +1713,7 @@ export type GreenhouseDemographicQuestionsResolvers<ContextType = GraphQLContext
 };
 
 export type GreenhouseDepartmentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseDepartment'] = ResolversParentTypes['GreenhouseDepartment']> = {
-  child_ids?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  child_ids?: Resolver<Maybe<Array<ResolversTypes['String']>>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   parent_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1742,12 +1722,12 @@ export type GreenhouseDepartmentResolvers<ContextType = GraphQLContext, ParentTy
 export type GreenhouseMetadataResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseMetadata'] = ResolversParentTypes['GreenhouseMetadata']> = {
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  value?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  value_type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  value?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  value_type?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type GreenhouseOfficeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseOffice'] = ResolversParentTypes['GreenhouseOffice']> = {
-  child_ids?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  child_ids?: Resolver<Maybe<Array<ResolversTypes['String']>>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1756,7 +1736,7 @@ export type GreenhouseOfficeResolvers<ContextType = GraphQLContext, ParentType e
 
 export type GreenhouseQuestionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseQuestion'] = ResolversParentTypes['GreenhouseQuestion']> = {
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  fields?: Resolver<Array<ResolversTypes['GreenhouseQuestionField']>, ParentType, ContextType>;
+  fields?: Resolver<Maybe<Array<ResolversTypes['GreenhouseQuestionField']>>, ParentType, ContextType>;
   label?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   required?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
 };
@@ -1772,8 +1752,6 @@ export interface JsonScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes
 
 export type JobResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Job'] = ResolversParentTypes['Job']> = {
   absolute_url?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  additional?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  additional_plain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   ashby_address?: Resolver<Maybe<ResolversTypes['AshbyAddress']>, ParentType, ContextType>;
   ashby_apply_url?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   ashby_compensation?: Resolver<Maybe<ResolversTypes['AshbyCompensation']>, ParentType, ContextType>;
@@ -1785,34 +1763,26 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   ashby_published_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   ashby_secondary_locations?: Resolver<Maybe<Array<ResolversTypes['AshbySecondaryLocation']>>, ParentType, ContextType>;
   ashby_team?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  ats_created_at?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  categories?: Resolver<Maybe<ResolversTypes['LeverCategories']>, ParentType, ContextType>;
   company?: Resolver<Maybe<ResolversTypes['Company']>, ParentType, ContextType>;
   company_id?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   company_key?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   company_name?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   compliance?: Resolver<Maybe<Array<ResolversTypes['GreenhouseCompliance']>>, ParentType, ContextType>;
-  country?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   created_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   data_compliance?: Resolver<Maybe<Array<ResolversTypes['GreenhouseDataCompliance']>>, ParentType, ContextType>;
   demographic_questions?: Resolver<Maybe<ResolversTypes['GreenhouseDemographicQuestions']>, ParentType, ContextType>;
   departments?: Resolver<Maybe<Array<ResolversTypes['GreenhouseDepartment']>>, ParentType, ContextType>;
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  description_body?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  description_body_plain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   external_id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   first_published?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   internal_job_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   is_remote_eu?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   language?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  lists?: Resolver<Maybe<Array<ResolversTypes['LeverList']>>, ParentType, ContextType>;
   location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   location_questions?: Resolver<Maybe<Array<ResolversTypes['GreenhouseQuestion']>>, ParentType, ContextType>;
   metadata?: Resolver<Maybe<Array<ResolversTypes['GreenhouseMetadata']>>, ParentType, ContextType>;
   offices?: Resolver<Maybe<Array<ResolversTypes['GreenhouseOffice']>>, ParentType, ContextType>;
-  opening?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  opening_plain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   posted_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   questions?: Resolver<Maybe<Array<ResolversTypes['GreenhouseQuestion']>>, ParentType, ContextType>;
   remote_eu_confidence?: Resolver<Maybe<ResolversTypes['ClassificationConfidence']>, ParentType, ContextType>;
@@ -1828,7 +1798,6 @@ export type JobResolvers<ContextType = GraphQLContext, ParentType extends Resolv
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updated_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  workplace_type?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type JobSkillResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['JobSkill'] = ResolversParentTypes['JobSkill']> = {
@@ -1872,19 +1841,6 @@ export type LangSmithPromptCommitResolvers<ContextType = GraphQLContext, ParentT
   promptName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
-export type LeverCategoriesResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['LeverCategories'] = ResolversParentTypes['LeverCategories']> = {
-  allLocations?: Resolver<Maybe<Array<ResolversTypes['String']>>, ParentType, ContextType>;
-  commitment?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  department?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  team?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-};
-
-export type LeverListResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['LeverList'] = ResolversParentTypes['LeverList']> = {
-  content?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  text?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-};
-
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   add_company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<MutationAdd_Company_FactsArgs, 'company_id' | 'facts'>>;
   createApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationCreateApplicationArgs, 'input'>>;
@@ -1903,6 +1859,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
+  reportJob?: Resolver<Maybe<ResolversTypes['Job']>, ParentType, ContextType, RequireFields<MutationReportJobArgs, 'id'>>;
   updateApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUpdateApplicationArgs, 'id' | 'input'>>;
   updateCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationUpdateCompanyArgs, 'id' | 'input'>>;
   updateLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationUpdateLangSmithPromptArgs, 'input' | 'promptIdentifier'>>;
@@ -2170,8 +2127,6 @@ export type Resolvers<ContextType = GraphQLContext> = {
   JobsResponse?: JobsResponseResolvers<ContextType>;
   LangSmithPrompt?: LangSmithPromptResolvers<ContextType>;
   LangSmithPromptCommit?: LangSmithPromptCommitResolvers<ContextType>;
-  LeverCategories?: LeverCategoriesResolvers<ContextType>;
-  LeverList?: LeverListResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   PrepCategory?: PrepCategoryResolvers<ContextType>;
   PrepContent?: PrepContentResolvers<ContextType>;

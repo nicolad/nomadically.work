@@ -77,3 +77,9 @@ results/*.json
 # MCP / Playwright MCP
 .mcp.json
 .playwright-mcp/
+
+# Claude Code local settings (may contain secrets)
+.claude/settings.local.json
+
+# Rust build artifacts
+workers/ashby-crawler/target/

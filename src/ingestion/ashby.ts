@@ -515,11 +515,16 @@ export async function saveAshbyJobData(
       }
     }
 
-    const [updated] = await db
+    await db
       .update(jobs)
       .set(updateData as any)
+      .where(eq(jobs.id, jobId));
+
+    const [updated] = await db
+      .select()
+      .from(jobs)
       .where(eq(jobs.id, jobId))
-      .returning();
+      .limit(1);
 
     return updated;
   } catch (error) {

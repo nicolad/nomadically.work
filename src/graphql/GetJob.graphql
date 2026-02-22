@@ -18,6 +18,7 @@ query GetJob($id: String!) {
     posted_at
     score
     score_reason
+    status
     is_remote_eu
     remote_eu_confidence
     remote_eu_reason
@@ -172,28 +173,6 @@ query GetJob($id: String!) {
         addressCountry
       }
     }
-
-    # Lever ATS fields
-    categories {
-      commitment
-      location
-      team
-      department
-      allLocations
-    }
-    workplace_type
-    country
-    opening
-    opening_plain
-    description_body
-    description_body_plain
-    additional
-    additional_plain
-    lists {
-      text
-      content
-    }
-    ats_created_at
 
     created_at
     updated_at

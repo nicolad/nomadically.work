@@ -22,6 +22,20 @@
       "when": 1771686726236,
       "tag": "0005_add_jobs_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1771747351322,
+      "tag": "0003_reflective_black_bolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1771751188297,
+      "tag": "0004_nifty_northstar",
+      "breakpoints": true
     }
   ]
 }

@@ -14,6 +14,7 @@ export const JOB_STATUS = {
   EU_REMOTE: "eu-remote",
   NON_EU: "non-eu",
   ERROR: "error",
+  REPORTED: "reported",
 } as const;
 
 export type JobStatusValue = (typeof JOB_STATUS)[keyof typeof JOB_STATUS];

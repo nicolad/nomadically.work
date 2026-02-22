@@ -1,0 +1,14 @@
+{
+  "name": "job-reporter-llm",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "queue:create": "wrangler queues create job-report-queue && wrangler queues create job-report-dlq",
+    "migrate:test": "wrangler d1 execute nomadically-db --local --file migrations/0001_init.sql",
+    "secrets": "echo 'Run: wrangler secret put WORKER_SECRET && wrangler secret put DEEPSEEK_API_KEY && wrangler secret put LANGFUSE_PUBLIC_KEY && wrangler secret put LANGFUSE_SECRET_KEY'"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

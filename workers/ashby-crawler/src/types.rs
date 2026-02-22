@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 pub enum AtsProvider {
     Ashby,
     Greenhouse,
-    Lever,
     Workable,
 }
 
@@ -18,7 +17,6 @@ impl AtsProvider {
         match self {
             AtsProvider::Ashby => "jobs.ashbyhq.com%2F*",
             AtsProvider::Greenhouse => "job-boards.greenhouse.io%2F*",
-            AtsProvider::Lever => "jobs.lever.co%2F*",
             AtsProvider::Workable => "apply.workable.com%2F*",
         }
     }
@@ -28,7 +26,6 @@ impl AtsProvider {
         match self {
             AtsProvider::Ashby => "jobs.ashbyhq.com",
             AtsProvider::Greenhouse => "job-boards.greenhouse.io",
-            AtsProvider::Lever => "jobs.lever.co",
             AtsProvider::Workable => "apply.workable.com",
         }
     }
@@ -38,7 +35,6 @@ impl AtsProvider {
         match self {
             AtsProvider::Ashby => format!("https://jobs.ashbyhq.com/{}", token),
             AtsProvider::Greenhouse => format!("https://job-boards.greenhouse.io/{}", token),
-            AtsProvider::Lever => format!("https://jobs.lever.co/{}", token),
             AtsProvider::Workable => format!("https://apply.workable.com/{}", token),
         }
     }
@@ -47,7 +43,6 @@ impl AtsProvider {
         match self {
             AtsProvider::Ashby => "ashby",
             AtsProvider::Greenhouse => "greenhouse",
-            AtsProvider::Lever => "lever",
             AtsProvider::Workable => "workable",
         }
     }
@@ -56,7 +51,6 @@ impl AtsProvider {
         match s.to_lowercase().as_str() {
             "ashby" => Some(AtsProvider::Ashby),
             "greenhouse" | "gh" => Some(AtsProvider::Greenhouse),
-            "lever" | "lv" => Some(AtsProvider::Lever),
             "workable" | "wb" => Some(AtsProvider::Workable),
             _ => None,
         }

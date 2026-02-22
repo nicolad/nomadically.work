@@ -152,7 +152,10 @@ export async function saveGreenhouseJobData(
   greenhouseData: any,
 ) {
   try {
-    // Update the jobs table with Greenhouse data - save all fields individually
+    // Update the jobs table with Greenhouse data — only display/filter fields.
+    // Heavy JSON blobs (questions, location_questions, compliance,
+    // demographic_questions, data_compliance) are omitted to stay within
+    // D1 size limits. They can be re-fetched from the Greenhouse API on demand.
     const updateData = {
       // Greenhouse-specific fields
       absolute_url: greenhouseData.absolute_url,
@@ -164,15 +167,6 @@ export async function saveGreenhouseJobData(
       metadata: JSON.stringify(greenhouseData.metadata || []),
       departments: JSON.stringify(greenhouseData.departments || []),
       offices: JSON.stringify(greenhouseData.offices || []),
-      questions: JSON.stringify(greenhouseData.questions || []),
-      location_questions: JSON.stringify(
-        greenhouseData.location_questions || [],
-      ),
-      compliance: JSON.stringify(greenhouseData.compliance || []),
-      demographic_questions: JSON.stringify(
-        greenhouseData.demographic_questions || {},
-      ),
-      data_compliance: JSON.stringify(greenhouseData.data_compliance || []),
 
       // Update core fields if they're better/more complete
       description: greenhouseData.content || undefined,
@@ -188,11 +182,16 @@ export async function saveGreenhouseJobData(
         delete updateData[key as keyof typeof updateData],
     );
 
-    const [updated] = await db
+    await db
       .update(jobs)
       .set(updateData as any)
+      .where(eq(jobs.id, jobId));
+
+    const [updated] = await db
+      .select()
+      .from(jobs)
       .where(eq(jobs.id, jobId))
-      .returning();
+      .limit(1);
 
     return updated;
   } catch (error) {

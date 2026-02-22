@@ -1,71 +1,78 @@
 #!/usr/bin/env tsx
 
 /**
- * Enhance Greenhouse Jobs Script
+ * Enhance Jobs Script
  *
- * Triggers a Trigger.dev task to enhance all Greenhouse jobs
- * from the database with additional data from the Greenhouse Job Board API.
+ * Triggers the scheduled Trigger.dev task to find and enhance
+ * all un-enhanced jobs across ATS sources (Greenhouse, Lever, Ashby).
  *
  * Usage:
  *   tsx scripts/enhance-greenhouse-jobs.ts
+ *   tsx scripts/enhance-greenhouse-jobs.ts --job 123 --source greenhouse --url "https://..." --company grafanalabs
  */
 
 import { config } from "dotenv";
 import { tasks } from "@trigger.dev/sdk/v3";
-import type { enhanceGreenhouseJobsTask } from "../src/trigger/enhance-greenhouse";
+import type { enhanceJobTask } from "../src/trigger/enhance-job";
+import type { enhanceJobsScheduled } from "../src/trigger/enhance-greenhouse";
 
 // Load .env.local for environment variables
 config({ path: ".env.local" });
 
-// ============================================================================
-// Main Enhancement Logic
-// ============================================================================
+async function main() {
+  if (!process.env.TRIGGER_SECRET_KEY) {
+    throw new Error(
+      "TRIGGER_SECRET_KEY is not set. Please set it in your .env.local file.",
+    );
+  }
 
-async function triggerEnhancement() {
-  console.log("🚀 Triggering Greenhouse job enhancement task...\n");
+  const args = process.argv.slice(2);
+  const jobIdIdx = args.indexOf("--job");
 
-  try {
-    // Check if TRIGGER_SECRET_KEY is set
-    if (!process.env.TRIGGER_SECRET_KEY) {
-      throw new Error(
-        "❌ TRIGGER_SECRET_KEY is not set. Please set it in your .env.local file.",
-      );
+  // Single job mode: --job <id> --source <source> --url <url> --company <company>
+  if (jobIdIdx !== -1) {
+    const jobId = Number(args[jobIdIdx + 1]);
+    const sourceIdx = args.indexOf("--source");
+    const urlIdx = args.indexOf("--url");
+    const companyIdx = args.indexOf("--company");
+
+    if (!jobId || sourceIdx === -1 || urlIdx === -1 || companyIdx === -1) {
+      console.error("Usage: --job <id> --source <source> --url <url> --company <key>");
+      process.exit(1);
     }
 
-    console.log("📤 Triggering task via Trigger.dev...");
+    console.log(`Triggering single job enhancement for job ${jobId}...`);
 
-    // Trigger the task
-    const handle = await tasks.trigger<typeof enhanceGreenhouseJobsTask>(
-      "enhance-greenhouse-jobs",
-    );
+    const handle = await tasks.trigger<typeof enhanceJobTask>("enhance-job", {
+      jobId,
+      source: args[sourceIdx + 1],
+      url: args[urlIdx + 1],
+      companyKey: args[companyIdx + 1],
+    });
 
-    console.log("✅ Task triggered successfully!");
-    console.log(`📋 Task ID: ${handle.id}`);
-    console.log(
-      `🔗 View task: https://cloud.trigger.dev/projects/${process.env.TRIGGER_PROJECT_ID || "your-project"}/runs/${handle.id}`,
-    );
-    console.log(
-      "\n💡 Tip: Run 'pnpm run trigger:dev' to view task logs in real-time",
-    );
-  } catch (error) {
-    console.error(
-      "❌ Fatal error:",
-      error instanceof Error ? error.message : String(error),
-    );
-    process.exit(1);
+    console.log(`Task triggered: ${handle.id}`);
+    return;
   }
+
+  // Batch mode: trigger the scheduled scan
+  console.log("Triggering scheduled job enhancement scan...");
+
+  const handle = await tasks.trigger<typeof enhanceJobsScheduled>(
+    "enhance-jobs-scheduled",
+  );
+
+  console.log(`Task triggered: ${handle.id}`);
+  console.log(
+    `View: https://cloud.trigger.dev/projects/${process.env.TRIGGER_PROJECT_ID || "your-project"}/runs/${handle.id}`,
+  );
 }
 
-// ============================================================================
-// Run Script
-// ============================================================================
-
-triggerEnhancement()
+main()
   .then(() => {
-    console.log("\n👋 Done!");
+    console.log("Done!");
     process.exit(0);
   })
   .catch((error) => {
-    console.error("\n💥 Unhandled error:", error);
+    console.error("Error:", error instanceof Error ? error.message : error);
     process.exit(1);
   });

@@ -318,7 +318,7 @@ type EnhanceCompanyResponse {
 """Response from enhancing a job with ATS data"""
 type EnhanceJobResponse {
   """
-  Raw enhanced data from the ATS API (Greenhouse or Lever).
+  Raw enhanced data from the ATS API (Greenhouse or Ashby).
   
   Greenhouse data includes:
   - content: Full HTML job description
@@ -329,13 +329,11 @@ type EnhanceJobResponse {
   - compliance: Compliance questions
   - demographic_questions: EEOC/diversity questions
   
-  Lever data includes:
-  - description: Combined job description (HTML)
-  - descriptionPlain: Description as plaintext
-  - categories: location, commitment, team, department
-  - lists: Requirements, benefits, etc.
-  - workplaceType: on-site, remote, hybrid, or unspecified
-  - salaryRange: Currency, interval, min, max
+  Ashby data includes:
+  - department, team, employment type
+  - compensation tiers and summary
+  - secondary locations and address
+  - remote status
   """
   enhancedData: JSON
   """The updated job record with enhanced data from the ATS"""
@@ -404,7 +402,7 @@ type GreenhouseDemographicQuestions {
 }
 
 type GreenhouseDepartment {
-  child_ids: [String!]!
+  child_ids: [String!]
   id: String!
   name: String!
   parent_id: String
@@ -413,12 +411,12 @@ type GreenhouseDepartment {
 type GreenhouseMetadata {
   id: String!
   name: String!
-  value: String!
-  value_type: String!
+  value: String
+  value_type: String
 }
 
 type GreenhouseOffice {
-  child_ids: [String!]!
+  child_ids: [String!]
   id: String!
   location: String
   name: String!
@@ -427,7 +425,7 @@ type GreenhouseOffice {
 
 type GreenhouseQuestion {
   description: String
-  fields: [GreenhouseQuestionField!]!
+  fields: [GreenhouseQuestionField!]
   label: String!
   required: Boolean!
 }
@@ -441,8 +439,6 @@ scalar JSON
 
 type Job {
   absolute_url: String
-  additional: String
-  additional_plain: String
   ashby_address: AshbyAddress
   ashby_apply_url: String
   ashby_compensation: AshbyCompensation
@@ -454,21 +450,16 @@ type Job {
   ashby_published_at: String
   ashby_secondary_locations: [AshbySecondaryLocation!]
   ashby_team: String
-  ats_created_at: String
-  categories: LeverCategories
   company: Company
   company_id: Int
   company_key: String!
   company_name: String
   compliance: [GreenhouseCompliance!]
-  country: String
   created_at: String!
   data_compliance: [GreenhouseDataCompliance!]
   demographic_questions: GreenhouseDemographicQuestions
   departments: [GreenhouseDepartment!]
   description: String
-  description_body: String
-  description_body_plain: String
   external_id: String!
   first_published: String
   id: Int!
@@ -478,13 +469,10 @@ type Job {
   """
   is_remote_eu: Boolean!
   language: String
-  lists: [LeverList!]
   location: String
   location_questions: [GreenhouseQuestion!]
   metadata: [GreenhouseMetadata!]
   offices: [GreenhouseOffice!]
-  opening: String
-  opening_plain: String
   posted_at: String!
   questions: [GreenhouseQuestion!]
   remote_eu_confidence: ClassificationConfidence
@@ -500,7 +488,6 @@ type Job {
   title: String!
   updated_at: String!
   url: String!
-  workplace_type: String
 }
 
 type JobSkill {
@@ -520,6 +507,7 @@ enum JobStatus {
   eu_remote
   new
   non_eu
+  reported
   role_match
   role_nomatch
 }
@@ -558,19 +546,6 @@ type LangSmithPromptCommit {
   promptName: String!
 }
 
-type LeverCategories {
-  allLocations: [String!]
-  commitment: String
-  department: String
-  location: String
-  team: String
-}
-
-type LeverList {
-  content: String!
-  text: String!
-}
-
 type Mutation {
   add_company_facts(company_id: Int!, facts: [CompanyFactInput!]!): [CompanyFact!]!
   createApplication(input: ApplicationInput!): Application!
@@ -588,15 +563,15 @@ type Mutation {
   
   Supported ATS sources:
   - greenhouse: Greenhouse ATS (https://greenhouse.io)
-  - lever: Lever ATS (https://lever.co)
+  - ashby: Ashby ATS (https://ashbyhq.com)
   
   For Greenhouse:
   - jobId: The job posting ID from the URL (e.g., "5802159004" from https://job-boards.greenhouse.io/grafanalabs/jobs/5802159004)
   - company: The board token (e.g., "grafanalabs")
   
-  For Lever:
-  - jobId: The posting ID (e.g., "5ac21346-8e0c-4494-8e7a-3eb92ff77902")
-  - company: The site name (e.g., "leverdemo")
+  For Ashby:
+  - jobId: The posting ID
+  - company: The board name
   
   The mutation will:
   1. Fetch comprehensive job data from the ATS API
@@ -614,6 +589,12 @@ type Mutation {
   """
   processAllJobs(limit: Int): ProcessAllJobsResponse!
   pushLangSmithPrompt(input: PushLangSmithPromptInput, promptIdentifier: String!): String!
+  """
+  Report a job as irrelevant, spam, or incorrectly classified.
+  Sets the job status to "reported" so it can be reviewed or excluded.
+  Requires authentication.
+  """
+  reportJob(id: Int!): Job
   updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
   updateLangSmithPrompt(input: UpdateLangSmithPromptInput!, promptIdentifier: String!): LangSmithPrompt!

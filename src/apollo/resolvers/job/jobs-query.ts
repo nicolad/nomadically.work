@@ -5,6 +5,7 @@ import {
   or,
   like,
   notLike,
+  ne,
   desc,
   notInArray,
   inArray,
@@ -21,7 +22,7 @@ export async function jobsQuery(
   context: GraphQLContext,
 ) {
   try {
-    const conditions = [];
+    const conditions = [ne(jobs.status, "reported")];
     const hasFilters = !!(args.search || args.sourceType || args.remoteEuConfidence || (args.skills && args.skills.length > 0));
 
     if (args.search) {

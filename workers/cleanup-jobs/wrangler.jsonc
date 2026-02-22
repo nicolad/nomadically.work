@@ -1,0 +1,41 @@
+{
+  "name": "nomadically-work-cleanup-jobs",
+  "main": "src/entry.py",
+  "compatibility_date": "2025-11-02",
+  "compatibility_flags": ["python_workers"],
+  "triggers": {
+    "crons": ["0 2 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nomadically-work-db",
+      "database_id": "632b9c57-8262-40bd-86c2-bc08beab713b",
+      "remote": true,
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "queue": "cleanup-jobs-queue",
+        "binding": "CLEANUP_JOBS_QUEUE",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "cleanup-jobs-queue",
+        "max_batch_size": 1,
+        "max_retries": 3,
+        "dead_letter_queue": "cleanup-jobs-dlq",
+      },
+    ],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1.0,
+    },
+  },
+}

@@ -1,0 +1,6 @@
+mutation ReportJob($id: Int!) {
+  reportJob(id: $id) {
+    id
+    status
+  }
+}

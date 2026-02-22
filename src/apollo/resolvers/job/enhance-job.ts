@@ -1,11 +1,10 @@
 import { jobs } from "@/db/schema";
 import type { GraphQLContext } from "../../context";
-import { extractJobSlug } from "@/lib/job-utils";
+import { eq, like } from "drizzle-orm";
 import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
 } from "@/ingestion/greenhouse";
-import { getLeverPosting, saveLeverJobData } from "@/ingestion/lever";
 import {
   fetchAshbyJobPostFromUrl,
   saveAshbyJobData,
@@ -17,14 +16,13 @@ import {
  *
  * Supports:
  * - Greenhouse ATS: Fetches full job details including departments, offices, questions, compliance
- * - Lever ATS: Fetches posting details including categories, workplace type, salary range
  * - Ashby ATS: Fetches posting details including compensation, department, team, secondary locations
  *
  * @param _parent - Parent resolver (unused)
  * @param args - Mutation arguments
  * @param args.jobId - The unique job/posting ID from the ATS
- * @param args.company - Company identifier (board_token for Greenhouse, site name for Lever, board name for Ashby)
- * @param args.source - ATS source: "greenhouse", "lever", or "ashby"
+ * @param args.company - Company identifier (board_token for Greenhouse, board name for Ashby)
+ * @param args.source - ATS source: "greenhouse" or "ashby"
  * @param _context - GraphQL context (unused for this public operation)
  * @returns EnhanceJobResponse with success status, message, enhanced job, and raw ATS data
  */
@@ -37,7 +35,7 @@ export async function enhanceJobFromATS(
     const { jobId, company, source } = args;
 
     // Validate source
-    const supportedSources = ["greenhouse", "lever", "ashby"];
+    const supportedSources = ["greenhouse", "ashby"];
     if (!supportedSources.includes(source.toLowerCase())) {
       return {
         success: false,
@@ -47,12 +45,33 @@ export async function enhanceJobFromATS(
       };
     }
 
-    // Find the job in the database first
-    const allJobs = await context.db.select().from(jobs);
-    const job = allJobs.find((job) => {
-      const jobIdFromUrl = extractJobSlug(job.external_id, job.id);
-      return jobIdFromUrl === jobId;
-    });
+    // Find the job using indexed lookups (same strategy as the job query resolver)
+    let jobResults = await context.db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.external_id, jobId))
+      .limit(1);
+
+    if (jobResults.length === 0) {
+      jobResults = await context.db
+        .select()
+        .from(jobs)
+        .where(like(jobs.external_id, `%/${jobId}%`))
+        .limit(1);
+    }
+
+    if (jobResults.length === 0) {
+      const numericId = Number(jobId);
+      if (Number.isFinite(numericId) && numericId > 0) {
+        jobResults = await context.db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.id, numericId))
+          .limit(1);
+      }
+    }
+
+    const job = jobResults[0];
 
     if (!job) {
       return {
@@ -74,9 +93,7 @@ export async function enhanceJobFromATS(
         `🔄 [Enhance Job] Fetching Greenhouse data for job ${jobId} from ${jobBoardUrl}`,
       );
 
-      enhancedData = await fetchGreenhouseJobPost(jobBoardUrl, {
-        questions: true,
-      });
+      enhancedData = await fetchGreenhouseJobPost(jobBoardUrl);
 
       // Save the enhanced data to the database
       updatedJob = await saveGreenhouseJobData(
@@ -87,44 +104,6 @@ export async function enhanceJobFromATS(
 
       console.log(
         `✅ [Enhance Job] Successfully enhanced Greenhouse job ${jobId}`,
-      );
-    } else if (source.toLowerCase() === "lever") {
-      // For Lever, extract site name from the external_id URL
-      // Format: https://jobs.lever.co/{site}/{posting_id}
-      const urlParts = job.external_id.split("/");
-      const leverSite =
-        urlParts.length >= 5 ? urlParts[urlParts.length - 2] : company;
-      const leverPostingId = last(urlParts) || jobId;
-
-      console.log(
-        `🔄 [Enhance Job] Fetching Lever data for posting ${leverPostingId} from site ${leverSite}`,
-      );
-
-      // Lever uses 'site' (company name) and posting ID
-      // Try both global and EU regions
-      try {
-        enhancedData = await getLeverPosting({
-          site: leverSite,
-          postingId: leverPostingId,
-          region: "global",
-        });
-      } catch (globalError) {
-        console.log(
-          `⚠️  [Enhance Job] Failed to fetch from global region, trying EU...`,
-        );
-        // If global fails, try EU region
-        enhancedData = await getLeverPosting({
-          site: leverSite,
-          postingId: leverPostingId,
-          region: "eu",
-        });
-      }
-
-      // Save the enhanced data to the database
-      updatedJob = await saveLeverJobData(context.db, job.id, enhancedData);
-
-      console.log(
-        `✅ [Enhance Job] Successfully enhanced Lever job ${leverPostingId}`,
       );
     } else if (source.toLowerCase() === "ashby") {
       // For Ashby, construct the URL from company (board name) and jobId
@@ -157,11 +136,16 @@ export async function enhanceJobFromATS(
     };
   } catch (error) {
     console.error("❌ [Enhance Job] Error enhancing job:", error);
+    if (error instanceof Error && error.cause) {
+      console.error("❌ [Enhance Job] Root cause:", error.cause);
+    }
 
-    // Provide more specific error messages
+    // Provide more specific error messages — surface root cause from Drizzle wrapper
     let errorMessage = "Failed to enhance job";
     if (error instanceof Error) {
-      errorMessage = error.message;
+      // DrizzleQueryError wraps the actual D1 error as `cause`
+      const rootCause = error.cause instanceof Error ? error.cause.message : String(error.cause ?? "");
+      errorMessage = rootCause || error.message;
 
       // Handle specific error cases
       if (error.message.includes("404")) {

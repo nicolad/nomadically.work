@@ -75,6 +75,22 @@ const MIGRATIONS: &[(&str, &str)] = &[
            AND absolute_url != ''
            AND absolute_url NOT IN (SELECT external_id FROM jobs WHERE external_id NOT LIKE 'gh-%')
     "),
+    ("0011_workable_boards", "
+        CREATE TABLE IF NOT EXISTS workable_boards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shortcode TEXT NOT NULL UNIQUE,
+            url TEXT NOT NULL,
+            first_seen TEXT NOT NULL DEFAULT (datetime('now')),
+            last_seen TEXT NOT NULL DEFAULT (datetime('now')),
+            crawl_id TEXT,
+            last_synced_at TEXT,
+            job_count INTEGER,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_wb_boards_shortcode ON workable_boards(shortcode)
+    "),
     ("0010_strip_querystring_from_external_id", "
         DELETE FROM jobs WHERE id NOT IN (
           SELECT MIN(id) FROM jobs
@@ -272,6 +288,24 @@ pub async fn get_company_slugs_by_provider(db: &D1Database, provider: AtsProvide
                      LEFT JOIN lever_boards lb ON lb.site = c.key
                      WHERE c.ats_provider = 'lever'
                        AND lb.last_synced_at IS NULL
+                     ORDER BY c.key
+                     LIMIT ?1"
+                )
+                .bind(&[(limit as f64).into()])?
+                .all()
+                .await?
+                .results::<serde_json::Value>()?;
+            Ok(rows.iter()
+                .filter_map(|r| r["key"].as_str().map(String::from))
+                .collect())
+        }
+        AtsProvider::Workable => {
+            let rows = db
+                .prepare(
+                    "SELECT c.key FROM companies c
+                     LEFT JOIN workable_boards wb ON wb.shortcode = c.key
+                     WHERE c.ats_provider = 'workable'
+                       AND wb.last_synced_at IS NULL
                      ORDER BY c.key
                      LIMIT ?1"
                 )

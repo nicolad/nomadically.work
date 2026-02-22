@@ -1,20 +1,25 @@
 import type { GraphQLContext } from "../../context";
 import { isAdminEmail } from "@/lib/admin";
+import { tasks } from "@trigger.dev/sdk/v3";
+import type { enhanceJobsOnDemand } from "@/trigger/enhance-all";
+
+const EMPTY_STATS = {
+  enhanced: null,
+  enhanceErrors: null,
+  processed: null,
+  euRemote: null,
+  nonEuRemote: null,
+  errors: null,
+} as const;
 
 /**
- * GraphQL mutation resolver to trigger the classify-jobs Cloudflare Worker.
+ * GraphQL mutation resolver: one-click enhancement + classification.
  *
- * Follows the langchain-cloudflare pattern of calling CF workers via HTTP POST
- * with Bearer token authentication (see test_worker_integration.py).
+ * 1. Fires off Trigger.dev enhancement (fan-out to individual ATS jobs) — fire-and-forget
+ * 2. Calls the classify-jobs Cloudflare Worker (waits for response)
  *
- * The worker runs DeepSeek-based classification for remote-EU eligibility
- * on all unclassified jobs in the D1 database.
- *
- * @param _parent - Parent resolver (unused)
- * @param args - Mutation arguments
- * @param args.limit - Optional max number of jobs to process (default: worker decides)
- * @param context - GraphQL context with auth info
- * @returns ProcessAllJobsResponse with success status, stats, and message
+ * Both pipelines run concurrently. Enhancement enriches jobs from Greenhouse/Ashby APIs;
+ * classification runs the DeepSeek remote-EU pipeline on all unclassified jobs.
  */
 export async function processAllJobs(
   _parent: any,
@@ -23,30 +28,12 @@ export async function processAllJobs(
 ) {
   // Require authentication
   if (!context.userId) {
-    return {
-      success: false,
-      message: "Unauthorized — sign in required",
-      enhanced: null,
-      enhanceErrors: null,
-      processed: null,
-      euRemote: null,
-      nonEuRemote: null,
-      errors: null,
-    };
+    return { success: false, message: "Unauthorized — sign in required", ...EMPTY_STATS };
   }
 
   // Require admin privileges
   if (!isAdminEmail(context.userEmail)) {
-    return {
-      success: false,
-      message: "Forbidden — admin access required",
-      enhanced: null,
-      enhanceErrors: null,
-      processed: null,
-      euRemote: null,
-      nonEuRemote: null,
-      errors: null,
-    };
+    return { success: false, message: "Forbidden — admin access required", ...EMPTY_STATS };
   }
 
   // Resolve worker URL — the classify-jobs CF worker
@@ -57,30 +44,33 @@ export async function processAllJobs(
   if (!workerUrl) {
     return {
       success: false,
-      message:
-        "CLASSIFY_JOBS_WORKER_URL is not configured. Set it in your environment.",
-      enhanced: null,
-      enhanceErrors: null,
-      processed: null,
-      euRemote: null,
-      nonEuRemote: null,
-      errors: null,
+      message: "CLASSIFY_JOBS_WORKER_URL is not configured. Set it in your environment.",
+      ...EMPTY_STATS,
     };
   }
 
   const cronSecret = process.env.CRON_SECRET;
+  const messages: string[] = [];
 
+  // --- Step 1: Trigger.dev enhancement (fire-and-forget) ---
   try {
-    console.log(
-      `🔄 [ProcessAllJobs] Triggering classify-jobs worker at ${workerUrl}`,
+    const handle = await tasks.trigger<typeof enhanceJobsOnDemand>(
+      "enhance-jobs-on-demand",
+      { limit: args.limit ?? 200 },
     );
+    console.log(`[ProcessAllJobs] Enhancement triggered: ${handle.id}`);
+    messages.push(`Enhancement triggered (run ${handle.id})`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[ProcessAllJobs] Enhancement trigger failed: ${msg}`);
+    messages.push(`Enhancement skipped: ${msg}`);
+  }
 
-    // Following the langchain-cloudflare pattern:
-    //   response = requests.post(url, json=payload, headers={"Authorization": f"Bearer {secret}"})
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+  // --- Step 2: Classification worker ---
+  try {
+    console.log(`[ProcessAllJobs] Triggering classify-jobs worker at ${workerUrl}`);
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (cronSecret) {
       headers["Authorization"] = `Bearer ${cronSecret}`;
     }
@@ -98,18 +88,12 @@ export async function processAllJobs(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(
-        `❌ [ProcessAllJobs] Worker returned ${response.status}: ${errorText}`,
-      );
+      console.error(`[ProcessAllJobs] Worker returned ${response.status}: ${errorText}`);
+      messages.push(`Classification failed: ${response.status}`);
       return {
         success: false,
-        message: `Worker returned ${response.status}: ${errorText}`,
-        enhanced: null,
-        enhanceErrors: null,
-        processed: null,
-        euRemote: null,
-        nonEuRemote: null,
-        errors: null,
+        message: messages.join(" | "),
+        ...EMPTY_STATS,
       };
     }
 
@@ -127,13 +111,12 @@ export async function processAllJobs(
       };
     };
 
-    console.log(
-      `✅ [ProcessAllJobs] Worker response: ${result.message ?? "OK"}${result.queued ? " (queued)" : ""}`,
-    );
+    console.log(`[ProcessAllJobs] Worker response: ${result.message ?? "OK"}${result.queued ? " (queued)" : ""}`);
+    messages.push(result.message ?? "Classification queued");
 
     return {
       success: result.success,
-      message: result.message ?? "Processing queued",
+      message: messages.join(" | "),
       enhanced: result.stats?.enhanced ?? null,
       enhanceErrors: result.stats?.enhanceErrors ?? null,
       processed: result.stats?.processed ?? null,
@@ -142,17 +125,12 @@ export async function processAllJobs(
       errors: result.stats?.errors ?? null,
     };
   } catch (error) {
-    console.error("❌ [ProcessAllJobs] Error calling worker:", error);
+    console.error("[ProcessAllJobs] Error calling worker:", error);
+    messages.push(error instanceof Error ? error.message : "Unknown error");
     return {
       success: false,
-      message:
-        error instanceof Error ? error.message : "Unknown error calling worker",
-      enhanced: null,
-      enhanceErrors: null,
-      processed: null,
-      euRemote: null,
-      nonEuRemote: null,
-      errors: null,
+      message: messages.join(" | "),
+      ...EMPTY_STATS,
     };
   }
 }

@@ -120,7 +120,7 @@ pub async fn upsert_ashby_jobs_to_d1(
                 ashby_is_remote, ashby_is_listed, ashby_published_at,
                 ashby_job_url, ashby_apply_url,
                 ashby_secondary_locations, ashby_compensation, ashby_address,
-                categories, ats_created_at, updated_at
+                categories, ats_created_at, first_published, updated_at
             ) VALUES (
                 ?1, 'ashby', ?2, ?3, ?4,
                 ?5, ?6, NULLIF(?7,''), NULLIF(?8,''),
@@ -130,7 +130,7 @@ pub async fn upsert_ashby_jobs_to_d1(
                 ?14, ?15, NULLIF(?9,''),
                 NULLIF(?16,''), NULLIF(?17,''),
                 NULLIF(?18,''), NULLIF(?19,''), NULLIF(?20,''),
-                NULLIF(?21,''), NULLIF(?9,''), datetime('now')
+                NULLIF(?21,''), NULLIF(?9,''), NULLIF(?9,''), datetime('now')
             )
             ON CONFLICT(external_id) DO UPDATE SET
                 source_id=excluded.source_id,
@@ -155,6 +155,7 @@ pub async fn upsert_ashby_jobs_to_d1(
                 ashby_address=excluded.ashby_address,
                 categories=excluded.categories,
                 ats_created_at=excluded.ats_created_at,
+                first_published=COALESCE(excluded.first_published, first_published),
                 updated_at=datetime('now')";
 
     let mut stmts = Vec::with_capacity(jobs.len() + 2);

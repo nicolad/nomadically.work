@@ -15,7 +15,7 @@ query GetJob($id: String!) {
     location
     url
     description
-    posted_at
+    publishedAt
     score
     score_reason
     status
@@ -47,7 +47,7 @@ query GetJob($id: String!) {
     internal_job_id
     requisition_id
     company_name
-    first_published
+    publishedAt
     language
     metadata {
       id
@@ -127,7 +127,6 @@ query GetJob($id: String!) {
     ashby_employment_type
     ashby_is_remote
     ashby_is_listed
-    ashby_published_at
     ashby_job_url
     ashby_apply_url
     ashby_secondary_locations {

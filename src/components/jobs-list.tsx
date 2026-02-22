@@ -274,9 +274,9 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
                       {job.source_kind}
                     </span>
                   )}
-                  {job.posted_at && (
+                  {job.publishedAt && (
                     <span className="job-row-meta-item">
-                      {new Date(job.posted_at).toLocaleDateString("en-GB", {
+                      {new Date(job.publishedAt).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
                       })}

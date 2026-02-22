@@ -185,7 +185,6 @@ Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST 
 ## Known issues
 
 ### Performance
-- **Fetch-all-then-filter** in `src/apollo/resolvers/job/jobs-query.ts` — loads entire `jobs` table before paginating. Fix: push WHERE/LIMIT/OFFSET to SQL.
 - **Full table scan** in `src/apollo/resolvers/job/enhance-job.ts` — fetches all jobs to find one by `external_id`.
 - **N+1 queries** for skills, company, and ATS board sub-fields — no DataLoader.
 
@@ -227,3 +226,224 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 - **[SKILLS-REMOTE-WORK-EU.md](./SKILLS-REMOTE-WORK-EU.md)** — Curated agent skills and subagents for remote EU job market focus.
 - **[OPTIMIZATION-STRATEGY.md](./OPTIMIZATION-STRATEGY.md)** — Full Two-Layer Model strategy document.
+
+---
+
+## Domain-specific patterns
+
+> An MCPDoc MCP server is configured in `.claude/settings.json` with docs for Drizzle, Next.js, Vercel AI SDK, Trigger.dev, Mastra, Cloudflare Workers, and Inngest. Call `list_doc_sources` to see available sources, then `fetch_docs` on specific URLs when you need deeper detail on any API.
+
+---
+
+### Drizzle ORM + D1
+
+**Setup** — always cast `D1HttpClient` as `any` (it implements a subset of the CF binding interface):
+
+```ts
+import { drizzle } from "drizzle-orm/d1";
+import { createD1HttpClient } from "@/db/d1-http";
+
+const db = drizzle(createD1HttpClient() as any);
+```
+
+**Querying** — use Drizzle expressions, never raw SQL template literals:
+
+```ts
+import { eq, and, or, like, inArray, desc, count, sql } from "drizzle-orm";
+import { jobs, jobSkillTags } from "@/db/schema";
+
+// Paginate with hasMore trick (avoids extra COUNT on first page)
+const rows = await db.select().from(jobs).where(eq(jobs.is_remote_eu, true))
+  .orderBy(desc(jobs.posted_at)).limit(limit + 1).offset(offset);
+const hasMore = rows.length > limit;
+
+// Subquery
+const skillFilter = inArray(
+  jobs.id,
+  db.select({ job_id: jobSkillTags.job_id }).from(jobSkillTags)
+    .where(inArray(jobSkillTags.tag, skills))
+    .groupBy(jobSkillTags.job_id)
+    .having(sql`count(distinct ${jobSkillTags.tag}) = ${skills.length}`)
+);
+```
+
+**Types** — always derive from schema, never hand-write:
+
+```ts
+import type { Job, NewJob, Company } from "@/db/schema";
+// typeof jobs.$inferSelect  →  Job
+// typeof jobs.$inferInsert  →  NewJob
+```
+
+**Migration workflow** — schema change → generate → apply:
+
+```bash
+pnpm db:generate   # creates migration file in migrations/
+pnpm db:migrate    # applies locally
+pnpm db:push       # applies to remote D1
+```
+
+**Anti-patterns:**
+- Never write raw SQL strings in resolvers — use Drizzle ORM methods.
+- Never use `db.execute(sql\`...\`)` for application queries — use typed builder.
+- Never import from `drizzle-orm/pg-core` or `drizzle-orm/mysql-core` — use `drizzle-orm/sqlite-core`.
+
+> Docs: fetch_docs on `https://orm.drizzle.team/docs/overview`
+
+---
+
+### Apollo Server 5 resolver patterns
+
+**Context** — always type `context` as `GraphQLContext`:
+
+```ts
+import type { GraphQLContext } from "../../context";
+import type { QueryJobsArgs, JobResolvers } from "@/__generated__/resolvers-types";
+
+// Query resolver
+async function jobsQuery(_parent: unknown, args: QueryJobsArgs, context: GraphQLContext) {
+  return context.db.select().from(jobs)...;
+}
+
+// Field resolver — parent type is the raw Drizzle row (Job)
+const Job: JobResolvers<GraphQLContext, Job> = {
+  async skills(parent, _args, context) {
+    return context.loaders.jobSkills.load(parent.id); // always use DataLoaders
+  },
+  async company(parent, _args, context) {
+    if (!parent.company_id) return null;
+    return context.loaders.company.load(parent.company_id);
+  },
+};
+```
+
+**JSON column pattern** — D1 stores JSON as text; always parse in field resolvers:
+
+```ts
+departments(parent) {
+  if (!parent.departments) return [];
+  try { return JSON.parse(parent.departments); }
+  catch { return []; }
+},
+```
+
+**Boolean columns** — D1 returns `0`/`1` for SQLite integers. Fields defined with `{ mode: "boolean" }` in schema are auto-coerced by Drizzle. Fields without it need manual coercion in resolvers:
+
+```ts
+is_remote_eu(parent) {
+  return (parent.is_remote_eu as unknown) === 1 || parent.is_remote_eu === true;
+},
+```
+
+**Admin guard** — any mutation that modifies production data must check:
+
+```ts
+import { isAdminEmail } from "@/lib/admin";
+
+if (!context.userId || !isAdminEmail(context.userEmail)) {
+  throw new Error("Forbidden");
+}
+```
+
+**Anti-patterns:**
+- Never query the DB directly inside field resolvers — always go through `context.loaders.*` DataLoaders to avoid N+1.
+- Never use `any` for context — use the generated `GraphQLContext` type.
+- Never edit files in `src/__generated__/` — they are overwritten by `pnpm codegen`.
+- Prefer generated types from `@/__generated__/resolvers-types.ts` over `any` in resolver signatures.
+
+---
+
+### GraphQL codegen
+
+Run `pnpm codegen` after **any** change to `schema/**/*.graphql`. Generates into `src/__generated__/`:
+
+| File | Contents |
+|---|---|
+| `types.ts` | TS types for schema (strict scalars) |
+| `resolvers-types.ts` | Resolver types with `GraphQLContext` |
+| `hooks.tsx` | React Apollo hooks |
+| `typeDefs.ts` | Merged type definitions |
+
+Custom scalar mappings (in `codegen.ts`): `DateTime`/`URL`/`EmailAddress` → `string`, `JSON` → `any`, `Upload` → `File`.
+
+**Anti-patterns:**
+- Never skip codegen after schema changes — stale types cause silent runtime mismatches.
+- Never manually edit `src/__generated__/` files.
+
+---
+
+### Trigger.dev tasks
+
+Tasks live in `src/trigger/` and must be registered. Pattern:
+
+```ts
+import { task, logger } from "@trigger.dev/sdk/v3";
+import { drizzle } from "drizzle-orm/d1";
+import { createD1HttpClient } from "../db/d1-http";
+
+// Lazy DB init — don't create at module level
+function getDb() {
+  return drizzle(createD1HttpClient() as any);
+}
+
+export const myTask = task({
+  id: "my-task",           // unique kebab-case, matches trigger.config.ts registration
+  maxDuration: 120,        // seconds
+  retry: {
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
+    maxTimeoutInMs: 30000,
+    factor: 2,
+  },
+  queue: { concurrencyLimit: 5 },
+
+  run: async (payload: MyPayload) => {
+    logger.info("Starting task", { ...payload });  // use logger, not console
+    const db = getDb();
+    // ... do work
+    return { success: true };
+  },
+
+  handleError: async (payload, error) => {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("404")) {
+      logger.info("Resource not found, skipping retry");
+      return { skipRetrying: true };  // prevents retry for known terminal errors
+    }
+    logger.error("Task failed", { error: msg });
+    // return nothing = allow retry
+  },
+});
+```
+
+**Anti-patterns:**
+- Never import from `@trigger.dev/sdk` — use `@trigger.dev/sdk/v3`.
+- Never create the DB client at module level — always lazy-init inside `run` or a factory function.
+- Never use `console.log` inside tasks — use `logger.*` so logs appear in the Trigger.dev dashboard.
+- Never forget to export the task — unregistered tasks silently fail to trigger.
+
+> Docs: fetch_docs on `https://trigger.dev/docs/tasks-overview`
+
+---
+
+### D1 Gateway / batch queries
+
+Prefer batching when making multiple independent queries in one request:
+
+```ts
+// Single exec (via Drizzle — preferred for typed queries)
+const result = await context.db.select().from(jobs).where(eq(jobs.id, id));
+
+// Raw batch (for admin scripts / multi-statement operations)
+const client = createD1HttpClient();
+const [jobsResult, companiesResult] = await client.batch([
+  "SELECT count(*) FROM jobs",
+  "SELECT count(*) FROM companies",
+]);
+```
+
+The `D1HttpClient` singleton is cached (`_cachedClient`) — do not re-instantiate per request.
+
+**Anti-patterns:**
+- Never make N sequential `fetch()` calls to the D1 gateway when a batch would work.
+- Never bypass `createD1HttpClient()` by constructing `D1HttpClient` directly — the factory handles env var selection and caching.

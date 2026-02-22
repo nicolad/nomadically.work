@@ -20,8 +20,7 @@ export const enhanceJobsOnDemand = task({
   maxDuration: 300,
   queue: { concurrencyLimit: 1 },
   run: async (payload: { limit?: number }) => {
-    const maxJobs = payload.limit ?? 200;
-    logger.info("Starting on-demand job enhancement scan...", { maxJobs });
+    logger.info("Starting on-demand job enhancement scan...");
 
     const db = getDb();
 
@@ -40,22 +39,19 @@ export const enhanceJobsOnDemand = task({
             AND ${jobs.absolute_url} IS NULL
             AND ${jobs.ashby_department} IS NULL
             AND ${jobs.departments} IS NULL`,
-      )
-      .limit(250);
+      );
 
     // Filter out Ashby board-level entries (1 path segment = board, 2+ = job)
-    const unenhanced = candidates
-      .filter((job) => {
-        if (job.source_kind !== "ashby") return true;
-        if (job.url !== job.external_id) return true;
-        try {
-          const parts = new URL(job.url).pathname.split("/").filter(Boolean);
-          return parts.length >= 2;
-        } catch {
-          return false;
-        }
-      })
-      .slice(0, maxJobs);
+    const unenhanced = candidates.filter((job) => {
+      if (job.source_kind !== "ashby") return true;
+      if (job.url !== job.external_id) return true;
+      try {
+        const parts = new URL(job.url).pathname.split("/").filter(Boolean);
+        return parts.length >= 2;
+      } catch {
+        return false;
+      }
+    });
 
     logger.info(`Found ${unenhanced.length} un-enhanced jobs (${candidates.length} candidates)`);
 

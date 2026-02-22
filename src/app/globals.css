@@ -126,7 +126,7 @@ a:hover svg {
 }
 .yc-row-meta {
   font-size: 12px;
-  color: var(--gray-9);
+  color: var(--gray-11);
   white-space: nowrap;
 }
 
@@ -182,7 +182,7 @@ a:hover svg {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 /* line 1: title + badge */
@@ -196,14 +196,15 @@ a:hover svg {
   font-size: 17px;
   font-weight: 600;
   color: var(--gray-12);
-  line-height: 1.35;
-  letter-spacing: -0.015em;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
 }
 
 /* line 2: company */
 .job-row-company {
   font-size: 14px;
-  color: var(--gray-10);
+  font-weight: 500;
+  color: var(--gray-11);
   cursor: pointer;
   text-decoration: none;
   transition: color 0.12s;
@@ -227,12 +228,12 @@ a:hover svg {
 .job-row-meta-line > * + *::before {
   content: "·";
   margin-right: 8px;
-  color: var(--gray-7);
+  color: var(--gray-10);
   font-size: 11px;
 }
 .job-row-meta-item {
   font-size: 13px;
-  color: var(--gray-9);
+  color: var(--gray-11);
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -240,8 +241,8 @@ a:hover svg {
 .job-row-meta-badge {
   font-size: 12px;
   padding: 1px 6px;
-  border: 1px solid var(--gray-5);
-  color: var(--gray-9);
+  border: 1px solid var(--gray-6);
+  color: var(--gray-11);
   border-radius: 3px;
   text-transform: lowercase;
   background: var(--gray-3);

@@ -37,6 +37,8 @@ import {
 } from "@/__generated__/hooks";
 import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-hooks";
+import { ADMIN_EMAIL } from "@/lib/constants";
 
 const COLUMNS: {
   status: ApplicationStatus;
@@ -84,6 +86,8 @@ export default function ApplicationDetailPage() {
   const [generateInterviewPrep] = useGenerateInterviewPrepMutation();
   const [generateTopicDeepDive] = useGenerateTopicDeepDiveMutation();
   const { data: tracksData } = useGetTracksQuery();
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -342,6 +346,7 @@ export default function ApplicationDetailPage() {
       <Card mb="5">
         <Flex justify="between" align="center" mb="3">
           <Heading size="4">Interview Prep</Heading>
+          {isAdmin && (
           <Flex gap="2" align="center">
             <Button
               variant="soft"
@@ -401,6 +406,7 @@ export default function ApplicationDetailPage() {
             );
           })()}
           </Flex>
+          )}
         </Flex>
         {app.interviewPrep && app.interviewPrep.length > 0 ? (
           <Flex direction="column" gap="2">

@@ -24,7 +24,7 @@ export async function jobsQuery(
 ) {
   try {
     const conditions = [ne(jobs.status, "reported")];
-    const hasFilters = !!(args.search || args.sourceType || args.remoteEuConfidence || (args.skills && args.skills.length > 0));
+    const hasFilters = !!(args.search || args.sourceType || args.remoteEuConfidence || (args.skills && args.skills.length > 0) || (args.excludedCompanies && args.excludedCompanies.length > 0));
 
     if (args.search) {
       const searchPattern = `%${args.search}%`;

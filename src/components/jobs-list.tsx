@@ -7,6 +7,7 @@ import {
   useGetJobsQuery,
   useDeleteJobMutation,
   useGetUserSettingsQuery,
+  useUpdateUserSettingsMutation,
   useReportJobMutation,
 } from "@/__generated__/hooks";
 import type { GetJobsQuery } from "@/__generated__/graphql";
@@ -23,7 +24,7 @@ import {
   IconButton,
   Skeleton,
 } from "@radix-ui/themes";
-import { TrashIcon, ExclamationTriangleIcon, EyeOpenIcon, EyeNoneIcon } from "@radix-ui/react-icons";
+import { TrashIcon, ExclamationTriangleIcon, EyeNoneIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSkillLabel } from "@/lib/skills/taxonomy";
 
@@ -68,18 +69,6 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
   const [reportJobMutation] = useReportJobMutation();
 
   const isAdmin = user?.email === ADMIN_EMAIL;
-  const [hiddenCompanies, setHiddenCompanies] = useState<Set<string>>(new Set());
-
-  const toggleCompany = useCallback((key: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setHiddenCompanies((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
 
   const { data: userSettingsData } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
@@ -90,6 +79,35 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
     userSettingsData?.userSettings?.excluded_companies || [];
   const preferredSkills =
     userSettingsData?.userSettings?.preferred_skills || [];
+
+  const [updateUserSettingsMutation] = useUpdateUserSettingsMutation();
+
+  const handleHideCompany = useCallback(
+    async (companyKey: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!user?.id || excludedCompanies.includes(companyKey)) return;
+      try {
+        await updateUserSettingsMutation({
+          variables: {
+            userId: user.id,
+            settings: {
+              preferred_locations:
+                userSettingsData?.userSettings?.preferred_locations || [],
+              preferred_skills:
+                userSettingsData?.userSettings?.preferred_skills || [],
+              excluded_companies: [...excludedCompanies, companyKey],
+            },
+          },
+          refetchQueries: ["GetJobs"],
+          awaitRefetchQueries: true,
+        });
+      } catch (error) {
+        console.error("Error hiding company:", error);
+      }
+    },
+    [user?.id, excludedCompanies, userSettingsData, updateUserSettingsMutation],
+  );
 
   const handleDeleteJob = async (jobId: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -235,11 +253,9 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
               className="job-row"
             >
               {/* company avatar */}
-              {!hiddenCompanies.has(job.company_key || "") && (
-                <div className="job-row-avatar">
-                  {companyInitials(job.company_key || "?")}
-                </div>
-              )}
+              <div className="job-row-avatar">
+                {companyInitials(job.company_key || "?")}
+              </div>
 
               {/* content — stacked: title, company, meta */}
               <div className="job-row-content">
@@ -267,7 +283,7 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
                 </div>
 
                 {/* line 2: company name */}
-                {job.company_key && !hiddenCompanies.has(job.company_key) && (
+                {job.company_key && (
                   <span
                     className="job-row-company"
                     onClick={(e) => {
@@ -335,17 +351,15 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
                   </span>
                 )}
 
-                {isAdmin && job.company_key && (
+                {user && job.company_key && (
                   <IconButton
                     size="3"
                     color="gray"
                     variant="soft"
-                    onClick={(e) => toggleCompany(job.company_key!, e)}
-                    title={hiddenCompanies.has(job.company_key) ? "Show company" : "Hide company"}
+                    onClick={(e) => handleHideCompany(job.company_key!, e)}
+                    title="Hide company"
                   >
-                    {hiddenCompanies.has(job.company_key)
-                      ? <EyeOpenIcon width={16} height={16} />
-                      : <EyeNoneIcon width={16} height={16} />}
+                    <EyeNoneIcon width={16} height={16} />
                   </IconButton>
                 )}
                 {isAdmin && (

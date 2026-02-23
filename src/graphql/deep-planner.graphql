@@ -1,0 +1,51 @@
+query DeepPlannerTasks {
+  deepPlannerTasks {
+    id
+    workflowType
+    problemDescription
+    status
+    currentStep
+    checkpointCount
+    errorMessage
+    startedAt
+    completedAt
+    createdAt
+    updatedAt
+  }
+}
+
+query DeepPlannerTask($id: ID!) {
+  deepPlannerTask(id: $id) {
+    id
+    workflowType
+    problemDescription
+    context
+    status
+    currentStep
+    checkpointCount
+    outputArtifact
+    errorMessage
+    startedAt
+    completedAt
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateDeepPlannerTask(
+  $workflowType: String!
+  $problemDescription: String!
+  $context: String
+) {
+  createDeepPlannerTask(
+    workflowType: $workflowType
+    problemDescription: $problemDescription
+    context: $context
+  ) {
+    id
+    workflowType
+    problemDescription
+    status
+    createdAt
+  }
+}

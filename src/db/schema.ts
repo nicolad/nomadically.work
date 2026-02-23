@@ -529,3 +529,27 @@ export const jobReportEvents = sqliteTable(
 
 export type JobReportEvent = typeof jobReportEvents.$inferSelect;
 export type NewJobReportEvent = typeof jobReportEvents.$inferInsert;
+
+// Deep Planner Tasks
+export const deepPlannerTasks = sqliteTable("deep_planner_tasks", {
+  id: text("id").primaryKey(), // ULID
+  workflow_type: text("workflow_type").notNull(),
+  problem_description: text("problem_description").notNull(),
+  context: text("context"),
+  status: text("status").notNull().default("pending"),
+  current_step: text("current_step"),
+  checkpoint_count: integer("checkpoint_count").notNull().default(0),
+  output_artifact: text("output_artifact"),
+  error_message: text("error_message"),
+  started_at: text("started_at"),
+  completed_at: text("completed_at"),
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+export type DeepPlannerTask = typeof deepPlannerTasks.$inferSelect;
+export type NewDeepPlannerTask = typeof deepPlannerTasks.$inferInsert;

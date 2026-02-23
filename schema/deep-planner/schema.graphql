@@ -1,0 +1,35 @@
+type DeepPlannerTask {
+  id: ID!
+  workflowType: String!
+  problemDescription: String!
+  context: String
+  status: DeepPlannerStatus!
+  currentStep: String
+  checkpointCount: Int!
+  outputArtifact: String
+  errorMessage: String
+  startedAt: DateTime
+  completedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum DeepPlannerStatus {
+  PENDING
+  RUNNING
+  COMPLETE
+  FAILED
+}
+
+extend type Query {
+  deepPlannerTasks: [DeepPlannerTask!]!
+  deepPlannerTask(id: ID!): DeepPlannerTask
+}
+
+extend type Mutation {
+  createDeepPlannerTask(
+    workflowType: String!
+    problemDescription: String!
+    context: String
+  ): DeepPlannerTask!
+}

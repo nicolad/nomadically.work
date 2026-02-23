@@ -313,6 +313,29 @@ input CreateTrackInput {
 
 scalar DateTime
 
+enum DeepPlannerStatus {
+  COMPLETE
+  FAILED
+  PENDING
+  RUNNING
+}
+
+type DeepPlannerTask {
+  checkpointCount: Int!
+  completedAt: DateTime
+  context: String
+  createdAt: DateTime!
+  currentStep: String
+  errorMessage: String
+  id: ID!
+  outputArtifact: String
+  problemDescription: String!
+  startedAt: DateTime
+  status: DeepPlannerStatus!
+  updatedAt: DateTime!
+  workflowType: String!
+}
+
 type DeleteCompanyResponse {
   message: String
   success: Boolean!
@@ -551,6 +574,7 @@ type Mutation {
   add_company_facts(company_id: Int!, facts: [CompanyFactInput!]!): [CompanyFact!]!
   createApplication(input: ApplicationInput!): Application!
   createCompany(input: CreateCompanyInput!): Company!
+  createDeepPlannerTask(context: String, problemDescription: String!, workflowType: String!): DeepPlannerTask!
   createLangSmithPrompt(input: CreateLangSmithPromptInput, promptIdentifier: String!): LangSmithPrompt!
   createPrompt(input: CreatePromptInput!): Prompt!
   createTrack(input: CreateTrackInput!): Track!
@@ -710,6 +734,8 @@ type Query {
   company_ats_boards(company_id: Int!): [ATSBoard!]!
   company_facts(company_id: Int!, field: String, limit: Int, offset: Int): [CompanyFact!]!
   company_snapshots(company_id: Int!, limit: Int, offset: Int): [CompanySnapshot!]!
+  deepPlannerTask(id: ID!): DeepPlannerTask
+  deepPlannerTasks: [DeepPlannerTask!]!
   executeSql(sql: String!): TextToSqlResult!
   job(id: String!): Job
   jobs(excludedCompanies: [String!], isRemoteEu: Boolean, limit: Int, offset: Int, remoteEuConfidence: String, search: String, skills: [String!], sourceType: String): JobsResponse!

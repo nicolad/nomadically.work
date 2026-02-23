@@ -349,6 +349,29 @@ export type CreateTrackInput = {
   title: Scalars['String']['input'];
 };
 
+export type DeepPlannerStatus =
+  | 'COMPLETE'
+  | 'FAILED'
+  | 'PENDING'
+  | 'RUNNING';
+
+export type DeepPlannerTask = {
+  __typename?: 'DeepPlannerTask';
+  checkpointCount: Scalars['Int']['output'];
+  completedAt: Maybe<Scalars['DateTime']['output']>;
+  context: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  currentStep: Maybe<Scalars['String']['output']>;
+  errorMessage: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  outputArtifact: Maybe<Scalars['String']['output']>;
+  problemDescription: Scalars['String']['output'];
+  startedAt: Maybe<Scalars['DateTime']['output']>;
+  status: DeepPlannerStatus;
+  updatedAt: Scalars['DateTime']['output'];
+  workflowType: Scalars['String']['output'];
+};
+
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -598,6 +621,7 @@ export type Mutation = {
   add_company_facts: Array<CompanyFact>;
   createApplication: Application;
   createCompany: Company;
+  createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
   createTrack: Track;
@@ -670,6 +694,13 @@ export type MutationCreateApplicationArgs = {
 
 export type MutationCreateCompanyArgs = {
   input: CreateCompanyInput;
+};
+
+
+export type MutationCreateDeepPlannerTaskArgs = {
+  context?: InputMaybe<Scalars['String']['input']>;
+  problemDescription: Scalars['String']['input'];
+  workflowType: Scalars['String']['input'];
 };
 
 
@@ -935,6 +966,8 @@ export type Query = {
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
+  deepPlannerTask: Maybe<DeepPlannerTask>;
+  deepPlannerTasks: Array<DeepPlannerTask>;
   executeSql: TextToSqlResult;
   job: Maybe<Job>;
   jobs: JobsResponse;
@@ -996,6 +1029,11 @@ export type QueryCompany_SnapshotsArgs = {
   company_id: Scalars['Int']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -1386,6 +1424,8 @@ export type ResolversTypes = {
   CreatePromptInput: ResolverTypeWrapper<Partial<CreatePromptInput>>;
   CreateTrackInput: ResolverTypeWrapper<Partial<CreateTrackInput>>;
   DateTime: ResolverTypeWrapper<Partial<Scalars['DateTime']['output']>>;
+  DeepPlannerStatus: ResolverTypeWrapper<Partial<DeepPlannerStatus>>;
+  DeepPlannerTask: ResolverTypeWrapper<Partial<DeepPlannerTask>>;
   DeleteCompanyResponse: ResolverTypeWrapper<Partial<DeleteCompanyResponse>>;
   DeleteJobResponse: ResolverTypeWrapper<Partial<DeleteJobResponse>>;
   EmailAddress: ResolverTypeWrapper<Partial<Scalars['EmailAddress']['output']>>;
@@ -1479,6 +1519,7 @@ export type ResolversParentTypes = {
   CreatePromptInput: Partial<CreatePromptInput>;
   CreateTrackInput: Partial<CreateTrackInput>;
   DateTime: Partial<Scalars['DateTime']['output']>;
+  DeepPlannerTask: Partial<DeepPlannerTask>;
   DeleteCompanyResponse: Partial<DeleteCompanyResponse>;
   DeleteJobResponse: Partial<DeleteJobResponse>;
   EmailAddress: Partial<Scalars['EmailAddress']['output']>;
@@ -1706,6 +1747,22 @@ export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversT
   name: 'DateTime';
 }
 
+export type DeepPlannerTaskResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeepPlannerTask'] = ResolversParentTypes['DeepPlannerTask']> = {
+  checkpointCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  completedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  context?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  currentStep?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  errorMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  outputArtifact?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  problemDescription?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  startedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['DeepPlannerStatus'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  workflowType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type DeleteCompanyResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeleteCompanyResponse'] = ResolversParentTypes['DeleteCompanyResponse']> = {
   message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -1899,6 +1956,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   add_company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<MutationAdd_Company_FactsArgs, 'company_id' | 'facts'>>;
   createApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationCreateApplicationArgs, 'input'>>;
   createCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationCreateCompanyArgs, 'input'>>;
+  createDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationCreateDeepPlannerTaskArgs, 'problemDescription' | 'workflowType'>>;
   createLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationCreateLangSmithPromptArgs, 'promptIdentifier'>>;
   createPrompt?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationCreatePromptArgs, 'input'>>;
   createTrack?: Resolver<ResolversTypes['Track'], ParentType, ContextType, RequireFields<MutationCreateTrackArgs, 'input'>>;
@@ -2000,6 +2058,8 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<QueryCompany_Ats_BoardsArgs, 'company_id'>>;
   company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<QueryCompany_FactsArgs, 'company_id'>>;
   company_snapshots?: Resolver<Array<ResolversTypes['CompanySnapshot']>, ParentType, ContextType, RequireFields<QueryCompany_SnapshotsArgs, 'company_id'>>;
+  deepPlannerTask?: Resolver<Maybe<ResolversTypes['DeepPlannerTask']>, ParentType, ContextType, RequireFields<QueryDeepPlannerTaskArgs, 'id'>>;
+  deepPlannerTasks?: Resolver<Array<ResolversTypes['DeepPlannerTask']>, ParentType, ContextType>;
   executeSql?: Resolver<ResolversTypes['TextToSqlResult'], ParentType, ContextType, RequireFields<QueryExecuteSqlArgs, 'sql'>>;
   job?: Resolver<Maybe<ResolversTypes['Job']>, ParentType, ContextType, RequireFields<QueryJobArgs, 'id'>>;
   jobs?: Resolver<ResolversTypes['JobsResponse'], ParentType, ContextType, Partial<QueryJobsArgs>>;
@@ -2168,6 +2228,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   CompanyFact?: CompanyFactResolvers<ContextType>;
   CompanySnapshot?: CompanySnapshotResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
+  DeepPlannerTask?: DeepPlannerTaskResolvers<ContextType>;
   DeleteCompanyResponse?: DeleteCompanyResponseResolvers<ContextType>;
   DeleteJobResponse?: DeleteJobResponseResolvers<ContextType>;
   EmailAddress?: GraphQLScalarType;

@@ -1,0 +1,20 @@
+name = "dlq-consumer"
+main = "workers/dlq-consumer.ts"
+compatibility_date = "2026-02-01"
+
+# Consume from both dead letter queues
+[[queues.consumers]]
+queue = "jobs-pipeline-dlq"
+max_batch_size = 10
+
+[[queues.consumers]]
+queue = "process-jobs-dlq"
+max_batch_size = 10
+
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

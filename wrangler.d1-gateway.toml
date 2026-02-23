@@ -13,6 +13,14 @@ database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
 # API_KEY is set via `wrangler secret put API_KEY`
 # Generate a strong random key: openssl rand -hex 32
 
+# Observability
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # Optional: Custom domains
 # [[routes]]
 # pattern = "api.yourdomain.com/*"

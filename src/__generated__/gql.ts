@@ -15,6 +15,7 @@ import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-
  */
 type Documents = {
     "\n  query DeepPlannerTask($id: ID!) {\n    deepPlannerTask(id: $id) {\n      id\n      workflowType\n      problemDescription\n      context\n      status\n      currentStep\n      checkpointCount\n      outputArtifact\n      errorMessage\n      startedAt\n      completedAt\n      createdAt\n      updatedAt\n    }\n  }\n": typeof types.DeepPlannerTaskDocument,
+    "\n  mutation TriggerDeepPlannerTask($id: ID!) {\n    triggerDeepPlannerTask(id: $id) {\n      id\n      status\n      currentStep\n    }\n  }\n": typeof types.TriggerDeepPlannerTaskDocument,
     "\n  query DeepPlannerTasks {\n    deepPlannerTasks {\n      id\n      workflowType\n      problemDescription\n      status\n      currentStep\n      checkpointCount\n      errorMessage\n      startedAt\n      completedAt\n      createdAt\n      updatedAt\n    }\n  }\n": typeof types.DeepPlannerTasksDocument,
     "\n  mutation CreateDeepPlannerTask(\n    $workflowType: String!\n    $problemDescription: String!\n    $context: String\n  ) {\n    createDeepPlannerTask(\n      workflowType: $workflowType\n      problemDescription: $problemDescription\n      context: $context\n    ) {\n      id\n      workflowType\n      problemDescription\n      status\n      createdAt\n    }\n  }\n": typeof types.CreateDeepPlannerTaskDocument,
     "\n      query GetPrepResources {\n        prepResources {\n          categories {\n            id\n            name\n            emoji\n            description\n            resources {\n              id\n              title\n              href\n              description\n              category\n              tags\n            }\n          }\n          totalResources\n        }\n      }\n    ": typeof types.GetPrepResourcesDocument,
@@ -41,6 +42,7 @@ type Documents = {
 };
 const documents: Documents = {
     "\n  query DeepPlannerTask($id: ID!) {\n    deepPlannerTask(id: $id) {\n      id\n      workflowType\n      problemDescription\n      context\n      status\n      currentStep\n      checkpointCount\n      outputArtifact\n      errorMessage\n      startedAt\n      completedAt\n      createdAt\n      updatedAt\n    }\n  }\n": types.DeepPlannerTaskDocument,
+    "\n  mutation TriggerDeepPlannerTask($id: ID!) {\n    triggerDeepPlannerTask(id: $id) {\n      id\n      status\n      currentStep\n    }\n  }\n": types.TriggerDeepPlannerTaskDocument,
     "\n  query DeepPlannerTasks {\n    deepPlannerTasks {\n      id\n      workflowType\n      problemDescription\n      status\n      currentStep\n      checkpointCount\n      errorMessage\n      startedAt\n      completedAt\n      createdAt\n      updatedAt\n    }\n  }\n": types.DeepPlannerTasksDocument,
     "\n  mutation CreateDeepPlannerTask(\n    $workflowType: String!\n    $problemDescription: String!\n    $context: String\n  ) {\n    createDeepPlannerTask(\n      workflowType: $workflowType\n      problemDescription: $problemDescription\n      context: $context\n    ) {\n      id\n      workflowType\n      problemDescription\n      status\n      createdAt\n    }\n  }\n": types.CreateDeepPlannerTaskDocument,
     "\n      query GetPrepResources {\n        prepResources {\n          categories {\n            id\n            name\n            emoji\n            description\n            resources {\n              id\n              title\n              href\n              description\n              category\n              tags\n            }\n          }\n          totalResources\n        }\n      }\n    ": types.GetPrepResourcesDocument,
@@ -84,6 +86,10 @@ export function gql(source: string): unknown;
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function gql(source: "\n  query DeepPlannerTask($id: ID!) {\n    deepPlannerTask(id: $id) {\n      id\n      workflowType\n      problemDescription\n      context\n      status\n      currentStep\n      checkpointCount\n      outputArtifact\n      errorMessage\n      startedAt\n      completedAt\n      createdAt\n      updatedAt\n    }\n  }\n"): (typeof documents)["\n  query DeepPlannerTask($id: ID!) {\n    deepPlannerTask(id: $id) {\n      id\n      workflowType\n      problemDescription\n      context\n      status\n      currentStep\n      checkpointCount\n      outputArtifact\n      errorMessage\n      startedAt\n      completedAt\n      createdAt\n      updatedAt\n    }\n  }\n"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "\n  mutation TriggerDeepPlannerTask($id: ID!) {\n    triggerDeepPlannerTask(id: $id) {\n      id\n      status\n      currentStep\n    }\n  }\n"): (typeof documents)["\n  mutation TriggerDeepPlannerTask($id: ID!) {\n    triggerDeepPlannerTask(id: $id) {\n      id\n      status\n      currentStep\n    }\n  }\n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

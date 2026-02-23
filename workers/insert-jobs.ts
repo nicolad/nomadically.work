@@ -462,7 +462,6 @@ interface IngestionStats {
 async function autoIngestFromSources(
   db: D1Database,
   queue: Queue<QueueMessage>,
-  processQueue: Queue<ProcessJobsMessage> | undefined,
   options: { maxSources?: number; stalePeriodHours?: number; traceId?: string } = {},
 ): Promise<IngestionStats> {
   const { maxSources = 20, stalePeriodHours = 12, traceId } = options;
@@ -600,11 +599,6 @@ async function autoIngestFromSources(
     }
   }
 
-  // After ingestion, trigger processing if there are new jobs
-  if (stats.jobsInserted > 0) {
-    await triggerProcessing(processQueue, stats.jobsInserted, traceId);
-  }
-
   log({
     worker: WORKER, action: "ingest-complete", level: "info", traceId,
     metadata: {
@@ -627,7 +621,6 @@ async function autoIngestFromSources(
 async function recoverStalledJobs(
   db: D1Database,
   queue: Queue<QueueMessage>,
-  processQueue: Queue<ProcessJobsMessage> | undefined,
   traceId?: string,
 ): Promise<{ recovered: number }> {
   // Find jobs stuck in 'new' status for more than 6 hours
@@ -676,11 +669,6 @@ async function recoverStalledJobs(
         metadata: { batchIndex: i, totalIds: ids.length },
       });
     }
-  }
-
-  // Trigger processing
-  if (ids.length > 0) {
-    await triggerProcessing(processQueue, ids.length, traceId);
   }
 
   return { recovered: ids.length };
@@ -846,7 +834,6 @@ export default {
       const stats = await autoIngestFromSources(
         env.DB,
         env.JOBS_QUEUE,
-        env.PROCESS_JOBS_QUEUE,
         { maxSources, traceId },
       );
       return jsonResponse(
@@ -924,11 +911,6 @@ export default {
         }
       }
 
-      // Trigger processing for new jobs
-      if (enqueued > 0) {
-        await triggerProcessing(env.PROCESS_JOBS_QUEUE, enqueued, traceId);
-      }
-
       log({
         worker: WORKER, action: "insert-batch", level: "info", traceId,
         metadata: {
@@ -995,7 +977,6 @@ export default {
       const ingestionStats = await autoIngestFromSources(
         env.DB,
         env.JOBS_QUEUE,
-        env.PROCESS_JOBS_QUEUE,
         { maxSources: 15, stalePeriodHours: 12, traceId },
       );
 
@@ -1003,17 +984,8 @@ export default {
       const recovery = await recoverStalledJobs(
         env.DB,
         env.JOBS_QUEUE,
-        env.PROCESS_JOBS_QUEUE,
         traceId,
       );
-
-      // Phase 3: Trigger processing if queue binding not available, use HTTP fallback
-      if (!env.PROCESS_JOBS_QUEUE && env.PROCESS_JOBS_URL) {
-        const totalNew = ingestionStats.jobsInserted + recovery.recovered;
-        if (totalNew > 0) {
-          await triggerProcessingViaHTTP(env, "process", Math.min(totalNew, 50), traceId);
-        }
-      }
 
       log({
         worker: WORKER, action: "scheduled-complete", level: "info", traceId,

@@ -14,6 +14,7 @@ import {
   DropdownMenu,
   Select,
   IconButton,
+  Dialog,
 } from "@radix-ui/themes";
 import {
   ArrowLeftIcon,
@@ -24,7 +25,6 @@ import {
 } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-hooks";
 import {
   useGetApplicationQuery,
   useUpdateApplicationMutation,
@@ -69,12 +69,11 @@ function companyInitials(name: string): string {
 export default function ApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
   const id = Number(params.id);
 
   const { data, loading } = useGetApplicationQuery({
     variables: { id },
-    skip: !user || isNaN(id),
+    skip: isNaN(id),
   });
 
   const [updateApplication] = useUpdateApplicationMutation();
@@ -86,6 +85,7 @@ export default function ApplicationDetailPage() {
   const [notesValue, setNotesValue] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [selectedReq, setSelectedReq] = useState<AiInterviewPrepRequirement | null>(null);
 
   const app = data?.application;
 
@@ -112,16 +112,6 @@ export default function ApplicationDetailPage() {
   const statusCol = app
     ? COLUMNS.find((c) => c.status === app.status)
     : undefined;
-
-  if (!user) {
-    return (
-      <Container size="3" p="8">
-        <Card style={{ textAlign: "center" }}>
-          <Text color="gray">Sign in to view your applications.</Text>
-        </Card>
-      </Container>
-    );
-  }
 
   if (loading) {
     return (
@@ -326,32 +316,30 @@ export default function ApplicationDetailPage() {
         <Flex justify="between" align="center" mb="3">
           <Heading size="4">Interview Prep</Heading>
           <Flex gap="2" align="center">
-            {!app.aiInterviewPrep && (
-              <Button
-                variant="soft"
-                size="2"
-                disabled={generating || !app.jobDescription}
-                title={!app.jobDescription ? "No job description available for this application" : undefined}
-                onClick={async () => {
-                  setGenerating(true);
-                  setGenerateError(null);
-                  try {
-                    await generateInterviewPrep({
-                      variables: { applicationId: app.id },
-                      refetchQueries: ["GetApplication"],
-                    });
-                  } catch (e) {
-                    const msg = e instanceof Error ? e.message : "Generation failed";
-                    setGenerateError(msg);
-                  } finally {
-                    setGenerating(false);
-                  }
-                }}
-              >
-                <PlusIcon />
-                {generating ? "Generating..." : "Generate with AI"}
-              </Button>
-            )}
+            <Button
+              variant="soft"
+              size="2"
+              disabled={generating || !app.jobDescription}
+              title={!app.jobDescription ? "No job description available for this application" : undefined}
+              onClick={async () => {
+                setGenerating(true);
+                setGenerateError(null);
+                try {
+                  await generateInterviewPrep({
+                    variables: { applicationId: app.id },
+                    refetchQueries: ["GetApplication"],
+                  });
+                } catch (e) {
+                  const msg = e instanceof Error ? e.message : "Generation failed";
+                  setGenerateError(msg);
+                } finally {
+                  setGenerating(false);
+                }
+              }}
+            >
+              <PlusIcon />
+              {generating ? "Generating..." : app.aiInterviewPrep ? "Regenerate" : "Generate with AI"}
+            </Button>
             {generateError && (
               <Text size="1" color="red">
                 {generateError}
@@ -459,7 +447,14 @@ export default function ApplicationDetailPage() {
                     borderRadius: "var(--radius-2)",
                   }}
                 >
-                  <Text size="2" weight="bold" mb="2" as="div">
+                  <Text
+                    size="2"
+                    weight="bold"
+                    mb="2"
+                    as="div"
+                    style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                    onClick={() => setSelectedReq(req)}
+                  >
                     {req.requirement}
                   </Text>
                   {req.sourceQuote && (
@@ -562,6 +557,59 @@ export default function ApplicationDetailPage() {
           </Text>
         )}
       </Card>
+      <Dialog.Root open={!!selectedReq} onOpenChange={(o) => { if (!o) setSelectedReq(null); }}>
+        <Dialog.Content maxWidth="560px">
+          {selectedReq && (
+            <>
+              <Dialog.Title>{selectedReq.requirement}</Dialog.Title>
+              {selectedReq.sourceQuote && (
+                <Box
+                  mb="4"
+                  pl="3"
+                  role="button"
+                  tabIndex={0}
+                  style={{ borderLeft: "3px solid var(--accent-6)", cursor: "pointer" }}
+                  onClick={scrollToJobDescription}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollToJobDescription(); }}
+                >
+                  <Text size="2" color="gray" as="div" style={{ fontStyle: "italic" }}>
+                    &ldquo;{selectedReq.sourceQuote}&rdquo;
+                  </Text>
+                </Box>
+              )}
+              <Text size="1" color="gray" weight="medium" mb="2" as="div">
+                INTERVIEW QUESTIONS
+              </Text>
+              <Flex direction="column" gap="2" mb="4">
+                {selectedReq.questions.map((q, i) => (
+                  <Text key={q} size="2" as="div">
+                    {i + 1}. {q}
+                  </Text>
+                ))}
+              </Flex>
+              <Text size="1" color="gray" weight="medium" mb="2" as="div">
+                STUDY TOPICS
+              </Text>
+              <Flex gap="2" wrap="wrap" mb="4">
+                {selectedReq.studyTopics.map((t) => (
+                  <Text
+                    key={t}
+                    size="1"
+                    style={{ padding: "2px 8px", backgroundColor: "var(--violet-3)", borderRadius: "4px" }}
+                  >
+                    {t}
+                  </Text>
+                ))}
+              </Flex>
+              <Flex justify="end">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray" size="2">Close</Button>
+                </Dialog.Close>
+              </Flex>
+            </>
+          )}
+        </Dialog.Content>
+      </Dialog.Root>
     </Container>
   );
 }

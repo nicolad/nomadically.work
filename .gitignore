@@ -54,6 +54,10 @@ next-env.d.ts
 # python workers
 python_modules/
 workers/process-jobs/node_modules/
+workers/job-matcher/node_modules/
+workers/job-matcher/.venv/
+workers/job-matcher/.venv-workers/
+workers/job-matcher/.wheels_temp/
 *.pyc
 __pycache__/
 .venv/

@@ -1,7 +1,7 @@
-import { eq, inArray, desc, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { LlamaParse } from "llama-parse";
 import type { GraphQLContext } from "../context";
-import { resumes, jobs, jobSkillTags } from "@/db/schema";
+import { resumes } from "@/db/schema";
 import { extractSkillsFromResume } from "@/lib/skills/extract-from-resume";
 import type {
   MutationUploadSkillProfileArgs,
@@ -57,106 +57,40 @@ export const skillMatchingResolvers = {
 
       const limit = Math.min(args.limit ?? 20, 50);
       const offset = args.offset ?? 0;
-      const fetchLimit = limit + 1;
 
-      // Load user's skill profile
       const profileRows = await context.db
         .select()
         .from(resumes)
         .where(eq(resumes.user_id, context.userId))
         .limit(1);
 
-      if (profileRows.length === 0) {
-        return { jobs: [], totalCount: 0, hasMore: false };
-      }
+      if (profileRows.length === 0) return { jobs: [], totalCount: 0, hasMore: false };
 
-      const profile = profileRows[0];
       let resumeSkills: string[] = [];
-      try {
-        resumeSkills = JSON.parse(profile.extracted_skills) as string[];
-      } catch {
-        resumeSkills = [];
-      }
+      try { resumeSkills = JSON.parse(profileRows[0].extracted_skills) as string[]; }
+      catch { resumeSkills = []; }
 
-      if (resumeSkills.length === 0) {
-        return { jobs: [], totalCount: 0, hasMore: false };
-      }
+      if (resumeSkills.length === 0) return { jobs: [], totalCount: 0, hasMore: false };
 
-      // Query 1: find jobs ranked by matching skill count
-      const rankRows = await context.db
-        .select({
-          job_id: jobSkillTags.job_id,
-          cnt: sql<number>`count(*)`.as("cnt"),
-        })
-        .from(jobSkillTags)
-        .where(inArray(jobSkillTags.tag, resumeSkills))
-        .groupBy(jobSkillTags.job_id)
-        .orderBy(desc(sql`count(*)`))
-        .limit(fetchLimit)
-        .offset(offset);
+      const workerUrl = process.env.JOB_MATCHER_URL;
+      const workerApiKey = process.env.JOB_MATCHER_API_KEY;
+      if (!workerUrl) throw new Error("JOB_MATCHER_URL not configured");
 
-      const hasMore = rankRows.length > limit;
-      const pageRows = hasMore ? rankRows.slice(0, limit) : rankRows;
-
-      if (pageRows.length === 0) {
-        return { jobs: [], totalCount: 0, hasMore: false };
-      }
-
-      const jobIds = pageRows.map((r) => r.job_id);
-
-      // Query 2: fetch job details
-      const jobRows = await context.db
-        .select()
-        .from(jobs)
-        .where(inArray(jobs.id, jobIds));
-
-      // Query 3: fetch all skill tags for these jobs to compute missing skills
-      const allTagRows = await context.db
-        .select({ job_id: jobSkillTags.job_id, tag: jobSkillTags.tag })
-        .from(jobSkillTags)
-        .where(inArray(jobSkillTags.job_id, jobIds));
-
-      const resumeSkillSet = new Set(resumeSkills);
-
-      // Build job-id to skill tags map
-      const jobTagsMap = new Map<number, string[]>();
-      for (const tagRow of allTagRows) {
-        const existing = jobTagsMap.get(tagRow.job_id) ?? [];
-        existing.push(tagRow.tag);
-        jobTagsMap.set(tagRow.job_id, existing);
-      }
-
-      // Order job rows to match rank order
-      const jobById = new Map(jobRows.map((j) => [j.id, j]));
-
-      const matchedJobItems = pageRows.flatMap((rankRow) => {
-        const job = jobById.get(rankRow.job_id);
-        if (!job) return [];
-
-        const jobSkillList = jobTagsMap.get(job.id) ?? [];
-        const jobSkillSet = new Set(jobSkillList);
-
-        const matchedSkills = resumeSkills.filter((s) => jobSkillSet.has(s));
-        const missingSkills = jobSkillList.filter((s) => !resumeSkillSet.has(s));
-        const totalRequired = jobSkillList.length;
-        const totalMatched = matchedSkills.length;
-        const matchScore = totalRequired > 0 ? totalMatched / totalRequired : 0;
-
-        return [{
-          job,
-          matchedSkills,
-          missingSkills,
-          matchScore,
-          totalRequired,
-          totalMatched,
-        }];
+      const resp = await fetch(`${workerUrl}/match-jobs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(workerApiKey ? { "X-API-Key": workerApiKey } : {}),
+        },
+        body: JSON.stringify({ user_id: context.userId, skills: resumeSkills, limit, offset }),
       });
 
-      return {
-        jobs: matchedJobItems,
-        totalCount: matchedJobItems.length,
-        hasMore,
-      };
+      if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(`Job matcher worker error: ${resp.status} ${err}`);
+      }
+
+      return resp.json();
     },
   },
 

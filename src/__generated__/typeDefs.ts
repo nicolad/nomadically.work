@@ -623,6 +623,7 @@ type Mutation {
   Requires authentication.
   """
   reportJob(id: Int!): Job
+  triggerDeepPlannerTask(id: ID!): DeepPlannerTask!
   unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
   updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!

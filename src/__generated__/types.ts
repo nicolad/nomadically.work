@@ -667,6 +667,7 @@ export type Mutation = {
    * Requires authentication.
    */
   reportJob: Maybe<Job>;
+  triggerDeepPlannerTask: DeepPlannerTask;
   unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
@@ -803,6 +804,11 @@ export type MutationPushLangSmithPromptArgs = {
 
 export type MutationReportJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationTriggerDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 

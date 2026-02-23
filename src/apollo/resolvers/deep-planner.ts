@@ -94,5 +94,44 @@ export const deepPlannerResolvers = {
         .returning();
       return mapDeepPlannerTask(row);
     },
+
+    async triggerDeepPlannerTask(
+      _parent: unknown,
+      args: { id: string },
+      context: GraphQLContext
+    ) {
+      assertAdmin(context);
+
+      // Verify task exists and is pending
+      const rows = await context.db
+        .select()
+        .from(deepPlannerTasks)
+        .where(eq(deepPlannerTasks.id, args.id));
+      if (rows.length === 0) {
+        throw new Error("Task not found");
+      }
+      const task = rows[0];
+      if (task.status === "running") {
+        throw new Error("Task is already running");
+      }
+
+      // Trigger the worker (fire-and-forget)
+      const workerUrl = process.env.DEEP_PLANNER_WORKER_URL;
+      const apiKey = process.env.DEEP_PLANNER_API_KEY;
+      if (workerUrl) {
+        fetch(`${workerUrl}/trigger`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiKey ? { "X-API-Key": apiKey } : {}),
+          },
+          body: JSON.stringify({ task_id: args.id }),
+        }).catch((err) => {
+          console.error("[triggerDeepPlannerTask] Worker trigger failed:", err);
+        });
+      }
+
+      return mapDeepPlannerTask(task);
+    },
   },
 };

@@ -1,6 +1,5 @@
 import asyncio
 import json
-from typing import Optional
 from urllib.parse import urlparse
 from js import JSON, JSON as JsJSON, fetch
 from pyodide.ffi import to_js
@@ -84,31 +83,6 @@ class Default(WorkerEntrypoint):
             "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
             "Access-Control-Max-Age": "86400",
         }
-
-    def _authenticate(self, request) -> Optional[Response]:
-        """Validate API key. Returns an error Response if invalid, None if ok."""
-        expected = getattr(self.env, "API_KEY", None)
-        if not expected:
-            return Response.json(
-                {"success": False, "error": "Server misconfiguration: API_KEY not set"},
-                status=500,
-                headers=self._cors_headers,
-            )
-        provided = None
-        try:
-            provided = (
-                request.headers.get("X-API-Key")
-                or request.headers.get("x-api-key")
-            )
-        except Exception:
-            pass
-        if not provided or provided != expected:
-            return Response.json(
-                {"success": False, "error": "Unauthorized"},
-                status=401,
-                headers=self._cors_headers,
-            )
-        return None
 
     def _build_scoring_messages(self, titles: list[str]) -> list[dict]:
         target_str = ", ".join(TARGET_ROLES)
@@ -323,9 +297,6 @@ class Default(WorkerEntrypoint):
             path = _extract_path(request.url)
             if path in ("health", "") and request.method == "GET":
                 return Response.json({"status": "ok"}, headers=self._cors_headers)
-            auth_err = self._authenticate(request)
-            if auth_err:
-                return auth_err
             if path == "match-jobs" and request.method == "POST":
                 return await self._handle_match_jobs(request)
             return Response.json({"error": "Not found"}, status=404, headers=self._cors_headers)

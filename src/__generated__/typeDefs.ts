@@ -7,6 +7,18 @@ schema {
   mutation: Mutation
 }
 
+type AIInterviewPrep {
+  generatedAt: String!
+  requirements: [AIInterviewPrepRequirement!]!
+  summary: String!
+}
+
+type AIInterviewPrepRequirement {
+  questions: [String!]!
+  requirement: String!
+  studyTopics: [String!]!
+}
+
 type ATSBoard {
   board_type: ATSBoardType!
   company_id: Int!
@@ -56,10 +68,13 @@ enum ATSVendor {
 }
 
 type Application {
+  aiInterviewPrep: AIInterviewPrep
   companyName: String
   createdAt: String!
   email: EmailAddress!
   id: Int!
+  interviewPrep: [Track!]!
+  jobDescription: String
   jobId: String!
   jobTitle: String
   notes: String
@@ -563,9 +578,11 @@ type Mutation {
   3. Return the updated job with full ATS data
   """
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
+  generateInterviewPrep(applicationId: Int!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
   ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult
   ingest_company_snapshot(capture_timestamp: String, company_id: Int!, content_hash: String, crawl_id: String, evidence: EvidenceInput!, extracted: JSON, fetched_at: String!, http_status: Int, jsonld: JSON, mime: String, source_url: String!, text_sample: String): CompanySnapshot!
+  linkTrackToApplication(applicationId: Int!, trackSlug: String!): Application!
   """
   Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
   Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
@@ -579,6 +596,7 @@ type Mutation {
   Requires authentication.
   """
   reportJob(id: Int!): Job
+  unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
   updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
   updateLangSmithPrompt(input: UpdateLangSmithPromptInput!, promptIdentifier: String!): LangSmithPrompt!
@@ -681,6 +699,7 @@ input PushLangSmithPromptInput {
 }
 
 type Query {
+  application(id: Int!): Application
   applications: [Application!]!
   askAboutResume(email: String!, question: String!): ResumeAnswer
   companies(filter: CompanyFilterInput, limit: Int, offset: Int, order_by: CompanyOrderBy): CompaniesResponse!

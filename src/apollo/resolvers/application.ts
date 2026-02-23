@@ -1,8 +1,13 @@
 import type { GraphQLContext } from "../context";
-import { applications } from "@/db/schema";
+import { applications, applicationTracks, jobs } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
+import { mockTracks } from "./track";
+import { createDeepSeekClient, DEEPSEEK_MODELS } from "@/deepseek";
 
-function mapApplication(app: typeof applications.$inferSelect) {
+function mapApplication(
+  app: typeof applications.$inferSelect,
+  jobDescription?: string | null,
+) {
   return {
     id: app.id,
     email: app.user_email,
@@ -13,11 +18,43 @@ function mapApplication(app: typeof applications.$inferSelect) {
     notes: (app as any).notes ?? null,
     jobTitle: (app as any).job_title ?? null,
     companyName: (app as any).company_name ?? null,
+    jobDescription: jobDescription ?? null,
     createdAt: app.created_at,
+    aiInterviewPrep: app.ai_interview_prep
+      ? (() => {
+          try { return JSON.parse(app.ai_interview_prep); }
+          catch { return null; }
+        })()
+      : null,
   };
 }
 
+async function getApplicationById(id: number, userEmail: string, db: GraphQLContext["db"]) {
+  const [row] = await db
+    .select({
+      app: applications,
+      jobDescription: jobs.description,
+    })
+    .from(applications)
+    .leftJoin(jobs, eq(jobs.url, applications.job_id))
+    .where(and(eq(applications.id, id), eq(applications.user_email, userEmail)));
+  if (!row) return null;
+  return mapApplication(row.app, row.jobDescription);
+}
+
 export const applicationResolvers = {
+  Application: {
+    async interviewPrep(parent: { id: number }, _args: unknown, context: GraphQLContext) {
+      const rows = await context.db
+        .select()
+        .from(applicationTracks)
+        .where(eq(applicationTracks.application_id, parent.id));
+
+      return rows
+        .map((row) => mockTracks.find((t) => t.slug === row.track_slug))
+        .filter(Boolean);
+    },
+  },
   Query: {
     async applications(_parent: any, _args: any, context: GraphQLContext) {
       try {
@@ -26,16 +63,45 @@ export const applicationResolvers = {
         }
 
         const userApplications = await context.db
-          .select()
+          .select({
+            app: applications,
+            jobDescription: jobs.description,
+          })
           .from(applications)
+          .leftJoin(jobs, eq(jobs.url, applications.job_id))
           .where(eq(applications.user_email, context.userEmail))
           .orderBy(desc(applications.created_at));
 
-        return userApplications.map(mapApplication);
+        return userApplications.map(({ app, jobDescription }) =>
+          mapApplication(app, jobDescription),
+        );
       } catch (error) {
         console.error("Error fetching applications:", error);
         throw new Error("Failed to fetch applications");
       }
+    },
+
+    async application(_parent: any, args: { id: number }, context: GraphQLContext) {
+      if (!context.userEmail || !context.userId) {
+        throw new Error("User must be authenticated to view an application");
+      }
+
+      const [row] = await context.db
+        .select({
+          app: applications,
+          jobDescription: jobs.description,
+        })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .where(
+          and(
+            eq(applications.id, args.id),
+            eq(applications.user_email, context.userEmail),
+          ),
+        );
+
+      if (!row) return null;
+      return mapApplication(row.app, row.jobDescription);
     },
   },
   Mutation: {
@@ -134,6 +200,165 @@ export const applicationResolvers = {
         console.error("Error updating application:", error);
         throw new Error("Failed to update application");
       }
+    },
+
+    async linkTrackToApplication(
+      _parent: unknown,
+      args: { applicationId: number; trackSlug: string },
+      context: GraphQLContext,
+    ) {
+      if (!context.userEmail || !context.userId) {
+        throw new Error("User must be authenticated");
+      }
+
+      // Verify ownership before write
+      const app = await getApplicationById(args.applicationId, context.userEmail, context.db);
+      if (!app) throw new Error("Application not found or access denied");
+
+      const track = mockTracks.find((t) => t.slug === args.trackSlug);
+      if (!track) {
+        throw new Error("Track not found");
+      }
+
+      await context.db
+        .insert(applicationTracks)
+        .values({
+          application_id: args.applicationId,
+          track_slug: args.trackSlug,
+        })
+        .onConflictDoNothing();
+
+      return app;
+    },
+
+    async unlinkTrackFromApplication(
+      _parent: unknown,
+      args: { applicationId: number; trackSlug: string },
+      context: GraphQLContext,
+    ) {
+      if (!context.userEmail || !context.userId) {
+        throw new Error("User must be authenticated");
+      }
+
+      // Verify ownership before write
+      const app = await getApplicationById(args.applicationId, context.userEmail, context.db);
+      if (!app) throw new Error("Application not found or access denied");
+
+      await context.db
+        .delete(applicationTracks)
+        .where(
+          and(
+            eq(applicationTracks.application_id, args.applicationId),
+            eq(applicationTracks.track_slug, args.trackSlug),
+          ),
+        );
+
+      return app;
+    },
+
+    async generateInterviewPrep(
+      _parent: any,
+      args: { applicationId: number },
+      context: GraphQLContext,
+    ) {
+      if (!context.userEmail || !context.userId) {
+        throw new Error("User must be authenticated");
+      }
+
+      // Fetch application + jobDescription in one query.
+      // Can't reuse getApplicationById() here because that helper doesn't return jobDescription.
+      const [row] = await context.db
+        .select({ app: applications, jobDescription: jobs.description })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .where(
+          and(
+            eq(applications.id, args.applicationId),
+            eq(applications.user_email, context.userEmail),
+          ),
+        );
+
+      if (!row) throw new Error("Application not found or access denied");
+      if (!row.jobDescription) {
+        throw new Error("No job description available for this application");
+      }
+
+      // Strip HTML tags and truncate to ~8000 chars to stay within model context
+      const plainText = row.jobDescription
+        .replace(/(<([^>]+)>)/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 8000);
+
+      // Call DeepSeek with structured JSON prompt
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.CHAT,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert interview coach. Analyze the job description and return ONLY a JSON object with this exact shape:
+{
+  "summary": "2-3 sentence overview of the role and what to focus on for the interview",
+  "requirements": [
+    {
+      "requirement": "Requirement name (e.g. React expertise)",
+      "questions": ["Tailored interview question 1", "Tailored interview question 2"],
+      "studyTopics": ["Study topic 1", "Study topic 2"]
+    }
+  ]
+}
+Extract 4-6 key requirements from the job description. For each: 2-3 tailored interview questions specific to the role, and 2-3 concrete study topics.`,
+          },
+          {
+            role: "user",
+            content: `Job description:\n\n${plainText}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 2000,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) throw new Error("Empty response from AI");
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        throw new Error("Failed to parse AI response as JSON");
+      }
+
+      // Validate required structure before persisting
+      if (
+        typeof parsed.summary !== "string" ||
+        !Array.isArray(parsed.requirements) ||
+        parsed.requirements.length === 0
+      ) {
+        throw new Error("AI returned an unexpected response structure");
+      }
+
+      parsed.generatedAt = new Date().toISOString();
+
+      // Persist to DB (include updated_at for consistency with other mutations)
+      const [updated] = await context.db
+        .update(applications)
+        .set({
+          ai_interview_prep: JSON.stringify(parsed),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .where(
+          and(
+            eq(applications.id, args.applicationId),
+            eq(applications.user_email, context.userEmail),
+          ),
+        )
+        .returning();
+
+      if (!updated) throw new Error("Failed to save interview prep");
+
+      return mapApplication(updated, row.jobDescription);
     },
   },
 };

@@ -19,6 +19,20 @@ export type Scalars = {
   Upload: { input: File; output: File; }
 };
 
+export type AiInterviewPrep = {
+  __typename: 'AIInterviewPrep';
+  generatedAt: Scalars['String']['output'];
+  requirements: Array<AiInterviewPrepRequirement>;
+  summary: Scalars['String']['output'];
+};
+
+export type AiInterviewPrepRequirement = {
+  __typename: 'AIInterviewPrepRequirement';
+  questions: Array<Scalars['String']['output']>;
+  requirement: Scalars['String']['output'];
+  studyTopics: Array<Scalars['String']['output']>;
+};
+
 export type AtsBoard = {
   __typename: 'ATSBoard';
   board_type: AtsBoardType;
@@ -68,10 +82,13 @@ export type AtsVendor =
 
 export type Application = {
   __typename: 'Application';
+  aiInterviewPrep: Maybe<AiInterviewPrep>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
   id: Scalars['Int']['output'];
+  interviewPrep: Array<Track>;
+  jobDescription: Maybe<Scalars['String']['output']>;
   jobId: Scalars['String']['output'];
   jobTitle: Maybe<Scalars['String']['output']>;
   notes: Maybe<Scalars['String']['output']>;
@@ -605,9 +622,11 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
+  linkTrackToApplication: Application;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
    * Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
@@ -621,6 +640,7 @@ export type Mutation = {
    * Requires authentication.
    */
   reportJob: Maybe<Job>;
+  unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -691,6 +711,11 @@ export type MutationEnhanceJobFromAtsArgs = {
 };
 
 
+export type MutationGenerateInterviewPrepArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
 };
@@ -719,6 +744,12 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationLinkTrackToApplicationArgs = {
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
+};
+
+
 export type MutationProcessAllJobsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -732,6 +763,12 @@ export type MutationPushLangSmithPromptArgs = {
 
 export type MutationReportJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationUnlinkTrackFromApplicationArgs = {
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
 };
 
 
@@ -878,6 +915,7 @@ export type PushLangSmithPromptInput = {
 
 export type Query = {
   __typename: 'Query';
+  application: Maybe<Application>;
   applications: Array<Application>;
   askAboutResume: Maybe<ResumeAnswer>;
   companies: CompaniesResponse;
@@ -901,6 +939,11 @@ export type Query = {
   track: Maybe<Track>;
   tracks: Array<Track>;
   userSettings: Maybe<UserSettings>;
+};
+
+
+export type QueryApplicationArgs = {
+  id: Scalars['Int']['input'];
 };
 
 

@@ -22,6 +22,20 @@ export type Scalars = {
   Upload: { input: File; output: File; }
 };
 
+export type AiInterviewPrep = {
+  __typename?: 'AIInterviewPrep';
+  generatedAt: Scalars['String']['output'];
+  requirements: Array<AiInterviewPrepRequirement>;
+  summary: Scalars['String']['output'];
+};
+
+export type AiInterviewPrepRequirement = {
+  __typename?: 'AIInterviewPrepRequirement';
+  questions: Array<Scalars['String']['output']>;
+  requirement: Scalars['String']['output'];
+  studyTopics: Array<Scalars['String']['output']>;
+};
+
 export type AtsBoard = {
   __typename?: 'ATSBoard';
   board_type: AtsBoardType;
@@ -71,10 +85,13 @@ export type AtsVendor =
 
 export type Application = {
   __typename?: 'Application';
+  aiInterviewPrep: Maybe<AiInterviewPrep>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
   id: Scalars['Int']['output'];
+  interviewPrep: Array<Track>;
+  jobDescription: Maybe<Scalars['String']['output']>;
   jobId: Scalars['String']['output'];
   jobTitle: Maybe<Scalars['String']['output']>;
   notes: Maybe<Scalars['String']['output']>;
@@ -608,9 +625,11 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
+  linkTrackToApplication: Application;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
    * Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
@@ -624,6 +643,7 @@ export type Mutation = {
    * Requires authentication.
    */
   reportJob: Maybe<Job>;
+  unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -694,6 +714,11 @@ export type MutationEnhanceJobFromAtsArgs = {
 };
 
 
+export type MutationGenerateInterviewPrepArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
 };
@@ -722,6 +747,12 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationLinkTrackToApplicationArgs = {
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
+};
+
+
 export type MutationProcessAllJobsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -735,6 +766,12 @@ export type MutationPushLangSmithPromptArgs = {
 
 export type MutationReportJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationUnlinkTrackFromApplicationArgs = {
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
 };
 
 
@@ -881,6 +918,7 @@ export type PushLangSmithPromptInput = {
 
 export type Query = {
   __typename?: 'Query';
+  application: Maybe<Application>;
   applications: Array<Application>;
   askAboutResume: Maybe<ResumeAnswer>;
   companies: CompaniesResponse;
@@ -904,6 +942,11 @@ export type Query = {
   track: Maybe<Track>;
   tracks: Array<Track>;
   userSettings: Maybe<UserSettings>;
+};
+
+
+export type QueryApplicationArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -1308,17 +1351,26 @@ export type UpdateUserSettingsMutationVariables = Exact<{
 
 export type UpdateUserSettingsMutation = { __typename?: 'Mutation', updateUserSettings: { __typename?: 'UserSettings', id: number, user_id: string, email_notifications: boolean, daily_digest: boolean, new_job_alerts: boolean, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null, dark_mode: boolean, jobs_per_page: number, created_at: string, updated_at: string } };
 
+export type ApplicationFieldsFragment = { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string> }> } | null };
+
 export type GetApplicationsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetApplicationsQuery = { __typename?: 'Query', applications: Array<{ __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> }> };
+export type GetApplicationsQuery = { __typename?: 'Query', applications: Array<{ __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string> }> } | null }> };
+
+export type GetApplicationQueryVariables = Exact<{
+  id: Scalars['Int']['input'];
+}>;
+
+
+export type GetApplicationQuery = { __typename?: 'Query', application: { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string> }> } | null } | null };
 
 export type CreateApplicationMutationVariables = Exact<{
   input: ApplicationInput;
 }>;
 
 
-export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', id: number, email: string, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }> } };
+export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string> }> } | null } };
 
 export type UpdateApplicationMutationVariables = Exact<{
   id: Scalars['Int']['input'];
@@ -1327,6 +1379,29 @@ export type UpdateApplicationMutationVariables = Exact<{
 
 
 export type UpdateApplicationMutation = { __typename?: 'Mutation', updateApplication: { __typename?: 'Application', id: number, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null } };
+
+export type LinkTrackToApplicationMutationVariables = Exact<{
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
+}>;
+
+
+export type LinkTrackToApplicationMutation = { __typename?: 'Mutation', linkTrackToApplication: { __typename?: 'Application', id: number, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }> } };
+
+export type UnlinkTrackFromApplicationMutationVariables = Exact<{
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
+}>;
+
+
+export type UnlinkTrackFromApplicationMutation = { __typename?: 'Mutation', unlinkTrackFromApplication: { __typename?: 'Application', id: number, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }> } };
+
+export type GenerateInterviewPrepMutationVariables = Exact<{
+  applicationId: Scalars['Int']['input'];
+}>;
+
+
+export type GenerateInterviewPrepMutation = { __typename?: 'Mutation', generateInterviewPrep: { __typename?: 'Application', id: number, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string> }> } | null } };
 
 export type EvidenceFieldsFragment = { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null };
 
@@ -1621,6 +1696,41 @@ export type GetPrepResourcesByCategoryQueryVariables = Exact<{
 
 export type GetPrepResourcesByCategoryQuery = { __typename?: 'Query', prepResourcesByCategory: Array<{ __typename?: 'PrepResource', id: string, title: string, href: string, description: string, category: string, tags: Array<string> }> };
 
+export const ApplicationFieldsFragmentDoc = gql`
+    fragment ApplicationFields on Application {
+  id
+  email
+  jobId
+  resume
+  questions {
+    questionId
+    questionText
+    answerText
+  }
+  status
+  notes
+  jobTitle
+  companyName
+  jobDescription
+  createdAt
+  interviewPrep {
+    id
+    slug
+    title
+    description
+    level
+  }
+  aiInterviewPrep {
+    summary
+    requirements {
+      requirement
+      questions
+      studyTopics
+    }
+    generatedAt
+  }
+}
+    `;
 export const EvidenceFieldsFragmentDoc = gql`
     fragment EvidenceFields on Evidence {
   source_type
@@ -2395,23 +2505,10 @@ export type UpdateUserSettingsMutationOptions = Apollo.BaseMutationOptions<Updat
 export const GetApplicationsDocument = gql`
     query GetApplications {
   applications {
-    id
-    email
-    jobId
-    resume
-    questions {
-      questionId
-      questionText
-      answerText
-    }
-    status
-    notes
-    jobTitle
-    companyName
-    createdAt
+    ...ApplicationFields
   }
 }
-    `;
+    ${ApplicationFieldsFragmentDoc}`;
 
 /**
  * __useGetApplicationsQuery__
@@ -2447,25 +2544,56 @@ export type GetApplicationsQueryHookResult = ReturnType<typeof useGetApplication
 export type GetApplicationsLazyQueryHookResult = ReturnType<typeof useGetApplicationsLazyQuery>;
 export type GetApplicationsSuspenseQueryHookResult = ReturnType<typeof useGetApplicationsSuspenseQuery>;
 export type GetApplicationsQueryResult = Apollo.QueryResult<GetApplicationsQuery, GetApplicationsQueryVariables>;
+export const GetApplicationDocument = gql`
+    query GetApplication($id: Int!) {
+  application(id: $id) {
+    ...ApplicationFields
+  }
+}
+    ${ApplicationFieldsFragmentDoc}`;
+
+/**
+ * __useGetApplicationQuery__
+ *
+ * To run a query within a React component, call `useGetApplicationQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetApplicationQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetApplicationQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetApplicationQuery(baseOptions: Apollo.QueryHookOptions<GetApplicationQuery, GetApplicationQueryVariables> & ({ variables: GetApplicationQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetApplicationQuery, GetApplicationQueryVariables>(GetApplicationDocument, options);
+      }
+export function useGetApplicationLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetApplicationQuery, GetApplicationQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetApplicationQuery, GetApplicationQueryVariables>(GetApplicationDocument, options);
+        }
+// @ts-ignore
+export function useGetApplicationSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetApplicationQuery, GetApplicationQueryVariables>): Apollo.UseSuspenseQueryResult<GetApplicationQuery, GetApplicationQueryVariables>;
+export function useGetApplicationSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetApplicationQuery, GetApplicationQueryVariables>): Apollo.UseSuspenseQueryResult<GetApplicationQuery | undefined, GetApplicationQueryVariables>;
+export function useGetApplicationSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetApplicationQuery, GetApplicationQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetApplicationQuery, GetApplicationQueryVariables>(GetApplicationDocument, options);
+        }
+export type GetApplicationQueryHookResult = ReturnType<typeof useGetApplicationQuery>;
+export type GetApplicationLazyQueryHookResult = ReturnType<typeof useGetApplicationLazyQuery>;
+export type GetApplicationSuspenseQueryHookResult = ReturnType<typeof useGetApplicationSuspenseQuery>;
+export type GetApplicationQueryResult = Apollo.QueryResult<GetApplicationQuery, GetApplicationQueryVariables>;
 export const CreateApplicationDocument = gql`
     mutation CreateApplication($input: ApplicationInput!) {
   createApplication(input: $input) {
-    id
-    email
-    jobId
-    questions {
-      questionId
-      questionText
-      answerText
-    }
-    status
-    notes
-    jobTitle
-    companyName
-    createdAt
+    ...ApplicationFields
   }
 }
-    `;
+    ${ApplicationFieldsFragmentDoc}`;
 export type CreateApplicationMutationFn = Apollo.MutationFunction<CreateApplicationMutation, CreateApplicationMutationVariables>;
 
 /**
@@ -2531,6 +2659,130 @@ export function useUpdateApplicationMutation(baseOptions?: Apollo.MutationHookOp
 export type UpdateApplicationMutationHookResult = ReturnType<typeof useUpdateApplicationMutation>;
 export type UpdateApplicationMutationResult = Apollo.MutationResult<UpdateApplicationMutation>;
 export type UpdateApplicationMutationOptions = Apollo.BaseMutationOptions<UpdateApplicationMutation, UpdateApplicationMutationVariables>;
+export const LinkTrackToApplicationDocument = gql`
+    mutation LinkTrackToApplication($applicationId: Int!, $trackSlug: String!) {
+  linkTrackToApplication(applicationId: $applicationId, trackSlug: $trackSlug) {
+    id
+    interviewPrep {
+      id
+      slug
+      title
+      description
+      level
+    }
+  }
+}
+    `;
+export type LinkTrackToApplicationMutationFn = Apollo.MutationFunction<LinkTrackToApplicationMutation, LinkTrackToApplicationMutationVariables>;
+
+/**
+ * __useLinkTrackToApplicationMutation__
+ *
+ * To run a mutation, you first call `useLinkTrackToApplicationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useLinkTrackToApplicationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [linkTrackToApplicationMutation, { data, loading, error }] = useLinkTrackToApplicationMutation({
+ *   variables: {
+ *      applicationId: // value for 'applicationId'
+ *      trackSlug: // value for 'trackSlug'
+ *   },
+ * });
+ */
+export function useLinkTrackToApplicationMutation(baseOptions?: Apollo.MutationHookOptions<LinkTrackToApplicationMutation, LinkTrackToApplicationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<LinkTrackToApplicationMutation, LinkTrackToApplicationMutationVariables>(LinkTrackToApplicationDocument, options);
+      }
+export type LinkTrackToApplicationMutationHookResult = ReturnType<typeof useLinkTrackToApplicationMutation>;
+export type LinkTrackToApplicationMutationResult = Apollo.MutationResult<LinkTrackToApplicationMutation>;
+export type LinkTrackToApplicationMutationOptions = Apollo.BaseMutationOptions<LinkTrackToApplicationMutation, LinkTrackToApplicationMutationVariables>;
+export const UnlinkTrackFromApplicationDocument = gql`
+    mutation UnlinkTrackFromApplication($applicationId: Int!, $trackSlug: String!) {
+  unlinkTrackFromApplication(applicationId: $applicationId, trackSlug: $trackSlug) {
+    id
+    interviewPrep {
+      id
+      slug
+      title
+      description
+      level
+    }
+  }
+}
+    `;
+export type UnlinkTrackFromApplicationMutationFn = Apollo.MutationFunction<UnlinkTrackFromApplicationMutation, UnlinkTrackFromApplicationMutationVariables>;
+
+/**
+ * __useUnlinkTrackFromApplicationMutation__
+ *
+ * To run a mutation, you first call `useUnlinkTrackFromApplicationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUnlinkTrackFromApplicationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [unlinkTrackFromApplicationMutation, { data, loading, error }] = useUnlinkTrackFromApplicationMutation({
+ *   variables: {
+ *      applicationId: // value for 'applicationId'
+ *      trackSlug: // value for 'trackSlug'
+ *   },
+ * });
+ */
+export function useUnlinkTrackFromApplicationMutation(baseOptions?: Apollo.MutationHookOptions<UnlinkTrackFromApplicationMutation, UnlinkTrackFromApplicationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UnlinkTrackFromApplicationMutation, UnlinkTrackFromApplicationMutationVariables>(UnlinkTrackFromApplicationDocument, options);
+      }
+export type UnlinkTrackFromApplicationMutationHookResult = ReturnType<typeof useUnlinkTrackFromApplicationMutation>;
+export type UnlinkTrackFromApplicationMutationResult = Apollo.MutationResult<UnlinkTrackFromApplicationMutation>;
+export type UnlinkTrackFromApplicationMutationOptions = Apollo.BaseMutationOptions<UnlinkTrackFromApplicationMutation, UnlinkTrackFromApplicationMutationVariables>;
+export const GenerateInterviewPrepDocument = gql`
+    mutation GenerateInterviewPrep($applicationId: Int!) {
+  generateInterviewPrep(applicationId: $applicationId) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+      }
+      generatedAt
+    }
+  }
+}
+    `;
+export type GenerateInterviewPrepMutationFn = Apollo.MutationFunction<GenerateInterviewPrepMutation, GenerateInterviewPrepMutationVariables>;
+
+/**
+ * __useGenerateInterviewPrepMutation__
+ *
+ * To run a mutation, you first call `useGenerateInterviewPrepMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateInterviewPrepMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateInterviewPrepMutation, { data, loading, error }] = useGenerateInterviewPrepMutation({
+ *   variables: {
+ *      applicationId: // value for 'applicationId'
+ *   },
+ * });
+ */
+export function useGenerateInterviewPrepMutation(baseOptions?: Apollo.MutationHookOptions<GenerateInterviewPrepMutation, GenerateInterviewPrepMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateInterviewPrepMutation, GenerateInterviewPrepMutationVariables>(GenerateInterviewPrepDocument, options);
+      }
+export type GenerateInterviewPrepMutationHookResult = ReturnType<typeof useGenerateInterviewPrepMutation>;
+export type GenerateInterviewPrepMutationResult = Apollo.MutationResult<GenerateInterviewPrepMutation>;
+export type GenerateInterviewPrepMutationOptions = Apollo.BaseMutationOptions<GenerateInterviewPrepMutation, GenerateInterviewPrepMutationVariables>;
 export const CreateCompanyDocument = gql`
     mutation CreateCompany($input: CreateCompanyInput!) {
   createCompany(input: $input) {

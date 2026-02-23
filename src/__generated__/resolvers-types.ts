@@ -22,6 +22,20 @@ export type Scalars = {
   Upload: { input: File; output: File; }
 };
 
+export type AiInterviewPrep = {
+  __typename?: 'AIInterviewPrep';
+  generatedAt: Scalars['String']['output'];
+  requirements: Array<AiInterviewPrepRequirement>;
+  summary: Scalars['String']['output'];
+};
+
+export type AiInterviewPrepRequirement = {
+  __typename?: 'AIInterviewPrepRequirement';
+  questions: Array<Scalars['String']['output']>;
+  requirement: Scalars['String']['output'];
+  studyTopics: Array<Scalars['String']['output']>;
+};
+
 export type AtsBoard = {
   __typename?: 'ATSBoard';
   board_type: AtsBoardType;
@@ -71,10 +85,13 @@ export type AtsVendor =
 
 export type Application = {
   __typename?: 'Application';
+  aiInterviewPrep: Maybe<AiInterviewPrep>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
   id: Scalars['Int']['output'];
+  interviewPrep: Array<Track>;
+  jobDescription: Maybe<Scalars['String']['output']>;
   jobId: Scalars['String']['output'];
   jobTitle: Maybe<Scalars['String']['output']>;
   notes: Maybe<Scalars['String']['output']>;
@@ -608,9 +625,11 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
+  linkTrackToApplication: Application;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
    * Calls the classify-jobs CF worker (POST) which runs DeepSeek-based classification
@@ -624,6 +643,7 @@ export type Mutation = {
    * Requires authentication.
    */
   reportJob: Maybe<Job>;
+  unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
   updateLangSmithPrompt: LangSmithPrompt;
@@ -694,6 +714,11 @@ export type MutationEnhanceJobFromAtsArgs = {
 };
 
 
+export type MutationGenerateInterviewPrepArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
 };
@@ -722,6 +747,12 @@ export type MutationIngest_Company_SnapshotArgs = {
 };
 
 
+export type MutationLinkTrackToApplicationArgs = {
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
+};
+
+
 export type MutationProcessAllJobsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -735,6 +766,12 @@ export type MutationPushLangSmithPromptArgs = {
 
 export type MutationReportJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationUnlinkTrackFromApplicationArgs = {
+  applicationId: Scalars['Int']['input'];
+  trackSlug: Scalars['String']['input'];
 };
 
 
@@ -881,6 +918,7 @@ export type PushLangSmithPromptInput = {
 
 export type Query = {
   __typename?: 'Query';
+  application: Maybe<Application>;
   applications: Array<Application>;
   askAboutResume: Maybe<ResumeAnswer>;
   companies: CompaniesResponse;
@@ -904,6 +942,11 @@ export type Query = {
   track: Maybe<Track>;
   tracks: Array<Track>;
   userSettings: Maybe<UserSettings>;
+};
+
+
+export type QueryApplicationArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -1301,6 +1344,8 @@ export type DirectiveResolverFn<TResult = Record<PropertyKey, never>, TParent = 
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
+  AIInterviewPrep: ResolverTypeWrapper<Partial<AiInterviewPrep>>;
+  AIInterviewPrepRequirement: ResolverTypeWrapper<Partial<AiInterviewPrepRequirement>>;
   ATSBoard: ResolverTypeWrapper<Partial<AtsBoard>>;
   ATSBoardType: ResolverTypeWrapper<Partial<AtsBoardType>>;
   ATSBoardUpsertInput: ResolverTypeWrapper<Partial<AtsBoardUpsertInput>>;
@@ -1398,6 +1443,8 @@ export type ResolversTypes = {
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
+  AIInterviewPrep: Partial<AiInterviewPrep>;
+  AIInterviewPrepRequirement: Partial<AiInterviewPrepRequirement>;
   ATSBoard: Partial<AtsBoard>;
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
   Application: Partial<Application>;
@@ -1483,6 +1530,18 @@ export type ResolversParentTypes = {
   WarcPointerInput: Partial<WarcPointerInput>;
 };
 
+export type AiInterviewPrepResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewPrep'] = ResolversParentTypes['AIInterviewPrep']> = {
+  generatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  requirements?: Resolver<Array<ResolversTypes['AIInterviewPrepRequirement']>, ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AiInterviewPrepRequirementResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewPrepRequirement'] = ResolversParentTypes['AIInterviewPrepRequirement']> = {
+  questions?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  requirement?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  studyTopics?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
 export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ATSBoard'] = ResolversParentTypes['ATSBoard']> = {
   board_type?: Resolver<ResolversTypes['ATSBoardType'], ParentType, ContextType>;
   company_id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -1499,10 +1558,13 @@ export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends R
 };
 
 export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Application'] = ResolversParentTypes['Application']> = {
+  aiInterviewPrep?: Resolver<Maybe<ResolversTypes['AIInterviewPrep']>, ParentType, ContextType>;
   companyName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['EmailAddress'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  interviewPrep?: Resolver<Array<ResolversTypes['Track']>, ParentType, ContextType>;
+  jobDescription?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   jobId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   jobTitle?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   notes?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1835,12 +1897,15 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
+  generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
+  linkTrackToApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationLinkTrackToApplicationArgs, 'applicationId' | 'trackSlug'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
   reportJob?: Resolver<Maybe<ResolversTypes['Job']>, ParentType, ContextType, RequireFields<MutationReportJobArgs, 'id'>>;
+  unlinkTrackFromApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUnlinkTrackFromApplicationArgs, 'applicationId' | 'trackSlug'>>;
   updateApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUpdateApplicationArgs, 'id' | 'input'>>;
   updateCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationUpdateCompanyArgs, 'id' | 'input'>>;
   updateLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationUpdateLangSmithPromptArgs, 'input' | 'promptIdentifier'>>;
@@ -1915,6 +1980,7 @@ export type PromptUsageResolvers<ContextType = GraphQLContext, ParentType extend
 };
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  application?: Resolver<Maybe<ResolversTypes['Application']>, ParentType, ContextType, RequireFields<QueryApplicationArgs, 'id'>>;
   applications?: Resolver<Array<ResolversTypes['Application']>, ParentType, ContextType>;
   askAboutResume?: Resolver<Maybe<ResolversTypes['ResumeAnswer']>, ParentType, ContextType, RequireFields<QueryAskAboutResumeArgs, 'email' | 'question'>>;
   companies?: Resolver<ResolversTypes['CompaniesResponse'], ParentType, ContextType, Partial<QueryCompaniesArgs>>;
@@ -2073,6 +2139,8 @@ export type WarcPointerResolvers<ContextType = GraphQLContext, ParentType extend
 };
 
 export type Resolvers<ContextType = GraphQLContext> = {
+  AIInterviewPrep?: AiInterviewPrepResolvers<ContextType>;
+  AIInterviewPrepRequirement?: AiInterviewPrepRequirementResolvers<ContextType>;
   ATSBoard?: AtsBoardResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;
   AshbyAddress?: AshbyAddressResolvers<ContextType>;

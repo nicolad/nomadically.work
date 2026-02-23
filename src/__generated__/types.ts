@@ -346,6 +346,29 @@ export type CreateTrackInput = {
   title: Scalars['String']['input'];
 };
 
+export type DeepPlannerStatus =
+  | 'COMPLETE'
+  | 'FAILED'
+  | 'PENDING'
+  | 'RUNNING';
+
+export type DeepPlannerTask = {
+  __typename: 'DeepPlannerTask';
+  checkpointCount: Scalars['Int']['output'];
+  completedAt: Maybe<Scalars['DateTime']['output']>;
+  context: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  currentStep: Maybe<Scalars['String']['output']>;
+  errorMessage: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  outputArtifact: Maybe<Scalars['String']['output']>;
+  problemDescription: Scalars['String']['output'];
+  startedAt: Maybe<Scalars['DateTime']['output']>;
+  status: DeepPlannerStatus;
+  updatedAt: Scalars['DateTime']['output'];
+  workflowType: Scalars['String']['output'];
+};
+
 export type DeleteCompanyResponse = {
   __typename: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -595,6 +618,7 @@ export type Mutation = {
   add_company_facts: Array<CompanyFact>;
   createApplication: Application;
   createCompany: Company;
+  createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
   createTrack: Track;
@@ -667,6 +691,13 @@ export type MutationCreateApplicationArgs = {
 
 export type MutationCreateCompanyArgs = {
   input: CreateCompanyInput;
+};
+
+
+export type MutationCreateDeepPlannerTaskArgs = {
+  context?: InputMaybe<Scalars['String']['input']>;
+  problemDescription: Scalars['String']['input'];
+  workflowType: Scalars['String']['input'];
 };
 
 
@@ -932,6 +963,8 @@ export type Query = {
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
+  deepPlannerTask: Maybe<DeepPlannerTask>;
+  deepPlannerTasks: Array<DeepPlannerTask>;
   executeSql: TextToSqlResult;
   job: Maybe<Job>;
   jobs: JobsResponse;
@@ -993,6 +1026,11 @@ export type QueryCompany_SnapshotsArgs = {
   company_id: Scalars['Int']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 

@@ -40,7 +40,7 @@ pnpm jobs:extract-skills          # Extract skills during ingestion
 pnpm skills:extract               # Extract skills from jobs
 pnpm skills:seed                  # Seed skill taxonomy
 pnpm boards:discover              # Discover Ashby boards
-pnpm cron:trigger                 # Manually trigger cron job
+pnpm janitor:trigger              # Manually trigger janitor worker
 
 # Workers
 wrangler deploy --config wrangler.d1-gateway.toml   # Deploy D1 gateway
@@ -92,7 +92,7 @@ Custom scalars: `DateTime`/`URL`/`EmailAddress` → `string`, `Upload` → `File
 
 | Worker | Config | Runtime | Key details |
 |---|---|---|---|
-| `cron` | `wrangler.toml` | TypeScript | Daily midnight UTC, triggers ATS ingestion |
+| `janitor` | `wrangler.toml` | TypeScript | Daily midnight UTC, triggers ATS ingestion |
 | `d1-gateway` | `wrangler.d1-gateway.toml` | TypeScript | On-demand HTTP, D1 binding |
 | `insert-jobs` | `wrangler.insert-jobs.toml` | TypeScript | Queue-based, still uses Turso (legacy) |
 | `process-jobs` | `workers/process-jobs/wrangler.jsonc` | Python/LangGraph | Every 6h + queue, DeepSeek classification |
@@ -197,7 +197,7 @@ Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST 
 - 283+ `any` types in resolvers.
 
 ### Dead code
-- `workers/cron.ts` and `workers/insert-jobs.ts` still reference Turso (libsql) instead of D1.
+- `workers/janitor.ts` and `workers/insert-jobs.ts` still reference Turso (libsql) instead of D1.
 
 ### Dependencies
 - `@ai-sdk/anthropic` pinned to `"latest"` — should use specific version.

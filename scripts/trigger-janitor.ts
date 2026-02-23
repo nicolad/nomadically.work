@@ -1,19 +1,19 @@
 #!/usr/bin/env tsx
 
 /**
- * Manually trigger Cloudflare Workers Cron for ATS job ingestion
+ * Manually trigger Cloudflare Workers Janitor for ATS job ingestion
  * Triggers ingestion from known ATS sources (Greenhouse, Lever, Ashby) stored in D1
  */
 
 import { execSync } from "child_process";
 
-async function triggerCron() {
-  console.log("🚀 Triggering Cloudflare Workers Cron job discovery...\n");
+async function triggerJanitor() {
+  console.log("🚀 Triggering Cloudflare Workers Janitor...\n");
 
   try {
     // Step 1: Deploy the latest version
-    console.log("📦 Deploying latest cron worker...");
-    execSync("npx wrangler deploy workers/cron.ts", {
+    console.log("📦 Deploying latest janitor worker...");
+    execSync("npx wrangler deploy workers/janitor.ts", {
       stdio: "inherit",
       cwd: process.cwd(),
     });
@@ -22,7 +22,7 @@ async function triggerCron() {
 
     // Step 2: Trigger the scheduled event directly
     // Use wrangler's --test-scheduled to trigger the cron manually
-    execSync(`npx wrangler dev workers/cron.ts --test-scheduled --local`, {
+    execSync(`npx wrangler dev workers/janitor.ts --test-scheduled --local`, {
       stdio: "inherit",
       cwd: process.cwd(),
     });
@@ -36,4 +36,4 @@ async function triggerCron() {
 }
 
 // Run the script
-triggerCron();
+triggerJanitor();

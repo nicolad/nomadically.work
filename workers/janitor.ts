@@ -1,5 +1,5 @@
 /**
- * Cloudflare Workers Cron — ATS Job Ingestion Trigger
+ * Cloudflare Workers Janitor — ATS Job Ingestion Trigger
  *
  * Runs daily at midnight UTC to trigger ingestion from known ATS sources
  * (Greenhouse, Lever, Ashby, Workable) stored in the job_sources D1 table.
@@ -11,7 +11,7 @@
 
 import { log, generateTraceId } from "./lib/logger";
 
-const WORKER = "cron";
+const WORKER = "janitor";
 
 interface Env {
   DB: D1Database;

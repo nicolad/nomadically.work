@@ -33,8 +33,11 @@ export const resumeResolvers = {
     async resumeStatus(
       _parent: any,
       args: { email: string },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
+      if (!context.userId) {
+        throw new Error("Unauthorized");
+      }
       try {
         const response = await fetch(`${RESUME_RAG_WORKER_URL}/resume-status`, {
           method: "POST",
@@ -71,8 +74,11 @@ export const resumeResolvers = {
     async askAboutResume(
       _parent: any,
       args: { email: string; question: string },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
+      if (!context.userId) {
+        throw new Error("Unauthorized");
+      }
       try {
         const { email, question } = args;
 
@@ -116,8 +122,11 @@ export const resumeResolvers = {
     async uploadResume(
       _parent: any,
       args: { email: string; resumePdf: string; filename: string },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
+      if (!context.userId) {
+        throw new Error("Unauthorized");
+      }
       try {
         const { email, resumePdf, filename } = args;
 
@@ -161,8 +170,11 @@ export const resumeResolvers = {
     async ingestResumeParse(
       _parent: any,
       args: { email: string; job_id: string; filename: string },
-      _context: GraphQLContext,
+      context: GraphQLContext,
     ) {
+      if (!context.userId) {
+        throw new Error("Unauthorized");
+      }
       try {
         const { email, job_id, filename } = args;
 

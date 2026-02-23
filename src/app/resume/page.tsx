@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   Container,
   Heading,
@@ -10,9 +10,10 @@ import {
   Button,
   Text,
   Badge,
-  Separator,
   Callout,
   Box,
+  Separator,
+  ScrollArea,
 } from "@radix-ui/themes";
 import {
   UploadIcon,
@@ -20,6 +21,8 @@ import {
   CheckCircledIcon,
   CrossCircledIcon,
   InfoCircledIcon,
+  FileIcon,
+  ReloadIcon,
 } from "@radix-ui/react-icons";
 import { useAuth } from "@/lib/auth-hooks";
 import { useRouter } from "next/navigation";
@@ -40,6 +43,193 @@ interface ToastState {
 
 const POLL_INTERVAL = 3000;
 const MAX_POLLS = 60;
+
+const STEPS = ["Select file", "Uploading", "Parsing PDF", "Storing", "Ready"] as const;
+type StepIndex = 0 | 1 | 2 | 3 | 4;
+
+const STATUS_TO_STEP: Record<string, StepIndex> = {
+  idle: 0,
+  uploading: 1,
+  parsing: 2,
+  ingesting: 3,
+  success: 4,
+  error: 0,
+};
+
+function ProgressStepper({ currentStep }: { currentStep: StepIndex }) {
+  return (
+    <Flex gap="1" align="center" wrap="wrap">
+      {STEPS.map((label, i) => {
+        const done = i < currentStep;
+        const active = i === currentStep;
+        return (
+          <Flex key={label} align="center" gap="1">
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: done
+                  ? "var(--green-9)"
+                  : active
+                    ? "var(--accent-9)"
+                    : "var(--gray-4)",
+                color: done || active ? "white" : "var(--gray-9)",
+                fontSize: 11,
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            >
+              {done ? "✓" : i + 1}
+            </Flex>
+            <Text
+              size="1"
+              weight={active ? "bold" : "regular"}
+              color={done ? "green" : active ? undefined : "gray"}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {label}
+            </Text>
+            {i < STEPS.length - 1 && (
+              <Box
+                style={{
+                  width: 16,
+                  height: 1,
+                  background: done ? "var(--green-7)" : "var(--gray-5)",
+                  flexShrink: 0,
+                }}
+              />
+            )}
+          </Flex>
+        );
+      })}
+    </Flex>
+  );
+}
+
+function DropZone({
+  file,
+  onChange,
+  disabled,
+}: {
+  file: File | null;
+  onChange: (f: File) => void;
+  disabled: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      if (disabled) return;
+      const dropped = e.dataTransfer.files[0];
+      if (dropped?.type === "application/pdf") onChange(dropped);
+    },
+    [disabled, onChange],
+  );
+
+  return (
+    <Box
+      onClick={() => !disabled && inputRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      style={{
+        border: `2px dashed ${dragging ? "var(--accent-9)" : file ? "var(--green-8)" : "var(--gray-6)"}`,
+        borderRadius: 10,
+        padding: "28px 20px",
+        textAlign: "center",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: dragging
+          ? "var(--accent-2)"
+          : file
+            ? "var(--green-2)"
+            : "var(--gray-2)",
+        transition: "all 0.15s ease",
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onChange(f);
+        }}
+        disabled={disabled}
+      />
+      <Flex direction="column" align="center" gap="2">
+        {file ? (
+          <FileIcon width={28} height={28} color="var(--green-9)" />
+        ) : (
+          <UploadIcon width={28} height={28} color="var(--gray-9)" />
+        )}
+        {file ? (
+          <>
+            <Text size="2" weight="medium" color="green">
+              {file.name}
+            </Text>
+            <Text size="1" color="gray">
+              {(file.size / 1024).toFixed(1)} KB — click to change
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text size="2" weight="medium">
+              Drop your PDF here or click to browse
+            </Text>
+            <Text size="1" color="gray">
+              PDF files only · max 20 pages
+            </Text>
+          </>
+        )}
+      </Flex>
+    </Box>
+  );
+}
+
+function MarkdownAnswer({ text }: { text: string }) {
+  // Simple markdown: bold, bullet lines, line breaks
+  const lines = text.split("\n");
+  return (
+    <Flex direction="column" gap="1">
+      {lines.map((line, i) => {
+        const trimmed = line.trimStart();
+        const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("• ") || trimmed.startsWith("* ");
+        const content = isBullet ? trimmed.slice(2) : line;
+        const parts = content.split(/(\*\*[^*]+\*\*)/g);
+        const rendered = parts.map((p, j) =>
+          p.startsWith("**") && p.endsWith("**") ? (
+            <Text key={j} weight="bold">{p.slice(2, -2)}</Text>
+          ) : (
+            <span key={j}>{p}</span>
+          ),
+        );
+        if (!line.trim()) return <Box key={i} style={{ height: 6 }} />;
+        return (
+          <Text key={i} size="2" style={{ lineHeight: "1.65" }}>
+            {isBullet && <span style={{ marginRight: 6 }}>•</span>}
+            {rendered}
+          </Text>
+        );
+      })}
+    </Flex>
+  );
+}
+
+const SAMPLE_QUESTIONS = [
+  "What are my strongest technical skills?",
+  "Summarize my work experience",
+  "What companies have I worked at?",
+  "What programming languages do I know?",
+  "What's my educational background?",
+];
 
 function ResumePageContent() {
   const router = useRouter();
@@ -66,18 +256,18 @@ function ResumePageContent() {
   const [uploadedResumeId, setUploadedResumeId] = useState<string | null>(null);
   const [chunksCount, setChunksCount] = useState<number>(0);
 
-  // GQL hooks
   const [uploadResumeMutation] = useUploadResumeMutation();
   const [ingestResumeParseMutation] = useIngestResumeParseMutation();
   const [askAboutResume] = useAskAboutResumeLazyQuery();
 
   const userEmail = user?.email || "";
+  const resumeReady = uploadStatus === "success";
 
-  // Check for existing resume on load (runs automatically when userEmail is available)
   const { data: resumeStatusData } = useResumeStatusQuery({
     variables: { email: userEmail },
-    pollInterval: 3000, // Poll every 3 seconds to check for new resume status
     skip: !userEmail,
+    // Only poll while we don't know yet — stop once confirmed
+    pollInterval: resumeReady ? 0 : 5000,
     onCompleted(data) {
       const status = data?.resumeStatus;
       if (status?.exists && uploadStatus === "idle") {
@@ -107,20 +297,21 @@ function ResumePageContent() {
   if (loading) {
     return (
       <Container size="3" p="8">
-        <Text color="gray">Loading...</Text>
+        <Flex align="center" gap="2">
+          <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+          <Text color="gray">Loading...</Text>
+        </Flex>
       </Container>
     );
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        showToast("Please upload a PDF file", "error");
-        return;
-      }
-      setResumeFile(file);
+  const handleFileChange = (file: File) => {
+    if (file.type !== "application/pdf") {
+      showToast("Please upload a PDF file", "error");
+      return;
     }
+    setResumeFile(file);
+    if (uploadStatus === "success") setUploadStatus("idle");
   };
 
   const handleUploadResume = async () => {
@@ -136,7 +327,6 @@ function ResumePageContent() {
     setUploadStatus("uploading");
 
     try {
-      // Convert PDF to base64
       const arrayBuffer = await resumeFile.arrayBuffer();
       const base64 = btoa(
         new Uint8Array(arrayBuffer).reduce(
@@ -145,7 +335,6 @@ function ResumePageContent() {
         ),
       );
 
-      // Step 1: Submit PDF via GQL mutation
       const { data: uploadData } = await uploadResumeMutation({
         variables: {
           email: userEmail,
@@ -162,7 +351,6 @@ function ResumePageContent() {
       showToast(`PDF submitted (${upload.tier} tier). Parsing...`, "info");
       setUploadStatus("parsing");
 
-      // Step 2: Poll via GQL mutation until COMPLETED
       const jobId = upload.job_id;
       const filename = resumeFile.name;
 
@@ -170,11 +358,7 @@ function ResumePageContent() {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL));
 
         const { data: ingestData } = await ingestResumeParseMutation({
-          variables: {
-            email: userEmail,
-            job_id: jobId,
-            filename,
-          },
+          variables: { email: userEmail, job_id: jobId, filename },
         });
 
         const ingest = ingestData?.ingestResumeParse;
@@ -187,10 +371,14 @@ function ResumePageContent() {
           setUploadedResumeId(ingest.resume_id || "latest");
           setChunksCount(ingest.chunks_stored || 0);
           showToast(
-            `Resume processed! ${ingest.chunks_stored || 0} chunks stored.`,
+            `Resume ready — ${ingest.chunks_stored || 0} sections indexed.`,
             "success",
           );
           return;
+        }
+
+        if (i === Math.floor(MAX_POLLS / 2)) {
+          setUploadStatus("ingesting");
         }
       }
 
@@ -201,8 +389,6 @@ function ResumePageContent() {
         error instanceof Error ? error.message : "Failed to upload resume",
         "error",
       );
-      console.error("Upload error:", error);
-      // Reset to idle after showing error
       setTimeout(() => setUploadStatus("idle"), 3000);
     }
   };
@@ -216,7 +402,7 @@ function ResumePageContent() {
       showToast("User email not found", "error");
       return;
     }
-    if (!uploadedResumeId && uploadStatus !== "success") {
+    if (!uploadedResumeId && !resumeReady) {
       showToast("Please upload your resume first", "error");
       return;
     }
@@ -226,10 +412,7 @@ function ResumePageContent() {
 
     try {
       const { data } = await askAboutResume({
-        variables: {
-          email: userEmail,
-          question: question,
-        },
+        variables: { email: userEmail, question },
       });
 
       const result = data?.askAboutResume;
@@ -246,52 +429,23 @@ function ResumePageContent() {
         error instanceof Error ? error.message : "Failed to get answer",
         "error",
       );
-      console.error("Query error:", error);
     }
   };
-
-  const SAMPLE_QUESTIONS = [
-    "What are my strongest technical skills?",
-    "What companies have I worked at?",
-    "Summarize my work experience",
-    "What programming languages do I know?",
-    "What's my educational background?",
-  ];
 
   const isUploading =
     uploadStatus === "uploading" ||
     uploadStatus === "parsing" ||
     uploadStatus === "ingesting";
 
-  const uploadButtonLabel = {
-    idle: "Upload Resume",
-    uploading: "Submitting...",
-    parsing: "Parsing PDF...",
-    ingesting: "Storing chunks...",
-    success: "Upload Resume",
-    error: "Upload Resume",
-  }[uploadStatus];
+  const currentStep = STATUS_TO_STEP[uploadStatus] ?? 0;
 
   return (
-    <Container size="3" p="8">
-      {/* Toast notification */}
+    <Container size="3" py="8" px="4">
+      {/* Toast */}
       {toast.show && (
-        <Box
-          style={{
-            position: "fixed",
-            top: 20,
-            right: 20,
-            zIndex: 1000,
-          }}
-        >
+        <Box style={{ position: "fixed", top: 20, right: 20, zIndex: 1000, maxWidth: 340 }}>
           <Callout.Root
-            color={
-              toast.type === "success"
-                ? "green"
-                : toast.type === "error"
-                  ? "red"
-                  : "blue"
-            }
+            color={toast.type === "success" ? "green" : toast.type === "error" ? "red" : "blue"}
           >
             <Callout.Icon>
               {toast.type === "success" ? (
@@ -308,70 +462,59 @@ function ResumePageContent() {
       )}
 
       <Flex direction="column" gap="6">
-        <Flex direction="column" gap="2">
-          <Heading size="8">Resume Assistant</Heading>
-          <Text color="gray" size="3">
-            Upload your resume and ask questions about your experience using
-            AI-powered RAG
+        {/* Header */}
+        <Flex direction="column" gap="1">
+          <Heading size="7">Resume Assistant</Heading>
+          <Text color="gray" size="2">
+            Upload your resume and get instant AI-powered answers about your experience
           </Text>
         </Flex>
 
-        {/* Upload Section */}
+        {/* Upload card */}
         <Card>
           <Flex direction="column" gap="4">
-            <Flex align="center" gap="2">
-              <UploadIcon width={20} height={20} />
-              <Heading size="5">Upload Resume</Heading>
-              {uploadStatus === "success" && (
-                <Badge color="green" ml="auto">
-                  Uploaded
+            <Flex align="center" justify="between">
+              <Flex align="center" gap="2">
+                <UploadIcon />
+                <Heading size="4">Your Resume</Heading>
+              </Flex>
+              {resumeReady && (
+                <Badge color="green" variant="soft">
+                  <CheckCircledIcon /> Ready
                 </Badge>
               )}
             </Flex>
 
-            <Text color="gray" size="2">
-              Upload your resume as a PDF. It will be processed, chunked, and
-              stored securely with semantic embeddings for intelligent
-              retrieval.
-            </Text>
+            {/* Progress stepper — only when actively uploading */}
+            {isUploading && (
+              <ProgressStepper currentStep={currentStep} />
+            )}
 
-            <Flex direction="column" gap="3">
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={handleFileChange}
-                disabled={isUploading}
-                style={{
-                  padding: "12px",
-                  border: "2px dashed var(--gray-7)",
-                  borderRadius: "8px",
-                  cursor: isUploading ? "not-allowed" : "pointer",
-                  backgroundColor: "var(--gray-2)",
-                  color: "var(--gray-11)",
-                  fontSize: "14px",
-                }}
-              />
-              {resumeFile && (
-                <Text size="2" color="gray">
-                  Selected: {resumeFile.name} (
-                  {(resumeFile.size / 1024).toFixed(1)} KB)
-                </Text>
-              )}
-            </Flex>
-
-            {uploadStatus === "success" && uploadedResumeId && (
-              <Callout.Root color="green">
+            {/* Existing resume info */}
+            {resumeReady && uploadedResumeId && (
+              <Callout.Root color="green" variant="soft">
                 <Callout.Icon>
                   <CheckCircledIcon />
                 </Callout.Icon>
                 <Callout.Text>
-                  Resume ingested — {chunksCount} chunks stored
-                  {existingFilename && ` (${existingFilename})`}
-                  {existingIngestedAt &&
-                    ` · ${new Date(existingIngestedAt).toLocaleDateString()}`}
+                  <Text weight="medium">{existingFilename || "Resume"}</Text>
+                  {" — "}
+                  {chunksCount} sections indexed
+                  {existingIngestedAt && (
+                    <Text color="gray">
+                      {" · uploaded "}
+                      {new Date(existingIngestedAt).toLocaleDateString()}
+                    </Text>
+                  )}
                 </Callout.Text>
               </Callout.Root>
             )}
+
+            <DropZone
+              file={resumeFile}
+              onChange={handleFileChange}
+              disabled={isUploading}
+            />
 
             <Flex gap="3" justify="end">
               <Button
@@ -380,7 +523,15 @@ function ResumePageContent() {
                 loading={isUploading}
               >
                 <UploadIcon />
-                {uploadButtonLabel}
+                {isUploading
+                  ? uploadStatus === "uploading"
+                    ? "Submitting…"
+                    : uploadStatus === "parsing"
+                      ? "Parsing PDF…"
+                      : "Storing…"
+                  : resumeReady
+                    ? "Replace Resume"
+                    : "Upload Resume"}
               </Button>
             </Flex>
           </Flex>
@@ -388,139 +539,124 @@ function ResumePageContent() {
 
         <Separator size="4" />
 
-        {/* Q&A Section */}
+        {/* Q&A card */}
         <Card>
           <Flex direction="column" gap="4">
             <Flex align="center" gap="2">
-              <ChatBubbleIcon width={20} height={20} />
-              <Heading size="5">Ask Questions</Heading>
+              <ChatBubbleIcon />
+              <Heading size="4">Ask Questions</Heading>
             </Flex>
 
-            <Text color="gray" size="2">
-              Ask questions about your resume. The AI will search through your
-              resume and provide contextual answers.
-            </Text>
-
-            {!uploadedResumeId && uploadStatus !== "success" && (
-              <Callout.Root color="blue">
+            {!resumeReady && (
+              <Callout.Root color="blue" variant="soft">
                 <Callout.Icon>
                   <InfoCircledIcon />
                 </Callout.Icon>
-                <Callout.Text>
-                  Upload your resume first to enable Q&A
-                </Callout.Text>
+                <Callout.Text>Upload your resume above to enable Q&amp;A</Callout.Text>
               </Callout.Root>
             )}
 
-            <Flex direction="column" gap="2">
-              <Text size="2" weight="medium">
-                Sample questions:
-              </Text>
-              <Flex gap="2" wrap="wrap">
-                {SAMPLE_QUESTIONS.map((sample, i) => (
-                  <Button
-                    key={i}
-                    variant="soft"
-                    size="1"
-                    onClick={() => setQuestion(sample)}
-                    disabled={!uploadedResumeId && uploadStatus !== "success"}
-                  >
-                    {sample}
-                  </Button>
-                ))}
-              </Flex>
-            </Flex>
-
-            <TextArea
-              placeholder="Ask a question about your resume...&#10;&#10;Example: What are my strongest technical skills?"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              rows={3}
-              disabled={
-                queryStatus === "querying" ||
-                (!uploadedResumeId && uploadStatus !== "success")
-              }
-            />
-
-            <Flex gap="3" justify="end">
-              <Button
-                onClick={handleAskQuestion}
-                disabled={
-                  queryStatus === "querying" ||
-                  !question.trim() ||
-                  (!uploadedResumeId && uploadStatus !== "success")
-                }
-                loading={queryStatus === "querying"}
-              >
-                <ChatBubbleIcon />
-                {queryStatus === "querying" ? "Thinking..." : "Ask Question"}
-              </Button>
-            </Flex>
-
-            {/* Answer Display */}
-            {answer && (
-              <Card variant="surface" style={{ marginTop: "1rem" }}>
-                <Flex direction="column" gap="3">
-                  <Flex justify="between" align="center">
-                    <Text weight="bold" size="3">
-                      Answer
-                    </Text>
-                    <Badge color="gray" variant="soft">
-                      {contextCount} context chunks used
-                    </Badge>
-                  </Flex>
-                  <Text
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    {answer}
-                  </Text>
+            {resumeReady && (
+              <>
+                <Flex gap="2" wrap="wrap">
+                  {SAMPLE_QUESTIONS.map((sample, i) => (
+                    <Button
+                      key={i}
+                      variant="soft"
+                      size="1"
+                      onClick={() => setQuestion(sample)}
+                      disabled={queryStatus === "querying"}
+                    >
+                      {sample}
+                    </Button>
+                  ))}
                 </Flex>
-              </Card>
-            )}
 
-            {queryStatus === "error" && (
-              <Callout.Root color="red">
-                <Callout.Icon>
-                  <CrossCircledIcon />
-                </Callout.Icon>
-                <Callout.Text>
-                  Failed to get answer. Please try again.
-                </Callout.Text>
-              </Callout.Root>
+                <TextArea
+                  placeholder="Ask anything about your resume…"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  rows={3}
+                  disabled={queryStatus === "querying"}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      void handleAskQuestion();
+                    }
+                  }}
+                />
+
+                <Flex gap="3" justify="between" align="center">
+                  <Text size="1" color="gray">
+                    ⌘↵ to submit
+                  </Text>
+                  <Button
+                    onClick={handleAskQuestion}
+                    disabled={queryStatus === "querying" || !question.trim()}
+                    loading={queryStatus === "querying"}
+                  >
+                    <ChatBubbleIcon />
+                    {queryStatus === "querying" ? "Thinking…" : "Ask"}
+                  </Button>
+                </Flex>
+
+                {answer && (
+                  <Card variant="surface">
+                    <Flex direction="column" gap="3">
+                      <Flex justify="between" align="center">
+                        <Text size="2" weight="bold" color="gray">
+                          Answer
+                        </Text>
+                        <Badge color="gray" variant="soft" size="1">
+                          {contextCount} sections used
+                        </Badge>
+                      </Flex>
+                      <ScrollArea style={{ maxHeight: 400 }}>
+                        <MarkdownAnswer text={answer} />
+                      </ScrollArea>
+                    </Flex>
+                  </Card>
+                )}
+
+                {queryStatus === "error" && (
+                  <Callout.Root color="red">
+                    <Callout.Icon>
+                      <CrossCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text>Failed to get answer. Please try again.</Callout.Text>
+                  </Callout.Root>
+                )}
+              </>
             )}
           </Flex>
         </Card>
 
-        {/* Info Section */}
+        {/* How it works */}
         <Card variant="surface">
           <Flex direction="column" gap="3">
             <Flex align="center" gap="2">
-              <InfoCircledIcon width={18} height={18} />
-              <Heading size="4">How it works</Heading>
+              <InfoCircledIcon />
+              <Heading size="3">How it works</Heading>
             </Flex>
-            <Flex direction="column" gap="2" ml="4">
-              <Text size="2" color="gray">
-                • Your resume is chunked into semantic segments
-              </Text>
-              <Text size="2" color="gray">
-                • Each chunk is embedded using BGE-base-en-v1.5 (768 dimensions)
-              </Text>
-              <Text size="2" color="gray">
-                • Questions use semantic search to find relevant chunks
-              </Text>
-              <Text size="2" color="gray">
-                • Llama 3.3 70B generates answers from retrieved context
-              </Text>
-              <Text size="2" color="gray">
-                • All data is stored securely and tied to your email
-              </Text>
+            <Flex direction="column" gap="1" ml="4">
+              {[
+                "Your PDF is parsed with OCR support for scanned documents",
+                "The text is split into sections and indexed for fast search",
+                "Questions are matched to the most relevant resume sections",
+                "An AI model composes a precise answer from your content",
+                "Everything is stored privately and tied to your account",
+              ].map((step, i) => (
+                <Text key={i} size="2" color="gray">
+                  {i + 1}. {step}
+                </Text>
+              ))}
             </Flex>
           </Flex>
         </Card>
       </Flex>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </Container>
   );
 }

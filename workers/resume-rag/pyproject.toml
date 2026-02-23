@@ -6,10 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "webtypy>=0.1.7",
-    "langchain-cloudflare>=0.1.8",
-    "langchain-core>=0.3.60,<2.0.0",
-    # NOTE: Do NOT include pydantic — use Pyodide's built-in version.
-    # pydantic_core requires compiled Rust binaries unavailable for WebAssembly.
+    # NOTE: Do NOT include pydantic or langchain — they pull in pydantic_core
+    # (a 4 MB WASM binary that pushes the worker over the 3 MiB size limit).
+    # Use Pyodide's built-in modules and direct Workers AI binding calls instead.
 ]
 
 [dependency-groups]

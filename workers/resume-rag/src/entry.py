@@ -16,12 +16,6 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
 
-# Pydantic imports
-try:
-    from pydantic.v1 import BaseModel, Field
-except ImportError:
-    from pydantic import BaseModel, Field
-
 # Cloudflare Workers runtime
 from workers import Response, WorkerEntrypoint
 
@@ -44,53 +38,68 @@ _MAX_METADATA_BYTES = 10_000
 
 
 # ---------------------------------------------------------------------------
-# Pydantic Models
+# Request helpers (plain dicts — no pydantic to keep bundle under 3 MiB)
 # ---------------------------------------------------------------------------
 
-class ResumeData(BaseModel):
-    user_id: str = Field(description="User ID from auth")
-    name: str = Field(description="Full name")
-    summary: str = Field(description="Professional summary")
-    experience: str = Field(description="Work experience")
-    skills: List[str] = Field(default_factory=list)
-    education: str = Field(default="")
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-    def __init__(self, **data):
-        """Initialize and validate metadata."""
-        if "metadata" in data:
-            data["metadata"] = self._sanitize_metadata(data["metadata"])
-        super().__init__(**data)
-    
-    @staticmethod
-    def _sanitize_metadata(v: Dict[str, Any]) -> Dict[str, Any]:
-        """Strip reserved keys and cap total serialised size."""
-        sanitized = {k: val for k, val in v.items()
-                     if k not in _RESERVED_METADATA_KEYS}
-        if len(json.dumps(sanitized).encode()) > _MAX_METADATA_BYTES:
-            raise ValueError(
-                f"metadata exceeds {_MAX_METADATA_BYTES} bytes after stripping reserved keys"
-            )
-        return sanitized
+def _parse_resume_data(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate and return resume data dict."""
+    required = ("user_id", "name", "summary", "experience")
+    for field in required:
+        if not body.get(field):
+            raise ValueError(f"Missing required field: {field}")
+    meta = {k: v for k, v in body.get("metadata", {}).items()
+            if k not in _RESERVED_METADATA_KEYS}
+    if len(json.dumps(meta).encode()) > _MAX_METADATA_BYTES:
+        raise ValueError(f"metadata exceeds {_MAX_METADATA_BYTES} bytes")
+    return {
+        "user_id": body["user_id"],
+        "name": body["name"],
+        "summary": body["summary"],
+        "experience": body["experience"],
+        "skills": body.get("skills", []),
+        "education": body.get("education", ""),
+        "metadata": meta,
+    }
 
 
-class SearchRequest(BaseModel):
-    user_id: str = Field(description="User ID")
-    query: str = Field(description="Search query")
-    limit: int = Field(default=5, ge=1, le=50)
-    resume_id: str = Field(default="latest")
+def _parse_search_request(body: Dict[str, Any]) -> Dict[str, Any]:
+    if not body.get("user_id"):
+        raise ValueError("user_id required")
+    if not body.get("query"):
+        raise ValueError("query required")
+    limit = int(body.get("limit", 5))
+    return {
+        "user_id": body["user_id"],
+        "query": body["query"],
+        "limit": max(1, min(50, limit)),
+        "resume_id": body.get("resume_id", "latest"),
+    }
 
 
-class ChatRequest(BaseModel):
-    user_id: str = Field(description="User ID")
-    message: str = Field(description="User question")
-    resume_id: str = Field(default="latest")
+def _parse_chat_request(body: Dict[str, Any]) -> Dict[str, Any]:
+    if not body.get("user_id"):
+        raise ValueError("user_id required")
+    if not body.get("message"):
+        raise ValueError("message required")
+    return {
+        "user_id": body["user_id"],
+        "message": body["message"],
+        "resume_id": body.get("resume_id", "latest"),
+    }
 
 
-class PdfUploadRequest(BaseModel):
-    user_id: str = Field(description="User ID")
-    pdf_base64: str = Field(description="Base64 encoded PDF file")
-    filename: str = Field(description="Original filename")
+def _parse_pdf_upload_request(body: Dict[str, Any]) -> Dict[str, Any]:
+    if not body.get("user_id"):
+        raise ValueError("user_id required")
+    if not body.get("pdf_base64"):
+        raise ValueError("pdf_base64 required")
+    if not body.get("filename"):
+        raise ValueError("filename required")
+    return {
+        "user_id": body["user_id"],
+        "pdf_base64": body["pdf_base64"],
+        "filename": body["filename"],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -105,26 +114,59 @@ def get_attr(obj, attr: str, default=None):
         return default
 
 
+_SECTION_HEADERS = re.compile(
+    r"^(?:#{1,3}\s+)?(?:"
+    r"experience|work experience|employment|professional experience|"
+    r"education|academic background|"
+    r"skills|technical skills|core competencies|competencies|"
+    r"summary|professional summary|profile|about me|objective|"
+    r"projects|personal projects|open.?source|"
+    r"certifications?|certificates?|awards?|"
+    r"languages?|publications?|volunteer|"
+    r"contact|references?"
+    r")\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> List[str]:
-    """Split text into overlapping chunks."""
+    """Split resume text into chunks, keeping named sections together where possible."""
     if not text:
         return []
-    
-    chunks = []
-    start = 0
-    text_len = len(text)
-    
-    while start < text_len:
-        end = start + chunk_size
-        chunk = text[start:end]
-        
-        if chunk:
-            chunks.append(chunk.strip())
-        
-        start += chunk_size - overlap
-        if start >= text_len:
-            break
-    
+
+    # Split on detected section headers to keep sections coherent
+    split_indices = [0]
+    for m in _SECTION_HEADERS.finditer(text):
+        if m.start() > 0:
+            split_indices.append(m.start())
+    split_indices.append(len(text))
+
+    sections: List[str] = []
+    for i in range(len(split_indices) - 1):
+        section = text[split_indices[i]:split_indices[i + 1]].strip()
+        if section:
+            sections.append(section)
+
+    # If no sections detected, fall back to a single block
+    if not sections:
+        sections = [text]
+
+    chunks: List[str] = []
+    for section in sections:
+        if len(section) <= chunk_size:
+            chunks.append(section)
+        else:
+            # Section too large — slide through it with overlap
+            start = 0
+            while start < len(section):
+                end = start + chunk_size
+                chunk = section[start:end].strip()
+                if chunk:
+                    chunks.append(chunk)
+                start += chunk_size - overlap
+                if start >= len(section):
+                    break
+
     return chunks if chunks else [text]
 
 
@@ -154,20 +196,22 @@ async def generate_embedding(ai_binding, text: str) -> List[float]:
     return embedding
 
 
-def format_resume_text(resume: ResumeData) -> str:
-    """Format resume data into searchable text."""
+def format_resume_text(resume: Dict[str, Any]) -> str:
+    """Format resume data dict into searchable text."""
     parts = [
-        f"Name: {resume.name}",
-        f"Summary: {resume.summary}",
-        f"Experience:\n{resume.experience}",
+        f"Name: {resume['name']}",
+        f"Summary: {resume['summary']}",
+        f"Experience:\n{resume['experience']}",
     ]
-    
-    if resume.skills:
-        parts.append(f"Skills: {', '.join(resume.skills)}")
-    
-    if resume.education:
-        parts.append(f"Education: {resume.education}")
-    
+
+    skills = resume.get("skills", [])
+    if skills:
+        parts.append(f"Skills: {', '.join(skills)}")
+
+    education = resume.get("education", "")
+    if education:
+        parts.append(f"Education: {education}")
+
     return "\n\n".join(parts)
 
 
@@ -323,8 +367,6 @@ async def fetch_llamaparse_result(job_id: str, api_key: str) -> dict:
 class Default(WorkerEntrypoint):
     """Main Worker entrypoint with user-based resume RAG."""
 
-    _llm: Optional[Any] = None
-
     # ---- Shared helpers ------------------------------------------------
 
     @property
@@ -336,15 +378,33 @@ class Default(WorkerEntrypoint):
             "Access-Control-Max-Age": "86400",
         }
 
-    def _get_llm(self):
-        """Lazy-initialise the LLM once per worker instance."""
-        if self._llm is None:
-            from langchain_cloudflare import ChatCloudflareWorkersAI
-            self._llm = ChatCloudflareWorkersAI(
-                binding=self.env.AI,
-                model="@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-            )
-        return self._llm
+    async def _generate_text(self, prompt: str, context: str) -> str:
+        """Call Workers AI text generation directly (no langchain)."""
+        from js import JSON as JsJSON
+        from pyodide.ffi import to_js
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful career assistant helping a candidate "
+                    "understand their own resume. Answer questions accurately "
+                    "and concisely based solely on the resume excerpts provided "
+                    "below. If the information is not present in the excerpts, "
+                    "say so clearly rather than guessing. Format lists with "
+                    "bullet points when appropriate.\n\nResume excerpts:\n"
+                    + context
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ]
+
+        result = await self.env.AI.run(
+            "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            to_js({"messages": messages}, dict_converter=lambda d: JsJSON.stringify(d)),
+        )
+        result_dict = json.loads(JsJSON.stringify(result))
+        return result_dict.get("response", "")
 
     def _authenticate(self, request) -> Optional[Response]:
         """Validate API key. Returns an error Response if invalid, None if ok."""
@@ -440,13 +500,13 @@ class Default(WorkerEntrypoint):
 
     async def _handle_store_resume(self, request):
         body = await request.json()
-        resume = ResumeData(**body)
+        resume = _parse_resume_data(body)
 
         resume_text = format_resume_text(resume)
         chunks = chunk_text(resume_text)
 
-        resume_id = resume.metadata.get("resume_id", "latest")
-        namespace = resume_namespace(resume.user_id, resume_id)
+        resume_id = resume["metadata"].get("resume_id", "latest")
+        namespace = resume_namespace(resume["user_id"], resume_id)
 
         # Delete old vectors so stale chunks don't pollute the index
         await self._delete_existing_vectors(namespace)
@@ -459,8 +519,8 @@ class Default(WorkerEntrypoint):
                 "values": embedding,
                 "namespace": namespace,
                 "metadata": {
-                    "user_id": resume.user_id,
-                    "name": resume.name,
+                    "user_id": resume["user_id"],
+                    "name": resume["name"],
                     "chunk_index": i,
                     "total_chunks": len(chunks),
                     "text": chunk,
@@ -472,8 +532,7 @@ class Default(WorkerEntrypoint):
         if vectors_to_insert:
             await self.env.VECTORIZE.upsert(vectors_to_insert)
 
-        # Embed the actual summary for a distinctive manifest vector
-        manifest_text = f"{resume.name} — {resume.summary[:500]}"
+        manifest_text = f"{resume['name']} — {resume['summary'][:500]}"
         manifest_embedding = await generate_embedding(self.env.AI, manifest_text)
         await self.env.VECTORIZE.upsert([{
             "id": f"{namespace}:manifest",
@@ -481,8 +540,8 @@ class Default(WorkerEntrypoint):
             "namespace": namespace,
             "metadata": {
                 "type": "manifest",
-                "user_id": resume.user_id,
-                "name": resume.name,
+                "user_id": resume["user_id"],
+                "name": resume["name"],
                 "resume_id": resume_id,
                 "chunk_count": len(chunks),
                 "ingested_at": datetime.now(timezone.utc).isoformat(),
@@ -491,7 +550,7 @@ class Default(WorkerEntrypoint):
 
         return Response.json({
             "success": True,
-            "user_id": resume.user_id,
+            "user_id": resume["user_id"],
             "resume_id": resume_id,
             "chunks_stored": len(chunks),
             "namespace": namespace,
@@ -501,9 +560,9 @@ class Default(WorkerEntrypoint):
         """Fire-and-forget: submit PDF to LlamaParse v2, return job_id immediately."""
         try:
             body = await request.json()
-            pdf_req = PdfUploadRequest(**body)
+            pdf_req = _parse_pdf_upload_request(body)
 
-            pdf_bytes = base64.b64decode(pdf_req.pdf_base64)
+            pdf_bytes = base64.b64decode(pdf_req["pdf_base64"])
 
             llama_key = getattr(self.env, "LLAMA_CLOUD_API_KEY", None)
             if not llama_key:
@@ -513,7 +572,7 @@ class Default(WorkerEntrypoint):
                 }, status=500, headers=self._cors_headers)
 
             job_info = await submit_pdf_to_llamaparse(
-                pdf_bytes, pdf_req.filename, llama_key
+                pdf_bytes, pdf_req["filename"], llama_key
             )
 
             return Response.json({
@@ -521,8 +580,8 @@ class Default(WorkerEntrypoint):
                 "job_id": job_info["job_id"],
                 "tier": job_info["tier"],
                 "status": "PENDING",
-                "user_id": pdf_req.user_id,
-                "filename": pdf_req.filename,
+                "user_id": pdf_req["user_id"],
+                "filename": pdf_req["filename"],
             }, headers=self._cors_headers)
 
         except Exception as e:
@@ -635,14 +694,14 @@ class Default(WorkerEntrypoint):
 
     async def _handle_search_resumes(self, request):
         body = await request.json()
-        search_req = SearchRequest(**body)
+        search_req = _parse_search_request(body)
 
-        query_embedding = await generate_embedding(self.env.AI, search_req.query)
+        query_embedding = await generate_embedding(self.env.AI, search_req["query"])
 
         results = await self.env.VECTORIZE.query(
             vector=query_embedding,
-            topK=search_req.limit,
-            namespace=resume_namespace(search_req.user_id, search_req.resume_id),
+            topK=search_req["limit"],
+            namespace=resume_namespace(search_req["user_id"], search_req["resume_id"]),
             returnMetadata=True,
         )
 
@@ -660,22 +719,22 @@ class Default(WorkerEntrypoint):
 
         return Response.json({
             "success": True,
-            "user_id": search_req.user_id,
-            "query": search_req.query,
+            "user_id": search_req["user_id"],
+            "query": search_req["query"],
             "results": formatted_results,
             "count": len(formatted_results),
         }, headers=self._cors_headers)
 
     async def _handle_chat(self, request):
         body = await request.json()
-        chat_req = ChatRequest(**body)
+        chat_req = _parse_chat_request(body)
 
-        query_embedding = await generate_embedding(self.env.AI, chat_req.message)
+        query_embedding = await generate_embedding(self.env.AI, chat_req["message"])
 
         results = await self.env.VECTORIZE.query(
             vector=query_embedding,
             topK=5,
-            namespace=resume_namespace(chat_req.user_id, chat_req.resume_id),
+            namespace=resume_namespace(chat_req["user_id"], chat_req["resume_id"]),
             returnMetadata=True,
         )
 
@@ -692,27 +751,13 @@ class Default(WorkerEntrypoint):
             else "No relevant resume information found."
         )
 
-        from langchain_core.prompts import ChatPromptTemplate
-        
-        llm = self._get_llm()
-        prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are a helpful resume assistant. Answer questions based "
-             "solely on the resume context provided.\n\nContext:\n{context}"),
-            ("user", "{message}"),
-        ])
-
-        chain = prompt | llm
-        response = await chain.ainvoke({
-            "context": context,
-            "message": chat_req.message,
-        })
+        response_text = await self._generate_text(chat_req["message"], context)
 
         return Response.json({
             "success": True,
-            "user_id": chat_req.user_id,
-            "message": chat_req.message,
-            "response": response.content,
+            "user_id": chat_req["user_id"],
+            "message": chat_req["message"],
+            "response": response_text,
             "context_count": len(context_parts),
         }, headers=self._cors_headers)
 

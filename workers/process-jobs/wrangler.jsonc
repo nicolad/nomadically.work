@@ -29,7 +29,8 @@
     "consumers": [
       {
         "queue": "process-jobs-queue",
-        "max_batch_size": 1,
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
         "max_retries": 3,
         "dead_letter_queue": "process-jobs-dlq",
       },

@@ -1,5 +1,6 @@
 "use client";
 
+import ReactMarkdown from "react-markdown";
 import {
   Container,
   Heading,
@@ -672,14 +673,8 @@ export default function ApplicationDetailPage() {
                     {deepDiveError}
                   </Text>
                 ) : selectedReq.deepDive ? (
-                  <Box
-                    style={{
-                      fontSize: "var(--font-size-2)",
-                      lineHeight: 1.7,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {selectedReq.deepDive}
+                  <Box className="deep-dive-content">
+                    <ReactMarkdown>{selectedReq.deepDive}</ReactMarkdown>
                   </Box>
                 ) : null}
               </Box>

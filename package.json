@@ -75,6 +75,7 @@
     "openai": "^6.21.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "react-markdown": "^10.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

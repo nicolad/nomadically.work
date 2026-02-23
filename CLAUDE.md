@@ -105,7 +105,6 @@ Custom scalars: `DateTime`/`URL`/`EmailAddress` → `string`, `Upload` → `File
 | Route | Purpose |
 |---|---|
 | `/api/graphql` | Apollo Server GraphQL endpoint (main API) |
-| `/api/inngest` | Inngest webhook handler |
 | `/api/text-to-sql` | Natural language → SQL query |
 | `/api/enhance-greenhouse-jobs` | Trigger Greenhouse job enhancement |
 | `/api/companies/bulk-import` | Bulk import companies |
@@ -125,10 +124,10 @@ GraphQL Playground: `http://localhost:3000/api/graphql`. Vercel routes have 60s 
 | ORM | Drizzle ORM |
 | API | Apollo Server 5 (GraphQL) |
 | Auth | Clerk |
-| AI/ML | Vercel AI SDK, Anthropic Claude (+ Agent SDK), DeepSeek, Google ADK, Mastra, OpenRouter |
-| Background jobs | Trigger.dev, Inngest, Cloudflare Workers (cron + queues) |
+| AI/ML | Vercel AI SDK, Anthropic Claude (+ Agent SDK), DeepSeek, Google ADK, OpenRouter |
+| Background jobs | Trigger.dev, Cloudflare Workers (cron + queues) |
 | Observability | Langfuse, LangSmith, OpenTelemetry (partially active) |
-| Evaluation | Promptfoo, Vitest, Mastra Evals |
+| Evaluation | Promptfoo, Vitest |
 | Deployment | Vercel (app), Cloudflare Workers (workers) |
 | Package manager | pnpm 10.10 |
 | UI | Radix UI (Themes + Icons) |
@@ -141,7 +140,7 @@ GraphQL Playground: `http://localhost:3000/api/graphql`. Vercel routes have 60s 
 - **Resolvers** are in `src/apollo/resolvers/` — job resolvers in `src/apollo/resolvers/job/`.
 - **ATS ingestion** fetchers: `src/ingestion/{greenhouse,lever,ashby}.ts` — primary job discovery channel.
 - **Skills subsystem**: `src/lib/skills/` — taxonomy, extraction, vector ops, filtering.
-- **AI agents**: `src/agents/` (legacy SQL/admin), `src/anthropic/` (Claude client, MCP, sub-agents, architect).
+- **AI agents**: `src/agents/` (Vercel AI SDK — SQL, admin, strategy enforcer), `src/anthropic/` (Claude client, MCP, sub-agents, architect).
 - **Database tools for agents**: `src/tools/database/` (introspection + SQL execution).
 - **Rust worker**: `workers/ashby-crawler/src/lib.rs` — `rig_compat` module implements VectorStore, Pipeline, Tool patterns for WASM (swap to `rig::*` when rig-core ships wasm32 support).
 
@@ -159,7 +158,7 @@ See **[OPTIMIZATION-STRATEGY.md](./OPTIMIZATION-STRATEGY.md)** for the full stra
 | **Spec-Driven** | CROSS-CUTTING | GraphQL + Drizzle + Zod schemas as formal contracts |
 | **Observability** | EMERGING | Langfuse scoring active; production tracing partial |
 
-The strategy enforcer agent (`src/agents/strategy-enforcer.ts`) is available as a Mastra tool.
+The strategy enforcer (`src/agents/strategy-enforcer.ts`) is available as a plain async function.
 
 ---
 
@@ -178,7 +177,7 @@ The strategy enforcer agent (`src/agents/strategy-enforcer.ts`) is available as 
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST API for dev), Clerk auth, AI provider keys (Anthropic, DeepSeek, OpenAI, Gemini), Langfuse/LangSmith observability, admin email, Inngest, app URL. See `.env.example` for full list.
+Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST API for dev), Clerk auth, AI provider keys (Anthropic, DeepSeek, OpenAI, Gemini), Langfuse/LangSmith observability, admin email, app URL. See `.env.example` for full list.
 
 ---
 
@@ -199,11 +198,9 @@ Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST 
 
 ### Dead code
 - `workers/cron.ts` and `workers/insert-jobs.ts` still reference Turso (libsql) instead of D1.
-- `src/inngest/`, `src/workflows/`, `src/memory/` — mostly TODO stubs.
-- `src/observability/` — Langfuse exporter disabled (Edge Runtime zlib issue).
 
 ### Dependencies
-- `@ai-sdk/anthropic` and `@mastra/core` pinned to `"latest"` — should use specific versions.
+- `@ai-sdk/anthropic` pinned to `"latest"` — should use specific version.
 - `@libsql/client` and `pg` are likely unused after D1 migration.
 
 ---
@@ -222,6 +219,34 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 ---
 
+## BMAD Agent Teams Integration
+
+The project uses [BMAD Method v6](https://docs.bmad-method.org/) adapted for Claude Code Agent Teams. BMAD provides role definitions and quality gates; Agent Teams provides the orchestration layer.
+
+| Path | Contents |
+|---|---|
+| `_bmad/` | BMAD Core + BMM module (agents, checklists, workflows) |
+| `_bmad-output/planning-artifacts/` | Planning phase outputs |
+| `_bmad-output/implementation-artifacts/` | Implementation phase outputs |
+| `.claude/team-roles/` | Spawn prompt templates for Agent Teams teammates |
+| `docs/` | Working documents (PRD, architecture, stories) |
+
+**Team roles** (spawn prompts in `.claude/team-roles/`):
+- `pm.md` — Product Manager: requirements, user stories, PRD
+- `architect.md` — System Architect: architecture decisions, tech design
+- `dev.md` — Developer: implementation per stories, owns `src/` and `workers/`
+- `qa.md` — QA: validation, testing, checklist enforcement
+
+**Workflow phases**: Discovery (parallel research) → Planning (PRD + architecture) → Story Creation → Implementation (parallel dev) → Review (multi-lens).
+
+**Key rules**:
+- Teammates must not edit the same files — break ownership by directory/module
+- Use plan approval on teammates before implementation
+- 3-4 teammates is the sweet spot; skip the ceremony for bug fixes
+- Quality gates enforced via BMAD checklists in `_bmad/`
+
+---
+
 ## Additional resources
 
 - **[SKILLS-REMOTE-WORK-EU.md](./SKILLS-REMOTE-WORK-EU.md)** — Curated agent skills and subagents for remote EU job market focus.
@@ -231,7 +256,7 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 ## Domain-specific patterns
 
-> An MCPDoc MCP server is configured in `.claude/settings.json` with docs for Drizzle, Next.js, Vercel AI SDK, Trigger.dev, Mastra, Cloudflare Workers, and Inngest. Call `list_doc_sources` to see available sources, then `fetch_docs` on specific URLs when you need deeper detail on any API.
+> An MCPDoc MCP server is configured in `.claude/settings.json` with docs for Drizzle, Next.js, Vercel AI SDK, Trigger.dev, Cloudflare Workers. Call `list_doc_sources` to see available sources, then `fetch_docs` on specific URLs when you need deeper detail on any API.
 
 ---
 

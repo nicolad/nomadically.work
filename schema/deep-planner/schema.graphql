@@ -32,4 +32,5 @@ extend type Mutation {
     problemDescription: String!
     context: String
   ): DeepPlannerTask!
+  triggerDeepPlannerTask(id: ID!): DeepPlannerTask!
 }

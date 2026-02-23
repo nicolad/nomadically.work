@@ -49,3 +49,11 @@ mutation CreateDeepPlannerTask(
     createdAt
   }
 }
+
+mutation TriggerDeepPlannerTask($id: ID!) {
+  triggerDeepPlannerTask(id: $id) {
+    id
+    status
+    currentStep
+  }
+}

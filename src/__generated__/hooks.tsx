@@ -670,6 +670,7 @@ export type Mutation = {
    * Requires authentication.
    */
   reportJob: Maybe<Job>;
+  triggerDeepPlannerTask: DeepPlannerTask;
   unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
@@ -806,6 +807,11 @@ export type MutationPushLangSmithPromptArgs = {
 
 export type MutationReportJobArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationTriggerDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -1318,6 +1324,27 @@ export type WarcPointerInput = {
   offset: Scalars['Int']['input'];
 };
 
+export type DeepPlannerTaskQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeepPlannerTaskQuery = { __typename?: 'Query', deepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, context: string | null, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, outputArtifact: string | null, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string } | null };
+
+export type DeepPlannerTasksQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DeepPlannerTasksQuery = { __typename?: 'Query', deepPlannerTasks: Array<{ __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string }> };
+
+export type CreateDeepPlannerTaskMutationVariables = Exact<{
+  workflowType: Scalars['String']['input'];
+  problemDescription: Scalars['String']['input'];
+  context?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type CreateDeepPlannerTaskMutation = { __typename?: 'Mutation', createDeepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, status: DeepPlannerStatus, createdAt: string } };
+
 export type GetPrepResourcesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1584,26 +1611,12 @@ export type CompanyAuditQueryVariables = Exact<{
 
 export type CompanyAuditQuery = { __typename?: 'Query', company: { __typename?: 'Company', facts_count: number, snapshots_count: number, id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, facts: Array<{ __typename?: 'CompanyFact', id: number, company_id: number, field: string, value_json: any | null, value_text: string | null, normalized_value: any | null, confidence: number, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, snapshots: Array<{ __typename?: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id: string | null, capture_timestamp: string | null, fetched_at: string, http_status: number | null, mime: string | null, content_hash: string | null, text_sample: string | null, jsonld: any | null, extracted: any | null, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, ashby_enrichment: { __typename?: 'AshbyEnrichment', company_name: string | null, industry_tags: Array<string>, tech_signals: Array<string>, size_signal: string | null, enriched_at: string | null } | null } | null };
 
-export type DeepPlannerTasksQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type DeepPlannerTasksQuery = { __typename?: 'Query', deepPlannerTasks: Array<{ __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string }> };
-
-export type DeepPlannerTaskQueryVariables = Exact<{
+export type TriggerDeepPlannerTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type DeepPlannerTaskQuery = { __typename?: 'Query', deepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, context: string | null, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, outputArtifact: string | null, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string } | null };
-
-export type CreateDeepPlannerTaskMutationVariables = Exact<{
-  workflowType: Scalars['String']['input'];
-  problemDescription: Scalars['String']['input'];
-  context?: InputMaybe<Scalars['String']['input']>;
-}>;
-
-
-export type CreateDeepPlannerTaskMutation = { __typename?: 'Mutation', createDeepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, status: DeepPlannerStatus, createdAt: string } };
+export type TriggerDeepPlannerTaskMutation = { __typename?: 'Mutation', triggerDeepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, status: DeepPlannerStatus, currentStep: string | null } };
 
 export type GetGreenhouseJobsQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
@@ -1915,6 +1928,156 @@ export const CompanyFieldsFragmentDoc = gql`
   }
 }
     `;
+export const DeepPlannerTaskDocument = gql`
+    query DeepPlannerTask($id: ID!) {
+  deepPlannerTask(id: $id) {
+    id
+    workflowType
+    problemDescription
+    context
+    status
+    currentStep
+    checkpointCount
+    outputArtifact
+    errorMessage
+    startedAt
+    completedAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useDeepPlannerTaskQuery__
+ *
+ * To run a query within a React component, call `useDeepPlannerTaskQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDeepPlannerTaskQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeepPlannerTaskQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeepPlannerTaskQuery(baseOptions: Apollo.QueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables> & ({ variables: DeepPlannerTaskQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>(DeepPlannerTaskDocument, options);
+      }
+export function useDeepPlannerTaskLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>(DeepPlannerTaskDocument, options);
+        }
+// @ts-ignore
+export function useDeepPlannerTaskSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>;
+export function useDeepPlannerTaskSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTaskQuery | undefined, DeepPlannerTaskQueryVariables>;
+export function useDeepPlannerTaskSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>(DeepPlannerTaskDocument, options);
+        }
+export type DeepPlannerTaskQueryHookResult = ReturnType<typeof useDeepPlannerTaskQuery>;
+export type DeepPlannerTaskLazyQueryHookResult = ReturnType<typeof useDeepPlannerTaskLazyQuery>;
+export type DeepPlannerTaskSuspenseQueryHookResult = ReturnType<typeof useDeepPlannerTaskSuspenseQuery>;
+export type DeepPlannerTaskQueryResult = Apollo.QueryResult<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>;
+export const DeepPlannerTasksDocument = gql`
+    query DeepPlannerTasks {
+  deepPlannerTasks {
+    id
+    workflowType
+    problemDescription
+    status
+    currentStep
+    checkpointCount
+    errorMessage
+    startedAt
+    completedAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useDeepPlannerTasksQuery__
+ *
+ * To run a query within a React component, call `useDeepPlannerTasksQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDeepPlannerTasksQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeepPlannerTasksQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDeepPlannerTasksQuery(baseOptions?: Apollo.QueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>(DeepPlannerTasksDocument, options);
+      }
+export function useDeepPlannerTasksLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>(DeepPlannerTasksDocument, options);
+        }
+// @ts-ignore
+export function useDeepPlannerTasksSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>;
+export function useDeepPlannerTasksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTasksQuery | undefined, DeepPlannerTasksQueryVariables>;
+export function useDeepPlannerTasksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>(DeepPlannerTasksDocument, options);
+        }
+export type DeepPlannerTasksQueryHookResult = ReturnType<typeof useDeepPlannerTasksQuery>;
+export type DeepPlannerTasksLazyQueryHookResult = ReturnType<typeof useDeepPlannerTasksLazyQuery>;
+export type DeepPlannerTasksSuspenseQueryHookResult = ReturnType<typeof useDeepPlannerTasksSuspenseQuery>;
+export type DeepPlannerTasksQueryResult = Apollo.QueryResult<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>;
+export const CreateDeepPlannerTaskDocument = gql`
+    mutation CreateDeepPlannerTask($workflowType: String!, $problemDescription: String!, $context: String) {
+  createDeepPlannerTask(
+    workflowType: $workflowType
+    problemDescription: $problemDescription
+    context: $context
+  ) {
+    id
+    workflowType
+    problemDescription
+    status
+    createdAt
+  }
+}
+    `;
+export type CreateDeepPlannerTaskMutationFn = Apollo.MutationFunction<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>;
+
+/**
+ * __useCreateDeepPlannerTaskMutation__
+ *
+ * To run a mutation, you first call `useCreateDeepPlannerTaskMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDeepPlannerTaskMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDeepPlannerTaskMutation, { data, loading, error }] = useCreateDeepPlannerTaskMutation({
+ *   variables: {
+ *      workflowType: // value for 'workflowType'
+ *      problemDescription: // value for 'problemDescription'
+ *      context: // value for 'context'
+ *   },
+ * });
+ */
+export function useCreateDeepPlannerTaskMutation(baseOptions?: Apollo.MutationHookOptions<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>(CreateDeepPlannerTaskDocument, options);
+      }
+export type CreateDeepPlannerTaskMutationHookResult = ReturnType<typeof useCreateDeepPlannerTaskMutation>;
+export type CreateDeepPlannerTaskMutationResult = Apollo.MutationResult<CreateDeepPlannerTaskMutation>;
+export type CreateDeepPlannerTaskMutationOptions = Apollo.BaseMutationOptions<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>;
 export const GetPrepResourcesDocument = gql`
     query GetPrepResources {
   prepResources {
@@ -3465,156 +3628,41 @@ export type CompanyAuditQueryHookResult = ReturnType<typeof useCompanyAuditQuery
 export type CompanyAuditLazyQueryHookResult = ReturnType<typeof useCompanyAuditLazyQuery>;
 export type CompanyAuditSuspenseQueryHookResult = ReturnType<typeof useCompanyAuditSuspenseQuery>;
 export type CompanyAuditQueryResult = Apollo.QueryResult<CompanyAuditQuery, CompanyAuditQueryVariables>;
-export const DeepPlannerTasksDocument = gql`
-    query DeepPlannerTasks {
-  deepPlannerTasks {
+export const TriggerDeepPlannerTaskDocument = gql`
+    mutation TriggerDeepPlannerTask($id: ID!) {
+  triggerDeepPlannerTask(id: $id) {
     id
-    workflowType
-    problemDescription
     status
     currentStep
-    checkpointCount
-    errorMessage
-    startedAt
-    completedAt
-    createdAt
-    updatedAt
   }
 }
     `;
+export type TriggerDeepPlannerTaskMutationFn = Apollo.MutationFunction<TriggerDeepPlannerTaskMutation, TriggerDeepPlannerTaskMutationVariables>;
 
 /**
- * __useDeepPlannerTasksQuery__
+ * __useTriggerDeepPlannerTaskMutation__
  *
- * To run a query within a React component, call `useDeepPlannerTasksQuery` and pass it any options that fit your needs.
- * When your component renders, `useDeepPlannerTasksQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDeepPlannerTasksQuery({
- *   variables: {
- *   },
- * });
- */
-export function useDeepPlannerTasksQuery(baseOptions?: Apollo.QueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>(DeepPlannerTasksDocument, options);
-      }
-export function useDeepPlannerTasksLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>(DeepPlannerTasksDocument, options);
-        }
-// @ts-ignore
-export function useDeepPlannerTasksSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>;
-export function useDeepPlannerTasksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTasksQuery | undefined, DeepPlannerTasksQueryVariables>;
-export function useDeepPlannerTasksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>(DeepPlannerTasksDocument, options);
-        }
-export type DeepPlannerTasksQueryHookResult = ReturnType<typeof useDeepPlannerTasksQuery>;
-export type DeepPlannerTasksLazyQueryHookResult = ReturnType<typeof useDeepPlannerTasksLazyQuery>;
-export type DeepPlannerTasksSuspenseQueryHookResult = ReturnType<typeof useDeepPlannerTasksSuspenseQuery>;
-export type DeepPlannerTasksQueryResult = Apollo.QueryResult<DeepPlannerTasksQuery, DeepPlannerTasksQueryVariables>;
-export const DeepPlannerTaskDocument = gql`
-    query DeepPlannerTask($id: ID!) {
-  deepPlannerTask(id: $id) {
-    id
-    workflowType
-    problemDescription
-    context
-    status
-    currentStep
-    checkpointCount
-    outputArtifact
-    errorMessage
-    startedAt
-    completedAt
-    createdAt
-    updatedAt
-  }
-}
-    `;
-
-/**
- * __useDeepPlannerTaskQuery__
- *
- * To run a query within a React component, call `useDeepPlannerTaskQuery` and pass it any options that fit your needs.
- * When your component renders, `useDeepPlannerTaskQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDeepPlannerTaskQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useDeepPlannerTaskQuery(baseOptions: Apollo.QueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables> & ({ variables: DeepPlannerTaskQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>(DeepPlannerTaskDocument, options);
-      }
-export function useDeepPlannerTaskLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>(DeepPlannerTaskDocument, options);
-        }
-// @ts-ignore
-export function useDeepPlannerTaskSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>;
-export function useDeepPlannerTaskSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>): Apollo.UseSuspenseQueryResult<DeepPlannerTaskQuery | undefined, DeepPlannerTaskQueryVariables>;
-export function useDeepPlannerTaskSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>(DeepPlannerTaskDocument, options);
-        }
-export type DeepPlannerTaskQueryHookResult = ReturnType<typeof useDeepPlannerTaskQuery>;
-export type DeepPlannerTaskLazyQueryHookResult = ReturnType<typeof useDeepPlannerTaskLazyQuery>;
-export type DeepPlannerTaskSuspenseQueryHookResult = ReturnType<typeof useDeepPlannerTaskSuspenseQuery>;
-export type DeepPlannerTaskQueryResult = Apollo.QueryResult<DeepPlannerTaskQuery, DeepPlannerTaskQueryVariables>;
-export const CreateDeepPlannerTaskDocument = gql`
-    mutation CreateDeepPlannerTask($workflowType: String!, $problemDescription: String!, $context: String) {
-  createDeepPlannerTask(
-    workflowType: $workflowType
-    problemDescription: $problemDescription
-    context: $context
-  ) {
-    id
-    workflowType
-    problemDescription
-    status
-    createdAt
-  }
-}
-    `;
-export type CreateDeepPlannerTaskMutationFn = Apollo.MutationFunction<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>;
-
-/**
- * __useCreateDeepPlannerTaskMutation__
- *
- * To run a mutation, you first call `useCreateDeepPlannerTaskMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateDeepPlannerTaskMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useTriggerDeepPlannerTaskMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useTriggerDeepPlannerTaskMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [createDeepPlannerTaskMutation, { data, loading, error }] = useCreateDeepPlannerTaskMutation({
+ * const [triggerDeepPlannerTaskMutation, { data, loading, error }] = useTriggerDeepPlannerTaskMutation({
  *   variables: {
- *      workflowType: // value for 'workflowType'
- *      problemDescription: // value for 'problemDescription'
- *      context: // value for 'context'
+ *      id: // value for 'id'
  *   },
  * });
  */
-export function useCreateDeepPlannerTaskMutation(baseOptions?: Apollo.MutationHookOptions<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>) {
+export function useTriggerDeepPlannerTaskMutation(baseOptions?: Apollo.MutationHookOptions<TriggerDeepPlannerTaskMutation, TriggerDeepPlannerTaskMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>(CreateDeepPlannerTaskDocument, options);
+        return Apollo.useMutation<TriggerDeepPlannerTaskMutation, TriggerDeepPlannerTaskMutationVariables>(TriggerDeepPlannerTaskDocument, options);
       }
-export type CreateDeepPlannerTaskMutationHookResult = ReturnType<typeof useCreateDeepPlannerTaskMutation>;
-export type CreateDeepPlannerTaskMutationResult = Apollo.MutationResult<CreateDeepPlannerTaskMutation>;
-export type CreateDeepPlannerTaskMutationOptions = Apollo.BaseMutationOptions<CreateDeepPlannerTaskMutation, CreateDeepPlannerTaskMutationVariables>;
+export type TriggerDeepPlannerTaskMutationHookResult = ReturnType<typeof useTriggerDeepPlannerTaskMutation>;
+export type TriggerDeepPlannerTaskMutationResult = Apollo.MutationResult<TriggerDeepPlannerTaskMutation>;
+export type TriggerDeepPlannerTaskMutationOptions = Apollo.BaseMutationOptions<TriggerDeepPlannerTaskMutation, TriggerDeepPlannerTaskMutationVariables>;
 export const GetGreenhouseJobsDocument = gql`
     query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
   jobs(sourceType: "greenhouse", search: $search, limit: $limit, offset: $offset) {

@@ -606,7 +606,7 @@ type Mutation {
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
   generateInterviewPrep(applicationId: Int!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
-  generateTopicDeepDive(applicationId: Int!, requirement: String!): Application!
+  generateTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!): Application!
   ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult
   ingest_company_snapshot(capture_timestamp: String, company_id: Int!, content_hash: String, crawl_id: String, evidence: EvidenceInput!, extracted: JSON, fetched_at: String!, http_status: Int, jsonld: JSON, mime: String, source_url: String!, text_sample: String): CompanySnapshot!
   linkTrackToApplication(applicationId: Int!, trackSlug: String!): Application!

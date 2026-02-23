@@ -1,9 +1,13 @@
+import asyncio
 import json
 from typing import Optional
 from urllib.parse import urlparse
-from js import JSON, JSON as JsJSON
+from js import JSON, JSON as JsJSON, fetch
 from pyodide.ffi import to_js
 from workers import Response, WorkerEntrypoint
+
+DEEPSEEK_BASE_URL_DEFAULT = "https://api.deepseek.com/beta"
+DEEPSEEK_MODEL_DEFAULT    = "deepseek-chat"
 TARGET_ROLES = [
     "AI Engineer", "Machine Learning Engineer",
     "React Developer", "Frontend Developer", "Full Stack Developer",
@@ -17,6 +21,42 @@ LLM_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
 def to_py(js_val):
     return json.loads(JSON.stringify(js_val))
+
+
+def _to_js_obj(d: dict):
+    return JSON.parse(json.dumps(d))
+
+
+async def _sleep_ms(ms: int):
+    await asyncio.sleep(ms / 1000)
+
+
+async def _fetch_json(url: str, method: str = "GET", headers: dict | None = None, body: str | None = None, retries: int = 2) -> dict:
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            opts: dict = {"method": method}
+            if headers:
+                opts["headers"] = headers
+            if body:
+                opts["body"] = body
+            response = await fetch(url, _to_js_obj(opts))
+            if response.status == 429 or 500 <= response.status <= 599:
+                if attempt == retries:
+                    text = await response.text()
+                    raise Exception(f"HTTP {response.status}: {text}")
+                await _sleep_ms(min(5000, 300 * (2 ** attempt)))
+                continue
+            if not response.ok:
+                text = await response.text()
+                raise Exception(f"HTTP {response.status}: {text}")
+            return to_py(await response.json())
+        except Exception as e:
+            last_err = e
+            if attempt == retries:
+                break
+            await _sleep_ms(min(5000, 300 * (2 ** attempt)))
+    raise last_err or Exception("Unknown network error")
 
 
 async def d1_all(db, sql: str, params: list | None = None) -> list[dict]:
@@ -70,9 +110,7 @@ class Default(WorkerEntrypoint):
             )
         return None
 
-    async def _score_titles_with_llm(self, titles: list[str]) -> dict[str, float]:
-        if not titles:
-            return {}
+    def _build_scoring_messages(self, titles: list[str]) -> list[dict]:
         target_str = ", ".join(TARGET_ROLES)
         titles_str = "\n".join(f"- {t}" for t in titles)
         prompt = (
@@ -84,27 +122,63 @@ class Default(WorkerEntrypoint):
             f'Respond ONLY with valid JSON. No explanation, no markdown.\n\n'
             f'Titles:\n{titles_str}'
         )
-        messages = [
+        return [
             {"role": "system", "content": "You are a JSON-only job relevance scorer."},
             {"role": "user", "content": prompt},
         ]
+
+    def _parse_scores(self, text: str) -> dict[str, float]:
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        scores = json.loads(text)
+        return {k: float(v) for k, v in scores.items() if isinstance(v, (int, float))}
+
+    async def _score_titles_with_llm(self, titles: list[str]) -> dict[str, float]:
+        if not titles:
+            return {}
+        messages = self._build_scoring_messages(titles)
+
+        # Tier 1: Workers AI
+        workers_ai_err = None
         try:
             result = await self.env.AI.run(
                 LLM_MODEL,
                 to_js({"messages": messages}, dict_converter=lambda d: JsJSON.stringify(d)),
             )
             result_dict = json.loads(JsJSON.stringify(result))
-            text = result_dict.get("response", "")
-            # Strip markdown code fences if present
-            text = text.strip()
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            scores = json.loads(text)
-            return {k: float(v) for k, v in scores.items() if isinstance(v, (int, float))}
+            return self._parse_scores(result_dict.get("response", ""))
         except Exception as exc:
-            raise RuntimeError(f"LLM role-scoring failed: {exc}") from exc
+            workers_ai_err = exc
+            print(f"[job-matcher] Workers AI failed, trying DeepSeek fallback: {exc}")
+
+        # Tier 2: DeepSeek fallback
+        api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None)
+        base_url = getattr(self.env, "DEEPSEEK_BASE_URL", None) or DEEPSEEK_BASE_URL_DEFAULT
+        model    = getattr(self.env, "DEEPSEEK_MODEL", None) or DEEPSEEK_MODEL_DEFAULT
+        if api_key:
+            try:
+                payload = json.dumps({
+                    "model":           model,
+                    "temperature":     0.1,
+                    "max_tokens":      500,
+                    "response_format": {"type": "json_object"},
+                    "messages":        messages,
+                })
+                data = await _fetch_json(
+                    f"{base_url.rstrip('/')}/chat/completions",
+                    method  = "POST",
+                    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    body    = payload,
+                )
+                content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
+                return self._parse_scores(content)
+            except Exception as exc:
+                raise RuntimeError(f"LLM role-scoring failed (Workers AI: {workers_ai_err}; DeepSeek: {exc})") from exc
+
+        raise RuntimeError(f"LLM role-scoring failed: {workers_ai_err}") from workers_ai_err
 
     async def _handle_match_jobs(self, request):
         try:

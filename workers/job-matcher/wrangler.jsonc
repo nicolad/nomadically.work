@@ -10,6 +10,10 @@
     "database_id": "632b9c57-8262-40bd-86c2-bc08beab713b",
     "remote": true
   }],
+  "vars": {
+    "DEEPSEEK_BASE_URL": "https://api.deepseek.com/beta",
+    "DEEPSEEK_MODEL": "deepseek-chat"
+  },
   "observability": {
     "enabled": true,
     "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 1.0 }

@@ -73,7 +73,7 @@ const MIGRATIONS: &[(&str, &str)] = &[
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
-        CREATE INDEX IF NOT EXISTS idx_wb_boards_shortcode ON workable_boards(shortcode)
+        CREATE INDEX IF NOT EXISTS idx_wb_boards_shortcode ON workable_boards(shortcode);
     "),
     ("0010_strip_querystring_from_external_id", "
         DELETE FROM jobs WHERE id NOT IN (

@@ -471,6 +471,7 @@ export const applications = sqliteTable("applications", {
   notes: text("notes"), // Free-text notes on this application
   job_title: text("job_title"), // Denormalized job title for display
   company_name: text("company_name"), // Denormalized company name for display
+  ai_interview_prep: text("ai_interview_prep"), // JSON: AIInterviewPrep shape
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -481,6 +482,30 @@ export const applications = sqliteTable("applications", {
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
+
+// Application-Track linking (many-to-many)
+export const applicationTracks = sqliteTable(
+  "application_tracks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    application_id: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    track_slug: text("track_slug").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    uniqueAppTrack: uniqueIndex("idx_application_tracks_unique").on(
+      table.application_id,
+      table.track_slug,
+    ),
+  }),
+);
+
+export type ApplicationTrack = typeof applicationTracks.$inferSelect;
+export type NewApplicationTrack = typeof applicationTracks.$inferInsert;
 
 // Job report audit log (written by job-reporter-llm worker)
 export const jobReportEvents = sqliteTable(

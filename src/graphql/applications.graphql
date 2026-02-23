@@ -1,39 +1,54 @@
 # Application-related GraphQL queries and mutations
 
+fragment ApplicationFields on Application {
+  id
+  email
+  jobId
+  resume
+  questions {
+    questionId
+    questionText
+    answerText
+  }
+  status
+  notes
+  jobTitle
+  companyName
+  jobDescription
+  createdAt
+  interviewPrep {
+    id
+    slug
+    title
+    description
+    level
+  }
+  aiInterviewPrep {
+    summary
+    requirements {
+      requirement
+      questions
+      studyTopics
+    }
+    generatedAt
+  }
+}
+
 query GetApplications {
   applications {
-    id
-    email
-    jobId
-    resume
-    questions {
-      questionId
-      questionText
-      answerText
-    }
-    status
-    notes
-    jobTitle
-    companyName
-    createdAt
+    ...ApplicationFields
+  }
+}
+
+query GetApplication($id: Int!) {
+  application(id: $id) {
+    ...ApplicationFields
   }
 }
 
 mutation CreateApplication($input: ApplicationInput!) {
   createApplication(input: $input) {
-    id
-    email
-    jobId
-    questions {
-      questionId
-      questionText
-      answerText
-    }
-    status
-    notes
-    jobTitle
-    companyName
-    createdAt
+    ...ApplicationFields
   }
 }
 
@@ -45,5 +60,46 @@ mutation UpdateApplication($id: Int!, $input: UpdateApplicationInput!) {
     notes
     jobTitle
     companyName
+  }
+}
+
+mutation LinkTrackToApplication($applicationId: Int!, $trackSlug: String!) {
+  linkTrackToApplication(applicationId: $applicationId, trackSlug: $trackSlug) {
+    id
+    interviewPrep {
+      id
+      slug
+      title
+      description
+      level
+    }
+  }
+}
+
+mutation UnlinkTrackFromApplication($applicationId: Int!, $trackSlug: String!) {
+  unlinkTrackFromApplication(applicationId: $applicationId, trackSlug: $trackSlug) {
+    id
+    interviewPrep {
+      id
+      slug
+      title
+      description
+      level
+    }
+  }
+}
+
+mutation GenerateInterviewPrep($applicationId: Int!) {
+  generateInterviewPrep(applicationId: $applicationId) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+      }
+      generatedAt
+    }
   }
 }

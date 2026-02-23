@@ -1,10 +1,26 @@
 extend type Query {
   applications: [Application!]!
+  application(id: Int!): Application
 }
 
 extend type Mutation {
   createApplication(input: ApplicationInput!): Application!
   updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
+  linkTrackToApplication(applicationId: Int!, trackSlug: String!): Application!
+  unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
+  generateInterviewPrep(applicationId: Int!): Application!
+}
+
+type AIInterviewPrepRequirement {
+  requirement: String!
+  questions: [String!]!
+  studyTopics: [String!]!
+}
+
+type AIInterviewPrep {
+  summary: String!
+  requirements: [AIInterviewPrepRequirement!]!
+  generatedAt: String!
 }
 
 type QuestionAnswer {
@@ -36,7 +52,10 @@ type Application {
   notes: String
   jobTitle: String
   companyName: String
+  jobDescription: String
   createdAt: String!
+  interviewPrep: [Track!]!
+  aiInterviewPrep: AIInterviewPrep
 }
 
 input QuestionAnswerInput {

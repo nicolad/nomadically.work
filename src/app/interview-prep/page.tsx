@@ -1,9 +1,36 @@
 "use client";
 
-import { Container, Heading, Text, Flex, Card, Link, Box, Button } from "@radix-ui/themes";
-import { ExternalLinkIcon } from "@radix-ui/react-icons";
+import { Container, Heading, Text, Flex, Card, Link, Box, Skeleton } from "@radix-ui/themes";
+import { ExternalLinkIcon, ArrowRightIcon } from "@radix-ui/react-icons";
+import NextLink from "next/link";
 import { useQuery } from "@apollo/client";
 import { gql } from "@/__generated__";
+
+function PrepSkeleton() {
+  return (
+    <Container size="4" p="8">
+      <Flex direction="column" gap="8">
+        <Box>
+          <Skeleton height="48px" width="60%" mb="4" />
+          <Skeleton height="24px" width="85%" />
+        </Box>
+        <Card>
+          <Skeleton height="72px" />
+        </Card>
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <Skeleton height="28px" width="40%" mb="4" />
+            <Flex direction="column" gap="3">
+              <Skeleton height="16px" width="90%" />
+              <Skeleton height="16px" width="75%" />
+              <Skeleton height="16px" width="80%" />
+            </Flex>
+          </Card>
+        ))}
+      </Flex>
+    </Container>
+  );
+}
 
 export default function InterviewPrepPage() {
   const { data, loading, error } = useQuery(
@@ -38,13 +65,7 @@ export default function InterviewPrepPage() {
     );
   }
 
-  if (loading) {
-    return (
-      <Container size="4" p="8">
-        <Text color="gray">Loading prep resources...</Text>
-      </Container>
-    );
-  }
+  if (loading) return <PrepSkeleton />;
 
   const { categories = [], totalResources = 0 } = data?.prepResources || {};
 
@@ -60,6 +81,23 @@ export default function InterviewPrepPage() {
             Master system design, data structures, algorithms, and behavioral interviews with curated resources and references. ({totalResources} total resources)
           </Text>
         </Box>
+
+        {/* Practice Exercises CTA */}
+        <NextLink href="/interview-prep/exercises" style={{ textDecoration: "none" }}>
+          <Card style={{ backgroundColor: "var(--violet-3)", cursor: "pointer" }}>
+            <Flex justify="between" align="center">
+              <Box>
+                <Heading size="5" mb="1">
+                  Practice RLHF Evaluation Exercises
+                </Heading>
+                <Text size="3" color="gray">
+                  Timed practice exercises mirroring real RLHF practical evaluations — prompt crafting, AI code review, and tricky example creation.
+                </Text>
+              </Box>
+              <ArrowRightIcon width={24} height={24} />
+            </Flex>
+          </Card>
+        </NextLink>
 
         {/* Dynamic Categories from GraphQL */}
         {categories.map((category) => (
@@ -138,12 +176,10 @@ function ResourceLink({
 }) {
   return (
     <Box>
-      <Link href={href} target="_blank" rel="noopener noreferrer">
-        <Flex gap="2" align="center" asChild>
-          <Button variant="ghost" size="2">
-            <Text weight="medium">{title}</Text>
-            <ExternalLinkIcon width={16} height={16} />
-          </Button>
+      <Link href={href} target="_blank" rel="noopener noreferrer" weight="medium" size="2">
+        <Flex gap="2" align="center" display="inline-flex">
+          {title}
+          <ExternalLinkIcon width={14} height={14} />
         </Flex>
       </Link>
       <Text size="2" color="gray" mt="1">

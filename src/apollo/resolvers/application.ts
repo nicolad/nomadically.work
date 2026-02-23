@@ -58,19 +58,18 @@ export const applicationResolvers = {
   Query: {
     async applications(_parent: any, _args: any, context: GraphQLContext) {
       try {
-        if (!context.userEmail || !context.userId) {
-          throw new Error("User must be authenticated to view applications");
-        }
-
-        const userApplications = await context.db
+        const query = context.db
           .select({
             app: applications,
             jobDescription: jobs.description,
           })
           .from(applications)
           .leftJoin(jobs, eq(jobs.url, applications.job_id))
-          .where(eq(applications.user_email, context.userEmail))
           .orderBy(desc(applications.created_at));
+
+        const userApplications = context.userEmail
+          ? await query.where(eq(applications.user_email, context.userEmail))
+          : await query;
 
         return userApplications.map(({ app, jobDescription }) =>
           mapApplication(app, jobDescription),
@@ -82,9 +81,9 @@ export const applicationResolvers = {
     },
 
     async application(_parent: any, args: { id: number }, context: GraphQLContext) {
-      if (!context.userEmail || !context.userId) {
-        throw new Error("User must be authenticated to view an application");
-      }
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.id), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.id);
 
       const [row] = await context.db
         .select({
@@ -93,12 +92,7 @@ export const applicationResolvers = {
         })
         .from(applications)
         .leftJoin(jobs, eq(jobs.url, applications.job_id))
-        .where(
-          and(
-            eq(applications.id, args.id),
-            eq(applications.user_email, context.userEmail),
-          ),
-        );
+        .where(whereClause);
 
       if (!row) return null;
       return mapApplication(row.app, row.jobDescription);
@@ -256,27 +250,116 @@ export const applicationResolvers = {
       return app;
     },
 
+    async generateTopicDeepDive(
+      _parent: any,
+      args: { applicationId: number; requirement: string },
+      context: GraphQLContext,
+    ) {
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.applicationId);
+
+      const [row] = await context.db
+        .select({ app: applications, jobDescription: jobs.description })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .where(whereClause);
+
+      if (!row) throw new Error("Application not found or access denied");
+
+      // Parse existing prep data — we need the full requirement context
+      let prepData: any;
+      try {
+        prepData = row.app.ai_interview_prep ? JSON.parse(row.app.ai_interview_prep) : null;
+      } catch {
+        throw new Error("Could not parse existing interview prep data");
+      }
+      if (!prepData) throw new Error("No interview prep data found. Generate interview prep first.");
+
+      const reqEntry = prepData.requirements?.find(
+        (r: any) => r.requirement === args.requirement,
+      );
+      if (!reqEntry) throw new Error("Requirement not found in interview prep data");
+
+      // Return immediately if already generated
+      if (reqEntry.deepDive) return mapApplication(row.app, row.jobDescription);
+
+      const plainJobDesc = (row.jobDescription ?? "")
+        .replace(/(<([^>]+)>)/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 4000);
+
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.REASONER,
+        messages: [
+          {
+            role: "user",
+            content: `You are an expert interview coach preparing a candidate for a job interview.
+
+Job role: ${(row.app as any).job_title ?? "Not specified"}
+Company: ${(row.app as any).company_name ?? "Not specified"}
+Job description excerpt: ${plainJobDesc}
+
+The candidate needs a deep-dive preparation guide for this specific interview topic:
+"${args.requirement}"
+
+Related interview questions they may face:
+${reqEntry.questions?.map((q: string) => `- ${q}`).join("\n")}
+
+Study topics identified:
+${reqEntry.studyTopics?.map((t: string) => `- ${t}`).join("\n")}
+
+Write a thorough, practical deep-dive guide in markdown. Include:
+1. **Why this matters** — why the interviewer cares about this topic for this role
+2. **Key concepts to master** — what you need to deeply understand
+3. **How to answer** — a framework for structuring your answers (use STAR or similar where appropriate)
+4. **Example talking points** — 2-3 concrete examples or angles to bring up
+5. **Common mistakes to avoid** — what weak candidates get wrong
+6. **Quick study resources** — specific things to review (books, docs, concepts, not URLs)
+
+Be specific to the role and company context. Be direct and actionable.`,
+          },
+        ],
+        max_tokens: 3000,
+      });
+
+      const deepDive = response.choices[0]?.message?.content;
+      if (!deepDive) throw new Error("Empty response from AI");
+
+      // Store deep dive back into the JSON blob for the matching requirement
+      reqEntry.deepDive = deepDive;
+
+      const [updated] = await context.db
+        .update(applications)
+        .set({
+          ai_interview_prep: JSON.stringify(prepData),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .where(whereClause)
+        .returning();
+
+      if (!updated) throw new Error("Failed to save deep dive");
+
+      return mapApplication(updated, row.jobDescription);
+    },
+
     async generateInterviewPrep(
       _parent: any,
       args: { applicationId: number },
       context: GraphQLContext,
     ) {
-      if (!context.userEmail || !context.userId) {
-        throw new Error("User must be authenticated");
-      }
-
       // Fetch application + jobDescription in one query.
-      // Can't reuse getApplicationById() here because that helper doesn't return jobDescription.
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.applicationId);
+
       const [row] = await context.db
         .select({ app: applications, jobDescription: jobs.description })
         .from(applications)
         .leftJoin(jobs, eq(jobs.url, applications.job_id))
-        .where(
-          and(
-            eq(applications.id, args.applicationId),
-            eq(applications.user_email, context.userEmail),
-          ),
-        );
+        .where(whereClause);
 
       if (!row) throw new Error("Application not found or access denied");
       if (!row.jobDescription) {
@@ -360,10 +443,9 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
           updated_at: new Date().toISOString(),
         } as any)
         .where(
-          and(
-            eq(applications.id, args.applicationId),
-            eq(applications.user_email, context.userEmail),
-          ),
+          context.userEmail
+            ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+            : eq(applications.id, args.applicationId),
         )
         .returning();
 

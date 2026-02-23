@@ -32,6 +32,7 @@ import {
   useLinkTrackToApplicationMutation,
   useUnlinkTrackFromApplicationMutation,
   useGenerateInterviewPrepMutation,
+  useGenerateTopicDeepDiveMutation,
 } from "@/__generated__/hooks";
 import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import Link from "next/link";
@@ -80,12 +81,15 @@ export default function ApplicationDetailPage() {
   const [linkTrack] = useLinkTrackToApplicationMutation();
   const [unlinkTrack] = useUnlinkTrackFromApplicationMutation();
   const [generateInterviewPrep] = useGenerateInterviewPrepMutation();
+  const [generateTopicDeepDive] = useGenerateTopicDeepDiveMutation();
   const { data: tracksData } = useGetTracksQuery();
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [selectedReq, setSelectedReq] = useState<AiInterviewPrepRequirement | null>(null);
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+  const [deepDiveError, setDeepDiveError] = useState<string | null>(null);
 
   const app = data?.application;
 
@@ -99,6 +103,28 @@ export default function ApplicationDetailPage() {
 
   const scrollToJobDescription = () =>
     document.getElementById("job-description")?.scrollIntoView({ behavior: "smooth" });
+
+  const handleOpenTopic = async (req: AiInterviewPrepRequirement) => {
+    setSelectedReq(req);
+    setDeepDiveError(null);
+    if (!req.deepDive) {
+      setDeepDiveLoading(true);
+      try {
+        const result = await generateTopicDeepDive({
+          variables: { applicationId: app!.id, requirement: req.requirement },
+          refetchQueries: ["GetApplication"],
+        });
+        // Update selectedReq with fresh data from response
+        const updatedReqs = result.data?.generateTopicDeepDive?.aiInterviewPrep?.requirements;
+        const updatedReq = updatedReqs?.find((r) => r.requirement === req.requirement);
+        if (updatedReq) setSelectedReq(updatedReq as AiInterviewPrepRequirement);
+      } catch (e) {
+        setDeepDiveError(e instanceof Error ? e.message : "Generation failed");
+      } finally {
+        setDeepDiveLoading(false);
+      }
+    }
+  };
 
   const handleSaveNotes = async () => {
     if (!app) return;
@@ -437,60 +463,53 @@ export default function ApplicationDetailPage() {
             <Text size="2" color="gray" mb="4" as="div">
               {app.aiInterviewPrep.summary}
             </Text>
-            <Flex direction="column" gap="3">
+            <Flex direction="column" gap="2">
               {app.aiInterviewPrep.requirements.map((req: AiInterviewPrepRequirement) => (
                 <Box
                   key={req.requirement}
                   p="3"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenTopic(req)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleOpenTopic(req);
+                  }}
                   style={{
                     backgroundColor: "var(--gray-2)",
                     borderRadius: "var(--radius-2)",
+                    cursor: "pointer",
+                    transition: "background-color 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = "var(--gray-3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = "var(--gray-2)";
                   }}
                 >
-                  <Text
-                    size="2"
-                    weight="bold"
-                    mb="2"
-                    as="div"
-                    style={{ cursor: "pointer", textDecoration: "underline dotted" }}
-                    onClick={() => setSelectedReq(req)}
-                  >
-                    {req.requirement}
-                  </Text>
-                  {req.sourceQuote && (
-                    <Box
-                      mb="2"
-                      pl="3"
-                      role="button"
-                      tabIndex={0}
-                      style={{
-                        borderLeft: "3px solid var(--accent-6)",
-                        cursor: "pointer",
-                      }}
-                      onClick={scrollToJobDescription}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") scrollToJobDescription();
-                      }}
-                    >
-                      <Text size="1" color="gray" as="div" style={{ fontStyle: "italic" }}>
-                        &ldquo;{req.sourceQuote}&rdquo;
+                  <Flex justify="between" align="start" gap="2">
+                    <Box style={{ flex: 1 }}>
+                      <Text size="2" weight="bold" mb="1" as="div">
+                        {req.requirement}
                       </Text>
+                      {req.sourceQuote && (
+                        <Text size="1" color="gray" as="div" style={{ fontStyle: "italic" }}>
+                          &ldquo;{req.sourceQuote}&rdquo;
+                        </Text>
+                      )}
                     </Box>
-                  )}
-                  <Text size="1" color="gray" mb="1" as="div">
-                    Interview questions:
-                  </Text>
-                  <Flex direction="column" gap="1" mb="2">
-                    {req.questions.map((q: string) => (
-                      <Text key={q} size="2" as="div">
-                        • {q}
+                    <Flex gap="1" align="center" style={{ flexShrink: 0 }}>
+                      {req.deepDive && (
+                        <Badge size="1" variant="soft" color="green">
+                          Ready
+                        </Badge>
+                      )}
+                      <Text size="1" color="gray">
+                        ›
                       </Text>
-                    ))}
+                    </Flex>
                   </Flex>
-                  <Text size="1" color="gray" mb="1" as="div">
-                    Study topics:
-                  </Text>
-                  <Flex gap="2" wrap="wrap">
+                  <Flex gap="1" wrap="wrap" mt="2">
                     {req.studyTopics.map((t: string) => (
                       <Text
                         key={t}
@@ -557,8 +576,16 @@ export default function ApplicationDetailPage() {
           </Text>
         )}
       </Card>
-      <Dialog.Root open={!!selectedReq} onOpenChange={(o) => { if (!o) setSelectedReq(null); }}>
-        <Dialog.Content maxWidth="560px">
+      <Dialog.Root
+        open={!!selectedReq}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelectedReq(null);
+            setDeepDiveError(null);
+          }
+        }}
+      >
+        <Dialog.Content maxWidth="680px" style={{ maxHeight: "85vh", overflowY: "auto" }}>
           {selectedReq && (
             <>
               <Dialog.Title>{selectedReq.requirement}</Dialog.Title>
@@ -569,14 +596,21 @@ export default function ApplicationDetailPage() {
                   role="button"
                   tabIndex={0}
                   style={{ borderLeft: "3px solid var(--accent-6)", cursor: "pointer" }}
-                  onClick={scrollToJobDescription}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollToJobDescription(); }}
+                  onClick={() => { setSelectedReq(null); scrollToJobDescription(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setSelectedReq(null);
+                      scrollToJobDescription();
+                    }
+                  }}
                 >
-                  <Text size="2" color="gray" as="div" style={{ fontStyle: "italic" }}>
+                  <Text size="1" color="gray" as="div" style={{ fontStyle: "italic" }}>
                     &ldquo;{selectedReq.sourceQuote}&rdquo;
                   </Text>
                 </Box>
               )}
+
+              {/* Interview questions */}
               <Text size="1" color="gray" weight="medium" mb="2" as="div">
                 INTERVIEW QUESTIONS
               </Text>
@@ -587,6 +621,8 @@ export default function ApplicationDetailPage() {
                   </Text>
                 ))}
               </Flex>
+
+              {/* Study topics */}
               <Text size="1" color="gray" weight="medium" mb="2" as="div">
                 STUDY TOPICS
               </Text>
@@ -595,15 +631,64 @@ export default function ApplicationDetailPage() {
                   <Text
                     key={t}
                     size="1"
-                    style={{ padding: "2px 8px", backgroundColor: "var(--violet-3)", borderRadius: "4px" }}
+                    style={{
+                      padding: "2px 8px",
+                      backgroundColor: "var(--violet-3)",
+                      borderRadius: "4px",
+                    }}
                   >
                     {t}
                   </Text>
                 ))}
               </Flex>
-              <Flex justify="end">
+
+              {/* Deep dive section */}
+              <Box pt="4" style={{ borderTop: "1px solid var(--gray-4)" }}>
+                <Text size="1" color="gray" weight="medium" mb="3" as="div">
+                  DEEP DIVE
+                </Text>
+                {deepDiveLoading ? (
+                  <Flex direction="column" gap="3" py="4" align="center">
+                    <Text size="2" color="gray">
+                      Generating deep-dive with DeepSeek Reasoner…
+                    </Text>
+                    <Flex gap="2">
+                      {[0, 1, 2].map((i) => (
+                        <Box
+                          key={i}
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            backgroundColor: "var(--accent-9)",
+                            animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                          }}
+                        />
+                      ))}
+                    </Flex>
+                  </Flex>
+                ) : deepDiveError ? (
+                  <Text size="2" color="red">
+                    {deepDiveError}
+                  </Text>
+                ) : selectedReq.deepDive ? (
+                  <Box
+                    style={{
+                      fontSize: "var(--font-size-2)",
+                      lineHeight: 1.7,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {selectedReq.deepDive}
+                  </Box>
+                ) : null}
+              </Box>
+
+              <Flex justify="end" mt="4">
                 <Dialog.Close>
-                  <Button variant="soft" color="gray" size="2">Close</Button>
+                  <Button variant="soft" color="gray" size="2">
+                    Close
+                  </Button>
                 </Dialog.Close>
               </Flex>
             </>

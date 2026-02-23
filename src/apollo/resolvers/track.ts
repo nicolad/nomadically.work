@@ -492,6 +492,105 @@ const PREP_CATEGORIES: PrepCategory[] = [
     ],
   },
   {
+    id: "rlhf-ai-evaluation",
+    name: "RLHF & AI Code Evaluation",
+    emoji: "\u{1F9EA}",
+    description:
+      "Resources for AI training data generation, RLHF, code evaluation, and prompt engineering roles.",
+    resources: [
+      {
+        id: "rlhf-paper",
+        title: "Training Language Models to Follow Instructions with Human Feedback",
+        href: "https://arxiv.org/abs/2203.02155",
+        description:
+          "Foundational InstructGPT paper on RLHF — aligning LLMs via human preference data",
+        category: "rlhf-ai-evaluation",
+        tags: ["rlhf", "alignment", "paper"],
+      },
+      {
+        id: "constitutional-ai",
+        title: "Constitutional AI - Anthropic",
+        href: "https://arxiv.org/abs/2212.08073",
+        description:
+          "Anthropic's approach to AI alignment using principles instead of human labels",
+        category: "rlhf-ai-evaluation",
+        tags: ["alignment", "anthropic", "paper"],
+      },
+      {
+        id: "lmsys-arena",
+        title: "LMSYS Chatbot Arena",
+        href: "https://chat.lmsys.org/",
+        description:
+          "Model comparison via human preference — understand how pairwise ranking works",
+        category: "rlhf-ai-evaluation",
+        tags: ["evaluation", "ranking", "models"],
+      },
+      {
+        id: "prompt-engineering-guide",
+        title: "Prompt Engineering Guide - DAIR.AI",
+        href: "https://www.promptingguide.ai/",
+        description:
+          "Comprehensive guide to prompt techniques: few-shot, chain-of-thought, self-consistency",
+        category: "rlhf-ai-evaluation",
+        tags: ["prompting", "guide", "techniques"],
+      },
+      {
+        id: "openai-evals",
+        title: "OpenAI Evals Framework",
+        href: "https://github.com/openai/evals",
+        description:
+          "Framework for evaluating LLM outputs — rubrics, grading, and test case design",
+        category: "rlhf-ai-evaluation",
+        tags: ["evaluation", "framework", "testing"],
+      },
+      {
+        id: "google-code-review",
+        title: "Google Engineering Practices - Code Review",
+        href: "https://google.github.io/eng-practices/review/",
+        description:
+          "How to review code for correctness, clarity, and design — transferable to AI code eval",
+        category: "rlhf-ai-evaluation",
+        tags: ["code-review", "best-practices", "google"],
+      },
+      {
+        id: "owasp-top-10",
+        title: "OWASP Top 10 & CWE/SANS Top 25",
+        href: "https://owasp.org/www-project-top-ten/",
+        description:
+          "Common vulnerability patterns to spot in AI-generated code (injection, auth bypass, XSS)",
+        category: "rlhf-ai-evaluation",
+        tags: ["security", "vulnerabilities", "code-review"],
+      },
+      {
+        id: "reward-modeling",
+        title: "Reward Modeling & RLHF Survey",
+        href: "https://arxiv.org/abs/2307.15217",
+        description:
+          "Survey of reward modeling techniques and open problems in RLHF alignment research",
+        category: "rlhf-ai-evaluation",
+        tags: ["rlhf", "reward-modeling", "survey"],
+      },
+      {
+        id: "structured-output",
+        title: "Structured Output & Schema Constraints",
+        href: "https://platform.openai.com/docs/guides/structured-outputs",
+        description:
+          "Evaluating grounded AI output: JSON schemas, function calling, constrained generation",
+        category: "rlhf-ai-evaluation",
+        tags: ["structured-output", "schemas", "grounding"],
+      },
+      {
+        id: "red-teaming-llms",
+        title: "Red-Teaming Large Language Models",
+        href: "https://arxiv.org/abs/2202.03286",
+        description:
+          "Adversarial testing methodologies for discovering failure modes and harmful outputs",
+        category: "rlhf-ai-evaluation",
+        tags: ["red-teaming", "adversarial", "safety"],
+      },
+    ],
+  },
+  {
     id: "quick-reference",
     name: "Quick Reference Guides",
     emoji: "📋",
@@ -539,7 +638,7 @@ const PREP_CATEGORIES: PrepCategory[] = [
 // ── Track mock data ──────────────────────────────────────────────────
 
 // Mock data for tracks - replace with actual database queries when DB schema is ready
-const mockTracks = [
+export const mockTracks = [
   {
     id: "1",
     slug: "interview-prep",

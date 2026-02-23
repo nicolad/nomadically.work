@@ -28,6 +28,7 @@ export type AiInterviewPrep = {
 
 export type AiInterviewPrepRequirement = {
   __typename: 'AIInterviewPrepRequirement';
+  deepDive: Maybe<Scalars['String']['output']>;
   questions: Array<Scalars['String']['output']>;
   requirement: Scalars['String']['output'];
   sourceQuote: Maybe<Scalars['String']['output']>;
@@ -625,6 +626,7 @@ export type Mutation = {
   enhanceJobFromATS: EnhanceJobResponse;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
+  generateTopicDeepDive: Application;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   linkTrackToApplication: Application;
@@ -719,6 +721,12 @@ export type MutationGenerateInterviewPrepArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateTopicDeepDiveArgs = {
+  applicationId: Scalars['Int']['input'];
+  requirement: Scalars['String']['input'];
 };
 
 

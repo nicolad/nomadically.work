@@ -2,10 +2,10 @@
  * OpenRouter Agent Helpers
  *
  * Pre-configured agent templates using DeepSeek models through OpenRouter.
- * These helpers make it easy to create agents with consistent configurations.
+ * Uses Vercel AI SDK instead of Mastra.
  */
 
-import { Agent } from "@mastra/core/agent";
+import { generateText } from "ai";
 import { deepseekModels } from "./provider";
 import type { OpenRouterOptions } from "./config";
 import { GOAL_CONTEXT_LINE } from "@/constants/goal";
@@ -28,45 +28,60 @@ export function createChatAgent(config: AgentConfig) {
   const modelKey = config.model || "chat";
   const model = deepseekModels[modelKey]();
 
-  return new Agent({
+  return {
     id: config.id || `chat-agent-${Date.now()}`,
     name: config.name,
-    instructions: config.instructions,
-    model,
-  });
+    async generate(prompt: string) {
+      const result = await generateText({
+        model,
+        system: config.instructions,
+        prompt,
+      });
+      return { text: result.text };
+    },
+  };
 }
 
 /**
  * Create a reasoning agent using DeepSeek R1 through OpenRouter
  */
 export function createReasoningAgent(config: Omit<AgentConfig, "model">) {
-  return new Agent({
+  return {
     id: config.id || `reasoning-agent-${Date.now()}`,
     name: config.name,
-    instructions: config.instructions,
-    model: deepseekModels.r1(),
-  });
+    async generate(prompt: string) {
+      const result = await generateText({
+        model: deepseekModels.r1(),
+        system: config.instructions,
+        prompt,
+      });
+      return { text: result.text };
+    },
+  };
 }
 
 /**
  * Create a coding agent using DeepSeek Coder through OpenRouter
  */
 export function createCodingAgent(config: Omit<AgentConfig, "model">) {
-  return new Agent({
+  return {
     id: config.id || `coding-agent-${Date.now()}`,
     name: config.name,
-    instructions: config.instructions,
-    model: deepseekModels.coder(),
-  });
+    async generate(prompt: string) {
+      const result = await generateText({
+        model: deepseekModels.coder(),
+        system: config.instructions,
+        prompt,
+      });
+      return { text: result.text };
+    },
+  };
 }
 
 /**
  * Pre-configured agent templates
  */
 export const agentTemplates = {
-  /**
-   * General assistant using DeepSeek Chat
-   */
   assistant: (instructions?: string) =>
     createChatAgent({
       name: "Assistant",
@@ -75,9 +90,6 @@ export const agentTemplates = {
       model: "chat",
     }),
 
-  /**
-   * Reasoning agent using DeepSeek R1
-   */
   reasoning: (instructions?: string) =>
     createReasoningAgent({
       name: "Reasoning Assistant",
@@ -86,9 +98,6 @@ export const agentTemplates = {
         `${GOAL_CONTEXT_LINE} You are a reasoning assistant. Think through problems step by step.`,
     }),
 
-  /**
-   * Coding agent using DeepSeek Coder
-   */
   coder: (instructions?: string) =>
     createCodingAgent({
       name: "Coding Assistant",

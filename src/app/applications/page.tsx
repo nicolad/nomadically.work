@@ -17,12 +17,10 @@ import {
 } from "@radix-ui/themes";
 import {
   PlusIcon,
-  ExternalLinkIcon,
   DotsHorizontalIcon,
   ArrowRightIcon,
 } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { useAuth } from "@/lib/auth-hooks";
 import {
   useCreateApplicationMutation,
   useGetApplicationsQuery,
@@ -88,8 +86,12 @@ function ApplicationsList({
         const statusCol = COLUMNS.find((c) => c.status === app.status);
 
         return (
-          <Flex
+          <Link
             key={app.id}
+            href={`/applications/${app.id}`}
+            style={{ textDecoration: "none", color: "inherit" }}
+          >
+          <Flex
             align="center"
             gap="3"
             px="4"
@@ -97,6 +99,7 @@ function ApplicationsList({
             style={{
               borderTop: i > 0 ? "1px solid var(--gray-6)" : undefined,
               backgroundColor: "var(--color-surface)",
+              cursor: "pointer",
             }}
           >
             {/* Avatar */}
@@ -120,25 +123,9 @@ function ApplicationsList({
 
             {/* Company + role */}
             <Box style={{ flex: 1, minWidth: 0 }}>
-              {app.jobId.startsWith("http") ? (
-                <a
-                  href={app.jobId}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ textDecoration: "none" }}
-                >
-                  <Flex align="center" gap="1">
-                    <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {displayTitle}
-                    </Text>
-                    <ExternalLinkIcon style={{ flexShrink: 0, color: "var(--gray-9)" }} />
-                  </Flex>
-                </a>
-              ) : (
-                <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {displayTitle}
-                </Text>
-              )}
+              <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {displayTitle}
+              </Text>
               <Text size="1" color="gray">
                 {app.companyName ?? "—"} · {formatDate(app.createdAt)}
               </Text>
@@ -150,6 +137,7 @@ function ApplicationsList({
             </Badge>
 
             {/* Actions */}
+            <Box onClick={(e) => e.preventDefault()}>
             <DropdownMenu.Root>
               <DropdownMenu.Trigger>
                 <IconButton size="1" variant="ghost" color="gray">
@@ -175,7 +163,9 @@ function ApplicationsList({
                 )}
               </DropdownMenu.Content>
             </DropdownMenu.Root>
+            </Box>
           </Flex>
+          </Link>
         );
       })}
     </Flex>
@@ -291,7 +281,6 @@ function AddApplicationDialog({
 // Page
 // ──────────────────────────────────────────────────────────────────────────────
 export default function ApplicationsPage() {
-  const { user } = useAuth();
   const { data, loading, refetch } = useGetApplicationsQuery();
   const [updateApplication] = useUpdateApplicationMutation();
 
@@ -351,7 +340,7 @@ export default function ApplicationsPage() {
       </Flex>
 
       {/* Loading */}
-      {user && loading && (
+      {loading && (
         <Flex direction="column" gap="3">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} height="52px" />
@@ -360,7 +349,7 @@ export default function ApplicationsPage() {
       )}
 
       {/* Empty state */}
-      {user && !loading && total === 0 && (
+      {!loading && total === 0 && (
         <Card size="3" style={{ textAlign: "center" }}>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5" color="gray">
@@ -378,21 +367,12 @@ export default function ApplicationsPage() {
       )}
 
       {/* Applications list */}
-      {user && !loading && total > 0 && (
+      {!loading && total > 0 && (
         <ApplicationsList
           apps={apps}
           onMove={handleMove}
           onReject={handleReject}
         />
-      )}
-
-      {/* Sign-in prompt */}
-      {!user && (
-        <Card size="3" style={{ textAlign: "center" }}>
-          <Text color="gray">
-            Sign in to track your job applications.
-          </Text>
-        </Card>
       )}
     </Container>
   );

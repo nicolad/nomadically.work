@@ -1,25 +1,14 @@
 /**
- * Strategy Enforcer Agent
+ * Strategy Enforcer
  *
  * Validates code changes against the optimization strategy defined in
- * OPTIMIZATION-STRATEGY.md. Enforces the Two-Layer Model:
- *
- * Layer 1 — Meta Approaches:
- *   🟣 Eval-First: prompt/model changes require eval pass
- *   🟢 Grounding-First: LLM outputs must be schema-constrained with evidence
- *   🟡 Multi-Model: cost-aware routing (cheap model first)
- *   ⚪ Spec-Driven: schema changes require codegen
- *   🔵 Observability: classification outputs carry provenance
- *   🩷 HITL: batch ops require approval gates
+ * OPTIMIZATION-STRATEGY.md. Enforces the Two-Layer Model.
  *
  * Usage:
- *   import { strategyEnforcerTool } from "@/agents/strategy-enforcer";
- *   // As a Mastra tool in any agent
- *   // Or standalone: await enforceStrategy({ changedFiles: [...] })
+ *   import { strategyEnforcerTool, enforceStrategy } from "@/agents/strategy-enforcer";
  */
 
 import { z } from "zod";
-import { createTool } from "@mastra/core/tools";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,9 +40,6 @@ const PROMPT_PATTERNS = [
 
 const SCHEMA_PATTERNS = [/schema\/.*\.graphql$/, /schema\.graphql$/];
 
-// Only actual LLM invocations need structured output — agent definition
-// files (new Agent / createAgent) are excluded because they don't make
-// LLM calls themselves; the callers do.
 const LLM_CALL_PATTERNS = [
   /\.generate\s*\(/,
   /\.chat\s*\(/,
@@ -63,17 +49,15 @@ const LLM_CALL_PATTERNS = [
 
 const STRUCTURED_OUTPUT_PATTERNS = [
   /structuredOutput/,
-  /response_format/,   // includes both { type: 'json_object' } and pass-through
+  /response_format/,
   /\.object\s*\(/,
   /output_schema/i,
   /JsonOutputParser/,
   /PydanticOutputParser/,
-  /model_validate/,    // Pydantic structured output
+  /model_validate/,
   /generateObject/,
 ];
 
-// Files exempt from Grounding-First because they are infrastructure,
-// examples, or eval harnesses — not production LLM call sites.
 const GROUNDING_EXEMPT_PATHS = [
   "src/promptfoo/",
   "workers/promptfoo-eval.ts",
@@ -99,7 +83,7 @@ function stripCommentLines(content: string): string {
         !t.startsWith("//") &&
         !t.startsWith("*") &&
         !t.startsWith("/*") &&
-        !t.startsWith("#")  // Python / shell comments
+        !t.startsWith("#")
       );
     })
     .join("\n");
@@ -111,11 +95,10 @@ function stripCommentLines(content: string): string {
 
 function checkEvalFirst(
   changedFiles: string[],
-  fileContents: Map<string, string>,
+  _fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
-  // GraphQL schema files in schema/ are specs, not prompts — exclude them
   const touchesPromptOrModel = changedFiles.some(
     (f) =>
       !SCHEMA_PATTERNS.some((p) => p.test(f)) &&
@@ -126,7 +109,7 @@ function checkEvalFirst(
     violations.push({
       rule: "Rule 1: Eval-First — No prompt/model change without eval",
       severity: "BLOCKING",
-      metaApproach: "🟣 Eval-First",
+      metaApproach: "Eval-First",
       file: changedFiles.find((f) =>
         PROMPT_PATTERNS.some((p) => p.test(f)),
       )!,
@@ -140,19 +123,16 @@ function checkEvalFirst(
 }
 
 function checkGroundingFirst(
-  changedFiles: string[],
+  _changedFiles: string[],
   fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
-    // Skip infra / example / eval files that legitimately make unstructured calls
     if (GROUNDING_EXEMPT_PATHS.some((p) => file.includes(p))) continue;
 
-    // Strip comments before matching so JSDoc examples don't trigger false positives
     const codeContent = stripCommentLines(content);
 
-    // Check for LLM calls without structured output
     const hasLLMCall = LLM_CALL_PATTERNS.some((p) => p.test(codeContent));
     const hasStructuredOutput = STRUCTURED_OUTPUT_PATTERNS.some((p) =>
       p.test(codeContent),
@@ -162,7 +142,7 @@ function checkGroundingFirst(
       violations.push({
         rule: "Rule 2: Grounding-First — LLM outputs must be schema-constrained",
         severity: "BLOCKING",
-        metaApproach: "🟢 Grounding-First",
+        metaApproach: "Grounding-First",
         file,
         message:
           "LLM .generate()/.chat() call found without structuredOutput or response_format. All LLM outputs must be schema-constrained.",
@@ -170,13 +150,12 @@ function checkGroundingFirst(
       });
     }
 
-    // Check skill extraction pipeline integrity
     if (file.includes("extraction-workflow")) {
       if (!codeContent.includes("allowed.has")) {
         violations.push({
           rule: "Rule 3: Grounding-First — Skill extraction must validate against taxonomy",
           severity: "BLOCKING",
-          metaApproach: "🟢 Grounding-First",
+          metaApproach: "Grounding-First",
           file,
           message:
             "Skill extraction validation step must filter tags against taxonomy candidates. The `allowed.has(s.tag)` check is missing.",
@@ -190,17 +169,14 @@ function checkGroundingFirst(
 }
 
 function checkMultiModelRouting(
-  changedFiles: string[],
+  _changedFiles: string[],
   fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
-    // Check for expensive models without cost justification
     const usesOpus =
       content.includes("opus") || content.includes("claude-opus");
-    const usesSonnet =
-      content.includes("sonnet") || content.includes("claude-sonnet");
     const isSimpleTask =
       file.includes("quick") ||
       file.includes("simple") ||
@@ -210,7 +186,7 @@ function checkMultiModelRouting(
       violations.push({
         rule: "Rule 4: Multi-Model — Cost-aware routing",
         severity: "WARNING",
-        metaApproach: "🟡 Multi-Model / Routing-First",
+        metaApproach: "Multi-Model / Routing-First",
         file,
         message:
           "Opus model used for what appears to be a simple task. Consider Haiku (1/19th cost) or Sonnet (1/5th cost).",
@@ -224,7 +200,7 @@ function checkMultiModelRouting(
 
 function checkSpecDriven(
   changedFiles: string[],
-  fileContents: Map<string, string>,
+  _fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
@@ -236,7 +212,7 @@ function checkSpecDriven(
     violations.push({
       rule: "Rule 5: Spec-Driven — Schema changes require codegen",
       severity: "BLOCKING",
-      metaApproach: "⚪ Spec-Driven",
+      metaApproach: "Spec-Driven",
       file: changedFiles.find((f) =>
         SCHEMA_PATTERNS.some((p) => p.test(f)),
       )!,
@@ -250,16 +226,14 @@ function checkSpecDriven(
 }
 
 function checkObservability(
-  changedFiles: string[],
+  _changedFiles: string[],
   fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
-    // Skip auto-generated stubs — they don't persist classification decisions
     if (file.includes("/stubs/")) continue;
 
-    // Check classification outputs for provenance fields
     const isClassificationFile =
       file.includes("classif") ||
       file.includes("process-jobs") ||
@@ -282,7 +256,7 @@ function checkObservability(
           violations.push({
             rule: "Rule 6: Observability — Classification decisions must carry provenance",
             severity: "BLOCKING",
-            metaApproach: "🔵 Observability-First",
+            metaApproach: "Observability-First",
             file,
             message: `Classification output persisted without provenance fields: ${missingFields.join(", ")}. Every AI decision must carry confidence + reason + source.`,
             fix: `Add ${missingFields.join(", ")} fields to the persisted output.`,
@@ -296,13 +270,12 @@ function checkObservability(
 }
 
 function checkHITL(
-  changedFiles: string[],
+  _changedFiles: string[],
   fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
-    // Check for batch operations without approval
     const isBatchOp =
       content.includes("batch") ||
       content.includes("bulk") ||
@@ -320,7 +293,7 @@ function checkHITL(
       violations.push({
         rule: "Rule 7: HITL — Batch operations require approval gates",
         severity: "WARNING",
-        metaApproach: "🩷 Human-Validation-First",
+        metaApproach: "Human-Validation-First",
         file,
         message:
           "Batch/bulk operation found without an approval gate. High-impact operations should require human sign-off.",
@@ -333,13 +306,12 @@ function checkHITL(
 }
 
 function checkEvidenceRequired(
-  changedFiles: string[],
+  _changedFiles: string[],
   fileContents: Map<string, string>,
 ): Violation[] {
   const violations: Violation[] = [];
 
   for (const [file, content] of fileContents) {
-    // Check for INSERT into skill/classification tables without evidence
     const insertsToSkillTags =
       content.includes("job_skill_tags") && content.includes("INSERT");
     const insertsToFacts =
@@ -349,7 +321,7 @@ function checkEvidenceRequired(
       violations.push({
         rule: "Rule 8: Evidence — Every persisted AI decision must have evidence",
         severity: "BLOCKING",
-        metaApproach: "🟢 Grounding-First",
+        metaApproach: "Grounding-First",
         file,
         message:
           "INSERT to job_skill_tags without evidence field. Every skill tag must include the job description snippet that justified it.",
@@ -361,7 +333,7 @@ function checkEvidenceRequired(
       violations.push({
         rule: "Rule 8: Evidence — Every persisted AI decision must have evidence",
         severity: "BLOCKING",
-        metaApproach: "🟢 Grounding-First",
+        metaApproach: "Grounding-First",
         file,
         message:
           "INSERT to company_facts without evidence field. Every extracted fact must include provenance.",
@@ -409,32 +381,13 @@ export function enforceStrategy(
 }
 
 // ---------------------------------------------------------------------------
-// Mastra Tool — for use in any agent
+// Plain async function tool — for use in any agent
 // ---------------------------------------------------------------------------
 
-export const strategyEnforcerTool = createTool({
-  id: "enforce-optimization-strategy",
-  description: `Validates code changes against the nomadically.work optimization strategy (Two-Layer Model).
-Checks 8 rules across 6 meta approaches: Eval-First, Grounding-First, Multi-Model Routing,
-Spec-Driven, Observability, and Human-Validation. Returns BLOCKING violations that must be
-fixed and WARNING violations that should be reviewed.`,
-  inputSchema: z.object({
-    changedFiles: z
-      .array(z.string())
-      .describe("List of changed file paths (relative to repo root)"),
-    fileContents: z
-      .record(z.string(), z.string())
-      .describe(
-        "Map of file path -> file content for files that need content-level analysis",
-      ),
-  }),
-  outputSchema: z.object({
-    pass: z.boolean(),
-    violations: z.array(violationSchema),
-    summary: z.string(),
-  }),
-  execute: async ({ changedFiles, fileContents }) => {
-    const contentsMap = new Map(Object.entries(fileContents));
-    return enforceStrategy(changedFiles, contentsMap);
-  },
-});
+export async function strategyEnforcerTool(input: {
+  changedFiles: string[];
+  fileContents: Record<string, string>;
+}) {
+  const contentsMap = new Map(Object.entries(input.fileContents));
+  return enforceStrategy(input.changedFiles, contentsMap);
+}

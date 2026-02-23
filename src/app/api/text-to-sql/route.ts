@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { sqlAgent } from "@/agents/sql";
-
-// Schema-constrained output for SQL generation (Grounding-First)
-const textToSqlOutputSchema = z.object({
-  sql: z.string().describe("The generated SQL query"),
-  explanation: z.string().describe("Explanation of what the query does and why"),
-});
 
 /**
  * Text-to-SQL API endpoint
@@ -26,11 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use the agent to generate a structured SQL output
-    const result = await sqlAgent.generate(question, {
-      maxSteps: 3,
-      structuredOutput: { schema: textToSqlOutputSchema },
-    });
+    const result = await sqlAgent.generate(question);
 
     const { sql, explanation } = result.object;
 

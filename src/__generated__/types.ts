@@ -30,6 +30,7 @@ export type AiInterviewPrepRequirement = {
   __typename: 'AIInterviewPrepRequirement';
   questions: Array<Scalars['String']['output']>;
   requirement: Scalars['String']['output'];
+  sourceQuote: Maybe<Scalars['String']['output']>;
   studyTopics: Array<Scalars['String']['output']>;
 };
 

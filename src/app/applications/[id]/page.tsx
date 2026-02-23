@@ -97,6 +97,9 @@ export default function ApplicationDetailPage() {
     });
   };
 
+  const scrollToJobDescription = () =>
+    document.getElementById("job-description")?.scrollIntoView({ behavior: "smooth" });
+
   const handleSaveNotes = async () => {
     if (!app) return;
     await updateApplication({
@@ -307,7 +310,7 @@ export default function ApplicationDetailPage() {
 
       {/* Job Description */}
       {app.jobDescription && (
-        <Card mb="5">
+        <Card mb="5" id="job-description">
           <Heading size="4" mb="3">
             Job Description
           </Heading>
@@ -459,6 +462,26 @@ export default function ApplicationDetailPage() {
                   <Text size="2" weight="bold" mb="2" as="div">
                     {req.requirement}
                   </Text>
+                  {req.sourceQuote && (
+                    <Box
+                      mb="2"
+                      pl="3"
+                      role="button"
+                      tabIndex={0}
+                      style={{
+                        borderLeft: "3px solid var(--accent-6)",
+                        cursor: "pointer",
+                      }}
+                      onClick={scrollToJobDescription}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") scrollToJobDescription();
+                      }}
+                    >
+                      <Text size="1" color="gray" as="div" style={{ fontStyle: "italic" }}>
+                        &ldquo;{req.sourceQuote}&rdquo;
+                      </Text>
+                    </Box>
+                  )}
                   <Text size="1" color="gray" mb="1" as="div">
                     Interview questions:
                   </Text>

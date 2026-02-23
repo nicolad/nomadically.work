@@ -23,6 +23,9 @@ import {
   InfoCircledIcon,
   FileIcon,
   ReloadIcon,
+  MagicWandIcon,
+  TargetIcon,
+  ExternalLinkIcon,
 } from "@radix-ui/react-icons";
 import { useAuth } from "@/lib/auth-hooks";
 import { useRouter } from "next/navigation";
@@ -31,6 +34,10 @@ import {
   useIngestResumeParseMutation,
   useAskAboutResumeLazyQuery,
   useResumeStatusQuery,
+  useUploadSkillProfileMutation,
+  useExtractSkillProfileMutation,
+  useMySkillProfileQuery,
+  useMatchedJobsQuery,
 } from "@/__generated__/hooks";
 
 export const dynamic = "force-dynamic";
@@ -230,6 +237,229 @@ const SAMPLE_QUESTIONS = [
   "What programming languages do I know?",
   "What's my educational background?",
 ];
+
+// ── Job Matching sub-components ──────────────────────────────────────────────
+
+function SkillBadge({ skill, variant }: { skill: string; variant: "matched" | "missing" }) {
+  return (
+    <Badge
+      color={variant === "matched" ? "green" : "red"}
+      variant="soft"
+      size="1"
+    >
+      {skill}
+    </Badge>
+  );
+}
+
+function MatchedJobCard({
+  job,
+  matchedSkills,
+  missingSkills,
+  matchScore,
+}: {
+  job: { id: number; title: string; url: string; location?: string | null; publishedAt: string; company?: { name: string; logo_url?: string | null } | null };
+  matchedSkills: string[];
+  missingSkills: string[];
+  matchScore: number;
+}) {
+  const pct = Math.round(matchScore * 100);
+  return (
+    <Card variant="surface">
+      <Flex direction="column" gap="2">
+        <Flex justify="between" align="start" gap="2">
+          <Flex direction="column" gap="1" style={{ flex: 1 }}>
+            <Flex align="center" gap="2">
+              <Text size="2" weight="bold">{job.title}</Text>
+              <a href={job.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLinkIcon color="var(--accent-9)" />
+              </a>
+            </Flex>
+            {job.company?.name && (
+              <Text size="1" color="gray">{job.company.name}</Text>
+            )}
+            {job.location && (
+              <Text size="1" color="gray">{job.location}</Text>
+            )}
+          </Flex>
+          <Badge
+            color={pct >= 70 ? "green" : pct >= 40 ? "yellow" : "gray"}
+            variant="solid"
+            size="1"
+          >
+            {pct}% match
+          </Badge>
+        </Flex>
+
+        {matchedSkills.length > 0 && (
+          <Flex gap="1" wrap="wrap">
+            {matchedSkills.map((s) => <SkillBadge key={s} skill={s} variant="matched" />)}
+          </Flex>
+        )}
+
+        {missingSkills.length > 0 && (
+          <Flex gap="1" wrap="wrap">
+            {missingSkills.slice(0, 8).map((s) => <SkillBadge key={s} skill={s} variant="missing" />)}
+            {missingSkills.length > 8 && (
+              <Text size="1" color="gray">+{missingSkills.length - 8} more</Text>
+            )}
+          </Flex>
+        )}
+      </Flex>
+    </Card>
+  );
+}
+
+function JobMatchingSection({ userId }: { userId: string }) {
+  const [matchFile, setMatchFile] = useState<File | null>(null);
+  const [matchStatus, setMatchStatus] = useState<"idle" | "uploading" | "extracting" | "done" | "error">("idle");
+  const [matchToast, setMatchToast] = useState("");
+  const [matchPage, setMatchPage] = useState(0);
+  const PAGE_SIZE = 10;
+
+  const [uploadSkillProfile] = useUploadSkillProfileMutation();
+  const [extractSkillProfile] = useExtractSkillProfileMutation();
+  const { data: profileData, refetch: refetchProfile } = useMySkillProfileQuery({ skip: !userId });
+  const profile = profileData?.mySkillProfile;
+
+  const { data: matchedData, loading: matchLoading, refetch: refetchMatches } = useMatchedJobsQuery({
+    variables: { limit: PAGE_SIZE, offset: matchPage * PAGE_SIZE },
+    skip: !profile?.extractedSkills?.length,
+  });
+
+  const handleMatchUpload = async (file: File) => {
+    setMatchFile(file);
+    setMatchStatus("uploading");
+    setMatchToast("");
+
+    try {
+      const buf = await file.arrayBuffer();
+      const base64 = btoa(new Uint8Array(buf).reduce((d, b) => d + String.fromCharCode(b), ""));
+
+      const { data: upData } = await uploadSkillProfile({
+        variables: { resumeBase64: base64, filename: file.name, fileType: file.type },
+      });
+
+      const profileId = upData?.uploadSkillProfile?.id;
+      if (!profileId) throw new Error("Upload failed");
+
+      setMatchStatus("extracting");
+
+      await extractSkillProfile({ variables: { profileId } });
+      await refetchProfile();
+      await refetchMatches();
+
+      setMatchStatus("done");
+      setMatchToast("Skills extracted — matched jobs loaded below.");
+    } catch (err) {
+      setMatchStatus("error");
+      setMatchToast(err instanceof Error ? err.message : "Failed to process resume");
+      setTimeout(() => setMatchStatus("idle"), 3000);
+    }
+  };
+
+  const matchedJobs = matchedData?.matchedJobs?.jobs ?? [];
+  const hasMore = matchedData?.matchedJobs?.hasMore ?? false;
+
+  return (
+    <Flex direction="column" gap="4">
+      <Flex align="center" gap="2">
+        <TargetIcon />
+        <Heading size="4">Job Matching</Heading>
+      </Flex>
+
+      <Text size="2" color="gray">
+        Upload your resume to extract your skills and find the best-matching remote EU jobs.
+      </Text>
+
+      {/* Upload for skill matching */}
+      <DropZone
+        file={matchFile}
+        onChange={handleMatchUpload}
+        disabled={matchStatus === "uploading" || matchStatus === "extracting"}
+      />
+
+      {(matchStatus === "uploading" || matchStatus === "extracting") && (
+        <Flex align="center" gap="2">
+          <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+          <Text size="2" color="gray">
+            {matchStatus === "uploading" ? "Uploading resume…" : "Extracting skills with AI…"}
+          </Text>
+        </Flex>
+      )}
+
+      {matchToast && (
+        <Callout.Root color={matchStatus === "error" ? "red" : "green"} variant="soft">
+          <Callout.Icon>
+            {matchStatus === "error" ? <CrossCircledIcon /> : <CheckCircledIcon />}
+          </Callout.Icon>
+          <Callout.Text>{matchToast}</Callout.Text>
+        </Callout.Root>
+      )}
+
+      {/* Extracted skills */}
+      {profile?.extractedSkills && profile.extractedSkills.length > 0 && (
+        <Box>
+          <Text size="2" weight="bold" mb="2">Your extracted skills</Text>
+          <Flex gap="1" wrap="wrap" mt="1">
+            {profile.extractedSkills.map((s) => (
+              <Badge key={s} color="blue" variant="soft" size="1">{s}</Badge>
+            ))}
+          </Flex>
+        </Box>
+      )}
+
+      {/* Matched jobs */}
+      {profile?.extractedSkills && profile.extractedSkills.length > 0 && (
+        <Flex direction="column" gap="3">
+          <Flex align="center" justify="between">
+            <Heading size="3">Matched Jobs</Heading>
+            {matchLoading && (
+              <Flex align="center" gap="1">
+                <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+                <Text size="1" color="gray">Loading…</Text>
+              </Flex>
+            )}
+          </Flex>
+
+          {matchedJobs.length === 0 && !matchLoading && (
+            <Callout.Root color="blue" variant="soft">
+              <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+              <Callout.Text>No matched jobs found. Try adding more skills to your resume.</Callout.Text>
+            </Callout.Root>
+          )}
+
+          {matchedJobs.map((item) => (
+            <MatchedJobCard
+              key={item.job.id}
+              job={item.job}
+              matchedSkills={item.matchedSkills}
+              missingSkills={item.missingSkills}
+              matchScore={item.matchScore}
+            />
+          ))}
+
+          {(matchPage > 0 || hasMore) && (
+            <Flex gap="2" justify="center">
+              {matchPage > 0 && (
+                <Button variant="soft" size="2" onClick={() => setMatchPage(p => p - 1)}>
+                  Previous
+                </Button>
+              )}
+              {hasMore && (
+                <Button variant="soft" size="2" onClick={() => setMatchPage(p => p + 1)}>
+                  Next
+                </Button>
+              )}
+            </Flex>
+          )}
+        </Flex>
+      )}
+    </Flex>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 function ResumePageContent() {
   const router = useRouter();
@@ -629,6 +859,15 @@ function ResumePageContent() {
             )}
           </Flex>
         </Card>
+
+        <Separator size="4" />
+
+        {/* Job Matching section */}
+        <Card>
+          <JobMatchingSection userId={user?.id ?? ""} />
+        </Card>
+
+        <Separator size="4" />
 
         {/* How it works */}
         <Card variant="surface">

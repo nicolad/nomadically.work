@@ -1,0 +1,61 @@
+mutation UploadSkillProfile($resumeBase64: String!, $filename: String!, $fileType: String!) {
+  uploadSkillProfile(resumeBase64: $resumeBase64, filename: $filename, fileType: $fileType) {
+    id
+    userId
+    filename
+    extractedSkills
+    taxonomyVersion
+    createdAt
+    updatedAt
+  }
+}
+
+mutation ExtractSkillProfile($profileId: ID!) {
+  extractSkillProfile(profileId: $profileId) {
+    id
+    userId
+    filename
+    extractedSkills
+    taxonomyVersion
+    createdAt
+    updatedAt
+  }
+}
+
+query MySkillProfile {
+  mySkillProfile {
+    id
+    userId
+    filename
+    extractedSkills
+    taxonomyVersion
+    createdAt
+    updatedAt
+  }
+}
+
+query MatchedJobs($limit: Int, $offset: Int) {
+  matchedJobs(limit: $limit, offset: $offset) {
+    jobs {
+      job {
+        id
+        title
+        url
+        location
+        publishedAt
+        company {
+          id
+          name
+          logo_url
+        }
+      }
+      matchedSkills
+      missingSkills
+      matchScore
+      totalRequired
+      totalMatched
+    }
+    totalCount
+    hasMore
+  }
+}

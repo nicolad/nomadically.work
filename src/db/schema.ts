@@ -553,3 +553,20 @@ export const deepPlannerTasks = sqliteTable("deep_planner_tasks", {
 
 export type DeepPlannerTask = typeof deepPlannerTasks.$inferSelect;
 export type NewDeepPlannerTask = typeof deepPlannerTasks.$inferInsert;
+
+// Skill Profiles (D1-backed resume storage for skill matching)
+export const resumes = sqliteTable("resumes", {
+  id: text("id").primaryKey(),
+  user_id: text("user_id").notNull().unique(), // one per user
+  filename: text("filename"),
+  raw_text: text("raw_text").notNull(),
+  extracted_skills: text("extracted_skills").notNull().default("[]"), // JSON array
+  taxonomy_version: text("taxonomy_version").notNull().default("v1"),
+  created_at: integer("created_at", { mode: "timestamp" }).notNull(),
+  updated_at: integer("updated_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  resumeUserIdx: index("idx_resumes_user_id").on(table.user_id),
+}));
+
+export type SkillResume = typeof resumes.$inferSelect;
+export type NewSkillResume = typeof resumes.$inferInsert;

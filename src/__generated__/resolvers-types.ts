@@ -623,6 +623,23 @@ export type LangSmithPromptCommit = {
   promptName: Scalars['String']['output'];
 };
 
+export type MatchedJob = {
+  __typename?: 'MatchedJob';
+  job: Job;
+  matchScore: Scalars['Float']['output'];
+  matchedSkills: Array<Scalars['String']['output']>;
+  missingSkills: Array<Scalars['String']['output']>;
+  totalMatched: Scalars['Int']['output'];
+  totalRequired: Scalars['Int']['output'];
+};
+
+export type MatchedJobsResult = {
+  __typename?: 'MatchedJobsResult';
+  hasMore: Scalars['Boolean']['output'];
+  jobs: Array<MatchedJob>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
@@ -658,6 +675,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  extractSkillProfile: SkillProfile;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -686,6 +704,7 @@ export type Mutation = {
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   uploadResume: Maybe<ResumeUploadResult>;
+  uploadSkillProfile: SkillProfile;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
 
@@ -754,6 +773,11 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
+};
+
+
+export type MutationExtractSkillProfileArgs = {
+  profileId: Scalars['ID']['input'];
 };
 
 
@@ -873,6 +897,13 @@ export type MutationUploadResumeArgs = {
   email: Scalars['String']['input'];
   filename: Scalars['String']['input'];
   resumePdf: Scalars['String']['input'];
+};
+
+
+export type MutationUploadSkillProfileArgs = {
+  fileType: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  resumeBase64: Scalars['String']['input'];
 };
 
 
@@ -997,7 +1028,9 @@ export type Query = {
   langsmithPrompt: Maybe<LangSmithPrompt>;
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
+  matchedJobs: MatchedJobsResult;
   myPromptUsage: Array<PromptUsage>;
+  mySkillProfile: Maybe<SkillProfile>;
   prepResources: PrepContent;
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
@@ -1097,6 +1130,12 @@ export type QueryLangsmithPromptsArgs = {
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   query?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryMatchedJobsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1226,6 +1265,17 @@ export type SkillMatchDetail = {
   level: Scalars['String']['output'];
   matched: Scalars['Boolean']['output'];
   tag: Scalars['String']['output'];
+};
+
+export type SkillProfile = {
+  __typename?: 'SkillProfile';
+  createdAt: Scalars['DateTime']['output'];
+  extractedSkills: Array<Scalars['String']['output']>;
+  filename: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  taxonomyVersion: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  userId: Scalars['String']['output'];
 };
 
 export type SourceType =
@@ -1476,6 +1526,8 @@ export type ResolversTypes = {
   JobsResponse: ResolverTypeWrapper<Partial<JobsResponse>>;
   LangSmithPrompt: ResolverTypeWrapper<Partial<LangSmithPrompt>>;
   LangSmithPromptCommit: ResolverTypeWrapper<Partial<LangSmithPromptCommit>>;
+  MatchedJob: ResolverTypeWrapper<Partial<MatchedJob>>;
+  MatchedJobsResult: ResolverTypeWrapper<Partial<MatchedJobsResult>>;
   Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
   PrepCategory: ResolverTypeWrapper<Partial<PrepCategory>>;
   PrepContent: ResolverTypeWrapper<Partial<PrepContent>>;
@@ -1498,6 +1550,7 @@ export type ResolversTypes = {
   ResumeUploadResult: ResolverTypeWrapper<Partial<ResumeUploadResult>>;
   SkillMatch: ResolverTypeWrapper<Partial<SkillMatch>>;
   SkillMatchDetail: ResolverTypeWrapper<Partial<SkillMatchDetail>>;
+  SkillProfile: ResolverTypeWrapper<Partial<SkillProfile>>;
   SourceType: ResolverTypeWrapper<Partial<SourceType>>;
   String: ResolverTypeWrapper<Partial<Scalars['String']['output']>>;
   TextToSqlResult: ResolverTypeWrapper<Partial<TextToSqlResult>>;
@@ -1569,6 +1622,8 @@ export type ResolversParentTypes = {
   JobsResponse: Partial<JobsResponse>;
   LangSmithPrompt: Partial<LangSmithPrompt>;
   LangSmithPromptCommit: Partial<LangSmithPromptCommit>;
+  MatchedJob: Partial<MatchedJob>;
+  MatchedJobsResult: Partial<MatchedJobsResult>;
   Mutation: Record<PropertyKey, never>;
   PrepCategory: Partial<PrepCategory>;
   PrepContent: Partial<PrepContent>;
@@ -1590,6 +1645,7 @@ export type ResolversParentTypes = {
   ResumeUploadResult: Partial<ResumeUploadResult>;
   SkillMatch: Partial<SkillMatch>;
   SkillMatchDetail: Partial<SkillMatchDetail>;
+  SkillProfile: Partial<SkillProfile>;
   String: Partial<Scalars['String']['output']>;
   TextToSqlResult: Partial<TextToSqlResult>;
   Track: Partial<Track>;
@@ -1983,6 +2039,21 @@ export type LangSmithPromptCommitResolvers<ContextType = GraphQLContext, ParentT
   promptName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type MatchedJobResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['MatchedJob'] = ResolversParentTypes['MatchedJob']> = {
+  job?: Resolver<ResolversTypes['Job'], ParentType, ContextType>;
+  matchScore?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  matchedSkills?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  missingSkills?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  totalMatched?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalRequired?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
+export type MatchedJobsResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['MatchedJobsResult'] = ResolversParentTypes['MatchedJobsResult']> = {
+  hasMore?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  jobs?: Resolver<Array<ResolversTypes['MatchedJob']>, ParentType, ContextType>;
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   add_company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<MutationAdd_Company_FactsArgs, 'company_id' | 'facts'>>;
   createApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationCreateApplicationArgs, 'input'>>;
@@ -1997,6 +2068,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
+  extractSkillProfile?: Resolver<ResolversTypes['SkillProfile'], ParentType, ContextType, RequireFields<MutationExtractSkillProfileArgs, 'profileId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
@@ -2015,6 +2087,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updatePromptLabel?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationUpdatePromptLabelArgs, 'label' | 'name' | 'version'>>;
   updateUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType, RequireFields<MutationUpdateUserSettingsArgs, 'settings' | 'userId'>>;
   uploadResume?: Resolver<Maybe<ResolversTypes['ResumeUploadResult']>, ParentType, ContextType, RequireFields<MutationUploadResumeArgs, 'email' | 'filename' | 'resumePdf'>>;
+  uploadSkillProfile?: Resolver<ResolversTypes['SkillProfile'], ParentType, ContextType, RequireFields<MutationUploadSkillProfileArgs, 'fileType' | 'filename' | 'resumeBase64'>>;
   upsert_company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<MutationUpsert_Company_Ats_BoardsArgs, 'boards' | 'company_id'>>;
 };
 
@@ -2099,7 +2172,9 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   langsmithPrompt?: Resolver<Maybe<ResolversTypes['LangSmithPrompt']>, ParentType, ContextType, RequireFields<QueryLangsmithPromptArgs, 'promptIdentifier'>>;
   langsmithPromptCommit?: Resolver<Maybe<ResolversTypes['LangSmithPromptCommit']>, ParentType, ContextType, RequireFields<QueryLangsmithPromptCommitArgs, 'promptIdentifier'>>;
   langsmithPrompts?: Resolver<Array<ResolversTypes['LangSmithPrompt']>, ParentType, ContextType, Partial<QueryLangsmithPromptsArgs>>;
+  matchedJobs?: Resolver<ResolversTypes['MatchedJobsResult'], ParentType, ContextType, Partial<QueryMatchedJobsArgs>>;
   myPromptUsage?: Resolver<Array<ResolversTypes['PromptUsage']>, ParentType, ContextType, Partial<QueryMyPromptUsageArgs>>;
+  mySkillProfile?: Resolver<Maybe<ResolversTypes['SkillProfile']>, ParentType, ContextType>;
   prepResources?: Resolver<ResolversTypes['PrepContent'], ParentType, ContextType>;
   prepResourcesByCategory?: Resolver<Array<ResolversTypes['PrepResource']>, ParentType, ContextType, RequireFields<QueryPrepResourcesByCategoryArgs, 'category'>>;
   prompt?: Resolver<Maybe<ResolversTypes['Prompt']>, ParentType, ContextType, RequireFields<QueryPromptArgs, 'name'>>;
@@ -2181,6 +2256,16 @@ export type SkillMatchDetailResolvers<ContextType = GraphQLContext, ParentType e
   level?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   matched?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   tag?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type SkillProfileResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SkillProfile'] = ResolversParentTypes['SkillProfile']> = {
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  extractedSkills?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  filename?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  taxonomyVersion?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type TextToSqlResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TextToSqlResult'] = ResolversParentTypes['TextToSqlResult']> = {
@@ -2283,6 +2368,8 @@ export type Resolvers<ContextType = GraphQLContext> = {
   JobsResponse?: JobsResponseResolvers<ContextType>;
   LangSmithPrompt?: LangSmithPromptResolvers<ContextType>;
   LangSmithPromptCommit?: LangSmithPromptCommitResolvers<ContextType>;
+  MatchedJob?: MatchedJobResolvers<ContextType>;
+  MatchedJobsResult?: MatchedJobsResultResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   PrepCategory?: PrepCategoryResolvers<ContextType>;
   PrepContent?: PrepContentResolvers<ContextType>;
@@ -2301,6 +2388,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ResumeUploadResult?: ResumeUploadResultResolvers<ContextType>;
   SkillMatch?: SkillMatchResolvers<ContextType>;
   SkillMatchDetail?: SkillMatchDetailResolvers<ContextType>;
+  SkillProfile?: SkillProfileResolvers<ContextType>;
   TextToSqlResult?: TextToSqlResultResolvers<ContextType>;
   Track?: TrackResolvers<ContextType>;
   TrackItem?: TrackItemResolvers<ContextType>;

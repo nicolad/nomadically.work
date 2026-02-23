@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AuthHeader } from "@/components/auth-header";
+import { AdminNav } from "@/components/admin-nav";
 import { Providers } from "@/components/providers";
 import { Inter } from "next/font/google";
 
@@ -58,6 +59,7 @@ export default function RootLayout({
                 <Link href="/resume">resume</Link>
                 <Link href="/prompts">prompts</Link>
                 <Link href="/chats">query</Link>
+                <AdminNav />
                 <span style={{ flex: 1 }} />
                 <AuthHeader />
                 <Link

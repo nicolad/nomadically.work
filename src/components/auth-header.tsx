@@ -1,9 +1,8 @@
 "use client";
 
-import { GearIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { GearIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { ADMIN_EMAIL } from "@/lib/constants";
 
 export function AuthHeader() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -30,8 +29,6 @@ export function AuthHeader() {
     );
   }
 
-  const isAdmin = user.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
-
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
@@ -43,24 +40,6 @@ export function AuthHeader() {
           user.primaryEmailAddress?.emailAddress ||
           user.username}
       </span>
-      {isAdmin && (
-        <>
-          <Link
-            href="/admin/deep-planner"
-            style={{ color: "var(--gray-9)" }}
-            title="Deep Planner tasks"
-          >
-            tasks
-          </Link>
-          <Link
-            href="/admin/reported-jobs"
-            style={{ display: "flex", alignItems: "center" }}
-            title="Reported jobs review"
-          >
-            <ExclamationTriangleIcon width={14} height={14} style={{ color: "var(--orange-9)" }} />
-          </Link>
-        </>
-      )}
       <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
         <GearIcon width={14} height={14} style={{ color: "var(--gray-9)" }} />
       </Link>

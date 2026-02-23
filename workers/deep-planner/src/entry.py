@@ -9,8 +9,8 @@ from urllib.parse import urlparse
 
 from workers import Response, WorkerEntrypoint
 
-from .helpers import to_py, d1_first
-from .durable_object import DeepPlannerDO  # noqa: F401 — exported for wrangler DO binding
+from helpers import to_py, d1_first
+from durable_object import DeepPlannerDO  # noqa: F401 — exported for wrangler DO binding
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",

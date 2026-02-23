@@ -5,8 +5,6 @@ description = "Deep Planner: Autonomous BMAD workflow execution via Durable Obje
 requires-python = ">=3.12"
 dependencies = [
     "webtypy>=0.1.7",
-    "langchain-cloudflare",
-    "langchain-core>=0.3.81,<2.0.0",
 ]
 
 [dependency-groups]

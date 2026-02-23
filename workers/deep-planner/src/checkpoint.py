@@ -7,7 +7,7 @@ and the task status is mirrored to the D1 `deep_planner_tasks` table.
 import json
 from datetime import datetime, timezone
 
-from .helpers import d1_run, d1_first
+from helpers import d1_run, d1_first
 
 
 async def save_checkpoint(

@@ -10,12 +10,19 @@ extend type Mutation {
   unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
   generateInterviewPrep(applicationId: Int!): Application!
   generateTopicDeepDive(applicationId: Int!, requirement: String!, force: Boolean): Application!
+  generateStudyTopicDeepDive(applicationId: Int!, requirement: String!, studyTopic: String!, force: Boolean): Application!
+}
+
+type AIStudyTopicDeepDive {
+  topic: String!
+  deepDive: String!
 }
 
 type AIInterviewPrepRequirement {
   requirement: String!
   questions: [String!]!
   studyTopics: [String!]!
+  studyTopicDeepDives: [AIStudyTopicDeepDive!]!
   sourceQuote: String
   deepDive: String
 }

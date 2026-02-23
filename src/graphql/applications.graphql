@@ -29,6 +29,7 @@ fragment ApplicationFields on Application {
       requirement
       questions
       studyTopics
+      studyTopicDeepDives { topic deepDive }
       sourceQuote
       deepDive
     }
@@ -100,6 +101,7 @@ mutation GenerateInterviewPrep($applicationId: Int!) {
         requirement
         questions
         studyTopics
+        studyTopicDeepDives { topic deepDive }
         sourceQuote
         deepDive
       }
@@ -117,6 +119,25 @@ mutation GenerateTopicDeepDive($applicationId: Int!, $requirement: String!) {
         requirement
         questions
         studyTopics
+        studyTopicDeepDives { topic deepDive }
+        sourceQuote
+        deepDive
+      }
+      generatedAt
+    }
+  }
+}
+
+mutation GenerateStudyTopicDeepDive($applicationId: Int!, $requirement: String!, $studyTopic: String!, $force: Boolean) {
+  generateStudyTopicDeepDive(applicationId: $applicationId, requirement: $requirement, studyTopic: $studyTopic, force: $force) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+        studyTopicDeepDives { topic deepDive }
         sourceQuote
         deepDive
       }

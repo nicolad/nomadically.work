@@ -35,7 +35,14 @@ export type AiInterviewPrepRequirement = {
   questions: Array<Scalars['String']['output']>;
   requirement: Scalars['String']['output'];
   sourceQuote: Maybe<Scalars['String']['output']>;
+  studyTopicDeepDives: Array<AiStudyTopicDeepDive>;
   studyTopics: Array<Scalars['String']['output']>;
+};
+
+export type AiStudyTopicDeepDive = {
+  __typename?: 'AIStudyTopicDeepDive';
+  deepDive: Scalars['String']['output'];
+  topic: Scalars['String']['output'];
 };
 
 export type AtsBoard = {
@@ -653,6 +660,7 @@ export type Mutation = {
   enhanceJobFromATS: EnhanceJobResponse;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
+  generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
@@ -756,6 +764,14 @@ export type MutationGenerateInterviewPrepArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyTopicDeepDiveArgs = {
+  applicationId: Scalars['Int']['input'];
+  force?: InputMaybe<Scalars['Boolean']['input']>;
+  requirement: Scalars['String']['input'];
+  studyTopic: Scalars['String']['input'];
 };
 
 
@@ -1400,6 +1416,7 @@ export type DirectiveResolverFn<TResult = Record<PropertyKey, never>, TParent = 
 export type ResolversTypes = {
   AIInterviewPrep: ResolverTypeWrapper<Partial<AiInterviewPrep>>;
   AIInterviewPrepRequirement: ResolverTypeWrapper<Partial<AiInterviewPrepRequirement>>;
+  AIStudyTopicDeepDive: ResolverTypeWrapper<Partial<AiStudyTopicDeepDive>>;
   ATSBoard: ResolverTypeWrapper<Partial<AtsBoard>>;
   ATSBoardType: ResolverTypeWrapper<Partial<AtsBoardType>>;
   ATSBoardUpsertInput: ResolverTypeWrapper<Partial<AtsBoardUpsertInput>>;
@@ -1501,6 +1518,7 @@ export type ResolversTypes = {
 export type ResolversParentTypes = {
   AIInterviewPrep: Partial<AiInterviewPrep>;
   AIInterviewPrepRequirement: Partial<AiInterviewPrepRequirement>;
+  AIStudyTopicDeepDive: Partial<AiStudyTopicDeepDive>;
   ATSBoard: Partial<AtsBoard>;
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
   Application: Partial<Application>;
@@ -1598,7 +1616,13 @@ export type AiInterviewPrepRequirementResolvers<ContextType = GraphQLContext, Pa
   questions?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   requirement?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   sourceQuote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  studyTopicDeepDives?: Resolver<Array<ResolversTypes['AIStudyTopicDeepDive']>, ParentType, ContextType>;
   studyTopics?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
+export type AiStudyTopicDeepDiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIStudyTopicDeepDive'] = ResolversParentTypes['AIStudyTopicDeepDive']> = {
+  deepDive?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  topic?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ATSBoard'] = ResolversParentTypes['ATSBoard']> = {
@@ -1975,6 +1999,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
+  generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
   generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
@@ -2221,6 +2246,7 @@ export type WarcPointerResolvers<ContextType = GraphQLContext, ParentType extend
 export type Resolvers<ContextType = GraphQLContext> = {
   AIInterviewPrep?: AiInterviewPrepResolvers<ContextType>;
   AIInterviewPrepRequirement?: AiInterviewPrepRequirementResolvers<ContextType>;
+  AIStudyTopicDeepDive?: AiStudyTopicDeepDiveResolvers<ContextType>;
   ATSBoard?: AtsBoardResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;
   AshbyAddress?: AshbyAddressResolvers<ContextType>;

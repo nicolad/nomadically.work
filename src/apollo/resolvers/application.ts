@@ -43,6 +43,11 @@ async function getApplicationById(id: number, userEmail: string, db: GraphQLCont
 }
 
 export const applicationResolvers = {
+  AIInterviewPrepRequirement: {
+    studyTopicDeepDives(parent: any) {
+      return parent.studyTopicDeepDives ?? [];
+    },
+  },
   Application: {
     async interviewPrep(parent: { id: number }, _args: unknown, context: GraphQLContext) {
       const rows = await context.db
@@ -463,6 +468,104 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
         .returning();
 
       if (!updated) throw new Error("Failed to save interview prep");
+
+      return mapApplication(updated, row.jobDescription);
+    },
+
+    async generateStudyTopicDeepDive(
+      _parent: any,
+      args: { applicationId: number; requirement: string; studyTopic: string; force?: boolean },
+      context: GraphQLContext,
+    ) {
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.applicationId);
+
+      const [row] = await context.db
+        .select({ app: applications, jobDescription: jobs.description })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .where(whereClause);
+
+      if (!row) throw new Error("Application not found or access denied");
+
+      let prepData: any;
+      try {
+        prepData = row.app.ai_interview_prep ? JSON.parse(row.app.ai_interview_prep) : null;
+      } catch {
+        throw new Error("Could not parse existing interview prep data");
+      }
+      if (!prepData) throw new Error("No interview prep data found. Generate interview prep first.");
+
+      const reqEntry = prepData.requirements?.find(
+        (r: any) => r.requirement === args.requirement,
+      );
+      if (!reqEntry) throw new Error("Requirement not found in interview prep data");
+
+      reqEntry.studyTopicDeepDives = reqEntry.studyTopicDeepDives ?? [];
+      const existing = reqEntry.studyTopicDeepDives.find((d: any) => d.topic === args.studyTopic);
+      if (existing?.deepDive && !args.force) return mapApplication(row.app, row.jobDescription);
+
+      const plainJobDesc = (row.jobDescription ?? "")
+        .replace(/(<([^>]+)>)/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 4000);
+
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.REASONER,
+        messages: [
+          {
+            role: "user",
+            content: `You are a senior staff engineer and technical interview coach. The candidate is preparing for a technical interview at ${(row.app as any).company_name ?? "a tech company"} for the role of ${(row.app as any).job_title ?? "software engineer"}.
+
+Job description context:
+${plainJobDesc}
+
+Parent topic: "${args.requirement}"
+Focused subtopic: "${args.studyTopic}"
+
+Write a technically rigorous, focused deep-dive on "${args.studyTopic}" in markdown. This is for a senior engineer — go beyond definitions into mechanisms, trade-offs, and concrete examples.
+
+## What It Actually Is
+The precise technical definition and mechanism. No hand-waving. Include how it works internally where relevant.
+
+## When It Matters (and When It Doesn't)
+Concrete scenarios where this concept is load-bearing. Name real systems (PostgreSQL, Cassandra, Redis, Kafka, etc.) and explain how they handle this. Include a trade-off table if applicable.
+
+## How to Talk About It in an Interview
+The exact reasoning pattern a senior engineer uses: state your constraints, name the trade-offs, give a concrete recommendation with justification. Show, don't tell.
+
+## The Trap Answers
+What mid-level engineers say that reveals shallow understanding. Be blunt.
+
+## One Concrete Example
+A real production scenario (incident, design decision, or architectural choice) where this subtopic was the crux. What happened, why, and what to learn from it.`,
+          },
+        ],
+        max_tokens: 2500,
+      });
+
+      const deepDive = response.choices[0]?.message?.content;
+      if (!deepDive) throw new Error("Empty response from AI");
+
+      if (existing) {
+        existing.deepDive = deepDive;
+      } else {
+        reqEntry.studyTopicDeepDives.push({ topic: args.studyTopic, deepDive });
+      }
+
+      const [updated] = await context.db
+        .update(applications)
+        .set({
+          ai_interview_prep: JSON.stringify(prepData),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .where(whereClause)
+        .returning();
+
+      if (!updated) throw new Error("Failed to save study topic deep dive");
 
       return mapApplication(updated, row.jobDescription);
     },

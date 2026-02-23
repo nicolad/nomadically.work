@@ -1468,7 +1468,7 @@ export type GetUserSettingsQueryVariables = Exact<{
 }>;
 
 
-export type GetUserSettingsQuery = { __typename?: 'Query', userSettings: { __typename?: 'UserSettings', preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null } | null };
+export type GetUserSettingsQuery = { __typename?: 'Query', userSettings: { __typename?: 'UserSettings', id: number, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null } | null };
 
 export type ProcessAllJobsMutationVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -2680,6 +2680,7 @@ export type GetJobsQueryResult = Apollo.QueryResult<GetJobsQuery, GetJobsQueryVa
 export const GetUserSettingsDocument = gql`
     query GetUserSettings($userId: String!) {
   userSettings(userId: $userId) {
+    id
     preferred_locations
     preferred_skills
     excluded_companies

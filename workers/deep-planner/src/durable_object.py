@@ -12,11 +12,11 @@ import time
 import json
 from datetime import datetime, timezone
 
-from js import JSON
 from workers import DurableObject, Response
 
-from helpers import guard_content, sleep_ms, to_py
-from prompts import BMAD_STEPS, PASS_TYPES, SYSTEM_BASE, get_prompt, total_passes
+from helpers import sleep_ms
+from llm import ChatDeepSeek, SystemMessage, HumanMessage
+from prompts import BMAD_STEPS, PASS_TYPES, FEEDBACK_PASS_INDICES, SYSTEM_BASE, get_prompt, total_passes
 from checkpoint import (
     save_checkpoint,
     load_checkpoint,
@@ -26,14 +26,11 @@ from checkpoint import (
     get_task,
 )
 
-# Pacing: 6 seconds between alarms to stay within Workers AI free tier
+# Pacing: delay between alarms for rate limiting
 ALARM_DELAY_MS = 6_000
 
 # Max retries per LLM call
 MAX_RETRIES = 3
-
-# Workers AI model — free tier
-MODEL_NAME = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
 
 class DeepPlannerDO(DurableObject):
@@ -128,23 +125,26 @@ class DeepPlannerDO(DurableObject):
 
             print(f"[DeepPlannerDO] Task {task_id}: step={step}, pass={pass_type} ({pass_index + 1}/{total})")
 
-            # Get previous outputs for critique/refine passes
+            # Load previous outputs based on pass position within step.
+            # Passes at FEEDBACK_PASS_INDICES (2=refine, 4=deepen) consume two prior outputs:
+            #   previous_output  = the generation pass two steps back (draft or refine)
+            #   critique_output  = the feedback pass one step back (critique or validate)
+            # All other passes (except draft at index 0) load just the immediately prior pass.
             previous_output = ""
             critique_output = ""
 
-            if pass_type == "critique":
-                # Load draft output from the previous pass
-                draft_checkpoint = await load_checkpoint(self.ctx.storage, task_id)
-                if draft_checkpoint:
-                    previous_output = draft_checkpoint.get("output", "")
-            elif pass_type == "refine":
-                # Load both draft and critique outputs
-                draft_key = f"step_output:{task_id}:{step}:draft"
-                critique_key = f"step_output:{task_id}:{step}:critique"
-                draft_data = await self.ctx.storage.get(draft_key)
-                critique_data = await self.ctx.storage.get(critique_key)
-                previous_output = str(draft_data) if draft_data else ""
-                critique_output = str(critique_data) if critique_data else ""
+            if pass_within_step > 0:
+                if pass_within_step in FEEDBACK_PASS_INDICES:
+                    gen_type = PASS_TYPES[pass_within_step - 2]
+                    fb_type = PASS_TYPES[pass_within_step - 1]
+                    gen_data = await self.ctx.storage.get(f"step_output:{task_id}:{step}:{gen_type}")
+                    fb_data = await self.ctx.storage.get(f"step_output:{task_id}:{step}:{fb_type}")
+                    previous_output = str(gen_data) if gen_data else ""
+                    critique_output = str(fb_data) if fb_data else ""
+                else:
+                    prev_type = PASS_TYPES[pass_within_step - 1]
+                    prev_data = await self.ctx.storage.get(f"step_output:{task_id}:{step}:{prev_type}")
+                    previous_output = str(prev_data) if prev_data else ""
 
             # Build prompt
             prompt_text = get_prompt(
@@ -171,13 +171,13 @@ class DeepPlannerDO(DurableObject):
             step_key = f"step_output:{task_id}:{step}:{pass_type}"
             await self.ctx.storage.put(step_key, output)
 
-            # Update artifact after refine pass (final output of each step)
-            if pass_type == "refine":
+            # Update artifact after the final pass of each step (polish)
+            if pass_type == PASS_TYPES[-1]:
                 if step == "COMPLETE":
                     # Final step — the output IS the complete artifact
                     artifact_so_far = output
                 else:
-                    # Append refined section to accumulated artifact
+                    # Append polished section to accumulated artifact
                     artifact_so_far = (artifact_so_far + "\n\n" + output).strip()
 
             # Save checkpoint
@@ -215,31 +215,29 @@ class DeepPlannerDO(DurableObject):
                 )
 
     async def _call_llm(self, prompt: str) -> str | None:
-        """Call Workers AI directly via binding with retry logic."""
+        """Call DeepSeek via LangChain-compatible ChatDeepSeek client with retry."""
+        api_key = str(getattr(self.env, "DEEPSEEK_API_KEY", "") or "")
+        if not api_key:
+            print("[DeepPlannerDO] DEEPSEEK_API_KEY not set")
+            return None
+
+        llm = ChatDeepSeek(
+            api_key=api_key,
+            temperature=0.7,
+            max_tokens=4096,
+        )
+
+        messages = [
+            SystemMessage(content=SYSTEM_BASE),
+            HumanMessage(content=prompt[:12000]),
+        ]
+
         for attempt in range(MAX_RETRIES):
             try:
-                messages = [
-                    {"role": "system", "content": SYSTEM_BASE},
-                    {"role": "user", "content": prompt[:12000]},
-                ]
-
-                result = await self.env.AI.run(
-                    MODEL_NAME,
-                    JSON.parse(json.dumps({
-                        "messages": messages,
-                        "temperature": 0.7,
-                        "max_tokens": 4096,
-                    })),
-                )
-
-                # Parse the response
-                result_dict = to_py(result)
-                content = result_dict.get("response") if isinstance(result_dict, dict) else None
-
-                if not content:
-                    print(f"[DeepPlannerDO] Workers AI returned empty content, attempt {attempt + 1}/{MAX_RETRIES}")
-                else:
-                    return str(content).strip()
+                result = await llm.ainvoke(messages)
+                if result.content:
+                    return result.content
+                print(f"[DeepPlannerDO] DeepSeek returned empty content, attempt {attempt + 1}/{MAX_RETRIES}")
 
             except Exception as e:
                 print(f"[DeepPlannerDO] LLM call error (attempt {attempt + 1}/{MAX_RETRIES}): {e}")

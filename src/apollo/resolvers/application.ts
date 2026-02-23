@@ -252,7 +252,7 @@ export const applicationResolvers = {
 
     async generateTopicDeepDive(
       _parent: any,
-      args: { applicationId: number; requirement: string },
+      args: { applicationId: number; requirement: string; force?: boolean },
       context: GraphQLContext,
     ) {
       const whereClause = context.userEmail
@@ -281,8 +281,8 @@ export const applicationResolvers = {
       );
       if (!reqEntry) throw new Error("Requirement not found in interview prep data");
 
-      // Return immediately if already generated
-      if (reqEntry.deepDive) return mapApplication(row.app, row.jobDescription);
+      // Return immediately if already generated (unless force regeneration requested)
+      if (reqEntry.deepDive && !args.force) return mapApplication(row.app, row.jobDescription);
 
       const plainJobDesc = (row.jobDescription ?? "")
         .replace(/(<([^>]+)>)/gi, " ")
@@ -296,33 +296,46 @@ export const applicationResolvers = {
         messages: [
           {
             role: "user",
-            content: `You are an expert interview coach preparing a candidate for a job interview.
+            content: `You are a senior staff engineer and technical interview coach. The candidate is preparing for a technical interview at ${(row.app as any).company_name ?? "a tech company"} for the role of ${(row.app as any).job_title ?? "software engineer"}.
 
-Job role: ${(row.app as any).job_title ?? "Not specified"}
-Company: ${(row.app as any).company_name ?? "Not specified"}
-Job description excerpt: ${plainJobDesc}
+Job description context:
+${plainJobDesc}
 
-The candidate needs a deep-dive preparation guide for this specific interview topic:
-"${args.requirement}"
+Topic to master: "${args.requirement}"
 
-Related interview questions they may face:
+Related interview questions:
 ${reqEntry.questions?.map((q: string) => `- ${q}`).join("\n")}
 
-Study topics identified:
+Study areas identified:
 ${reqEntry.studyTopics?.map((t: string) => `- ${t}`).join("\n")}
 
-Write a thorough, practical deep-dive guide in markdown. Include:
-1. **Why this matters** — why the interviewer cares about this topic for this role
-2. **Key concepts to master** — what you need to deeply understand
-3. **How to answer** — a framework for structuring your answers (use STAR or similar where appropriate)
-4. **Example talking points** — 2-3 concrete examples or angles to bring up
-5. **Common mistakes to avoid** — what weak candidates get wrong
-6. **Quick study resources** — specific things to review (books, docs, concepts, not URLs)
+Write a deep, technically rigorous preparation guide in markdown. This is for a senior engineer — avoid surface-level definitions. Every section must contain concrete, specific technical content.
 
-Be specific to the role and company context. Be direct and actionable.`,
+Structure your response exactly as follows:
+
+## Why This Matters for This Role
+Explain specifically why this topic is critical for this company and role. Reference the job description context. Be concrete about the technical decisions the candidate will face on the job.
+
+## Core Technical Concepts
+For each concept, go beyond the definition. Explain the mechanism, the trade-offs, and when each applies. Use concrete named systems as examples (e.g. PostgreSQL, Cassandra, Redis, Kafka, DynamoDB). Where relevant, include a trade-off comparison table.
+
+## How to Answer in the Interview
+Provide a structured framework for answering questions on this topic. Don't use generic STAR framing for technical topics — instead give a technical reasoning pattern: state your assumptions, name the constraints, explain the trade-offs, give a concrete recommendation with justification.
+
+## Battle-Tested Examples
+2-3 real-world scenarios where this topic caused a production incident or shaped a major architectural decision. Describe what went wrong (or right), why, and what the candidate can learn from it.
+
+## What Separates Senior Answers
+Exactly what a senior engineer says that a mid-level engineer misses. Be specific — quote the kind of phrasing, the specific trade-offs named, or the edge cases mentioned.
+
+## Common Mistakes to Avoid
+What weak or under-prepared candidates get wrong. Be blunt and specific.
+
+## Targeted Study Plan
+3-5 specific things to review before the interview (concepts, papers, system internals — not generic URLs). Prioritized by impact.`,
           },
         ],
-        max_tokens: 3000,
+        max_tokens: 4000,
       });
 
       const deepDive = response.choices[0]?.message?.content;

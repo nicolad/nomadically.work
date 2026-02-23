@@ -760,6 +760,7 @@ export type MutationGenerateResearchArgs = {
 
 export type MutationGenerateTopicDeepDiveArgs = {
   applicationId: Scalars['Int']['input'];
+  force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
 };
 

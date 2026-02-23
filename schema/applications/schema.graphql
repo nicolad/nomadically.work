@@ -9,7 +9,7 @@ extend type Mutation {
   linkTrackToApplication(applicationId: Int!, trackSlug: String!): Application!
   unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
   generateInterviewPrep(applicationId: Int!): Application!
-  generateTopicDeepDive(applicationId: Int!, requirement: String!): Application!
+  generateTopicDeepDive(applicationId: Int!, requirement: String!, force: Boolean): Application!
 }
 
 type AIInterviewPrepRequirement {

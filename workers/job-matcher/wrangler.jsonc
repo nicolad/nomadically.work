@@ -1,0 +1,17 @@
+{
+  "name": "nomadically-work-job-matcher",
+  "main": "src/entry.py",
+  "compatibility_date": "2025-11-02",
+  "compatibility_flags": ["python_workers"],
+  "ai": { "binding": "AI", "remote": true },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "nomadically-work-db",
+    "database_id": "632b9c57-8262-40bd-86c2-bc08beab713b",
+    "remote": true
+  }],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 1.0 }
+  }
+}

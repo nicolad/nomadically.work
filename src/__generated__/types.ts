@@ -620,6 +620,23 @@ export type LangSmithPromptCommit = {
   promptName: Scalars['String']['output'];
 };
 
+export type MatchedJob = {
+  __typename: 'MatchedJob';
+  job: Job;
+  matchScore: Scalars['Float']['output'];
+  matchedSkills: Array<Scalars['String']['output']>;
+  missingSkills: Array<Scalars['String']['output']>;
+  totalMatched: Scalars['Int']['output'];
+  totalRequired: Scalars['Int']['output'];
+};
+
+export type MatchedJobsResult = {
+  __typename: 'MatchedJobsResult';
+  hasMore: Scalars['Boolean']['output'];
+  jobs: Array<MatchedJob>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type Mutation = {
   __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
@@ -655,6 +672,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  extractSkillProfile: SkillProfile;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -683,6 +701,7 @@ export type Mutation = {
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   uploadResume: Maybe<ResumeUploadResult>;
+  uploadSkillProfile: SkillProfile;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
 
@@ -751,6 +770,11 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
+};
+
+
+export type MutationExtractSkillProfileArgs = {
+  profileId: Scalars['ID']['input'];
 };
 
 
@@ -870,6 +894,13 @@ export type MutationUploadResumeArgs = {
   email: Scalars['String']['input'];
   filename: Scalars['String']['input'];
   resumePdf: Scalars['String']['input'];
+};
+
+
+export type MutationUploadSkillProfileArgs = {
+  fileType: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  resumeBase64: Scalars['String']['input'];
 };
 
 
@@ -994,7 +1025,9 @@ export type Query = {
   langsmithPrompt: Maybe<LangSmithPrompt>;
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
+  matchedJobs: MatchedJobsResult;
   myPromptUsage: Array<PromptUsage>;
+  mySkillProfile: Maybe<SkillProfile>;
   prepResources: PrepContent;
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
@@ -1094,6 +1127,12 @@ export type QueryLangsmithPromptsArgs = {
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   query?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryMatchedJobsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1223,6 +1262,17 @@ export type SkillMatchDetail = {
   level: Scalars['String']['output'];
   matched: Scalars['Boolean']['output'];
   tag: Scalars['String']['output'];
+};
+
+export type SkillProfile = {
+  __typename: 'SkillProfile';
+  createdAt: Scalars['DateTime']['output'];
+  extractedSkills: Array<Scalars['String']['output']>;
+  filename: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  taxonomyVersion: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  userId: Scalars['String']['output'];
 };
 
 export type SourceType =

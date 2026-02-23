@@ -623,6 +623,23 @@ export type LangSmithPromptCommit = {
   promptName: Scalars['String']['output'];
 };
 
+export type MatchedJob = {
+  __typename?: 'MatchedJob';
+  job: Job;
+  matchScore: Scalars['Float']['output'];
+  matchedSkills: Array<Scalars['String']['output']>;
+  missingSkills: Array<Scalars['String']['output']>;
+  totalMatched: Scalars['Int']['output'];
+  totalRequired: Scalars['Int']['output'];
+};
+
+export type MatchedJobsResult = {
+  __typename?: 'MatchedJobsResult';
+  hasMore: Scalars['Boolean']['output'];
+  jobs: Array<MatchedJob>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
@@ -658,6 +675,7 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
+  extractSkillProfile: SkillProfile;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -686,6 +704,7 @@ export type Mutation = {
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   uploadResume: Maybe<ResumeUploadResult>;
+  uploadSkillProfile: SkillProfile;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
 
@@ -754,6 +773,11 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
+};
+
+
+export type MutationExtractSkillProfileArgs = {
+  profileId: Scalars['ID']['input'];
 };
 
 
@@ -873,6 +897,13 @@ export type MutationUploadResumeArgs = {
   email: Scalars['String']['input'];
   filename: Scalars['String']['input'];
   resumePdf: Scalars['String']['input'];
+};
+
+
+export type MutationUploadSkillProfileArgs = {
+  fileType: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  resumeBase64: Scalars['String']['input'];
 };
 
 
@@ -997,7 +1028,9 @@ export type Query = {
   langsmithPrompt: Maybe<LangSmithPrompt>;
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
+  matchedJobs: MatchedJobsResult;
   myPromptUsage: Array<PromptUsage>;
+  mySkillProfile: Maybe<SkillProfile>;
   prepResources: PrepContent;
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
@@ -1097,6 +1130,12 @@ export type QueryLangsmithPromptsArgs = {
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   query?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryMatchedJobsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1226,6 +1265,17 @@ export type SkillMatchDetail = {
   level: Scalars['String']['output'];
   matched: Scalars['Boolean']['output'];
   tag: Scalars['String']['output'];
+};
+
+export type SkillProfile = {
+  __typename?: 'SkillProfile';
+  createdAt: Scalars['DateTime']['output'];
+  extractedSkills: Array<Scalars['String']['output']>;
+  filename: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  taxonomyVersion: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  userId: Scalars['String']['output'];
 };
 
 export type SourceType =
@@ -1776,6 +1826,35 @@ export type AskAboutResumeQueryVariables = Exact<{
 
 
 export type AskAboutResumeQuery = { __typename?: 'Query', askAboutResume: { __typename?: 'ResumeAnswer', answer: string, context_count: number } | null };
+
+export type UploadSkillProfileMutationVariables = Exact<{
+  resumeBase64: Scalars['String']['input'];
+  filename: Scalars['String']['input'];
+  fileType: Scalars['String']['input'];
+}>;
+
+
+export type UploadSkillProfileMutation = { __typename?: 'Mutation', uploadSkillProfile: { __typename?: 'SkillProfile', id: string, userId: string, filename: string | null, extractedSkills: Array<string>, taxonomyVersion: string, createdAt: string, updatedAt: string } };
+
+export type ExtractSkillProfileMutationVariables = Exact<{
+  profileId: Scalars['ID']['input'];
+}>;
+
+
+export type ExtractSkillProfileMutation = { __typename?: 'Mutation', extractSkillProfile: { __typename?: 'SkillProfile', id: string, userId: string, filename: string | null, extractedSkills: Array<string>, taxonomyVersion: string, createdAt: string, updatedAt: string } };
+
+export type MySkillProfileQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MySkillProfileQuery = { __typename?: 'Query', mySkillProfile: { __typename?: 'SkillProfile', id: string, userId: string, filename: string | null, extractedSkills: Array<string>, taxonomyVersion: string, createdAt: string, updatedAt: string } | null };
+
+export type MatchedJobsQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type MatchedJobsQuery = { __typename?: 'Query', matchedJobs: { __typename?: 'MatchedJobsResult', totalCount: number, hasMore: boolean, jobs: Array<{ __typename?: 'MatchedJob', matchedSkills: Array<string>, missingSkills: Array<string>, matchScore: number, totalRequired: number, totalMatched: number, job: { __typename?: 'Job', id: number, title: string, url: string, location: string | null, publishedAt: string, company: { __typename?: 'Company', id: number, name: string, logo_url: string | null } | null } }> } };
 
 export type GenerateResearchMutationVariables = Exact<{
   goalDescription: Scalars['String']['input'];
@@ -4688,6 +4767,202 @@ export type AskAboutResumeQueryHookResult = ReturnType<typeof useAskAboutResumeQ
 export type AskAboutResumeLazyQueryHookResult = ReturnType<typeof useAskAboutResumeLazyQuery>;
 export type AskAboutResumeSuspenseQueryHookResult = ReturnType<typeof useAskAboutResumeSuspenseQuery>;
 export type AskAboutResumeQueryResult = Apollo.QueryResult<AskAboutResumeQuery, AskAboutResumeQueryVariables>;
+export const UploadSkillProfileDocument = gql`
+    mutation UploadSkillProfile($resumeBase64: String!, $filename: String!, $fileType: String!) {
+  uploadSkillProfile(
+    resumeBase64: $resumeBase64
+    filename: $filename
+    fileType: $fileType
+  ) {
+    id
+    userId
+    filename
+    extractedSkills
+    taxonomyVersion
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export type UploadSkillProfileMutationFn = Apollo.MutationFunction<UploadSkillProfileMutation, UploadSkillProfileMutationVariables>;
+
+/**
+ * __useUploadSkillProfileMutation__
+ *
+ * To run a mutation, you first call `useUploadSkillProfileMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUploadSkillProfileMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [uploadSkillProfileMutation, { data, loading, error }] = useUploadSkillProfileMutation({
+ *   variables: {
+ *      resumeBase64: // value for 'resumeBase64'
+ *      filename: // value for 'filename'
+ *      fileType: // value for 'fileType'
+ *   },
+ * });
+ */
+export function useUploadSkillProfileMutation(baseOptions?: Apollo.MutationHookOptions<UploadSkillProfileMutation, UploadSkillProfileMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UploadSkillProfileMutation, UploadSkillProfileMutationVariables>(UploadSkillProfileDocument, options);
+      }
+export type UploadSkillProfileMutationHookResult = ReturnType<typeof useUploadSkillProfileMutation>;
+export type UploadSkillProfileMutationResult = Apollo.MutationResult<UploadSkillProfileMutation>;
+export type UploadSkillProfileMutationOptions = Apollo.BaseMutationOptions<UploadSkillProfileMutation, UploadSkillProfileMutationVariables>;
+export const ExtractSkillProfileDocument = gql`
+    mutation ExtractSkillProfile($profileId: ID!) {
+  extractSkillProfile(profileId: $profileId) {
+    id
+    userId
+    filename
+    extractedSkills
+    taxonomyVersion
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export type ExtractSkillProfileMutationFn = Apollo.MutationFunction<ExtractSkillProfileMutation, ExtractSkillProfileMutationVariables>;
+
+/**
+ * __useExtractSkillProfileMutation__
+ *
+ * To run a mutation, you first call `useExtractSkillProfileMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useExtractSkillProfileMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [extractSkillProfileMutation, { data, loading, error }] = useExtractSkillProfileMutation({
+ *   variables: {
+ *      profileId: // value for 'profileId'
+ *   },
+ * });
+ */
+export function useExtractSkillProfileMutation(baseOptions?: Apollo.MutationHookOptions<ExtractSkillProfileMutation, ExtractSkillProfileMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ExtractSkillProfileMutation, ExtractSkillProfileMutationVariables>(ExtractSkillProfileDocument, options);
+      }
+export type ExtractSkillProfileMutationHookResult = ReturnType<typeof useExtractSkillProfileMutation>;
+export type ExtractSkillProfileMutationResult = Apollo.MutationResult<ExtractSkillProfileMutation>;
+export type ExtractSkillProfileMutationOptions = Apollo.BaseMutationOptions<ExtractSkillProfileMutation, ExtractSkillProfileMutationVariables>;
+export const MySkillProfileDocument = gql`
+    query MySkillProfile {
+  mySkillProfile {
+    id
+    userId
+    filename
+    extractedSkills
+    taxonomyVersion
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useMySkillProfileQuery__
+ *
+ * To run a query within a React component, call `useMySkillProfileQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMySkillProfileQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMySkillProfileQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMySkillProfileQuery(baseOptions?: Apollo.QueryHookOptions<MySkillProfileQuery, MySkillProfileQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MySkillProfileQuery, MySkillProfileQueryVariables>(MySkillProfileDocument, options);
+      }
+export function useMySkillProfileLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MySkillProfileQuery, MySkillProfileQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MySkillProfileQuery, MySkillProfileQueryVariables>(MySkillProfileDocument, options);
+        }
+// @ts-ignore
+export function useMySkillProfileSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MySkillProfileQuery, MySkillProfileQueryVariables>): Apollo.UseSuspenseQueryResult<MySkillProfileQuery, MySkillProfileQueryVariables>;
+export function useMySkillProfileSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MySkillProfileQuery, MySkillProfileQueryVariables>): Apollo.UseSuspenseQueryResult<MySkillProfileQuery | undefined, MySkillProfileQueryVariables>;
+export function useMySkillProfileSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MySkillProfileQuery, MySkillProfileQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MySkillProfileQuery, MySkillProfileQueryVariables>(MySkillProfileDocument, options);
+        }
+export type MySkillProfileQueryHookResult = ReturnType<typeof useMySkillProfileQuery>;
+export type MySkillProfileLazyQueryHookResult = ReturnType<typeof useMySkillProfileLazyQuery>;
+export type MySkillProfileSuspenseQueryHookResult = ReturnType<typeof useMySkillProfileSuspenseQuery>;
+export type MySkillProfileQueryResult = Apollo.QueryResult<MySkillProfileQuery, MySkillProfileQueryVariables>;
+export const MatchedJobsDocument = gql`
+    query MatchedJobs($limit: Int, $offset: Int) {
+  matchedJobs(limit: $limit, offset: $offset) {
+    jobs {
+      job {
+        id
+        title
+        url
+        location
+        publishedAt
+        company {
+          id
+          name
+          logo_url
+        }
+      }
+      matchedSkills
+      missingSkills
+      matchScore
+      totalRequired
+      totalMatched
+    }
+    totalCount
+    hasMore
+  }
+}
+    `;
+
+/**
+ * __useMatchedJobsQuery__
+ *
+ * To run a query within a React component, call `useMatchedJobsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMatchedJobsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMatchedJobsQuery({
+ *   variables: {
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
+ *   },
+ * });
+ */
+export function useMatchedJobsQuery(baseOptions?: Apollo.QueryHookOptions<MatchedJobsQuery, MatchedJobsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MatchedJobsQuery, MatchedJobsQueryVariables>(MatchedJobsDocument, options);
+      }
+export function useMatchedJobsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MatchedJobsQuery, MatchedJobsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MatchedJobsQuery, MatchedJobsQueryVariables>(MatchedJobsDocument, options);
+        }
+// @ts-ignore
+export function useMatchedJobsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MatchedJobsQuery, MatchedJobsQueryVariables>): Apollo.UseSuspenseQueryResult<MatchedJobsQuery, MatchedJobsQueryVariables>;
+export function useMatchedJobsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MatchedJobsQuery, MatchedJobsQueryVariables>): Apollo.UseSuspenseQueryResult<MatchedJobsQuery | undefined, MatchedJobsQueryVariables>;
+export function useMatchedJobsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MatchedJobsQuery, MatchedJobsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MatchedJobsQuery, MatchedJobsQueryVariables>(MatchedJobsDocument, options);
+        }
+export type MatchedJobsQueryHookResult = ReturnType<typeof useMatchedJobsQuery>;
+export type MatchedJobsLazyQueryHookResult = ReturnType<typeof useMatchedJobsLazyQuery>;
+export type MatchedJobsSuspenseQueryHookResult = ReturnType<typeof useMatchedJobsSuspenseQuery>;
+export type MatchedJobsQueryResult = Apollo.QueryResult<MatchedJobsQuery, MatchedJobsQueryVariables>;
 export const GenerateResearchDocument = gql`
     mutation GenerateResearch($goalDescription: String!) {
   generateResearch(goalDescription: $goalDescription) {

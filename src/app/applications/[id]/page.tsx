@@ -34,6 +34,7 @@ import {
   useUnlinkTrackFromApplicationMutation,
   useGenerateInterviewPrepMutation,
   useGenerateTopicDeepDiveMutation,
+  useGenerateStudyTopicDeepDiveMutation,
 } from "@/__generated__/hooks";
 import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import Link from "next/link";
@@ -85,6 +86,7 @@ export default function ApplicationDetailPage() {
   const [unlinkTrack] = useUnlinkTrackFromApplicationMutation();
   const [generateInterviewPrep] = useGenerateInterviewPrepMutation();
   const [generateTopicDeepDive] = useGenerateTopicDeepDiveMutation();
+  const [generateStudyTopicDeepDive] = useGenerateStudyTopicDeepDiveMutation();
   const { data: tracksData } = useGetTracksQuery();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -95,6 +97,9 @@ export default function ApplicationDetailPage() {
   const [selectedReq, setSelectedReq] = useState<AiInterviewPrepRequirement | null>(null);
   const [deepDiveLoading, setDeepDiveLoading] = useState(false);
   const [deepDiveError, setDeepDiveError] = useState<string | null>(null);
+  const [selectedStudyTopic, setSelectedStudyTopic] = useState<{ req: AiInterviewPrepRequirement; topic: string } | null>(null);
+  const [studyTopicLoading, setStudyTopicLoading] = useState(false);
+  const [studyTopicError, setStudyTopicError] = useState<string | null>(null);
 
   const app = data?.application;
 
@@ -127,6 +132,29 @@ export default function ApplicationDetailPage() {
         setDeepDiveError(e instanceof Error ? e.message : "Generation failed");
       } finally {
         setDeepDiveLoading(false);
+      }
+    }
+  };
+
+  const handleOpenStudyTopic = async (e: React.MouseEvent, req: AiInterviewPrepRequirement, topic: string) => {
+    e.stopPropagation();
+    const existing = req.studyTopicDeepDives?.find((d) => d.topic === topic);
+    setSelectedStudyTopic({ req, topic });
+    setStudyTopicError(null);
+    if (!existing?.deepDive) {
+      setStudyTopicLoading(true);
+      try {
+        const result = await generateStudyTopicDeepDive({
+          variables: { applicationId: app!.id, requirement: req.requirement, studyTopic: topic },
+          refetchQueries: ["GetApplication"],
+        });
+        const updatedReqs = result.data?.generateStudyTopicDeepDive?.aiInterviewPrep?.requirements;
+        const updatedReq = updatedReqs?.find((r) => r.requirement === req.requirement);
+        if (updatedReq) setSelectedStudyTopic({ req: updatedReq as AiInterviewPrepRequirement, topic });
+      } catch (e) {
+        setStudyTopicError(e instanceof Error ? e.message : "Generation failed");
+      } finally {
+        setStudyTopicLoading(false);
       }
     }
   };
@@ -231,26 +259,28 @@ export default function ApplicationDetailPage() {
               {statusCol?.label ?? app.status}
             </Badge>
           </Flex>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger>
-              <Button variant="soft" size="2">
-                Change Status <ChevronDownIcon />
-              </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content size="1">
-              {COLUMNS.map((col) => (
-                <DropdownMenu.Item
-                  key={col.status}
-                  disabled={col.status === app.status}
-                  onClick={() => handleStatusChange(col.status)}
-                >
-                  <Badge color={col.color} variant="soft" size="1">
-                    {col.label}
-                  </Badge>
-                </DropdownMenu.Item>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu.Root>
+          {isAdmin && (
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                <Button variant="soft" size="2">
+                  Change Status <ChevronDownIcon />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content size="1">
+                {COLUMNS.map((col) => (
+                  <DropdownMenu.Item
+                    key={col.status}
+                    disabled={col.status === app.status}
+                    onClick={() => handleStatusChange(col.status)}
+                  >
+                    <Badge color={col.color} variant="soft" size="1">
+                      {col.label}
+                    </Badge>
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          )}
         </Flex>
       </Card>
 
@@ -437,22 +467,24 @@ export default function ApplicationDetailPage() {
                       {track.level}
                     </Badge>
                   )}
-                  <IconButton
-                    size="1"
-                    variant="ghost"
-                    color="gray"
-                    onClick={() => {
-                      unlinkTrack({
-                        variables: {
-                          applicationId: app.id,
-                          trackSlug: track.slug,
-                        },
-                        refetchQueries: ["GetApplication"],
-                      });
-                    }}
-                  >
-                    <Cross1Icon />
-                  </IconButton>
+                  {isAdmin && (
+                    <IconButton
+                      size="1"
+                      variant="ghost"
+                      color="gray"
+                      onClick={() => {
+                        unlinkTrack({
+                          variables: {
+                            applicationId: app.id,
+                            trackSlug: track.slug,
+                          },
+                          refetchQueries: ["GetApplication"],
+                        });
+                      }}
+                    >
+                      <Cross1Icon />
+                    </IconButton>
+                  )}
                 </Flex>
               </Flex>
             ))}
@@ -517,19 +549,29 @@ export default function ApplicationDetailPage() {
                     </Flex>
                   </Flex>
                   <Flex gap="1" wrap="wrap" mt="2">
-                    {req.studyTopics.map((t: string) => (
-                      <Text
-                        key={t}
-                        size="1"
-                        style={{
-                          padding: "2px 8px",
-                          backgroundColor: "var(--violet-3)",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        {t}
-                      </Text>
-                    ))}
+                    {req.studyTopics.map((t: string) => {
+                      const hasDeepDive = req.studyTopicDeepDives?.some((d) => d.topic === t && d.deepDive);
+                      return (
+                        <Text
+                          key={t}
+                          size="1"
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => handleOpenStudyTopic(e, req, t)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") handleOpenStudyTopic(e as any, req, t);
+                          }}
+                          style={{
+                            padding: "2px 8px",
+                            backgroundColor: hasDeepDive ? "var(--violet-5)" : "var(--violet-3)",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {t}
+                        </Text>
+                      );
+                    })}
                   </Flex>
                 </Box>
               ))}
@@ -542,7 +584,7 @@ export default function ApplicationDetailPage() {
       <Card>
         <Flex justify="between" align="center" mb="3">
           <Heading size="4">Notes</Heading>
-          {!editingNotes && (
+          {isAdmin && !editingNotes && (
             <Button
               variant="soft"
               size="1"
@@ -685,6 +727,70 @@ export default function ApplicationDetailPage() {
                 ) : null}
               </Box>
 
+              <Flex justify="end" mt="4">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray" size="2">
+                    Close
+                  </Button>
+                </Dialog.Close>
+              </Flex>
+            </>
+          )}
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={!!selectedStudyTopic}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelectedStudyTopic(null);
+            setStudyTopicError(null);
+          }
+        }}
+      >
+        <Dialog.Content maxWidth="680px" style={{ maxHeight: "85vh", overflowY: "auto" }}>
+          {selectedStudyTopic && (
+            <>
+              <Dialog.Title>{selectedStudyTopic.topic}</Dialog.Title>
+              <Text size="1" color="gray" mb="4" as="div">
+                Part of: {selectedStudyTopic.req.requirement}
+              </Text>
+              <Box pt="2">
+                {studyTopicLoading ? (
+                  <Flex direction="column" gap="3" py="4" align="center">
+                    <Text size="2" color="gray">
+                      Generating focused deep-dive with DeepSeek Reasoner…
+                    </Text>
+                    <Flex gap="2">
+                      {[0, 1, 2].map((i) => (
+                        <Box
+                          key={i}
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            backgroundColor: "var(--accent-9)",
+                            animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                          }}
+                        />
+                      ))}
+                    </Flex>
+                  </Flex>
+                ) : studyTopicError ? (
+                  <Text size="2" color="red">
+                    {studyTopicError}
+                  </Text>
+                ) : (() => {
+                  const d = selectedStudyTopic.req.studyTopicDeepDives?.find(
+                    (d) => d.topic === selectedStudyTopic.topic,
+                  );
+                  return d?.deepDive ? (
+                    <Box className="deep-dive-content">
+                      <ReactMarkdown>{d.deepDive}</ReactMarkdown>
+                    </Box>
+                  ) : null;
+                })()}
+              </Box>
               <Flex justify="end" mt="4">
                 <Dialog.Close>
                   <Button variant="soft" color="gray" size="2">

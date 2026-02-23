@@ -32,7 +32,14 @@ export type AiInterviewPrepRequirement = {
   questions: Array<Scalars['String']['output']>;
   requirement: Scalars['String']['output'];
   sourceQuote: Maybe<Scalars['String']['output']>;
+  studyTopicDeepDives: Array<AiStudyTopicDeepDive>;
   studyTopics: Array<Scalars['String']['output']>;
+};
+
+export type AiStudyTopicDeepDive = {
+  __typename: 'AIStudyTopicDeepDive';
+  deepDive: Scalars['String']['output'];
+  topic: Scalars['String']['output'];
 };
 
 export type AtsBoard = {
@@ -650,6 +657,7 @@ export type Mutation = {
   enhanceJobFromATS: EnhanceJobResponse;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
+  generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
@@ -753,6 +761,14 @@ export type MutationGenerateInterviewPrepArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyTopicDeepDiveArgs = {
+  applicationId: Scalars['Int']['input'];
+  force?: InputMaybe<Scalars['Boolean']['input']>;
+  requirement: Scalars['String']['input'];
+  studyTopic: Scalars['String']['input'];
 };
 
 

@@ -1,5 +1,8 @@
 ---
-stepsCompleted: [1, 2, 3, 4]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
+lastStep: 8
+status: 'complete'
+completedAt: '2026-02-23'
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/product-brief-nomadically.work-2026-02-23.md
@@ -291,3 +294,355 @@ extend type Mutation {
 - GraphQL codegen must run after schema changes, before app build
 - Worker URL must be configured as env var in the app (for resolver to call)
 - Codebase context bundle must be generated before worker deploy
+
+## Implementation Patterns & Consistency Rules
+
+### Critical Conflict Points Identified
+
+7 areas where AI agents could make different choices when implementing Deep Planner across the Python worker and TypeScript app boundary.
+
+### Naming Patterns
+
+**Database Naming (Existing Convention — Enforce):**
+- Tables: `snake_case`, plural (`deep_planner_tasks`, not `DeepPlannerTask`)
+- Columns: `snake_case` (`checkpoint_count`, `created_at`)
+- Follows existing pattern: `jobs`, `companies`, `job_skill_tags`
+
+**GraphQL Naming (Existing Convention — Enforce):**
+- Types: `PascalCase` (`DeepPlannerTask`)
+- Fields: `camelCase` (`checkpointCount`, `createdAt`)
+- Enums: `SCREAMING_SNAKE` (`PENDING`, `RUNNING`)
+- Mutations: `camelCase` verb-first (`createDeepPlannerTask`)
+- Queries: `camelCase` noun-first (`deepPlannerTasks`)
+
+**Python Worker Naming:**
+- Files: `snake_case` (`entry.py`, `prompts.py`, `bmad_workflow.py`)
+- Classes: `PascalCase` (`DeepPlannerDO`, `BmadWorkflow`)
+- Functions: `snake_case` (`execute_pass`, `load_checkpoint`)
+- Constants: `SCREAMING_SNAKE` (`BMAD_STEPS`, `MAX_PASSES_PER_STEP`)
+
+**TypeScript App Naming (Existing Convention — Enforce):**
+- Files: `kebab-case` (`deep-planner.ts`, `deep-planner-resolver.ts`)
+- Components: `PascalCase` files and exports (`DeepPlannerPage.tsx`)
+- Variables: `camelCase`
+- Path alias: `@/*` maps to `./src/*`
+
+### Structure Patterns
+
+**New Files — Where Things Go:**
+
+| Component | Path | Owner |
+|-----------|------|-------|
+| Drizzle schema addition | `src/db/schema.ts` (extend existing) | App |
+| GraphQL schema | `schema/deep-planner/schema.graphql` | App |
+| Resolvers | `src/apollo/resolvers/deep-planner.ts` | App |
+| Admin UI page | `src/app/admin/deep-planner/page.tsx` | App |
+| Worker entry | `workers/deep-planner/src/entry.py` | Worker |
+| BMAD prompts | `workers/deep-planner/src/prompts.py` | Worker |
+| Workflow logic | `workers/deep-planner/src/bmad_workflow.py` | Worker |
+| DO class | `workers/deep-planner/src/durable_object.py` | Worker |
+| Wrangler config | `workers/deep-planner/wrangler.jsonc` | Worker |
+| Context bundle | `workers/deep-planner/context/` | Worker (generated) |
+| Migration | `migrations/NNNN_add_deep_planner_tasks.sql` | App |
+
+**Anti-Pattern: Do NOT put worker code in `src/` or app code in `workers/`.**
+
+### Format Patterns
+
+**D1 ↔ GraphQL Data Mapping:**
+
+| D1 Column (snake_case) | GraphQL Field (camelCase) | Transform |
+|------------------------|--------------------------|-----------|
+| `workflow_type` | `workflowType` | Direct map in resolver |
+| `problem_description` | `problemDescription` | Direct map in resolver |
+| `checkpoint_count` | `checkpointCount` | Direct map |
+| `output_artifact` | `outputArtifact` | Direct map |
+| `error_message` | `errorMessage` | Direct map |
+| `created_at` | `createdAt` | ISO string (no transform needed) |
+| `status` | `status` | Map to enum (`pending` → `PENDING`) |
+
+**Timestamps:** ISO 8601 strings everywhere. D1 stores text. GraphQL returns `DateTime` scalar (string). No integer timestamps.
+
+**Status Enum Mapping:**
+- D1: lowercase text (`pending`, `running`, `complete`, `failed`)
+- GraphQL: uppercase enum (`PENDING`, `RUNNING`, `COMPLETE`, `FAILED`)
+- Python: string constants matching D1 values
+- Resolver maps between them
+
+### Communication Patterns
+
+**Worker Trigger Protocol:**
+
+```
+GraphQL Resolver → HTTP POST to worker URL
+  Headers: { Authorization: "Bearer ${API_KEY}", Content-Type: "application/json" }
+  Body: { "taskId": "ulid-here" }
+  Response: { "status": "accepted" } (202)
+```
+
+- Resolver does NOT wait for worker completion — fire-and-forget after 202
+- Worker validates API key, returns 401 if invalid
+- Worker returns 404 if task ID not found in D1
+- Worker returns 409 if task is already running
+
+**D1 Status Update Protocol (Worker → D1):**
+- Worker writes directly via D1 binding (not gateway)
+- Update `status`, `current_step`, `checkpoint_count`, `updated_at` after each pass
+- Write `output_artifact` only on completion (not partial updates)
+- Write `error_message` only on failure
+
+### Process Patterns
+
+**Error Handling — Worker Side:**
+
+| Error Type | D1 Status | Error Message Pattern |
+|-----------|-----------|----------------------|
+| Workers AI timeout | `failed` | `"Workers AI call timed out on step {step}, pass {pass}"` |
+| Workers AI rate limit | Keep `running` | Retry with backoff (max 3 retries), then `failed` |
+| Pyodide crash | `failed` | `"Runtime error: {exception}"` |
+| DO eviction | Keep `running` | Next alarm resumes from checkpoint (no explicit error) |
+| Invalid LLM output | Keep `running` | Log warning, retry the pass |
+| D1 write failure | `failed` | `"Checkpoint write failed: {error}"` |
+
+**Error Handling — App Side (Resolver):**
+- Worker HTTP call failure → return task with status `pending` (let user retry)
+- D1 query failure → throw GraphQL error with `INTERNAL_SERVER_ERROR` code
+- Admin auth failure → throw GraphQL error with `FORBIDDEN` code
+
+**Stale Status Detection:**
+- If task status is `running` and `updated_at` is > 30 minutes old, UI shows "Stale — may have crashed"
+
+### Enforcement Guidelines
+
+**All AI Agents MUST:**
+- Follow existing naming conventions from CLAUDE.md (snake_case DB, camelCase GraphQL, kebab-case files)
+- Place new files in the paths specified in the Structure Patterns table above
+- Use Drizzle ORM for all DB queries — no raw SQL strings
+- Use `isAdminEmail()` guard on all Deep Planner GraphQL operations
+- Use ISO 8601 strings for all timestamps
+- Map D1 snake_case columns to GraphQL camelCase fields in resolvers
+
+**Anti-Patterns:**
+- Never import worker code from `src/` or vice versa — they are separate deployments
+- Never use the D1 gateway from the worker — use direct D1 binding
+- Never store checkpoint data in the `deep_planner_tasks` table — that's `CloudflareD1Saver`'s job
+- Never write raw SQL in resolvers — use Drizzle
+- Never skip `pnpm codegen` after modifying `schema/deep-planner/schema.graphql`
+
+## Project Structure & Boundaries
+
+### FR Category → Component Mapping
+
+| FR Category | Architectural Component | Location |
+|------------|------------------------|----------|
+| Task Management (FR1-FR5) | GraphQL resolvers + Admin UI | `src/apollo/resolvers/`, `src/app/admin/` |
+| Workflow Execution (FR6-FR10) | Python Worker + DO | `workers/deep-planner/src/` |
+| State Persistence (FR11-FR14) | CloudflareD1Saver + D1 | `workers/deep-planner/src/`, `src/db/schema.ts` |
+| Status Tracking (FR15-FR18) | Resolvers + UI polling | `src/apollo/resolvers/`, `src/app/admin/` |
+| Auth (FR19-FR20) | Existing Clerk + isAdminEmail | `src/apollo/resolvers/` (reuse) |
+| Output Generation (FR21-FR23) | BMAD prompts + DO logic | `workers/deep-planner/src/` |
+
+### New Files & Directories (Deep Planner Addition)
+
+```
+nomadically.work/                          # existing project root
+├── migrations/
+│   └── NNNN_add_deep_planner_tasks.sql    # NEW — Drizzle migration
+├── schema/
+│   └── deep-planner/
+│       └── schema.graphql                 # NEW — GraphQL types, queries, mutations
+├── scripts/
+│   └── bundle-deep-planner-context.ts     # NEW — pre-deploy context bundler
+├── src/
+│   ├── app/
+│   │   └── admin/
+│   │       └── deep-planner/
+│   │           └── page.tsx               # NEW — admin UI (create, list, view)
+│   ├── apollo/
+│   │   └── resolvers/
+│   │       └── deep-planner.ts            # NEW — query + mutation resolvers
+│   ├── db/
+│   │   └── schema.ts                      # MODIFY — add deep_planner_tasks table
+│   ├── graphql/
+│   │   └── deep-planner.graphql           # NEW — client-side query/mutation documents
+│   └── __generated__/                     # AUTO — regenerated by pnpm codegen
+│       ├── hooks.tsx
+│       ├── types.ts
+│       └── resolvers-types.ts
+└── workers/
+    └── deep-planner/                      # NEW — entire directory
+        ├── wrangler.jsonc                 # Worker + DO config
+        ├── requirements.txt               # Python dependencies
+        ├── src/
+        │   ├── entry.py                   # Worker entrypoint (fetch handler → DO)
+        │   ├── durable_object.py          # DeepPlannerDO class (alarm loop)
+        │   ├── bmad_workflow.py            # BMAD step sequencer + multi-pass logic
+        │   └── prompts.py                 # BMAD prompt templates (product brief)
+        └── context/                       # GENERATED — bundled at deploy time
+            ├── claude-md.txt              # CLAUDE.md content
+            ├── graphql-schema.txt         # Merged schema/**/*.graphql
+            └── db-schema.txt              # src/db/schema.ts content
+```
+
+### Architectural Boundaries
+
+**Boundary 1: App ↔ Worker (HTTP)**
+
+```
+Next.js App (Vercel)  ──HTTP POST──→  Deep Planner Worker (Cloudflare)
+     │                                       │
+     │ reads D1 via gateway                  │ writes D1 via binding
+     └──────────── D1 Database ──────────────┘
+```
+
+- App and worker never share code — separate runtimes (Node.js vs Pyodide)
+- Communication is one-way: app triggers worker, worker writes to D1, app reads from D1
+- No callback from worker to app — polling only
+
+**Boundary 2: Worker Entrypoint ↔ Durable Object**
+
+```
+entry.py (fetch handler)
+  │
+  ├── Validates API key
+  ├── Looks up task in D1
+  └── Forwards to DO instance (by task ID)
+        │
+        DeepPlannerDO
+        ├── alarm() → runs one BMAD pass
+        ├── Reads/writes D1 (checkpoints + task status)
+        └── Calls Workers AI (LLM inference)
+```
+
+- `entry.py` handles HTTP routing and auth only — no business logic
+- `DeepPlannerDO` owns all execution logic — BMAD workflow, LLM calls, checkpointing
+- DO is instantiated per task ID — one DO instance per running task
+
+**Boundary 3: BMAD Workflow ↔ LLM Interface**
+
+```
+bmad_workflow.py                    prompts.py
+  │                                    │
+  ├── Step sequencer                   ├── System prompt templates
+  ├── Multi-pass orchestration         ├── Step-specific prompts
+  └── Output assembly                  └── Codebase context injection
+        │
+        └── ChatCloudflareWorkersAI (langchain-cloudflare)
+```
+
+- `bmad_workflow.py` decides what to do (step ordering, pass logic, completion detection)
+- `prompts.py` decides what to say (prompt content, context injection)
+- Neither module calls D1 or Workers AI directly — they return prompts/decisions, the DO handles execution
+
+**Boundary 4: D1 Shared Database**
+
+| Table | Written By | Read By |
+|-------|-----------|---------|
+| `deep_planner_tasks` | Worker (via binding) | App (via gateway), Worker (via binding) |
+| `langgraph_checkpoints` | Worker (CloudflareD1Saver) | Worker (CloudflareD1Saver) |
+| All other tables | App (via gateway) | App (via gateway) |
+
+- Deep Planner tables are isolated from existing tables — no foreign keys to `jobs`, `companies`, etc.
+- No risk of data contention — single writer (one DO per task)
+
+### Data Flow
+
+```
+1. Admin UI → createDeepPlannerTask mutation
+2. Resolver → INSERT into deep_planner_tasks (status: pending)
+3. Resolver → HTTP POST to worker URL with task ID
+4. Worker fetch() → validate API key → instantiate DO
+5. DO alarm() loop:
+   a. Load checkpoint from D1
+   b. Determine current BMAD step + pass
+   c. Build prompt (prompts.py + codebase context)
+   d. Call Workers AI (ChatCloudflareWorkersAI)
+   e. Save checkpoint (CloudflareD1Saver)
+   f. Update task row (status, current_step, checkpoint_count)
+   g. Schedule next alarm (6s) → hibernate
+6. On completion: write output_artifact, set status=complete
+7. Admin UI polls deepPlannerTask(id) → sees status=complete → renders artifact
+```
+
+### Development Workflow
+
+| Action | Command | Notes |
+|--------|---------|-------|
+| Add DB table | Edit `src/db/schema.ts` → `pnpm db:generate` → `pnpm db:migrate` → `pnpm db:push` | |
+| Add GraphQL schema | Edit `schema/deep-planner/schema.graphql` → `pnpm codegen` | |
+| Dev worker locally | `cd workers/deep-planner && wrangler dev` | Needs D1 binding configured |
+| Deploy worker | `wrangler deploy --config workers/deep-planner/wrangler.jsonc` | Run context bundler first |
+| Bundle context | `pnpm tsx scripts/bundle-deep-planner-context.ts` | Pre-deploy step |
+| Deploy app | `pnpm deploy` | Vercel |
+| Stream worker logs | `wrangler tail --config workers/deep-planner/wrangler.jsonc` | |
+
+## Architecture Validation Results
+
+### Coherence Validation
+
+**Decision Compatibility:** All decisions align — Python Worker + DO + D1 binding + Workers AI binding are Cloudflare-native with no conflicts. GraphQL mutations/queries use existing Apollo Server 5 + Drizzle patterns. Admin UI follows existing Next.js App Router + Radix UI + Clerk patterns.
+
+**Pattern Consistency:** No contradictions — snake_case DB → camelCase GraphQL → PascalCase types consistent with existing codebase. Worker code in `workers/`, app code in `src/` — clean separation. API key for worker trigger, Clerk for admin UI — both proven patterns.
+
+**Structure Alignment:** Project structure supports all decisions — DO class separate from entry point, BMAD prompts isolated in `prompts.py`, context bundle generated at deploy time.
+
+### Requirements Coverage Validation
+
+**Functional Requirements:** 23/23 covered. Task Mgmt (FR1-5) → resolvers + UI. Workflow Exec (FR6-10) → DO + bmad_workflow. State Persist (FR11-14) → CloudflareD1Saver. Status Track (FR15-18) → D1 writes + polling. Auth (FR19-20) → Clerk + API key. Output Gen (FR21-23) → prompts + context injection.
+
+**Non-Functional Requirements:** 13/13 covered. Performance (NFR1-5) → DO pacing, D1 writes, 6h max. Reliability (NFR6-10) → D1 source of truth, alarm resume, error taxonomy. Integration (NFR11-13) → Cloudflare-native bindings, deploy-time bundling.
+
+### Implementation Readiness Validation
+
+**Decision Completeness:** All critical decisions documented with table schemas, GraphQL types, wrangler config snippets, and DO lifecycle. No ambiguous items.
+
+**Structure Completeness:** Every new file has a defined path and owner. No orphan components.
+
+**Pattern Completeness:** Naming, format, communication, and error handling patterns specified with examples and anti-patterns.
+
+### Gap Analysis Results
+
+**No Critical Gaps.**
+
+**Important Gaps (non-blocking):**
+1. Python DO support — validate early in PoC. Fallback: TypeScript DO that calls Python worker for LLM
+2. Workers AI model selection per BMAD step — decide during implementation
+3. Total prompt size validation — codebase context + BMAD prompt + artifact must fit model context window
+
+### Architecture Completeness Checklist
+
+- [x] Project context thoroughly analyzed
+- [x] Scale and complexity assessed
+- [x] Technical constraints identified
+- [x] Cross-cutting concerns mapped
+- [x] Critical decisions documented with versions
+- [x] Technology stack fully specified
+- [x] Integration patterns defined
+- [x] Performance considerations addressed
+- [x] Naming conventions established
+- [x] Structure patterns defined
+- [x] Communication patterns specified
+- [x] Process patterns documented
+- [x] Complete directory structure defined
+- [x] Component boundaries established
+- [x] Integration points mapped
+- [x] Requirements to structure mapping complete
+
+### Architecture Readiness Assessment
+
+**Overall Status:** READY FOR IMPLEMENTATION
+
+**Confidence Level:** High — brownfield project with proven patterns, narrow scope, single user
+
+**Key Strengths:**
+- Builds on proven Python Worker pattern (process-jobs)
+- Clean architectural boundaries — app and worker fully independent
+- D1 as single source of truth eliminates state management complexity
+- DO alarm loop is crash-resilient by design
+- All 36 requirements (23 FR + 13 NFR) have explicit architectural coverage
+
+**Areas for Future Enhancement:**
+- Python DO stability validation (early PoC priority)
+- Workers AI model benchmarking per BMAD step
+- Monitoring/alerting (post-MVP)
+- Multi-workflow type support (Phase 2)

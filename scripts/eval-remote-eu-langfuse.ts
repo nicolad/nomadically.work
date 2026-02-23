@@ -3,28 +3,10 @@
 /**
  * Remote EU Job Classification Evaluation with Langfuse
  *
- * This script evaluates remote EU job classification using Langfuse for:
- * - Classification accuracy tracking
- * - Performance metrics analysis
- * - Batch evaluation with full tracing
+ * Uses Vercel AI SDK for classification and Langfuse for tracing.
  *
  * Usage:
  *   pnpm tsx scripts/eval-remote-eu-langfuse.ts
- *
- * Environment variables required (loaded from .env.local via config/env):
- * - LANGFUSE_SECRET_KEY
- * - LANGFUSE_PUBLIC_KEY
- * - LANGFUSE_BASE_URL
- * - DEEPSEEK_API_KEY
- *
- * Optional:
- * - SKIP_LANGFUSE_PROMPTS=true - Skip remote prompt fetching, use local fallback
- *
- * Note: If you see "Prompt not found" warnings, the script will use a local fallback.
- * To create the prompt in Langfuse:
- * 1. Go to Langfuse UI → Prompts
- * 2. Create a new prompt named "job-classifier" with label "production"
- * 3. Or set SKIP_LANGFUSE_PROMPTS=true to always use the local fallback
  */
 
 import { Langfuse } from "langfuse";
@@ -33,7 +15,7 @@ import { remoteEUTestCases } from "../src/evals/remote-eu/test-data";
 import { scoreRemoteEUClassification } from "../src/evals/remote-eu/scorers";
 import type { RemoteEUClassification } from "../src/evals/remote-eu/schema";
 import { deepseek } from "@ai-sdk/deepseek";
-import { Agent } from "@mastra/core/agent";
+import { generateObject } from "ai";
 import { z } from "zod";
 import {
   LANGFUSE_SECRET_KEY,
@@ -73,11 +55,10 @@ async function evaluateTestCase(
   promptText: string,
   sessionId: string,
 ): Promise<EvaluationResult> {
-  console.log(`\n📋 Evaluating: ${testCase.description}`);
+  console.log(`\nEvaluating: ${testCase.description}`);
   console.log(`   Location: ${testCase.jobPosting.location}`);
   console.log(`   Title: ${testCase.jobPosting.title}`);
 
-  // Create Langfuse trace for this evaluation
   const trace = langfuse.trace({
     name: "remote-eu-classification",
     sessionId,
@@ -88,7 +69,6 @@ async function evaluateTestCase(
   });
 
   try {
-    // Create generation span
     const generation = trace.generation({
       name: "classify-job",
       model: "deepseek-chat",
@@ -101,37 +81,19 @@ async function evaluateTestCase(
       },
     });
 
-    // Create agent with the prompt
-    const agent = new Agent({
-      id: "eval-classifier",
-      name: "Evaluation Classifier",
-      instructions: promptText,
+    const result = await generateObject({
       model: deepseek("deepseek-chat"),
-    });
-
-    // Classify the job using the agent
-    const result = await agent.generate(
-      [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Job Title: ${testCase.jobPosting.title}
+      system: promptText,
+      prompt: `Job Title: ${testCase.jobPosting.title}
 Location: ${testCase.jobPosting.location}
 Description: ${testCase.jobPosting.description}
 
 Classify this job posting.`,
-            },
-          ],
-        },
-      ],
-      { structuredOutput: { schema: remoteEUSchema } },
-    );
+      schema: remoteEUSchema,
+    });
 
     const actualClassification: RemoteEUClassification = result.object;
 
-    // Update generation with output
     generation.update({
       output: actualClassification,
       usage: {
@@ -141,14 +103,12 @@ Classify this job posting.`,
       },
     });
 
-    // Score the classification
     const scoreResult = scoreRemoteEUClassification({
       jobPosting: testCase.jobPosting,
       expectedClassification: testCase.expectedClassification,
       actualClassification,
     });
 
-    // Add score to Langfuse
     trace.score({
       name: "remote-eu-accuracy",
       value: scoreResult.score,
@@ -157,7 +117,6 @@ Classify this job posting.`,
         : `Incorrect: Expected ${scoreResult.metadata.expected.isRemoteEU}, got ${scoreResult.metadata.actual.isRemoteEU}`,
     });
 
-    // Also track confidence match as separate score
     trace.score({
       name: "confidence-match",
       value: scoreResult.metadata.confidenceMatch ? 1 : 0,
@@ -167,13 +126,13 @@ Classify this job posting.`,
     generation.end();
 
     console.log(
-      `   Result: ${actualClassification.isRemoteEU ? "✅ EU Remote" : "❌ Non-EU"} (${actualClassification.confidence})`,
+      `   Result: ${actualClassification.isRemoteEU ? "EU Remote" : "Non-EU"} (${actualClassification.confidence})`,
     );
     console.log(
       `   Expected: ${testCase.expectedClassification.isRemoteEU ? "EU Remote" : "Non-EU"} (${testCase.expectedClassification.confidence})`,
     );
     console.log(
-      `   Score: ${scoreResult.score} ${scoreResult.metadata.isCorrect ? "✅" : "❌"}`,
+      `   Score: ${scoreResult.score} ${scoreResult.metadata.isCorrect ? "PASS" : "FAIL"}`,
     );
 
     return {
@@ -188,7 +147,7 @@ Classify this job posting.`,
     };
   } catch (error) {
     console.error(
-      `   ❌ Error evaluating test case ${testCase.id}:`,
+      `   Error evaluating test case ${testCase.id}:`,
       error instanceof Error ? error.message : error,
     );
 
@@ -202,26 +161,19 @@ Classify this job posting.`,
 }
 
 async function runEvaluation() {
-  console.log("🚀 Remote EU Job Classification Evaluation");
+  console.log("Remote EU Job Classification Evaluation");
   console.log("==========================================\n");
 
-  // Fetch prompt from Langfuse
-  console.log("📝 Fetching prompt from Langfuse...");
+  console.log("Fetching prompt from Langfuse...");
   const { text: promptText } = await getPrompt(PROMPTS.JOB_CLASSIFIER);
-  console.log(
-    `✅ Using latest prompt version\n${promptText.substring(0, 100)}...\n`,
-  );
+  console.log(`Using latest prompt version\n${promptText.substring(0, 100)}...\n`);
 
-  // Run all test cases
   const testCases = remoteEUTestCases;
+  console.log(`Running ${testCases.length} test cases...`);
 
-  console.log(`📊 Running ${testCases.length} test cases...`);
-
-  // Create a session for this evaluation run
   const sessionId = `eval-${Date.now()}`;
   const results: EvaluationResult[] = [];
 
-  // Run evaluations sequentially (to avoid rate limits)
   for (const testCase of testCases) {
     try {
       const result = await evaluateTestCase(testCase, promptText, sessionId);
@@ -231,12 +183,10 @@ async function runEvaluation() {
     }
   }
 
-  // Flush Langfuse events
-  console.log("\n📤 Sending traces to Langfuse...");
+  console.log("\nSending traces to Langfuse...");
   await langfuse.flushAsync();
 
-  // Generate summary report
-  console.log("\n\n📈 EVALUATION SUMMARY");
+  console.log("\n\nEVALUATION SUMMARY");
   console.log("=====================\n");
 
   const correctClassifications = results.filter((r) => r.isCorrect).length;
@@ -256,10 +206,9 @@ async function runEvaluation() {
     `Confidence Match: ${confidenceMatches}/${results.length} (${confidenceAccuracy.toFixed(1)}%)`,
   );
 
-  // Show failures
   const failures = results.filter((r) => !r.isCorrect);
   if (failures.length > 0) {
-    console.log("\n❌ FAILED CLASSIFICATIONS:");
+    console.log("\nFAILED CLASSIFICATIONS:");
     failures.forEach((f) => {
       console.log(`\n  ${f.testCaseId}: ${f.description}`);
       console.log(
@@ -273,22 +222,15 @@ async function runEvaluation() {
     });
   }
 
-  // Show Langfuse session link
-  console.log(
-    `\n🔗 View traces in Langfuse: https://cloud.langfuse.com/project/${LANGFUSE_PUBLIC_KEY?.split("-")[2] || "default"}/sessions/${sessionId}`,
-  );
+  console.log("\nEvaluation complete!");
 
-  console.log("\n✅ Evaluation complete!");
-
-  // Exit with error code if accuracy is below threshold
   if (accuracy < 80) {
-    console.log("\n⚠️  Warning: Accuracy below 80% threshold");
+    console.log("\nWarning: Accuracy below 80% threshold");
     process.exit(1);
   }
 }
 
-// Run the evaluation
 runEvaluation().catch((error) => {
-  console.error("❌ Evaluation failed:", error);
+  console.error("Evaluation failed:", error);
   process.exit(1);
 });

@@ -33,8 +33,8 @@ import { TrashIcon, BookmarkIcon, BookmarkFilledIcon, ExternalLinkIcon, Exclamat
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-hooks";
-import { classifyJob } from "@/mastra/actions";
-import type { JobClassificationResponse } from "@/mastra/actions";
+import { classifyJob } from "@/lib/classify-job";
+import type { JobClassificationResponse } from "@/lib/classify-job";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSkillLabel, formatConfidence } from "@/lib/skills/taxonomy";
 

@@ -1,4 +1,6 @@
-import { Agent } from "@mastra/core/agent";
+import { generateObject } from "ai";
+import { deepseek } from "@ai-sdk/deepseek";
+import { z } from "zod";
 import { GOAL_CONTEXT_LINE } from "@/constants/goal";
 
 function createSchemaDescription(databaseSchema: any): string {
@@ -100,12 +102,26 @@ QUERY ANALYSIS:
 Provide a high-confidence SQL query that accurately answers the user's question.`;
 }
 
-export const sqlGenerationAgent = new Agent({
-  id: "sql-generation-agent",
-  name: "SQL Generation Agent",
-  instructions: ({ requestContext }) => {
-    const databaseSchema = requestContext.get("databaseSchema");
-    return generateSystemPrompt(databaseSchema);
-  },
-  model: "openai/gpt-4o",
+const sqlOutputSchema = z.object({
+  sql: z.string().describe("The generated SQL query"),
+  explanation: z.string().describe("Explanation of what the query does"),
 });
+
+export const sqlGenerationAgent = {
+  async generate(
+    question: string,
+    opts?: { requestContext?: Map<string, any> },
+  ) {
+    const databaseSchema = opts?.requestContext?.get("databaseSchema");
+    const systemPrompt = generateSystemPrompt(databaseSchema);
+
+    const result = await generateObject({
+      model: deepseek("deepseek-chat"),
+      system: systemPrompt,
+      prompt: question,
+      schema: sqlOutputSchema,
+    });
+
+    return { object: result.object };
+  },
+};

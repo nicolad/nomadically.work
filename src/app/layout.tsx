@@ -55,6 +55,7 @@ export default function RootLayout({
                 <Link href="/applications">applications</Link>
                 <Link href="/companies">companies</Link>
                 <Link href="/prep">prep</Link>
+                <Link href="/resume">resume</Link>
                 <Link href="/prompts">prompts</Link>
                 <Link href="/chats">query</Link>
                 <span style={{ flex: 1 }} />

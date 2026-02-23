@@ -31,6 +31,7 @@ export type AiInterviewPrep = {
 
 export type AiInterviewPrepRequirement = {
   __typename?: 'AIInterviewPrepRequirement';
+  deepDive: Maybe<Scalars['String']['output']>;
   questions: Array<Scalars['String']['output']>;
   requirement: Scalars['String']['output'];
   sourceQuote: Maybe<Scalars['String']['output']>;
@@ -628,6 +629,7 @@ export type Mutation = {
   enhanceJobFromATS: EnhanceJobResponse;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
+  generateTopicDeepDive: Application;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   linkTrackToApplication: Application;
@@ -722,6 +724,12 @@ export type MutationGenerateInterviewPrepArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateTopicDeepDiveArgs = {
+  applicationId: Scalars['Int']['input'];
+  requirement: Scalars['String']['input'];
 };
 
 
@@ -1538,6 +1546,7 @@ export type AiInterviewPrepResolvers<ContextType = GraphQLContext, ParentType ex
 };
 
 export type AiInterviewPrepRequirementResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewPrepRequirement'] = ResolversParentTypes['AIInterviewPrepRequirement']> = {
+  deepDive?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   questions?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   requirement?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   sourceQuote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1901,6 +1910,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
+  generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   linkTrackToApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationLinkTrackToApplicationArgs, 'applicationId' | 'trackSlug'>>;

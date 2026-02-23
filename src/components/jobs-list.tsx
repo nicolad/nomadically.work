@@ -21,6 +21,7 @@ import {
   Badge,
   Spinner,
   IconButton,
+  Skeleton,
 } from "@radix-ui/themes";
 import { TrashIcon, ExclamationTriangleIcon, EyeOpenIcon, EyeNoneIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
@@ -180,6 +181,8 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
     );
   }
 
+  const isInitialLoad = loading && !data;
+
   return (
     <Box>
       {/* header */}
@@ -187,14 +190,41 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
         <Text size="2" weight="medium" style={{ color: "var(--gray-11)" }}>
           jobs
         </Text>
-        <Text size="1" style={{ color: "var(--gray-9)" }}>
-          {jobs.length}/{totalCount}
+        <Text
+          size="1"
+          style={{ color: "var(--gray-9)" }}
+          aria-live="polite"
+          aria-busy={isInitialLoad}
+        >
+          {isInitialLoad ? (
+            <Skeleton width="48px" height="14px" style={{ display: "inline-block" }} />
+          ) : (
+            `${jobs.length}/${totalCount}`
+          )}
         </Text>
       </Flex>
 
       {/* card container */}
       <div className="job-list-card">
-        {jobs.map((job, idx) => {
+        {isInitialLoad
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="job-row" style={{ pointerEvents: "none" }} aria-hidden="true">
+                <div className="job-row-avatar">
+                  <Skeleton width="100%" height="100%" style={{ borderRadius: 4 }} />
+                </div>
+                <div className="job-row-content">
+                  <div className="job-row-title-line">
+                    <Skeleton width={`${120 + (i % 3) * 40}px`} height="14px" />
+                  </div>
+                  <Skeleton width="80px" height="12px" style={{ marginTop: 4 }} />
+                  <Skeleton width="140px" height="11px" style={{ marginTop: 4 }} />
+                </div>
+                <div className="job-row-actions">
+                  <Skeleton width="60px" height="24px" />
+                </div>
+              </div>
+            ))
+          : jobs.map((job) => {
           const jobId = extractJobSlug(job.external_id, job.id);
 
           return (
@@ -348,7 +378,7 @@ export function JobsList({ searchFilter = "", isRemoteEu }: JobsListProps) {
         })}
 
         {/* empty border-bottom guard */}
-        {jobs.length === 0 && !loading && (
+        {!isInitialLoad && jobs.length === 0 && !loading && (
           <Flex justify="center" py="6">
             <Text size="2" style={{ color: "var(--gray-9)" }}>
               no jobs found

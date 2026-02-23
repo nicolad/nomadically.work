@@ -521,3 +521,10 @@ a:hover svg {
   border-top: 1px solid var(--gray-4);
   margin: 1em 0;
 }
+
+/* NFR11: Disable skeleton pulse animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .rt-Skeleton {
+    animation: none !important;
+  }
+}

@@ -4,8 +4,6 @@ from urllib.parse import urlparse
 from js import JSON, JSON as JsJSON
 from pyodide.ffi import to_js
 from workers import Response, WorkerEntrypoint
-from langchain_core.prompts import ChatPromptTemplate  # available for future chain composition
-
 TARGET_ROLES = [
     "AI Engineer", "Machine Learning Engineer",
     "React Developer", "Frontend Developer", "Full Stack Developer",
@@ -51,7 +49,11 @@ class Default(WorkerEntrypoint):
         """Validate API key. Returns an error Response if invalid, None if ok."""
         expected = getattr(self.env, "API_KEY", None)
         if not expected:
-            return None  # no key configured — skip auth
+            return Response.json(
+                {"success": False, "error": "Server misconfiguration: API_KEY not set"},
+                status=500,
+                headers=self._cors_headers,
+            )
         provided = None
         try:
             provided = (
@@ -101,8 +103,8 @@ class Default(WorkerEntrypoint):
                     text = text[4:]
             scores = json.loads(text)
             return {k: float(v) for k, v in scores.items() if isinstance(v, (int, float))}
-        except Exception:
-            return {t: 0.0 for t in titles}  # safe fallback — all filtered out
+        except Exception as exc:
+            raise RuntimeError(f"LLM role-scoring failed: {exc}") from exc
 
     async def _handle_match_jobs(self, request):
         try:

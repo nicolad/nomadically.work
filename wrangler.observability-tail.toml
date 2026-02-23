@@ -1,0 +1,6 @@
+name = "observability-tail"
+main = "workers/observability-tail.ts"
+compatibility_date = "2026-02-01"
+
+[observability]
+enabled = true

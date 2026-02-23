@@ -8,6 +8,10 @@
  * 4. Stalled job recovery: Re-enqueue jobs stuck in intermediate states
  */
 
+import { log, generateTraceId } from "./lib/logger";
+
+const WORKER = "insert-jobs";
+
 // ---------------------------------------------------------------------------
 // Cloudflare Workers types
 // ---------------------------------------------------------------------------
@@ -66,12 +70,14 @@ interface Env {
 
 type QueueMessage = {
   jobId: number;
+  traceId?: string;
   action?: "process" | "enhance" | "tag" | "classify";
 };
 
 type ProcessJobsMessage = {
   action: "process" | "enhance" | "tag" | "classify";
   limit: number;
+  traceId?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -170,6 +176,7 @@ async function d1Run(
 async function insertJob(
   db: D1Database,
   job: JobInput,
+  traceId?: string,
 ): Promise<{ success: boolean; jobId?: number; isNew?: boolean; error?: string }> {
   try {
     const now = new Date().toISOString();
@@ -273,7 +280,11 @@ async function insertJob(
 
     return { success: true, jobId: id, isNew };
   } catch (error) {
-    console.error("Failed to insert job:", error);
+    log({
+      worker: WORKER, action: "insert-job", level: "error", traceId,
+      error: error instanceof Error ? error.message : String(error),
+      metadata: { companyKey: job.companyKey, externalId: job.externalId },
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -306,14 +317,19 @@ async function fetchWithRetry(
       });
       if (res.status === 429 || (res.status >= 500 && res.status <= 599)) {
         if (attempt === retries) return res;
-        await new Promise((r) => setTimeout(r, Math.min(5000, 300 * 2 ** attempt)));
+        // Exponential backoff with jitter to avoid thundering herd
+        const baseDelay = Math.min(5000, 300 * 2 ** attempt);
+        const jitter = Math.random() * baseDelay * 0.5;
+        await new Promise((r) => setTimeout(r, baseDelay + jitter));
         continue;
       }
       return res;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
       if (attempt === retries) break;
-      await new Promise((r) => setTimeout(r, Math.min(5000, 300 * 2 ** attempt)));
+      const baseDelay = Math.min(5000, 300 * 2 ** attempt);
+      const jitter = Math.random() * baseDelay * 0.5;
+      await new Promise((r) => setTimeout(r, baseDelay + jitter));
     }
   }
   throw lastError ?? new Error("Network error");
@@ -323,7 +339,10 @@ async function fetchGreenhouseJobs(companyKey: string): Promise<ATSJob[]> {
   const url = `https://boards-api.greenhouse.io/v1/boards/${companyKey}/jobs?content=true`;
   const res = await fetchWithRetry(url);
   if (!res.ok) {
-    console.error(`Greenhouse ${companyKey}: HTTP ${res.status}`);
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "greenhouse", companyKey },
+    });
     return [];
   }
   const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
@@ -371,7 +390,10 @@ async function fetchAshbyJobs(companyKey: string): Promise<ATSJob[]> {
   const url = `https://api.ashbyhq.com/posting-api/job-board/${companyKey}`;
   const res = await fetchWithRetry(url);
   if (!res.ok) {
-    console.error(`Ashby ${companyKey}: HTTP ${res.status}`);
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "ashby", companyKey },
+    });
     return [];
   }
   const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
@@ -391,7 +413,10 @@ async function fetchWorkableJobs(companyKey: string): Promise<ATSJob[]> {
   const url = `https://apply.workable.com/api/v3/accounts/${companyKey}/jobs`;
   const res = await fetchWithRetry(url);
   if (!res.ok) {
-    console.error(`Workable ${companyKey}: HTTP ${res.status}`);
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "workable", companyKey },
+    });
     return [];
   }
   const data = (await res.json()) as { results?: Array<Record<string, unknown>> };
@@ -438,9 +463,9 @@ async function autoIngestFromSources(
   db: D1Database,
   queue: Queue<QueueMessage>,
   processQueue: Queue<ProcessJobsMessage> | undefined,
-  options: { maxSources?: number; stalePeriodHours?: number } = {},
+  options: { maxSources?: number; stalePeriodHours?: number; traceId?: string } = {},
 ): Promise<IngestionStats> {
-  const { maxSources = 20, stalePeriodHours = 12 } = options;
+  const { maxSources = 20, stalePeriodHours = 12, traceId } = options;
 
   const stats: IngestionStats = {
     sourcesChecked: 0,
@@ -466,7 +491,10 @@ async function autoIngestFromSources(
     [staleThreshold, maxSources],
   );
 
-  console.log(`Found ${sources.rows.length} stale sources to ingest`);
+  log({
+    worker: WORKER, action: "ingest-start", level: "info", traceId,
+    metadata: { staleSources: sources.rows.length },
+  });
 
   for (const source of sources.rows) {
     const kind = String(source.kind);
@@ -477,7 +505,10 @@ async function autoIngestFromSources(
 
     const fetcher = getATSFetcher(kind);
     if (!fetcher) {
-      console.log(`  Skipping unsupported ATS kind: ${kind}`);
+      log({
+        worker: WORKER, action: "ingest-skip", level: "info", traceId,
+        metadata: { kind, companyKey, reason: "unsupported" },
+      });
       continue;
     }
 
@@ -499,7 +530,10 @@ async function autoIngestFromSources(
       }
 
       stats.sourcesWithJobs++;
-      console.log(`  ${kind}/${companyKey}: ${atsJobs.length} jobs found`);
+      log({
+        worker: WORKER, action: "fetch-ats", level: "info", traceId,
+        sourceId, metadata: { kind, companyKey, jobCount: atsJobs.length },
+      });
 
       // Batch insert — collect new job IDs for enqueuing
       const newJobIds: number[] = [];
@@ -517,7 +551,7 @@ async function autoIngestFromSources(
           description: atsJob.description,
           postedAt: atsJob.postedAt,
           status: "new",
-        });
+        }, traceId);
 
         if (result.success && result.jobId) {
           if (result.isNew) {
@@ -529,16 +563,24 @@ async function autoIngestFromSources(
         }
       }
 
-      // Enqueue new jobs in batches
+      // Enqueue new jobs in batches with correlation IDs
       if (newJobIds.length > 0 && queue) {
         const batchMessages = newJobIds.map((jobId) => ({
-          body: { jobId } as QueueMessage,
+          body: { jobId, traceId } as QueueMessage,
         }));
         // sendBatch supports up to 100 messages per call
         for (let i = 0; i < batchMessages.length; i += 100) {
           const chunk = batchMessages.slice(i, i + 100);
-          await queue.sendBatch(chunk);
-          stats.jobsEnqueued += chunk.length;
+          try {
+            await queue.sendBatch(chunk);
+            stats.jobsEnqueued += chunk.length;
+          } catch (err) {
+            log({
+              worker: WORKER, action: "queue-send", level: "error", traceId,
+              error: err instanceof Error ? err.message : String(err),
+              metadata: { chunkSize: chunk.length, kind, companyKey },
+            });
+          }
         }
       }
 
@@ -550,15 +592,30 @@ async function autoIngestFromSources(
       );
     } catch (err) {
       const msg = `${kind}/${companyKey}: ${err instanceof Error ? err.message : String(err)}`;
-      console.error(`  Error: ${msg}`);
+      log({
+        worker: WORKER, action: "ingest-source-error", level: "error", traceId,
+        sourceId, error: msg, metadata: { kind, companyKey },
+      });
       stats.errors.push(msg);
     }
   }
 
   // After ingestion, trigger processing if there are new jobs
   if (stats.jobsInserted > 0) {
-    await triggerProcessing(processQueue, stats.jobsInserted);
+    await triggerProcessing(processQueue, stats.jobsInserted, traceId);
   }
+
+  log({
+    worker: WORKER, action: "ingest-complete", level: "info", traceId,
+    metadata: {
+      sourcesChecked: stats.sourcesChecked,
+      sourcesWithJobs: stats.sourcesWithJobs,
+      jobsInserted: stats.jobsInserted,
+      jobsSkipped: stats.jobsSkipped,
+      jobsEnqueued: stats.jobsEnqueued,
+      errorCount: stats.errors.length,
+    },
+  });
 
   return stats;
 }
@@ -571,6 +628,7 @@ async function recoverStalledJobs(
   db: D1Database,
   queue: Queue<QueueMessage>,
   processQueue: Queue<ProcessJobsMessage> | undefined,
+  traceId?: string,
 ): Promise<{ recovered: number }> {
   // Find jobs stuck in 'new' status for more than 6 hours
   const stalledThreshold = new Date(
@@ -589,7 +647,10 @@ async function recoverStalledJobs(
 
   if (stalled.rows.length === 0) return { recovered: 0 };
 
-  console.log(`Found ${stalled.rows.length} stalled jobs to re-enqueue`);
+  log({
+    worker: WORKER, action: "recover-stalled", level: "info", traceId,
+    metadata: { stalledCount: stalled.rows.length },
+  });
 
   // Touch updated_at to prevent immediate re-recovery
   const ids = stalled.rows.map((r) => Number(r.id));
@@ -601,17 +662,25 @@ async function recoverStalledJobs(
     );
   }
 
-  // Re-enqueue in batches
+  // Re-enqueue in batches with correlation IDs
   const batchMessages = ids.map((jobId) => ({
-    body: { jobId } as QueueMessage,
+    body: { jobId, traceId } as QueueMessage,
   }));
   for (let i = 0; i < batchMessages.length; i += 100) {
-    await queue.sendBatch(batchMessages.slice(i, i + 100));
+    try {
+      await queue.sendBatch(batchMessages.slice(i, i + 100));
+    } catch (err) {
+      log({
+        worker: WORKER, action: "recover-queue-send", level: "error", traceId,
+        error: err instanceof Error ? err.message : String(err),
+        metadata: { batchIndex: i, totalIds: ids.length },
+      });
+    }
   }
 
   // Trigger processing
   if (ids.length > 0) {
-    await triggerProcessing(processQueue, ids.length);
+    await triggerProcessing(processQueue, ids.length, traceId);
   }
 
   return { recovered: ids.length };
@@ -624,9 +693,13 @@ async function recoverStalledJobs(
 async function triggerProcessing(
   processQueue: Queue<ProcessJobsMessage> | undefined,
   jobCount: number,
+  traceId?: string,
 ): Promise<void> {
   if (!processQueue) {
-    console.log("  No PROCESS_JOBS_QUEUE binding — skipping process trigger");
+    log({
+      worker: WORKER, action: "trigger-processing", level: "info", traceId,
+      metadata: { skipped: true, reason: "No PROCESS_JOBS_QUEUE binding" },
+    });
     return;
   }
 
@@ -635,10 +708,17 @@ async function triggerProcessing(
     await processQueue.send({
       action: "process",
       limit: Math.min(jobCount, 50),
+      traceId,
     });
-    console.log(`  Triggered process-jobs pipeline for up to ${Math.min(jobCount, 50)} jobs`);
+    log({
+      worker: WORKER, action: "trigger-processing", level: "info", traceId,
+      metadata: { limit: Math.min(jobCount, 50) },
+    });
   } catch (err) {
-    console.error("  Failed to trigger process-jobs:", err);
+    log({
+      worker: WORKER, action: "trigger-processing", level: "error", traceId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -646,6 +726,7 @@ async function triggerProcessingViaHTTP(
   env: Env,
   action: "process" | "enhance" | "tag" | "classify" = "process",
   limit = 50,
+  traceId?: string,
 ): Promise<boolean> {
   if (!env.PROCESS_JOBS_URL) return false;
 
@@ -656,6 +737,9 @@ async function triggerProcessingViaHTTP(
     if (env.PROCESS_JOBS_SECRET) {
       headers["Authorization"] = `Bearer ${env.PROCESS_JOBS_SECRET}`;
     }
+    if (traceId) {
+      headers["X-Trace-Id"] = traceId;
+    }
 
     const res = await fetch(env.PROCESS_JOBS_URL, {
       method: "POST",
@@ -665,13 +749,22 @@ async function triggerProcessingViaHTTP(
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      console.error(`Process-jobs HTTP ${res.status}: ${text}`);
+      log({
+        worker: WORKER, action: "trigger-processing-http", level: "error", traceId,
+        error: `HTTP ${res.status}: ${text}`,
+      });
       return false;
     }
-    console.log(`  Triggered process-jobs via HTTP (action=${action}, limit=${limit})`);
+    log({
+      worker: WORKER, action: "trigger-processing-http", level: "info", traceId,
+      metadata: { action, limit },
+    });
     return true;
   } catch (err) {
-    console.error("  Failed to trigger process-jobs via HTTP:", err);
+    log({
+      worker: WORKER, action: "trigger-processing-http", level: "error", traceId,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return false;
   }
 }
@@ -688,7 +781,7 @@ export default {
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Trace-Id",
     };
 
     if (request.method === "OPTIONS") {
@@ -696,6 +789,7 @@ export default {
     }
 
     const url = new URL(request.url);
+    const traceId = request.headers.get("X-Trace-Id") || generateTraceId();
 
     // GET /health — health check
     if (request.method === "GET" && url.pathname === "/health") {
@@ -711,6 +805,10 @@ export default {
           { headers: corsHeaders },
         );
       } catch (err) {
+        log({
+          worker: WORKER, action: "health", level: "error", traceId,
+          error: err instanceof Error ? err.message : String(err),
+        });
         return jsonResponse(
           { status: "unhealthy", error: String(err) },
           { status: 500, headers: corsHeaders },
@@ -749,10 +847,10 @@ export default {
         env.DB,
         env.JOBS_QUEUE,
         env.PROCESS_JOBS_QUEUE,
-        { maxSources },
+        { maxSources, traceId },
       );
       return jsonResponse(
-        { success: true, message: "Ingestion complete", stats },
+        { success: true, message: "Ingestion complete", traceId, stats },
         { headers: corsHeaders },
       );
     }
@@ -806,18 +904,18 @@ export default {
 
       // Insert/upsert jobs
       const insertResults = await Promise.all(
-        body.jobs.map((job) => insertJob(env.DB, job)),
+        body.jobs.map((job) => insertJob(env.DB, job, traceId)),
       );
 
       const successful = insertResults.filter((r) => r.success && r.jobId != null);
       const newJobs = successful.filter((r) => r.isNew);
       const failed = insertResults.filter((r) => !r.success);
 
-      // Enqueue only genuinely new jobs
+      // Enqueue only genuinely new jobs with correlation IDs
       let enqueued = 0;
       if (newJobs.length > 0) {
         const batchMessages = newJobs.map((r) => ({
-          body: { jobId: r.jobId! } as QueueMessage,
+          body: { jobId: r.jobId!, traceId } as QueueMessage,
         }));
         for (let i = 0; i < batchMessages.length; i += 100) {
           const chunk = batchMessages.slice(i, i + 100);
@@ -828,16 +926,21 @@ export default {
 
       // Trigger processing for new jobs
       if (enqueued > 0) {
-        await triggerProcessing(env.PROCESS_JOBS_QUEUE, enqueued);
+        await triggerProcessing(env.PROCESS_JOBS_QUEUE, enqueued, traceId);
       }
 
-      console.log(
-        `Inserted ${successful.length}/${body.jobs.length} jobs (${newJobs.length} new); enqueued ${enqueued}`,
-      );
+      log({
+        worker: WORKER, action: "insert-batch", level: "info", traceId,
+        metadata: {
+          total: body.jobs.length, success: successful.length,
+          new: newJobs.length, enqueued, failed: failed.length,
+        },
+      });
 
       return jsonResponse(
         {
           success: failed.length === 0,
+          traceId,
           message: `Inserted ${successful.length}/${body.jobs.length} jobs (${newJobs.length} new); enqueued ${enqueued}`,
           data: {
             totalJobs: body.jobs.length,
@@ -853,7 +956,10 @@ export default {
         { status: 200, headers: corsHeaders },
       );
     } catch (error) {
-      console.error("Error processing request:", error);
+      log({
+        worker: WORKER, action: "insert-request", level: "error", traceId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return jsonResponse(
         {
           success: false,
@@ -876,43 +982,56 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<void> {
-    console.log(`Cron triggered: ${event.cron} at ${new Date(event.scheduledTime).toISOString()}`);
+    const traceId = generateTraceId();
+    const start = Date.now();
+
+    log({
+      worker: WORKER, action: "scheduled-start", level: "info", traceId,
+      metadata: { cron: event.cron },
+    });
 
     try {
       // Phase 1: Auto-ingest from ATS sources
-      console.log("Phase 1: Auto-ingesting from ATS sources...");
       const ingestionStats = await autoIngestFromSources(
         env.DB,
         env.JOBS_QUEUE,
         env.PROCESS_JOBS_QUEUE,
-        { maxSources: 15, stalePeriodHours: 12 },
-      );
-      console.log(
-        `Ingestion: ${ingestionStats.sourcesChecked} sources checked, ` +
-          `${ingestionStats.jobsInserted} new jobs, ${ingestionStats.jobsEnqueued} enqueued`,
+        { maxSources: 15, stalePeriodHours: 12, traceId },
       );
 
       // Phase 2: Recover stalled jobs
-      console.log("Phase 2: Recovering stalled jobs...");
       const recovery = await recoverStalledJobs(
         env.DB,
         env.JOBS_QUEUE,
         env.PROCESS_JOBS_QUEUE,
+        traceId,
       );
-      console.log(`Recovery: ${recovery.recovered} stalled jobs re-enqueued`);
 
       // Phase 3: Trigger processing if queue binding not available, use HTTP fallback
       if (!env.PROCESS_JOBS_QUEUE && env.PROCESS_JOBS_URL) {
         const totalNew = ingestionStats.jobsInserted + recovery.recovered;
         if (totalNew > 0) {
-          console.log("Phase 3: Triggering process-jobs via HTTP fallback...");
-          await triggerProcessingViaHTTP(env, "process", Math.min(totalNew, 50));
+          await triggerProcessingViaHTTP(env, "process", Math.min(totalNew, 50), traceId);
         }
       }
 
-      console.log("Scheduled run complete");
+      log({
+        worker: WORKER, action: "scheduled-complete", level: "info", traceId,
+        duration_ms: Date.now() - start,
+        metadata: {
+          sourcesChecked: ingestionStats.sourcesChecked,
+          jobsInserted: ingestionStats.jobsInserted,
+          jobsEnqueued: ingestionStats.jobsEnqueued,
+          recovered: recovery.recovered,
+          errors: ingestionStats.errors.length,
+        },
+      });
     } catch (error) {
-      console.error("Scheduled run failed:", error);
+      log({
+        worker: WORKER, action: "scheduled-failed", level: "error", traceId,
+        error: error instanceof Error ? error.message : String(error),
+        duration_ms: Date.now() - start,
+      });
     }
   },
 
@@ -928,32 +1047,57 @@ export default {
     _ctx: ExecutionContext,
   ): Promise<void> {
     const jobIds: number[] = [];
+    const traceIds = new Set<string>();
 
     for (const message of batch.messages) {
       try {
-        const { jobId } = message.body;
-        if (typeof jobId === "number" && Number.isFinite(jobId)) {
-          jobIds.push(jobId);
+        const { jobId, traceId } = message.body;
+
+        if (typeof jobId !== "number" || !Number.isFinite(jobId)) {
+          // Log invalid message instead of silently acking
+          log({
+            worker: WORKER, action: "queue-consume", level: "error",
+            traceId,
+            error: `Invalid jobId in queue message: ${JSON.stringify(message.body)}`,
+          });
+          message.ack(); // Still ack to prevent infinite retry of bad messages
+          continue;
         }
+
+        jobIds.push(jobId);
+        if (traceId) traceIds.add(traceId);
         message.ack();
       } catch (err) {
-        console.error("Failed to process queue message:", err);
+        log({
+          worker: WORKER, action: "queue-consume", level: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
         message.retry();
       }
     }
 
     if (jobIds.length === 0) return;
 
-    console.log(`Queue batch: ${jobIds.length} jobs acknowledged`);
+    const batchTraceId = traceIds.size === 1 ? [...traceIds][0] : generateTraceId();
+
+    log({
+      worker: WORKER, action: "queue-batch", level: "info",
+      traceId: batchTraceId,
+      metadata: { jobCount: jobIds.length, batchSize: batch.messages.length },
+    });
 
     // Trigger processing for the batch
     const triggered =
       env.PROCESS_JOBS_QUEUE
-        ? await triggerProcessing(env.PROCESS_JOBS_QUEUE, jobIds.length).then(() => true)
-        : await triggerProcessingViaHTTP(env, "process", jobIds.length);
+        ? await triggerProcessing(env.PROCESS_JOBS_QUEUE, jobIds.length, batchTraceId).then(() => true)
+        : await triggerProcessingViaHTTP(env, "process", jobIds.length, batchTraceId);
 
     if (!triggered) {
-      console.log("  No process-jobs trigger available — jobs will be picked up by process-jobs cron");
+      log({
+        worker: WORKER, action: "queue-batch", level: "info",
+        traceId: batchTraceId,
+        metadata: { deferred: true, reason: "No process-jobs trigger available" },
+      });
     }
   },
 };

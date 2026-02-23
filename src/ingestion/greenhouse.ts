@@ -135,7 +135,6 @@ export async function fetchGreenhouseJobPost(
   }
 
   const data = await res.json();
-  console.log(data);
   return data;
 }
 

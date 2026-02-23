@@ -9,6 +9,10 @@
  * - Manual addition via admin UI or scripts
  */
 
+import { log, generateTraceId } from "./lib/logger";
+
+const WORKER = "cron";
+
 interface Env {
   DB: D1Database;
   APP_URL: string;
@@ -89,34 +93,46 @@ async function getSourceStats(
 // Trigger job ingestion
 // ---------------------------------------------------------------------------
 
-async function triggerIngestion(env: Env, sourceCount: number): Promise<void> {
+async function triggerIngestion(env: Env, sourceCount: number, traceId: string): Promise<void> {
   // Method 1: Via insert-jobs HTTP endpoint (direct)
   if (env.INSERT_JOBS_URL) {
     try {
       const url = `${env.INSERT_JOBS_URL}/ingest?limit=${Math.min(sourceCount, 20)}`;
       const res = await fetch(url, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          "X-Trace-Id": traceId,
+        },
       });
       if (res.ok) {
         const data = (await res.json()) as {
           stats?: { jobsInserted?: number };
         };
-        console.log(
-          `Triggered ingestion via HTTP: ${data.stats?.jobsInserted ?? 0} jobs inserted`,
-        );
+        log({
+          worker: WORKER, action: "trigger-ingestion", level: "info", traceId,
+          metadata: { method: "http", jobsInserted: data.stats?.jobsInserted ?? 0 },
+        });
         return;
       }
-      console.error(`Ingestion HTTP trigger failed: ${res.status}`);
+      log({
+        worker: WORKER, action: "trigger-ingestion", level: "error", traceId,
+        error: `HTTP ${res.status}`, metadata: { method: "http" },
+      });
     } catch (err) {
-      console.error("Ingestion HTTP trigger error:", err);
+      log({
+        worker: WORKER, action: "trigger-ingestion", level: "error", traceId,
+        error: err instanceof Error ? err.message : String(err),
+        metadata: { method: "http" },
+      });
     }
   }
 
   // Method 2: The insert-jobs worker will pick up stale sources on its own cron
-  console.log(
-    "No INSERT_JOBS_URL configured — insert-jobs worker cron will pick up new sources automatically",
-  );
+  log({
+    worker: WORKER, action: "trigger-ingestion", level: "info", traceId,
+    metadata: { method: "deferred", reason: "No INSERT_JOBS_URL configured" },
+  });
 }
 
 export default {
@@ -132,6 +148,10 @@ export default {
           { headers: { "Content-Type": "application/json" } },
         );
       } catch (err) {
+        log({
+          worker: WORKER, action: "health", level: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
         return new Response(
           JSON.stringify({ status: "unhealthy", error: String(err) }),
           { status: 500, headers: { "Content-Type": "application/json" } },
@@ -168,12 +188,14 @@ export default {
 
     // GET /trigger-ingest — manually trigger ingestion of stale sources
     if (url.pathname === "/trigger-ingest") {
+      const traceId = generateTraceId();
       const stats = await getSourceStats(env.DB);
-      await triggerIngestion(env, stats.stale);
+      await triggerIngestion(env, stats.stale, traceId);
 
       return new Response(
         JSON.stringify({
           message: `Triggered ingestion for ${stats.stale} stale sources`,
+          traceId,
           stats,
         }),
         { headers: { "Content-Type": "application/json" } },
@@ -195,21 +217,29 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<void> {
-    console.log("Cron: Starting ATS job ingestion cycle...");
+    const traceId = generateTraceId();
+    const start = Date.now();
+
+    log({ worker: WORKER, action: "scheduled-start", level: "info", traceId });
 
     try {
       const stats = await getSourceStats(env.DB);
 
-      console.log(
-        `ATS sources: ${stats.total} total, ${stats.stale} stale. By kind:`,
-        stats.byKind,
-      );
+      log({
+        worker: WORKER, action: "source-stats", level: "info", traceId,
+        metadata: { total: stats.total, stale: stats.stale, byKind: stats.byKind },
+      });
 
       if (stats.stale > 0) {
-        console.log(`Triggering ingestion for ${stats.stale} stale sources...`);
-        ctx.waitUntil(triggerIngestion(env, stats.stale));
+        log({
+          worker: WORKER, action: "trigger-ingestion", level: "info", traceId,
+          metadata: { staleSources: stats.stale },
+        });
+        ctx.waitUntil(triggerIngestion(env, stats.stale, traceId));
       } else {
-        console.log("All sources recently synced — nothing to do.");
+        log({
+          worker: WORKER, action: "no-stale-sources", level: "info", traceId,
+        });
       }
 
       // Mark sync timestamp on sources we're about to ingest
@@ -220,9 +250,16 @@ export default {
             OR last_synced_at < datetime('now', '-24 hours')`,
       ).run();
 
-      console.log("Cron job completed");
+      log({
+        worker: WORKER, action: "scheduled-complete", level: "info", traceId,
+        duration_ms: Date.now() - start,
+      });
     } catch (error) {
-      console.error("Cron job failed:", error);
+      log({
+        worker: WORKER, action: "scheduled-failed", level: "error", traceId,
+        error: error instanceof Error ? error.message : String(error),
+        duration_ms: Date.now() - start,
+      });
       throw error;
     }
   },

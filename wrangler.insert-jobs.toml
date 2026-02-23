@@ -2,10 +2,6 @@ name = "nomadically-work-insert-jobs"
 main = "workers/insert-jobs.ts"
 compatibility_date = "2026-02-01"
 
-# Cron trigger — auto-ingest from ATS sources every 3 hours + recover stalled jobs
-[triggers]
-crons = ["0 */3 * * *"]
-
 # D1 Database
 [[d1_databases]]
 binding = "DB"

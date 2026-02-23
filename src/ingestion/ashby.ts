@@ -221,7 +221,6 @@ export async function fetchAshbyJobBoard(
   }
 
   const data = await res.json();
-  console.log(data);
   return data as AshbyJobBoard;
 }
 
@@ -268,7 +267,6 @@ export async function fetchAshbyJobPost(
   }
 
   const data = await res.json();
-  console.log(data);
   return data as AshbyJobPosting;
 }
 

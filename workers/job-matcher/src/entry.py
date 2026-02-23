@@ -2,7 +2,7 @@ import asyncio
 import json
 from urllib.parse import urlparse
 from js import JSON, JSON as JsJSON, fetch
-from pyodide.ffi import to_js
+from pyodide.ffi import to_js  # noqa: F401 — kept for future use
 from workers import Response, WorkerEntrypoint
 
 DEEPSEEK_BASE_URL_DEFAULT = "https://api.deepseek.com/beta"
@@ -16,13 +16,14 @@ MAX_CANDIDATES = 50
 LLM_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
 
-# ---- Module-level helpers (copied from process-jobs/src/entry.py:362-395) ----
+# ---- Module-level helpers ----
 
 def to_py(js_val):
     return json.loads(JSON.stringify(js_val))
 
 
 def _to_js_obj(d: dict):
+    """Convert a Python dict to a JS object via JSON round-trip (safe in Pyodide)."""
     return JSON.parse(json.dumps(d))
 
 
@@ -115,12 +116,12 @@ class Default(WorkerEntrypoint):
             return {}
         messages = self._build_scoring_messages(titles)
 
-        # Tier 1: Workers AI
+        # Tier 1: Workers AI — _to_js_obj converts dicts correctly for Workers AI binding
         workers_ai_err = None
         try:
             result = await self.env.AI.run(
                 LLM_MODEL,
-                to_js({"messages": messages}, dict_converter=lambda d: JsJSON.stringify(d)),
+                _to_js_obj({"messages": messages}),
             )
             result_dict = json.loads(JsJSON.stringify(result))
             return self._parse_scores(result_dict.get("response", ""))
@@ -128,7 +129,7 @@ class Default(WorkerEntrypoint):
             workers_ai_err = exc
             print(f"[job-matcher] Workers AI failed, trying DeepSeek fallback: {exc}")
 
-        # Tier 2: DeepSeek fallback
+        # Tier 2: DeepSeek fallback — reads DEEPSEEK_API_KEY from worker secrets
         api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None)
         base_url = getattr(self.env, "DEEPSEEK_BASE_URL", None) or DEEPSEEK_BASE_URL_DEFAULT
         model    = getattr(self.env, "DEEPSEEK_MODEL", None) or DEEPSEEK_MODEL_DEFAULT
@@ -168,7 +169,7 @@ class Default(WorkerEntrypoint):
                     headers=self._cors_headers
                 )
 
-            # Step 1: Get candidate job IDs that have ≥1 matching skill tag
+            # Step 1: Get candidate job IDs that have >=1 matching skill tag
             ph = ",".join(["?"] * len(skills))
             candidate_rows = await d1_all(
                 self.env.DB,
@@ -189,10 +190,8 @@ class Default(WorkerEntrypoint):
             id_to_title = {r["job_id"]: r["title"] for r in candidate_rows}
             titles = list(id_to_title.values())
             scores = await self._score_titles_with_llm(titles)
-            # Map job_id -> role_score (match by title string)
-            title_to_score = scores
             job_role_scores = {
-                jid: title_to_score.get(title, 0.0)
+                jid: scores.get(title, 0.0)
                 for jid, title in id_to_title.items()
             }
 

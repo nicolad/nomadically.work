@@ -16,6 +16,7 @@ type AIInterviewPrep {
 type AIInterviewPrepRequirement {
   questions: [String!]!
   requirement: String!
+  sourceQuote: String
   studyTopics: [String!]!
 }
 

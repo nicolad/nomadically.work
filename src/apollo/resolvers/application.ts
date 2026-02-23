@@ -304,11 +304,12 @@ export const applicationResolvers = {
     {
       "requirement": "Requirement name (e.g. React expertise)",
       "questions": ["Tailored interview question 1", "Tailored interview question 2"],
-      "studyTopics": ["Study topic 1", "Study topic 2"]
+      "studyTopics": ["Study topic 1", "Study topic 2"],
+      "sourceQuote": "at most 20 words copied verbatim from the job description that most directly triggered this requirement"
     }
   ]
 }
-Extract 4-6 key requirements from the job description. For each: 2-3 tailored interview questions specific to the role, and 2-3 concrete study topics.`,
+Extract 4-6 key requirements from the job description. For each: 2-3 tailored interview questions specific to the role, and 2-3 concrete study topics. For sourceQuote: copy at most 20 words verbatim from the job description that most directly triggered this requirement.`,
           },
           {
             role: "user",
@@ -337,6 +338,16 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
         parsed.requirements.length === 0
       ) {
         throw new Error("AI returned an unexpected response structure");
+      }
+
+      // Enforce sourceQuote word limit in case the model overshoots
+      for (const req of parsed.requirements) {
+        if (typeof req.sourceQuote === "string") {
+          const words = req.sourceQuote.trim().split(/\s+/);
+          if (words.length > 20) {
+            req.sourceQuote = words.slice(0, 20).join(" ") + "…";
+          }
+        }
       }
 
       parsed.generatedAt = new Date().toISOString();

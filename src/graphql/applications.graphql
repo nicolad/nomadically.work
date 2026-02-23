@@ -29,6 +29,7 @@ fragment ApplicationFields on Application {
       requirement
       questions
       studyTopics
+      sourceQuote
     }
     generatedAt
   }
@@ -98,6 +99,7 @@ mutation GenerateInterviewPrep($applicationId: Int!) {
         requirement
         questions
         studyTopics
+        sourceQuote
       }
       generatedAt
     }

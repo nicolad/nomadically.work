@@ -33,6 +33,7 @@ export type AiInterviewPrepRequirement = {
   __typename?: 'AIInterviewPrepRequirement';
   questions: Array<Scalars['String']['output']>;
   requirement: Scalars['String']['output'];
+  sourceQuote: Maybe<Scalars['String']['output']>;
   studyTopics: Array<Scalars['String']['output']>;
 };
 
@@ -1539,6 +1540,7 @@ export type AiInterviewPrepResolvers<ContextType = GraphQLContext, ParentType ex
 export type AiInterviewPrepRequirementResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewPrepRequirement'] = ResolversParentTypes['AIInterviewPrepRequirement']> = {
   questions?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   requirement?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  sourceQuote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   studyTopics?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
 };
 

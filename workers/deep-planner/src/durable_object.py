@@ -12,13 +12,12 @@ import time
 import json
 from datetime import datetime, timezone
 
+from js import JSON
 from workers import DurableObject, Response
-from langchain_cloudflare import ChatCloudflareWorkersAI
-from langchain_core.messages import SystemMessage, HumanMessage
 
-from .helpers import guard_content, sleep_ms
-from .prompts import BMAD_STEPS, PASS_TYPES, SYSTEM_BASE, get_prompt, total_passes
-from .checkpoint import (
+from helpers import guard_content, sleep_ms, to_py
+from prompts import BMAD_STEPS, PASS_TYPES, SYSTEM_BASE, get_prompt, total_passes
+from checkpoint import (
     save_checkpoint,
     load_checkpoint,
     mark_running,
@@ -216,27 +215,31 @@ class DeepPlannerDO(DurableObject):
                 )
 
     async def _call_llm(self, prompt: str) -> str | None:
-        """Call Workers AI with retry logic."""
+        """Call Workers AI directly via binding with retry logic."""
         for attempt in range(MAX_RETRIES):
             try:
-                llm = ChatCloudflareWorkersAI(
-                    model_name=MODEL_NAME,
-                    binding=self.env.AI,
-                    temperature=0.7,
-                )
-
                 messages = [
-                    SystemMessage(content=SYSTEM_BASE),
-                    HumanMessage(content=prompt[:12000]),  # Truncate for token limits
+                    {"role": "system", "content": SYSTEM_BASE},
+                    {"role": "user", "content": prompt[:12000]},
                 ]
 
-                response = await llm.ainvoke(messages)
-                content = guard_content(response.content)
+                result = await self.env.AI.run(
+                    MODEL_NAME,
+                    JSON.parse(json.dumps({
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "max_tokens": 4096,
+                    })),
+                )
 
-                if content:
-                    return content
+                # Parse the response
+                result_dict = to_py(result)
+                content = result_dict.get("response") if isinstance(result_dict, dict) else None
 
-                print(f"[DeepPlannerDO] Workers AI returned empty content, attempt {attempt + 1}/{MAX_RETRIES}")
+                if not content:
+                    print(f"[DeepPlannerDO] Workers AI returned empty content, attempt {attempt + 1}/{MAX_RETRIES}")
+                else:
+                    return str(content).strip()
 
             except Exception as e:
                 print(f"[DeepPlannerDO] LLM call error (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
@@ -251,11 +254,8 @@ class DeepPlannerDO(DurableObject):
     async def _load_codebase_context(self) -> str:
         """Load bundled codebase context files."""
         try:
-            # Context is bundled at deploy time in the context/ directory
-            # For now, return a placeholder that will be replaced by the bundler
             context_parts = []
 
-            # Try to read bundled files from DO storage or fallback
             claude_md = await self.ctx.storage.get("context:claude_md")
             if claude_md:
                 context_parts.append(f"## CLAUDE.md\n{str(claude_md)}")
@@ -271,7 +271,6 @@ class DeepPlannerDO(DurableObject):
             if context_parts:
                 return "\n\n---\n\n".join(context_parts)
 
-            # Fallback: minimal context
             return "No codebase context bundled. The worker should be deployed with context files."
 
         except Exception as e:

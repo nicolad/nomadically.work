@@ -3,23 +3,24 @@
 import { resend } from "@/lib/resend";
 import { checkIsAdmin } from "@/lib/admin";
 
+const EMAILS_USER = "contact@vadim.blog";
+
 export async function getSentEmails(limit = 100) {
   const { isAdmin, userEmail } = await checkIsAdmin();
 
-  if (!isAdmin || !userEmail) {
+  if (!isAdmin || userEmail?.toLowerCase() !== EMAILS_USER) {
     return { emails: [], error: "Forbidden" };
   }
 
   try {
     const data = await resend.instance.listEmails({ limit });
     const all = data?.data ?? [];
-    const lowerEmail = userEmail.toLowerCase();
-    const filtered = all.filter(
+    const emails = all.filter(
       (email: { to?: string[]; from?: string }) =>
-        email.to?.some((addr) => addr.toLowerCase() === lowerEmail) ||
-        email.from?.toLowerCase() === lowerEmail,
+        email.to?.some((addr) => addr.toLowerCase() === "contact@vadim.blog") ||
+        email.from?.toLowerCase().includes("contact@vadim.blog"),
     );
-    return { emails: filtered, error: null };
+    return { emails, error: null };
   } catch (err) {
     return {
       emails: [],
@@ -31,18 +32,17 @@ export async function getSentEmails(limit = 100) {
 export async function getReceivedEmails(limit = 100) {
   const { isAdmin, userEmail } = await checkIsAdmin();
 
-  if (!isAdmin || !userEmail) {
+  if (!isAdmin || userEmail?.toLowerCase() !== EMAILS_USER) {
     return { emails: [], error: "Forbidden" };
   }
 
   try {
     const data = await resend.instance.listReceived({ limit });
     const all = data?.data ?? [];
-    const lowerEmail = userEmail.toLowerCase();
-    const filtered = all.filter((email: { to?: string[] }) =>
-      email.to?.some((addr) => addr.toLowerCase() === lowerEmail),
+    const emails = all.filter((email: { to?: string[] }) =>
+      email.to?.some((addr) => addr.toLowerCase() === "contact@vadim.blog"),
     );
-    return { emails: filtered, error: null };
+    return { emails, error: null };
   } catch (err) {
     return {
       emails: [],

@@ -22,7 +22,6 @@ import {
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
-import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSentEmails, getReceivedEmails } from "./actions";
 
 type SentEmail = {
@@ -306,7 +305,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  if (user.email?.toLowerCase() !== "contact@vadim.blog") {
     return (
       <Container size="3" p="8">
         <Card>

@@ -14,6 +14,7 @@ export function AdminNav() {
     user.primaryEmailAddress?.emailAddress ??
     user.emailAddresses[0]?.emailAddress;
   const isAdmin = userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isEmailsUser = userEmail?.toLowerCase() === "contact@vadim.blog";
 
   if (!isAdmin) return null;
 
@@ -23,14 +24,16 @@ export function AdminNav() {
         <CheckboxIcon width={15} height={15} />
         tasks
       </Link>
-      <Link
-        href="/admin/emails"
-        style={{ display: "flex", alignItems: "center", gap: 6 }}
-        title="Emails"
-      >
-        <EnvelopeClosedIcon width={14} height={14} />
-        emails
-      </Link>
+      {isEmailsUser && (
+        <Link
+          href="/admin/emails"
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+          title="Emails"
+        >
+          <EnvelopeClosedIcon width={14} height={14} />
+          emails
+        </Link>
+      )}
       <Link
         href="/admin/reported-jobs"
         style={{ display: "flex", alignItems: "center", gap: 6 }}

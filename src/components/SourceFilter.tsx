@@ -10,6 +10,9 @@ const SOURCE_OPTIONS = [
   { value: "remotive", label: "Remotive", color: "orange" },
   { value: "arbeitnow", label: "Arbeitnow", color: "grass" },
   { value: "workable", label: "Workable", color: "teal" },
+  { value: "remoteok", label: "RemoteOK", color: "red" },
+  { value: "himalayas", label: "Himalayas", color: "purple" },
+  { value: "jobicy", label: "Jobicy", color: "pink" },
 ] as const;
 
 type SourceColor = (typeof SOURCE_OPTIONS)[number]["color"];

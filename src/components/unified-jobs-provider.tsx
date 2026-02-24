@@ -6,12 +6,14 @@ import { Container, Box, Flex, Badge, Text } from "@radix-ui/themes";
 import { SearchQueryBar } from "./SearchQueryBar";
 import { UserPreferences } from "./user-preferences";
 import { JobsList } from "./jobs-list";
+import { SourceFilter } from "./SourceFilter";
 
 export function UnifiedJobsProvider() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchFilter = searchParams.get("q") ?? "";
   const remoteEuFilter = searchParams.get("remote_eu") === "1";
+  const sourcesFilter = (searchParams.get("source") ?? "").split(",").filter(Boolean);
 
   const handleSearch = useCallback(
     (query: string) => {
@@ -38,6 +40,20 @@ export function UnifiedJobsProvider() {
     router.push(`?${params.toString()}`, { scroll: false });
   }, [router, searchParams, remoteEuFilter]);
 
+  const handleSourcesChange = useCallback(
+    (sources: string[]) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (sources.length > 0) {
+        params.set("source", sources.join(","));
+      } else {
+        params.delete("source");
+      }
+      params.delete("offset");
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+
   return (
     <Container size="4" py="4">
       <Box mb="5">
@@ -54,7 +70,7 @@ export function UnifiedJobsProvider() {
           onSearchSubmit={handleSearch}
           initialQuery={searchFilter}
         />
-        <Flex mt="2" gap="2">
+        <Flex mt="2" gap="2" align="center" wrap="wrap">
           <Badge
             variant={remoteEuFilter ? "solid" : "outline"}
             color="green"
@@ -63,10 +79,11 @@ export function UnifiedJobsProvider() {
           >
             remote EU only
           </Badge>
+          <SourceFilter selected={sourcesFilter} onChange={handleSourcesChange} />
         </Flex>
       </Box>
       <Box mt="4">
-        <JobsList searchFilter={searchFilter} isRemoteEu={remoteEuFilter} />
+        <JobsList searchFilter={searchFilter} isRemoteEu={remoteEuFilter} sourceTypes={sourcesFilter} />
       </Box>
     </Container>
   );

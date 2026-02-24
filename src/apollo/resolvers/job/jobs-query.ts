@@ -24,7 +24,7 @@ export async function jobsQuery(
 ) {
   try {
     const conditions = [ne(jobs.status, "reported")];
-    const hasFilters = !!(args.search || args.sourceType || args.remoteEuConfidence || (args.skills && args.skills.length > 0) || (args.excludedCompanies && args.excludedCompanies.length > 0));
+    const hasFilters = !!(args.search || args.sourceType || (args.sourceTypes && args.sourceTypes.length > 0) || args.remoteEuConfidence || (args.skills && args.skills.length > 0) || (args.excludedCompanies && args.excludedCompanies.length > 0));
 
     if (args.search) {
       const searchPattern = `%${args.search}%`;
@@ -45,9 +45,14 @@ export async function jobsQuery(
       conditions.push(eq(jobs.is_remote_eu, false));
     }
 
-    // Filter by sourceType (ATS provider)
+    // Filter by sourceType (ATS provider) — single value, kept for backward compat
     if (args.sourceType) {
       conditions.push(eq(jobs.source_kind, args.sourceType));
+    }
+
+    // Filter by sourceTypes (multi-source OR logic)
+    if (args.sourceTypes && args.sourceTypes.length > 0) {
+      conditions.push(inArray(jobs.source_kind, args.sourceTypes));
     }
 
     // Filter by remoteEuConfidence level

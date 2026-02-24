@@ -1,6 +1,7 @@
 extend type Query {
   jobs(
     sourceType: String
+    sourceTypes: [String!]
     search: String
     limit: Int
     offset: Int

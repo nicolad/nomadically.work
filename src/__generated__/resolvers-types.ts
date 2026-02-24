@@ -1242,6 +1242,7 @@ export type QueryJobsArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
   skills?: InputMaybe<Array<Scalars['String']['input']>>;
   sourceType?: InputMaybe<Scalars['String']['input']>;
+  sourceTypes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 

@@ -1,5 +1,6 @@
 query GetJobs(
   $sourceType: String
+  $sourceTypes: [String!]
   $search: String
   $limit: Int
   $offset: Int
@@ -9,6 +10,7 @@ query GetJobs(
 ) {
   jobs(
     sourceType: $sourceType
+    sourceTypes: $sourceTypes
     search: $search
     limit: $limit
     offset: $offset

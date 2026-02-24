@@ -466,42 +466,6 @@ async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
   }));
 }
 
-async function fetchArbeitnowJobs(_companyKey: string): Promise<ATSJob[]> {
-  const jobs: ATSJob[] = [];
-  let page = 1;
-  while (page <= 2) {
-    const url = `https://www.arbeitnow.com/api/job-board-api?page=${page}`;
-    const res = await fetchWithRetry(url);
-    if (!res.ok) {
-      log({
-        worker: WORKER, action: "fetch-ats", level: "error",
-        error: `HTTP ${res.status}`, metadata: { kind: "arbeitnow", page },
-      });
-      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-        throw new ATSFetchError(res.status, `Arbeitnow API error (HTTP ${res.status})`);
-      }
-      break;
-    }
-    const data = (await res.json()) as { data?: Array<Record<string, unknown>> };
-    const items = data.data ?? [];
-    if (items.length === 0) break;
-    for (const j of items) {
-      jobs.push({
-        externalId: String(j.slug ?? ""),
-        title: String(j.title ?? ""),
-        url: String(j.url ?? ""),
-        location: String(j.location ?? ""),
-        description: typeof j.description === "string" ? j.description.slice(0, 5000) : undefined,
-        postedAt: j.published_at ? String(j.published_at) : undefined,
-        companyKey: slugifyCompany(String(j.company_name ?? "unknown")),
-      });
-    }
-    page++;
-    // Be polite between pages
-    await new Promise((r) => setTimeout(r, 200));
-  }
-  return jobs;
-}
 
 async function fetchWorkableJobs(companyKey: string): Promise<ATSJob[]> {
   const url = `https://apply.workable.com/api/v3/accounts/${companyKey}/jobs`;
@@ -540,8 +504,6 @@ function getATSFetcher(kind: string): ((key: string) => Promise<ATSJob[]>) | nul
       return fetchWorkableJobs;
     case "remotive":
       return fetchRemotiveJobs;
-    case "arbeitnow":
-      return fetchArbeitnowJobs;
     default:
       return null;
   }

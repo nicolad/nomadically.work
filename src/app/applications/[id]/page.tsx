@@ -524,10 +524,9 @@ export default function ApplicationDetailPage() {
             </Flex>
           </Flex>
         ) : app.jobDescription ? (
-          <Box
-            style={{ lineHeight: 1.7, fontSize: "var(--font-size-2)" }}
-            dangerouslySetInnerHTML={{ __html: app.jobDescription }}
-          />
+          <Box className="deep-dive-content" style={{ lineHeight: 1.7, fontSize: "var(--font-size-2)" }}>
+            <ReactMarkdown>{app.jobDescription}</ReactMarkdown>
+          </Box>
         ) : (
           <Text size="2" color="gray">No job description yet.</Text>
         )}

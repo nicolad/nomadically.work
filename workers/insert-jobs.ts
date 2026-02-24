@@ -532,6 +532,82 @@ async function fetchWorkableJobs(companyKey: string): Promise<ATSJob[]> {
   }));
 }
 
+async function fetchRemoteOKJobs(_companyKey: string): Promise<ATSJob[]> {
+  // RemoteOK returns a JSON array; index 0 is a legal notice object, not a job.
+  const res = await fetchWithRetry("https://remoteok.com/api", 2);
+  if (!res.ok) {
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "remoteok" },
+    });
+    if (res.status >= 400 && res.status < 500 && res.status !== 429) return [];
+    return [];
+  }
+  const data = (await res.json()) as Array<Record<string, unknown>>;
+  return data
+    .slice(1) // skip the legal notice at index 0
+    .filter((j) => j.id && j.position)
+    .map((j) => ({
+      externalId: String(j.id),
+      title: String(j.position ?? ""),
+      url: String(j.url ?? `https://remoteok.com/remote-jobs/${j.id}`),
+      location: String(j.location ?? ""),
+      description: typeof j.description === "string" ? j.description.slice(0, 5000) : undefined,
+      postedAt: j.date ? String(j.date) : undefined,
+      companyKey: slugifyCompany(String(j.company ?? "unknown")),
+    }));
+}
+
+async function fetchHimalayasJobs(_companyKey: string): Promise<ATSJob[]> {
+  const res = await fetchWithRetry("https://himalayas.app/jobs/api?limit=100", 2);
+  if (!res.ok) {
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "himalayas" },
+    });
+    if (res.status >= 400 && res.status < 500 && res.status !== 429) return [];
+    return [];
+  }
+  const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
+  return (data.jobs ?? []).map((j) => {
+    const company = j.company as Record<string, unknown> | undefined;
+    return {
+      externalId: String(j.id ?? j.slug ?? ""),
+      title: String(j.title ?? ""),
+      url: String(j.applicationUrl ?? j.url ?? ""),
+      location: String(j.location ?? ""),
+      description: typeof j.description === "string" ? j.description.slice(0, 5000) : undefined,
+      postedAt: j.publishedAt ? String(j.publishedAt) : undefined,
+      companyKey: slugifyCompany(String(company?.name ?? j.companyName ?? "unknown")),
+    };
+  });
+}
+
+async function fetchJobicyJobs(_companyKey: string): Promise<ATSJob[]> {
+  const res = await fetchWithRetry(
+    "https://jobicy.com/api/v2/remote-jobs?count=50&geo=worldwide&industry=tech",
+    2,
+  );
+  if (!res.ok) {
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "jobicy" },
+    });
+    if (res.status >= 400 && res.status < 500 && res.status !== 429) return [];
+    return [];
+  }
+  const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
+  return (data.jobs ?? []).map((j) => ({
+    externalId: String(j.id ?? ""),
+    title: String(j.jobTitle ?? ""),
+    url: String(j.url ?? ""),
+    location: String(j.jobGeo ?? ""),
+    description: typeof j.jobDescription === "string" ? j.jobDescription.slice(0, 5000) : undefined,
+    postedAt: j.pubDate ? String(j.pubDate) : undefined,
+    companyKey: slugifyCompany(String(j.companyName ?? "unknown")),
+  }));
+}
+
 function getATSFetcher(kind: string): ((key: string) => Promise<ATSJob[]>) | null {
   switch (kind) {
     case "greenhouse":
@@ -544,6 +620,12 @@ function getATSFetcher(kind: string): ((key: string) => Promise<ATSJob[]>) | nul
       return fetchWorkableJobs;
     case "remotive":
       return fetchRemotiveJobs;
+    case "remoteok":
+      return fetchRemoteOKJobs;
+    case "himalayas":
+      return fetchHimalayasJobs;
+    case "jobicy":
+      return fetchJobicyJobs;
     default:
       return null;
   }

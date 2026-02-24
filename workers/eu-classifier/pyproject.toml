@@ -1,0 +1,22 @@
+[project]
+name = "nomadically-work-eu-classifier"
+version = "0.1.0"
+description = "Centralized Cloudflare Python Worker for EU remote job classification using LangChain"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "webtypy>=0.1.7",
+    "langchain-cloudflare",
+    "langchain-core>=0.3.81,<2.0.0",
+    # NOTE: Do NOT include pydantic — use Pyodide's built-in version.
+    # pydantic_core requires compiled Rust binaries unavailable for WebAssembly.
+    # NOTE: langsmith is NOT included — it's unused, only a transitive dep of
+    # langchain-core. A stub env.py is provided in python_modules/langsmith/.
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+    "pytest",
+]

@@ -1,20 +1,23 @@
+# DEPRECATED: EU classification is now handled by the centralized eu-classifier worker.
+# See workers/eu-classifier/wrangler.jsonc for the active configuration.
+# Deploy with: cd workers/eu-classifier && npx wrangler deploy
+#
+# This file is kept for reference only. The original classify-jobs.ts worker
+# has been replaced by the Python-based eu-classifier with LangChain integration.
+
 name = "nomadically-work-classify-jobs"
 main = "workers/classify-jobs.ts"
 compatibility_date = "2024-01-01"
 
-# Cron trigger - runs every 6 hours
-[triggers]
-crons = ["0 */6 * * *"]
+# Cron trigger - DISABLED (handled by eu-classifier)
+# [triggers]
+# crons = ["0 */6 * * *"]
 
 # D1 Database
 [[d1_databases]]
 binding = "DB"
 database_name = "nomadically-work-db"
 database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
-
-# Secrets (set via wrangler secret put)
-# - DEEPSEEK_API_KEY (or OPENAI_API_KEY as fallback)
-# - CRON_SECRET (optional)
 
 # Observability - Enable logging
 [observability]

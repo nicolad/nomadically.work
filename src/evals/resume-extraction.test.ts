@@ -105,4 +105,27 @@ describe("extractSkillsFromResume", () => {
     // Results should be identical (temperature=0)
     expect(s1).toEqual(s2);
   });
+
+  it("handles a sparse/thin resume without crashing", async () => {
+    const text = `
+      Software Engineer
+      Python, FastAPI
+    `;
+    const { skills, taxonomyVersion } = await extractSkillsFromResume(text);
+
+    expect(taxonomyVersion).toBe("v1");
+    // All returned skills must be in taxonomy — no hallucination
+    for (const s of skills) {
+      expect(TAXONOMY_SET.has(s)).toBe(true);
+    }
+    // Should find at least 1 skill (Python is in taxonomy)
+    expect(skills.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("returns empty skills for empty text input", async () => {
+    const { skills, taxonomyVersion } = await extractSkillsFromResume("");
+
+    expect(skills).toEqual([]);
+    expect(taxonomyVersion).toBe("v1");
+  });
 });

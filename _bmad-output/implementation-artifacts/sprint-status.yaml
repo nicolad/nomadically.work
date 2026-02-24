@@ -1,0 +1,122 @@
+# generated: 2026-02-24
+# project: nomadically.work
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Key prefixes: dp- = Deep Planner, sbm- = Skills-Based Matching, wc- = Workers Consolidation
+# - Deep Planner keys are unprefixed to match existing story file names in implementation-artifacts
+
+generated: 2026-02-24
+project: nomadically.work
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+
+  # ============================================================
+  # FEATURE: Deep Planner (source: epics.md)
+  # ============================================================
+
+  # Epic 1: Task Assignment & Management
+  epic-1: in-progress
+  1-1-d1-schema-graphql-api: review
+  1-2-admin-ui-task-creation-list: review
+  1-3-admin-ui-artifact-viewer: review
+  epic-1-retrospective: optional
+
+  # Epic 2: Autonomous BMAD Execution
+  epic-2: in-progress
+  2-1-worker-scaffold-do-trigger: review
+  2-2-bmad-prompts-codebase-context: review
+  2-3-do-alarm-execution-loop: review
+  epic-2-retrospective: optional
+
+  # Epic 3: Checkpoint Persistence & Crash Recovery
+  epic-3: in-progress
+  3-1-langgraph-d1-checkpointing: review
+  3-2-resume-checkpoint-failure-handling: review
+  epic-3-retrospective: optional
+
+  # ============================================================
+  # FEATURE: Skills-Based Matching (source: epics-skills-based-matching-2026-02-23.md)
+  # ============================================================
+
+  # Epic 1: Resume Upload & Skill Profile
+  sbm-epic-1: in-progress
+  sbm-1-1-resume-upload-storage-and-graphql-schema: review
+  sbm-1-2-skill-extraction-function-and-mutation: review
+  sbm-1-3-resume-profile-page: review
+  sbm-epic-1-retrospective: optional
+
+  # Epic 2: Skill-Based Job Match Discovery
+  sbm-epic-2: in-progress
+  sbm-2-1-matched-jobs-query-api: review
+  sbm-2-2-match-results-ui-with-skill-breakdown-and-freshness: review
+  sbm-epic-2-retrospective: optional
+
+  # Epic 3: Extraction Quality Gate & Admin Visibility
+  sbm-epic-3: in-progress
+  sbm-3-1-resume-extraction-eval-coverage-and-quality-gate: review
+  sbm-3-2-admin-panel-resume-upload-count: review
+  sbm-epic-3-retrospective: optional
+
+  # ============================================================
+  # FEATURE: Workers Consolidation (source: epics-workers-consolidation-2026-02-24.md)
+  # ============================================================
+
+  # Epic 1: Fleet Audit & Documentation
+  wc-epic-1: backlog
+  wc-1-1-conduct-workers-fleet-audit: backlog
+  wc-1-2-update-claude-md-workers-table: backlog
+  wc-epic-1-retrospective: optional
+
+  # Epic 2: Legacy Worker Retirement & Dependency Cleanup
+  wc-epic-2: backlog
+  wc-2-1-audit-all-turso-libsql-references: backlog
+  wc-2-2-retire-insert-jobs-worker: backlog
+  wc-2-3-purge-turso-references-from-janitor: backlog
+  wc-2-4-migrate-promptfoo-eval-to-nextjs-api-route: backlog
+  wc-2-5-verify-pipeline-integrity-post-retirement: backlog
+  wc-epic-2-retrospective: optional
+
+  # Epic 3: Streamlined Deploy Configuration
+  wc-epic-3: backlog
+  wc-3-1-rename-wrangler-toml-to-wrangler-janitor-toml: backlog
+  wc-3-2-update-deploy-scripts-to-reflect-final-fleet: backlog
+  wc-epic-3-retrospective: optional
+
+  # Epic 4: Observability for Surviving Workers
+  wc-epic-4: backlog
+  wc-4-1-add-structured-logging-to-janitor: backlog
+  wc-4-2-add-structured-logging-to-d1-gateway: backlog
+  wc-epic-4-retrospective: optional

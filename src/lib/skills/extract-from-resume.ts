@@ -16,6 +16,8 @@ export async function extractSkillsFromResume(
   text: string,
   taxonomy: string[] = TAXONOMY_KEYS,
 ): Promise<{ skills: string[]; taxonomyVersion: string }> {
+  if (!text.trim()) return { skills: [], taxonomyVersion: TAXONOMY_VERSION };
+
   const result = await generateObject({
     model: anthropic("claude-haiku-4-5-20251001"),
     temperature: 0,

@@ -33,7 +33,13 @@ export interface AuthContext {
 export function useAuth(): AuthContext {
   const { isLoaded, isSignedIn, user } = useUser();
 
-  if (!isLoaded) {
+  // Dev-only: allow bypassing Clerk with NEXT_PUBLIC_PLAYWRIGHT_EMAIL
+  const devEmail =
+    process.env.NODE_ENV === "development"
+      ? process.env.NEXT_PUBLIC_PLAYWRIGHT_EMAIL
+      : undefined;
+
+  if (!isLoaded && !devEmail) {
     return {
       user: null,
       session: null,
@@ -43,14 +49,18 @@ export function useAuth(): AuthContext {
     };
   }
 
-  const mappedUser = user
-    ? {
-        id: user.id,
-        email: user.primaryEmailAddress?.emailAddress?.toLowerCase(),
-        name: user.fullName || user.username,
-        emailVerified: user.primaryEmailAddress?.verification.status === "verified",
-      }
-    : null;
+  const mappedUser =
+    devEmail && !isSignedIn
+      ? { id: "dev", email: devEmail, name: "Dev User", emailVerified: true }
+      : user
+        ? {
+            id: user.id,
+            email: user.primaryEmailAddress?.emailAddress?.toLowerCase(),
+            name: user.fullName || user.username,
+            emailVerified:
+              user.primaryEmailAddress?.verification.status === "verified",
+          }
+        : null;
 
   return {
     user: mappedUser,

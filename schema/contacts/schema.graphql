@@ -9,6 +9,10 @@ extend type Mutation {
   updateContact(id: Int!, input: UpdateContactInput!): Contact!
   deleteContact(id: Int!): DeleteContactResult!
   importContacts(contacts: [ContactInput!]!): ImportContactsResult!
+  findContactEmail(contactId: Int!): FindContactEmailResult!
+  findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
+  enhanceAllContacts: EnhanceAllContactsResult!
+  applyEmailPattern(companyId: Int!): ApplyEmailPatternResult!
 }
 
 type Contact {
@@ -18,6 +22,7 @@ type Contact {
   linkedinUrl: String
   email: String
   emails: [String!]!
+  bouncedEmails: [String!]!
   company: String
   companyId: Int
   position: String
@@ -92,4 +97,30 @@ input UpdateContactInput {
   telegramHandle: String
   doNotContact: Boolean
   tags: [String!]
+}
+
+type FindContactEmailResult {
+  success: Boolean!
+  emailFound: Boolean!
+  email: String
+  verified: Boolean
+  message: String!
+  candidatesTried: Int!
+}
+
+type EnhanceAllContactsResult {
+  success: Boolean!
+  message: String!
+  companiesProcessed: Int!
+  totalContactsProcessed: Int!
+  totalEmailsFound: Int!
+  errors: [String!]!
+}
+
+type ApplyEmailPatternResult {
+  success: Boolean!
+  message: String!
+  contactsUpdated: Int!
+  pattern: String
+  contacts: [Contact!]!
 }

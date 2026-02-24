@@ -267,7 +267,24 @@ export default function DeepPlannerClient() {
       )}
 
       {loading && tasks.length === 0 && (
-        <Text color="gray">Loading tasks...</Text>
+        <Flex direction="column" gap="3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} style={{ opacity: 0.5 }}>
+              <Flex justify="between" align="start">
+                <Box style={{ flex: 1 }}>
+                  <Flex gap="2" align="center" mb="2">
+                    <Box style={{ width: 60, height: 20, background: "var(--gray-4)", borderRadius: "var(--radius-2)" }} />
+                    <Box style={{ width: 90, height: 16, background: "var(--gray-3)", borderRadius: "var(--radius-2)" }} />
+                  </Flex>
+                  <Box style={{ width: `${60 + i * 10}%`, height: 18, background: "var(--gray-3)", borderRadius: "var(--radius-2)" }} />
+                </Box>
+                <Box>
+                  <Box style={{ width: 70, height: 14, background: "var(--gray-3)", borderRadius: "var(--radius-2)" }} />
+                </Box>
+              </Flex>
+            </Card>
+          ))}
+        </Flex>
       )}
 
       {!loading && tasks.length === 0 && (
@@ -277,9 +294,11 @@ export default function DeepPlannerClient() {
               No planning tasks yet
             </Text>
             <Text color="gray" size="2">
-              Click &quot;New Task&quot; to assign your first BMAD planning
-              workflow.
+              Assign a BMAD workflow to run autonomously.
             </Text>
+            <Button onClick={() => setDialogOpen(true)}>
+              <PlusIcon /> New Task
+            </Button>
           </Flex>
         </Card>
       )}
@@ -295,51 +314,79 @@ export default function DeepPlannerClient() {
               style={{ cursor: "pointer" }}
               className="rt-hover-card"
             >
-              <Flex justify="between" align="start">
-                <Box>
-                  <Flex gap="2" align="center" mb="1">
-                    <Badge color={STATUS_COLORS[task.status] ?? "gray"}>
-                      {task.status}
-                    </Badge>
-                    {task.status === "RUNNING" &&
-                      isStale(task.updatedAt) && (
-                        <Badge color="orange" variant="outline">
-                          Stale — may have crashed
-                        </Badge>
-                      )}
-                    <Text size="1" color="gray">
-                      {task.workflowType.replace("_", " ")}
+              <Flex direction="column" gap="2">
+                <Flex justify="between" align="start">
+                  <Box>
+                    <Flex gap="2" align="center" mb="1">
+                      <Badge color={STATUS_COLORS[task.status] ?? "gray"}>
+                        {task.status}
+                      </Badge>
+                      {task.status === "RUNNING" &&
+                        isStale(task.updatedAt) && (
+                          <Badge color="orange" variant="outline">
+                            Stale — may have crashed
+                          </Badge>
+                        )}
+                      <Text size="1" color="gray">
+                        {task.workflowType.replace(/_/g, " ")}
+                      </Text>
+                    </Flex>
+                    <Text size="3" weight="medium">
+                      {task.problemDescription.length > 120
+                        ? task.problemDescription.slice(0, 120) + "..."
+                        : task.problemDescription}
                     </Text>
+                    {task.status === "FAILED" && task.errorMessage && (
+                      <Text size="1" color="red" mt="1">
+                        {task.errorMessage}
+                      </Text>
+                    )}
+                    {task.status === "RUNNING" && task.currentStep && (
+                      <Text size="1" color="blue" mt="1">
+                        Step: {task.currentStep}
+                      </Text>
+                    )}
+                  </Box>
+                  <Flex direction="column" align="end" gap="1" style={{ flexShrink: 0, marginLeft: "var(--space-4)" }}>
+                    <Text size="1" color="gray">
+                      {formatDate(task.createdAt)}
+                    </Text>
+                    <Text size="1" color="gray">
+                      {task.checkpointCount}/{task.totalSteps} ({task.progressPercent}%)
+                    </Text>
+                    {task.completedAt && (
+                      <Text size="1" color="gray">
+                        Completed {formatDate(task.completedAt)}
+                      </Text>
+                    )}
                   </Flex>
-                  <Text size="3" weight="medium">
-                    {task.problemDescription.length > 120
-                      ? task.problemDescription.slice(0, 120) + "..."
-                      : task.problemDescription}
-                  </Text>
-                  {task.status === "FAILED" && task.errorMessage && (
-                    <Text size="1" color="red" mt="1">
-                      {task.errorMessage}
-                    </Text>
-                  )}
-                  {task.status === "RUNNING" && task.currentStep && (
-                    <Text size="1" color="blue" mt="1">
-                      Step: {task.currentStep}
-                    </Text>
-                  )}
-                </Box>
-                <Flex direction="column" align="end" gap="1">
-                  <Text size="1" color="gray">
-                    {formatDate(task.createdAt)}
-                  </Text>
-                  <Text size="1" color="gray">
-                    {task.checkpointCount}/{task.totalSteps} ({task.progressPercent}%)
-                  </Text>
-                  {task.completedAt && (
-                    <Text size="1" color="gray">
-                      Completed {formatDate(task.completedAt)}
-                    </Text>
-                  )}
                 </Flex>
+                {(task.progressPercent ?? 0) > 0 && (
+                  <Box
+                    style={{
+                      width: "100%",
+                      height: 4,
+                      background: "var(--gray-4)",
+                      borderRadius: 2,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Box
+                      style={{
+                        width: `${task.progressPercent}%`,
+                        height: "100%",
+                        background: task.status === "COMPLETE"
+                          ? "var(--green-9)"
+                          : task.status === "FAILED"
+                          ? "var(--red-9)"
+                          : task.status === "CANCELLED"
+                          ? "var(--orange-9)"
+                          : "var(--blue-9)",
+                        borderRadius: 2,
+                      }}
+                    />
+                  </Box>
+                )}
               </Flex>
             </Card>
           </Link>

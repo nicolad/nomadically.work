@@ -5,8 +5,10 @@ import { useCallback, useMemo, useState } from "react";
 import {
   useGetCompanyQuery,
   useEnhanceCompanyMutation,
+  useUpdateCompanyMutation,
   useGetJobsQuery,
 } from "@/__generated__/hooks";
+import type { CompanyCategory } from "@/__generated__/graphql";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
@@ -19,13 +21,17 @@ import {
   Callout,
   Card,
   Container,
+  Dialog,
   Flex,
   Heading,
   Link as RadixLink,
+  Select,
   Separator,
   Strong,
   Tabs,
   Text,
+  TextArea,
+  TextField,
 } from "@radix-ui/themes";
 import {
   CheckCircledIcon,
@@ -35,6 +41,7 @@ import {
   MagicWandIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  Pencil1Icon,
   PersonIcon,
 } from "@radix-ui/react-icons";
 
@@ -364,6 +371,254 @@ function KeyFactsCard({
 }
 
 
+const CATEGORY_OPTIONS: CompanyCategory[] = [
+  "PRODUCT",
+  "CONSULTANCY",
+  "AGENCY",
+  "STAFFING",
+  "DIRECTORY",
+  "OTHER",
+  "UNKNOWN",
+];
+
+type EditDialogProps = {
+  company: NonNullable<ReturnType<typeof useGetCompanyQuery>["data"]>["company"];
+  onSaved: () => void;
+};
+
+function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [form, setForm] = useState({
+    name: company?.name ?? "",
+    website: company?.website ?? "",
+    description: company?.description ?? "",
+    logo_url: company?.logo_url ?? "",
+    location: company?.location ?? "",
+    size: company?.size ?? "",
+    industry: company?.industry ?? "",
+    canonical_domain: company?.canonical_domain ?? "",
+    category: (company?.category as CompanyCategory | null | undefined) ?? null,
+    tags: (company?.tags ?? []).join(", "),
+    services: (company?.services ?? []).join("\n"),
+  });
+
+  const [updateCompany, { loading }] = useUpdateCompanyMutation({
+    onCompleted: () => {
+      setSaveError(null);
+      setOpen(false);
+      onSaved();
+    },
+    onError: (err) => {
+      setSaveError(err.message || "Save failed.");
+    },
+  });
+
+  const handleOpen = () => {
+    setForm({
+      name: company?.name ?? "",
+      website: company?.website ?? "",
+      description: company?.description ?? "",
+      logo_url: company?.logo_url ?? "",
+      location: company?.location ?? "",
+      size: company?.size ?? "",
+      industry: company?.industry ?? "",
+      canonical_domain: company?.canonical_domain ?? "",
+      category: (company?.category as CompanyCategory | null | undefined) ?? null,
+      tags: (company?.tags ?? []).join(", "),
+      services: (company?.services ?? []).join("\n"),
+    });
+    setSaveError(null);
+    setOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!company) return;
+    const tags = form.tags
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const services = form.services
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    await updateCompany({
+      variables: {
+        id: company.id,
+        input: {
+          name: form.name || undefined,
+          website: form.website || undefined,
+          description: form.description || undefined,
+          logo_url: form.logo_url || undefined,
+          location: form.location || undefined,
+          size: form.size || undefined,
+          industry: form.industry || undefined,
+          canonical_domain: form.canonical_domain || undefined,
+          category: form.category ?? undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          services: services.length > 0 ? services : undefined,
+        },
+      },
+    });
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger>
+        <Button size="2" variant="soft" color="gray" onClick={handleOpen}>
+          <Pencil1Icon />
+          Edit
+        </Button>
+      </Dialog.Trigger>
+
+      <Dialog.Content maxWidth="560px">
+        <Dialog.Title>Edit company</Dialog.Title>
+        <Dialog.Description size="2" color="gray" mb="4">
+          Update company fields. Leave blank to keep existing value.
+        </Dialog.Description>
+
+        <Flex direction="column" gap="3">
+          {saveError && (
+            <Callout.Root color="red" size="1">
+              <Callout.Icon>
+                <InfoCircledIcon />
+              </Callout.Icon>
+              <Callout.Text>{saveError}</Callout.Text>
+            </Callout.Root>
+          )}
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Name</Text>
+            <TextField.Root
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Company name"
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Website</Text>
+            <TextField.Root
+              value={form.website}
+              onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+              placeholder="https://example.com"
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Canonical domain</Text>
+            <TextField.Root
+              value={form.canonical_domain}
+              onChange={(e) => setForm((f) => ({ ...f, canonical_domain: e.target.value }))}
+              placeholder="example.com"
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Logo URL</Text>
+            <TextField.Root
+              value={form.logo_url}
+              onChange={(e) => setForm((f) => ({ ...f, logo_url: e.target.value }))}
+              placeholder="https://..."
+            />
+          </Flex>
+
+          <Flex gap="3">
+            <Flex direction="column" gap="1" style={{ flex: 1 }}>
+              <Text size="2" weight="medium">Location</Text>
+              <TextField.Root
+                value={form.location}
+                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                placeholder="e.g. Remote, Berlin"
+              />
+            </Flex>
+            <Flex direction="column" gap="1" style={{ flex: 1 }}>
+              <Text size="2" weight="medium">Size</Text>
+              <TextField.Root
+                value={form.size}
+                onChange={(e) => setForm((f) => ({ ...f, size: e.target.value }))}
+                placeholder="e.g. 51-200"
+              />
+            </Flex>
+          </Flex>
+
+          <Flex gap="3">
+            <Flex direction="column" gap="1" style={{ flex: 1 }}>
+              <Text size="2" weight="medium">Industry</Text>
+              <TextField.Root
+                value={form.industry}
+                onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))}
+                placeholder="e.g. Software"
+              />
+            </Flex>
+            <Flex direction="column" gap="1" style={{ flex: 1 }}>
+              <Text size="2" weight="medium">Category</Text>
+              <Select.Root
+                value={form.category ?? ""}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, category: (v as CompanyCategory) || null }))
+                }
+              >
+                <Select.Trigger placeholder="Select…" style={{ width: "100%" }} />
+                <Select.Content>
+                  <Select.Item value="">— none —</Select.Item>
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <Select.Item key={c} value={c}>
+                      {c}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Tags <Text size="1" color="gray">(comma-separated)</Text></Text>
+            <TextField.Root
+              value={form.tags}
+              onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+              placeholder="tag1, tag2, tag3"
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Services <Text size="1" color="gray">(one per line)</Text></Text>
+            <TextArea
+              value={form.services}
+              onChange={(e) => setForm((f) => ({ ...f, services: e.target.value }))}
+              placeholder="Service A&#10;Service B"
+              rows={4}
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Description</Text>
+            <TextArea
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="Company description…"
+              rows={4}
+            />
+          </Flex>
+        </Flex>
+
+        <Flex gap="3" mt="5" justify="end">
+          <Dialog.Close>
+            <Button variant="soft" color="gray">
+              Cancel
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Saving…" : "Save"}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
 export function CompanyDetail({ companyKey, companyId }: Props) {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -657,6 +912,9 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                   Contacts
                 </Button>
               </Link>
+            )}
+            {isAdmin && (
+              <CompanyEditDialog company={company} onSaved={refetch} />
             )}
             {isAdmin && (
               <Button

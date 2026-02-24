@@ -5,15 +5,73 @@ query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
       firstName
       lastName
       email
+      bouncedEmails
       linkedinUrl
       position
       githubHandle
       telegramHandle
       emailVerified
       doNotContact
+      nbResult
       tags
       createdAt
     }
     totalCount
+  }
+}
+
+mutation ImportContacts($contacts: [ContactInput!]!) {
+  importContacts(contacts: $contacts) {
+    success
+    imported
+    failed
+    errors
+  }
+}
+
+mutation FindContactEmail($contactId: Int!) {
+  findContactEmail(contactId: $contactId) {
+    success
+    emailFound
+    email
+    verified
+    message
+    candidatesTried
+  }
+}
+
+mutation FindCompanyEmails($companyId: Int!) {
+  findCompanyEmails(companyId: $companyId) {
+    success
+    message
+    companiesProcessed
+    totalContactsProcessed
+    totalEmailsFound
+    errors
+  }
+}
+
+mutation EnhanceAllContacts {
+  enhanceAllContacts {
+    success
+    message
+    companiesProcessed
+    totalContactsProcessed
+    totalEmailsFound
+    errors
+  }
+}
+
+mutation ApplyEmailPattern($companyId: Int!) {
+  applyEmailPattern(companyId: $companyId) {
+    success
+    message
+    contactsUpdated
+    pattern
+    contacts {
+      id
+      email
+      emailVerified
+    }
   }
 }

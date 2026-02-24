@@ -257,11 +257,13 @@ function MatchedJobCard({
   matchedSkills,
   missingSkills,
   matchScore,
+  isNew,
 }: {
   job: { id: number; title: string; url: string; location?: string | null; publishedAt: string; company?: { name: string; logo_url?: string | null } | null };
   matchedSkills: string[];
   missingSkills: string[];
   matchScore: number;
+  isNew?: boolean;
 }) {
   const pct = Math.round(matchScore * 100);
   return (
@@ -282,27 +284,36 @@ function MatchedJobCard({
               <Text size="1" color="gray">{job.location}</Text>
             )}
           </Flex>
-          <Badge
-            color={pct >= 70 ? "green" : pct >= 40 ? "yellow" : "gray"}
-            variant="solid"
-            size="1"
-          >
-            {pct}% match
-          </Badge>
+          <Flex align="center" gap="1">
+            <Badge
+              color={pct >= 70 ? "green" : pct >= 40 ? "yellow" : "gray"}
+              variant="solid"
+              size="1"
+            >
+              {pct}% match
+            </Badge>
+            {isNew && <Badge color="blue" variant="soft" size="1">New</Badge>}
+          </Flex>
         </Flex>
 
         {matchedSkills.length > 0 && (
-          <Flex gap="1" wrap="wrap">
-            {matchedSkills.map((s) => <SkillBadge key={s} skill={s} variant="matched" />)}
+          <Flex direction="column" gap="1">
+            <Text size="1" color="gray">You have:</Text>
+            <Flex gap="1" wrap="wrap">
+              {matchedSkills.map((s) => <SkillBadge key={s} skill={s} variant="matched" />)}
+            </Flex>
           </Flex>
         )}
 
         {missingSkills.length > 0 && (
-          <Flex gap="1" wrap="wrap">
-            {missingSkills.slice(0, 8).map((s) => <SkillBadge key={s} skill={s} variant="missing" />)}
-            {missingSkills.length > 8 && (
-              <Text size="1" color="gray">+{missingSkills.length - 8} more</Text>
-            )}
+          <Flex direction="column" gap="1">
+            <Text size="1" color="gray">You&apos;re missing:</Text>
+            <Flex gap="1" wrap="wrap">
+              {missingSkills.slice(0, 8).map((s) => <SkillBadge key={s} skill={s} variant="missing" />)}
+              {missingSkills.length > 8 && (
+                <Text size="1" color="gray">+{missingSkills.length - 8} more</Text>
+              )}
+            </Flex>
           </Flex>
         )}
       </Flex>
@@ -372,6 +383,13 @@ function JobMatchingSection({ userId }: { userId: string }) {
         Upload your resume to extract your skills and find the best-matching remote EU jobs.
       </Text>
 
+      {/* Replace resume affordance — shown when a profile already exists */}
+      {profile?.extractedSkills && profile.extractedSkills.length > 0 && (
+        <Text size="1" color="gray">
+          Drop a new PDF below to replace your resume and re-extract skills.
+        </Text>
+      )}
+
       {/* Upload for skill matching */}
       <DropZone
         file={matchFile}
@@ -409,18 +427,39 @@ function JobMatchingSection({ userId }: { userId: string }) {
         </Box>
       )}
 
+      {/* Empty state — no skills extracted yet */}
+      {(!profile?.extractedSkills || profile.extractedSkills.length === 0) && (
+        <Text size="2" color="gray">
+          Upload your resume to see matched jobs.
+        </Text>
+      )}
+
       {/* Matched jobs */}
       {profile?.extractedSkills && profile.extractedSkills.length > 0 && (
         <Flex direction="column" gap="3">
           <Flex align="center" justify="between">
             <Heading size="3">Matched Jobs</Heading>
-            {matchLoading && (
+            {matchLoading && matchedJobs.length > 0 && (
               <Flex align="center" gap="1">
                 <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
                 <Text size="1" color="gray">Loading…</Text>
               </Flex>
             )}
           </Flex>
+
+          {matchLoading && matchedJobs.length === 0 && [1, 2, 3].map((i) => (
+            <Card key={i} variant="surface">
+              <Flex direction="column" gap="2">
+                <Box style={{ height: 16, width: "55%", background: "var(--gray-4)", borderRadius: 4 }} />
+                <Box style={{ height: 12, width: "30%", background: "var(--gray-3)", borderRadius: 4 }} />
+                <Flex gap="1">
+                  {[1, 2, 3].map((j) => (
+                    <Box key={j} style={{ height: 20, width: 56, background: "var(--gray-3)", borderRadius: 20 }} />
+                  ))}
+                </Flex>
+              </Flex>
+            </Card>
+          ))}
 
           {matchedJobs.length === 0 && !matchLoading && (
             <Callout.Root color="blue" variant="soft">
@@ -436,6 +475,11 @@ function JobMatchingSection({ userId }: { userId: string }) {
               matchedSkills={item.matchedSkills}
               missingSkills={item.missingSkills}
               matchScore={item.matchScore}
+              isNew={
+                !!item.job.publishedAt &&
+                !!profile?.updatedAt &&
+                item.job.publishedAt > profile.updatedAt
+              }
             />
           ))}
 
@@ -491,25 +535,23 @@ function ResumePageContent() {
   const [askAboutResume] = useAskAboutResumeLazyQuery();
 
   const userEmail = user?.email || "";
-  const resumeReady = uploadStatus === "success";
+  const resumeKnownReady = uploadStatus === "success";
 
   const { data: resumeStatusData } = useResumeStatusQuery({
     variables: { email: userEmail },
     skip: !userEmail,
     // Only poll while we don't know yet — stop once confirmed
-    pollInterval: resumeReady ? 0 : 5000,
-    onCompleted(data) {
-      const status = data?.resumeStatus;
-      if (status?.exists && uploadStatus === "idle") {
-        setUploadedResumeId(status.resume_id || "latest");
-        setChunksCount(status.chunk_count || 0);
-        setUploadStatus("success");
-      }
-    },
+    pollInterval: resumeKnownReady ? 0 : 5000,
   });
+
+  const resumeReady =
+    resumeKnownReady ||
+    (uploadStatus === "idle" && resumeStatusData?.resumeStatus?.exists === true);
 
   const existingFilename = resumeStatusData?.resumeStatus?.filename ?? null;
   const existingIngestedAt = resumeStatusData?.resumeStatus?.ingested_at ?? null;
+  const displayResumeId = uploadedResumeId || resumeStatusData?.resumeStatus?.resume_id || null;
+  const displayChunksCount = uploadStatus === "success" ? chunksCount : (resumeStatusData?.resumeStatus?.chunk_count ?? 0);
 
   const showToast = (message: string, type: ToastState["type"]) => {
     setToast({ show: true, message, type });
@@ -632,7 +674,7 @@ function ResumePageContent() {
       showToast("User email not found", "error");
       return;
     }
-    if (!uploadedResumeId && !resumeReady) {
+    if (!displayResumeId && !resumeReady) {
       showToast("Please upload your resume first", "error");
       return;
     }
@@ -721,7 +763,7 @@ function ResumePageContent() {
             )}
 
             {/* Existing resume info */}
-            {resumeReady && uploadedResumeId && (
+            {resumeReady && displayResumeId && (
               <Callout.Root color="green" variant="soft">
                 <Callout.Icon>
                   <CheckCircledIcon />
@@ -729,7 +771,7 @@ function ResumePageContent() {
                 <Callout.Text>
                   <Text weight="medium">{existingFilename || "Resume"}</Text>
                   {" — "}
-                  {chunksCount} sections indexed
+                  {displayChunksCount} sections indexed
                   {existingIngestedAt && (
                     <Text color="gray">
                       {" · uploaded "}

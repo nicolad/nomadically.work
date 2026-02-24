@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import {
@@ -37,6 +38,15 @@ const WORKERS = [
 export default function WorkersPage() {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const [resumeCount, setResumeCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch("/api/admin/resume-count")
+      .then((r) => r.json())
+      .then((d) => setResumeCount(d.count ?? 0))
+      .catch(() => setResumeCount(null));
+  }, [isAdmin]);
 
   if (!user) {
     return (
@@ -81,6 +91,19 @@ export default function WorkersPage() {
             <ReloadIcon /> Cloudflare Dashboard
           </a>
         </Button>
+      </Flex>
+
+      {/* Feature Adoption */}
+      <Heading size="4" mb="3">Feature Adoption</Heading>
+      <Flex gap="3" mb="6">
+        <Card style={{ minWidth: 160 }}>
+          <Flex direction="column" gap="1" p="2">
+            <Text size="1" color="gray">Resumes uploaded</Text>
+            <Text size="5" weight="bold">
+              {resumeCount === null ? "…" : resumeCount}
+            </Text>
+          </Flex>
+        </Card>
       </Flex>
 
       {/* Cloudflare Workers */}

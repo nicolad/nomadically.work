@@ -1,7 +1,14 @@
-import { contacts } from "@/db/schema";
+import { contacts, companies } from "@/db/schema";
 import { eq, and, like, or, count } from "drizzle-orm";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
+import {
+  NeverBounceClient,
+  extractDomainFromWebsite,
+  generateEmailCandidates,
+  inferEmailPattern,
+  generateEmailFromPattern,
+} from "@/lib/neverbounce";
 
 function parseJsonArray(val: string | null | undefined): string[] {
   if (!val) return [];
@@ -15,6 +22,9 @@ function parseJsonArray(val: string | null | undefined): string[] {
 const Contact = {
   emails(parent: any) {
     return parseJsonArray(parent.emails);
+  },
+  bouncedEmails(parent: any) {
+    return parseJsonArray(parent.bounced_emails);
   },
   nbFlags(parent: any) {
     return parseJsonArray(parent.nb_flags);
@@ -243,6 +253,476 @@ export const contactResolvers = {
         failed: errors.length,
         errors,
       };
+    },
+
+    // -------------------------------------------------------------------------
+    // Email discovery mutations
+    // -------------------------------------------------------------------------
+
+    async findContactEmail(
+      _parent: unknown,
+      args: { contactId: number },
+      context: GraphQLContext,
+    ) {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
+      const apiKey = process.env.NEVERBOUNCE_API_KEY;
+      if (!apiKey) {
+        throw new Error("NEVERBOUNCE_API_KEY not configured");
+      }
+
+      const contactRows = await context.db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, args.contactId))
+        .limit(1);
+      const contact = contactRows[0];
+
+      if (!contact) {
+        return {
+          success: false,
+          emailFound: false,
+          email: null,
+          verified: null,
+          message: "Contact not found",
+          candidatesTried: 0,
+        };
+      }
+
+      if (contact.email && contact.email_verified) {
+        return {
+          success: true,
+          emailFound: true,
+          email: contact.email,
+          verified: true,
+          message: "Contact already has a verified email",
+          candidatesTried: 0,
+        };
+      }
+
+      if (!contact.first_name) {
+        return {
+          success: false,
+          emailFound: false,
+          email: null,
+          verified: null,
+          message: "Contact must have a first name",
+          candidatesTried: 0,
+        };
+      }
+
+      const domains: string[] = [];
+      if (contact.company_id) {
+        const companyRows = await context.db
+          .select()
+          .from(companies)
+          .where(eq(companies.id, contact.company_id))
+          .limit(1);
+        const company = companyRows[0];
+        if (company?.website) {
+          const domain = extractDomainFromWebsite(company.website);
+          if (domain) domains.push(domain);
+        }
+      }
+
+      if (domains.length === 0) {
+        return {
+          success: false,
+          emailFound: false,
+          email: null,
+          verified: null,
+          message: "Company must have a website to find email",
+          candidatesTried: 0,
+        };
+      }
+
+      const bouncedEmails = new Set(parseJsonArray(contact.bounced_emails));
+      const nbClient = new NeverBounceClient(apiKey);
+      let totalCandidatesTried = 0;
+
+      for (const domain of domains) {
+        const candidates = generateEmailCandidates(
+          contact.first_name,
+          contact.last_name ?? "",
+          domain,
+        );
+        const validCandidates = candidates.filter((e) => !bouncedEmails.has(e));
+
+        if (validCandidates.length === 0) continue;
+        totalCandidatesTried += validCandidates.length;
+
+        const result = await nbClient.findVerifiedEmail(validCandidates);
+
+        if (result) {
+          await context.db
+            .update(contacts)
+            .set({
+              email: result.email,
+              email_verified: result.outcome.verified,
+              nb_status: "success",
+              nb_result: result.outcome.rawResult,
+              nb_flags: JSON.stringify(result.outcome.flags),
+              nb_suggested_correction: result.outcome.suggestedCorrection ?? null,
+              nb_retry_token: result.outcome.retryToken ?? null,
+              nb_execution_time_ms: result.outcome.executionTimeMs,
+              updated_at: new Date().toISOString(),
+            })
+            .where(eq(contacts.id, args.contactId));
+
+          return {
+            success: true,
+            emailFound: true,
+            email: result.email,
+            verified: result.outcome.verified,
+            message: `Found and verified email: ${result.email}`,
+            candidatesTried: totalCandidatesTried,
+          };
+        }
+      }
+
+      return {
+        success: true,
+        emailFound: false,
+        email: null,
+        verified: null,
+        message: `No verified email found after trying ${totalCandidatesTried} candidate(s) across ${domains.length} domain(s)`,
+        candidatesTried: totalCandidatesTried,
+      };
+    },
+
+    async findCompanyEmails(
+      _parent: unknown,
+      args: { companyId: number },
+      context: GraphQLContext,
+    ) {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
+      const apiKey = process.env.NEVERBOUNCE_API_KEY;
+      if (!apiKey) {
+        throw new Error("NEVERBOUNCE_API_KEY not configured");
+      }
+
+      const [company] = await context.db
+        .select()
+        .from(companies)
+        .where(eq(companies.id, args.companyId))
+        .limit(1);
+
+      if (!company?.website) {
+        return {
+          success: false,
+          message: "Company not found or has no website",
+          companiesProcessed: 0,
+          totalContactsProcessed: 0,
+          totalEmailsFound: 0,
+          errors: [],
+        };
+      }
+
+      const domain = extractDomainFromWebsite(company.website);
+      if (!domain) {
+        return {
+          success: false,
+          message: `Could not extract domain from ${company.website}`,
+          companiesProcessed: 0,
+          totalContactsProcessed: 0,
+          totalEmailsFound: 0,
+          errors: [],
+        };
+      }
+
+      const companyContacts = await context.db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.company_id, company.id));
+
+      const errors: string[] = [];
+      let totalContactsProcessed = 0;
+      let totalEmailsFound = 0;
+      const nbClient = new NeverBounceClient(apiKey);
+      let foundPattern = NeverBounceClient.getDomainPattern(domain) ?? null;
+
+      for (const contact of companyContacts) {
+        if (contact.email_verified && contact.email) continue;
+
+        const firstName = contact.first_name?.trim();
+        const lastName = contact.last_name?.trim();
+        if (!firstName || !lastName) continue;
+
+        totalContactsProcessed++;
+
+        try {
+          let foundEmail: string | null = null;
+          let verified = false;
+
+          if (foundPattern) {
+            const result = NeverBounceClient.verifyWithPattern(firstName, lastName, foundPattern);
+            foundEmail = result.email;
+            verified = true;
+          } else {
+            const candidates = generateEmailCandidates(firstName, lastName, domain);
+            const result = await nbClient.findVerifiedEmail(candidates);
+            if (result) {
+              foundEmail = result.email;
+              verified = result.outcome.verified;
+              const pattern = inferEmailPattern(firstName, lastName, foundEmail);
+              if (pattern && verified) {
+                foundPattern = pattern;
+                NeverBounceClient.setDomainPattern(pattern);
+              }
+            }
+          }
+
+          if (foundEmail) {
+            await context.db
+              .update(contacts)
+              .set({ email: foundEmail, email_verified: verified, updated_at: new Date().toISOString() })
+              .where(eq(contacts.id, contact.id));
+            totalEmailsFound++;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          errors.push(`${firstName} ${lastName}: ${msg}`);
+        }
+      }
+
+      return {
+        success: true,
+        message: `Found ${totalEmailsFound} email${totalEmailsFound !== 1 ? "s" : ""} for ${totalContactsProcessed} contact${totalContactsProcessed !== 1 ? "s" : ""}`,
+        companiesProcessed: 1,
+        totalContactsProcessed,
+        totalEmailsFound,
+        errors,
+      };
+    },
+
+    async enhanceAllContacts(
+      _parent: unknown,
+      _args: unknown,
+      context: GraphQLContext,
+    ) {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
+      const apiKey = process.env.NEVERBOUNCE_API_KEY;
+      if (!apiKey) {
+        throw new Error("NEVERBOUNCE_API_KEY not configured");
+      }
+
+      const allCompanies = await context.db.select().from(companies);
+      const errors: string[] = [];
+      let companiesProcessed = 0;
+      let totalContactsProcessed = 0;
+      let totalEmailsFound = 0;
+
+      const nbClient = new NeverBounceClient(apiKey);
+
+      for (const company of allCompanies) {
+        if (!company.website) continue;
+
+        const domain = extractDomainFromWebsite(company.website);
+        if (!domain) continue;
+
+        try {
+          const companyContacts = await context.db
+            .select()
+            .from(contacts)
+            .where(eq(contacts.company_id, company.id));
+
+          if (companyContacts.length === 0) continue;
+
+          let contactsProcessedForCompany = 0;
+          let emailsFoundForCompany = 0;
+
+          let foundPattern = NeverBounceClient.getDomainPattern(domain) ?? null;
+
+          for (const contact of companyContacts) {
+            if (contact.email_verified && contact.email) continue;
+
+            const firstName = contact.first_name?.trim();
+            const lastName = contact.last_name?.trim();
+            if (!firstName || !lastName) continue;
+
+            contactsProcessedForCompany++;
+
+            try {
+              let foundEmail: string | null = null;
+              let verified = false;
+
+              if (foundPattern) {
+                const result = NeverBounceClient.verifyWithPattern(firstName, lastName, foundPattern);
+                foundEmail = result.email;
+                verified = true;
+              } else {
+                const candidates = generateEmailCandidates(firstName, lastName, domain);
+                const result = await nbClient.findVerifiedEmail(candidates);
+
+                if (result) {
+                  foundEmail = result.email;
+                  verified = result.outcome.verified;
+
+                  const pattern = inferEmailPattern(firstName, lastName, foundEmail);
+                  if (pattern && verified) {
+                    foundPattern = pattern;
+                    NeverBounceClient.setDomainPattern(pattern);
+                  }
+                }
+              }
+
+              if (foundEmail) {
+                await context.db
+                  .update(contacts)
+                  .set({
+                    email: foundEmail,
+                    email_verified: verified,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .where(eq(contacts.id, contact.id));
+
+                emailsFoundForCompany++;
+              }
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : "Unknown error";
+              errors.push(`Contact ${contact.id} (${firstName} ${lastName}): ${msg}`);
+            }
+          }
+
+          if (contactsProcessedForCompany > 0) {
+            companiesProcessed++;
+            totalContactsProcessed += contactsProcessedForCompany;
+            totalEmailsFound += emailsFoundForCompany;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          errors.push(`Company ${company.name ?? company.id}: ${msg}`);
+        }
+      }
+
+      return {
+        success: true,
+        message: `Processed ${companiesProcessed} companies, found ${totalEmailsFound} emails for ${totalContactsProcessed} contacts`,
+        companiesProcessed,
+        totalContactsProcessed,
+        totalEmailsFound,
+        errors,
+      };
+    },
+
+    async applyEmailPattern(
+      _parent: unknown,
+      args: { companyId: number },
+      context: GraphQLContext,
+    ) {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
+      try {
+        const companyContacts = await context.db
+          .select()
+          .from(contacts)
+          .where(eq(contacts.company_id, args.companyId));
+
+        const verifiedContacts = companyContacts.filter(
+          (c) => (c.email_verified === true || (c.email_verified as unknown) === 1) && c.email,
+        );
+
+        if (verifiedContacts.length === 0) {
+          return {
+            success: false,
+            message: `No verified emails found. Total contacts: ${companyContacts.length}. Contacts with emails: ${companyContacts.filter((c) => c.email).length}.`,
+            contactsUpdated: 0,
+            pattern: null,
+            contacts: [],
+          };
+        }
+
+        const patternContact = verifiedContacts.find((c) => c.first_name && c.last_name);
+
+        if (!patternContact) {
+          return {
+            success: false,
+            message: `Found ${verifiedContacts.length} verified email(s), but none have both first and last name needed to infer pattern`,
+            contactsUpdated: 0,
+            pattern: null,
+            contacts: [],
+          };
+        }
+
+        const pattern = inferEmailPattern(
+          patternContact.first_name,
+          patternContact.last_name,
+          patternContact.email!,
+        );
+
+        if (!pattern) {
+          return {
+            success: false,
+            message: `Could not infer pattern from verified email '${patternContact.email}' for contact '${patternContact.first_name} ${patternContact.last_name}'`,
+            contactsUpdated: 0,
+            pattern: null,
+            contacts: [],
+          };
+        }
+
+        const contactsToProcess = companyContacts.filter((c) => {
+          if (c.email_verified === true || (c.email_verified as unknown) === 1) return false;
+          if (!c.first_name) return false;
+          return !!c.last_name;
+        });
+
+        const updatedContacts = [];
+
+        for (const contact of contactsToProcess) {
+          const generatedEmail = generateEmailFromPattern(pattern, contact.first_name, contact.last_name ?? "");
+
+          const existingMatches = contact.email
+            ? contact.email.toLowerCase().trim() === generatedEmail.toLowerCase().trim()
+            : false;
+
+          if (existingMatches) {
+            const rows = await context.db
+              .update(contacts)
+              .set({ email_verified: true, updated_at: new Date().toISOString() })
+              .where(eq(contacts.id, contact.id))
+              .returning();
+            if (rows[0]) updatedContacts.push(rows[0]);
+          } else {
+            const rows = await context.db
+              .update(contacts)
+              .set({ email: generatedEmail, email_verified: true, updated_at: new Date().toISOString() })
+              .where(eq(contacts.id, contact.id))
+              .returning();
+            if (rows[0]) updatedContacts.push(rows[0]);
+          }
+        }
+
+        const patternLabel = `${pattern.patternType}@${pattern.domain}`;
+
+        return {
+          success: updatedContacts.length > 0,
+          message: updatedContacts.length > 0
+            ? `Applied pattern ${patternLabel} to ${updatedContacts.length} contacts`
+            : "No contacts to update",
+          contactsUpdated: updatedContacts.length,
+          pattern: patternLabel,
+          contacts: updatedContacts,
+        };
+      } catch (err) {
+        console.error("[applyEmailPattern] error:", err);
+        return {
+          success: false,
+          message: err instanceof Error ? err.message : "Failed to apply email pattern",
+          contactsUpdated: 0,
+          pattern: null,
+          contacts: [],
+        };
+      }
     },
   },
 

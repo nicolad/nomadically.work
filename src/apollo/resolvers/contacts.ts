@@ -218,13 +218,17 @@ export const contactResolvers = {
 
       for (const input of args.contacts) {
         try {
-          const { firstName, lastName, emails, tags, ...rest } = input;
+          const { firstName, lastName, emails, tags, linkedinUrl, companyId, githubHandle, telegramHandle, ...rest } = input;
           await context.db.insert(contacts).values({
             first_name: firstName,
             last_name: lastName ?? "",
             emails: emails ? JSON.stringify(emails) : "[]",
             tags: tags ? JSON.stringify(tags) : "[]",
             nb_flags: "[]",
+            ...(linkedinUrl != null && { linkedin_url: linkedinUrl }),
+            ...(companyId != null && { company_id: companyId }),
+            ...(githubHandle != null && { github_handle: githubHandle }),
+            ...(telegramHandle != null && { telegram_handle: telegramHandle }),
             ...rest,
           });
           imported++;

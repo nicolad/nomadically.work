@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { useUser } from "@clerk/nextjs";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
@@ -20,6 +20,13 @@ export function AdminNav() {
   return (
     <>
       <Link href="/admin/deep-planner">tasks</Link>
+      <Link
+        href="/admin/emails"
+        style={{ display: "flex", alignItems: "center" }}
+        title="Emails"
+      >
+        <EnvelopeClosedIcon width={14} height={14} />
+      </Link>
       <Link
         href="/admin/reported-jobs"
         style={{ display: "flex", alignItems: "center" }}

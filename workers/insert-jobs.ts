@@ -305,6 +305,17 @@ interface ATSJob {
   postedAt?: string;
 }
 
+/**
+ * Thrown when an ATS board returns a 4xx HTTP error, indicating the board
+ * is gone or the company key is invalid (not a transient server-side error).
+ */
+class ATSFetchError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "ATSFetchError";
+  }
+}
+
 async function fetchWithRetry(
   url: string,
   retries = 2,
@@ -343,6 +354,9 @@ async function fetchGreenhouseJobs(companyKey: string): Promise<ATSJob[]> {
       worker: WORKER, action: "fetch-ats", level: "error",
       error: `HTTP ${res.status}`, metadata: { kind: "greenhouse", companyKey },
     });
+    if (res.status >= 400 && res.status < 500) {
+      throw new ATSFetchError(res.status, `Greenhouse board not found: ${companyKey} (HTTP ${res.status})`);
+    }
     return [];
   }
   const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
@@ -360,12 +374,17 @@ async function fetchGreenhouseJobs(companyKey: string): Promise<ATSJob[]> {
 
 async function fetchLeverJobs(companyKey: string): Promise<ATSJob[]> {
   // Try global endpoint first, then EU
-  for (const base of [
+  const endpoints = [
     `https://api.lever.co/v0/postings/${companyKey}`,
     `https://api.eu.lever.co/v0/postings/${companyKey}`,
-  ]) {
+  ];
+  let clientErrorCount = 0;
+  for (const base of endpoints) {
     const res = await fetchWithRetry(`${base}?mode=json`);
-    if (!res.ok) continue;
+    if (!res.ok) {
+      if (res.status >= 400 && res.status < 500) clientErrorCount++;
+      continue;
+    }
     const data = (await res.json()) as Array<Record<string, unknown>>;
     if (!Array.isArray(data) || data.length === 0) continue;
 
@@ -383,6 +402,10 @@ async function fetchLeverJobs(companyKey: string): Promise<ATSJob[]> {
       };
     });
   }
+  // Both endpoints returned 4xx — board is gone
+  if (clientErrorCount === endpoints.length) {
+    throw new ATSFetchError(404, `Lever board not found: ${companyKey}`);
+  }
   return [];
 }
 
@@ -394,6 +417,9 @@ async function fetchAshbyJobs(companyKey: string): Promise<ATSJob[]> {
       worker: WORKER, action: "fetch-ats", level: "error",
       error: `HTTP ${res.status}`, metadata: { kind: "ashby", companyKey },
     });
+    if (res.status >= 400 && res.status < 500) {
+      throw new ATSFetchError(res.status, `Ashby board not found: ${companyKey} (HTTP ${res.status})`);
+    }
     return [];
   }
   const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
@@ -417,6 +443,9 @@ async function fetchWorkableJobs(companyKey: string): Promise<ATSJob[]> {
       worker: WORKER, action: "fetch-ats", level: "error",
       error: `HTTP ${res.status}`, metadata: { kind: "workable", companyKey },
     });
+    if (res.status >= 400 && res.status < 500) {
+      throw new ATSFetchError(res.status, `Workable board not found: ${companyKey} (HTTP ${res.status})`);
+    }
     return [];
   }
   const data = (await res.json()) as { results?: Array<Record<string, unknown>> };
@@ -457,6 +486,7 @@ interface IngestionStats {
   jobsSkipped: number;
   jobsEnqueued: number;
   errors: string[];
+  deadBoardsDetected: number;
 }
 
 async function autoIngestFromSources(
@@ -473,6 +503,7 @@ async function autoIngestFromSources(
     jobsSkipped: 0,
     jobsEnqueued: 0,
     errors: [],
+    deadBoardsDetected: 0,
   };
 
   // Find sources not fetched recently, ordered by oldest-first
@@ -535,10 +566,10 @@ async function autoIngestFromSources(
           worker: WORKER, action: "board-fetch-result", level: "info", traceId,
           sourceId, metadata: { kind, companyKey, jobsFetched: 0 },
         });
-        // Still mark as fetched to avoid re-checking immediately
+        // Board is alive but has no open positions — reset error counter and mark fetched
         await d1Run(
           db,
-          `UPDATE job_sources SET last_fetched_at = datetime('now') WHERE id = ?`,
+          `UPDATE job_sources SET last_fetched_at = datetime('now'), consecutive_errors = 0 WHERE id = ?`,
           [sourceId],
         );
         continue;
@@ -599,19 +630,33 @@ async function autoIngestFromSources(
         }
       }
 
-      // Update last_fetched_at
+      // Update last_fetched_at and reset consecutive_errors on success
       await d1Run(
         db,
-        `UPDATE job_sources SET last_fetched_at = datetime('now') WHERE id = ?`,
+        `UPDATE job_sources SET last_fetched_at = datetime('now'), consecutive_errors = 0 WHERE id = ?`,
         [sourceId],
       );
     } catch (err) {
+      const isDeadBoard = err instanceof ATSFetchError;
       const msg = `${kind}/${companyKey}: ${err instanceof Error ? err.message : String(err)}`;
       log({
-        worker: WORKER, action: "board-fetch-error", level: "error", traceId,
-        sourceId, error: msg, metadata: { kind, companyKey },
+        worker: WORKER, action: "board-fetch-error", level: isDeadBoard ? "warn" : "error", traceId,
+        sourceId, error: msg, metadata: { kind, companyKey, isDeadBoard },
       });
       stats.errors.push(msg);
+
+      if (isDeadBoard) {
+        stats.deadBoardsDetected++;
+        // Increment consecutive_errors — janitor will clean up after threshold is reached
+        await d1Run(
+          db,
+          `UPDATE job_sources
+           SET last_fetched_at = datetime('now'),
+               consecutive_errors = consecutive_errors + 1
+           WHERE id = ?`,
+          [sourceId],
+        );
+      }
     }
   }
 
@@ -628,6 +673,7 @@ async function autoIngestFromSources(
       jobsSkipped: stats.jobsSkipped,
       jobsEnqueued: stats.jobsEnqueued,
       errorCount: stats.errors.length,
+      deadBoardsDetected: stats.deadBoardsDetected,
     },
   });
 

@@ -1,12 +1,14 @@
 /**
- * Cloudflare Workers Janitor — ATS Job Ingestion Trigger
+ * Cloudflare Workers Janitor — ATS Pipeline Orchestrator
  *
- * Runs daily at midnight UTC to trigger ingestion from known ATS sources
- * (Greenhouse, Lever, Ashby, Workable) stored in the job_sources D1 table.
+ * Runs daily at midnight UTC. Three automatic phases:
+ *   1. Sync   — pull new boards from greenhouse_boards / lever_boards / ashby_boards
+ *               into the unified job_sources table (INSERT OR IGNORE).
+ *   2. Cleanup — remove dead sources (consecutive_errors >= 5) and archive their jobs.
+ *   3. Ingest  — trigger insert-jobs worker to fetch jobs from all stale sources.
  *
- * Discovery of new sources is handled separately via:
- * - ashby-crawler (Rust/WASM worker for Common Crawl)
- * - Manual addition via admin UI or scripts
+ * No manual intervention required. New boards flow in automatically as the
+ * ashby-crawler and other discovery workers populate the per-ATS board tables.
  */
 
 import { log, generateTraceId } from "./lib/logger";
@@ -46,6 +48,109 @@ type JobSource = {
   first_seen_at: string;
   last_synced_at: string | null;
 };
+
+// ---------------------------------------------------------------------------
+// Phase 1: Sync new boards into job_sources
+// ---------------------------------------------------------------------------
+
+/**
+ * Copies newly discovered boards from the per-ATS discovery tables
+ * (greenhouse_boards, lever_boards, ashby_boards) into the unified
+ * job_sources table. INSERT OR IGNORE means existing rows are untouched.
+ */
+async function syncNewBoards(
+  db: D1Database,
+  traceId: string,
+): Promise<{ added: number }> {
+  const results = await db.batch([
+    db.prepare(
+      `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+       SELECT 'greenhouse', token, url, first_seen
+       FROM greenhouse_boards
+       WHERE is_active = 1`,
+    ),
+    db.prepare(
+      `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+       SELECT 'lever', site, url, first_seen
+       FROM lever_boards
+       WHERE is_active = 1`,
+    ),
+    db.prepare(
+      `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
+       SELECT 'ashby', slug, url, first_seen
+       FROM ashby_boards
+       WHERE is_active = 1`,
+    ),
+  ]);
+
+  const added = results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+
+  if (added > 0) {
+    log({
+      worker: WORKER, action: "sync-boards", level: "info", traceId,
+      metadata: { added },
+    });
+  }
+
+  return { added };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2: Dead board cleanup
+// ---------------------------------------------------------------------------
+
+/**
+ * Finds sources with consecutive_errors >= threshold (set by insert-jobs when
+ * the ATS API returns a 4xx), archives their jobs, and deletes the source row.
+ */
+async function cleanupDeadBoards(
+  db: D1Database,
+  traceId: string,
+  threshold = 5,
+): Promise<{ deactivated: number; jobsArchived: number }> {
+  const dead = await db
+    .prepare(
+      `SELECT id, kind, company_key
+       FROM job_sources
+       WHERE consecutive_errors >= ?`,
+    )
+    .bind(threshold)
+    .all<{ id: number; kind: string; company_key: string }>();
+
+  const rows = dead.results ?? [];
+  if (rows.length === 0) {
+    return { deactivated: 0, jobsArchived: 0 };
+  }
+
+  let jobsArchived = 0;
+  for (const source of rows) {
+    log({
+      worker: WORKER, action: "dead-board-found", level: "warn", traceId,
+      metadata: { sourceId: source.id, kind: source.kind, companyKey: source.company_key },
+    });
+
+    // Archive all active jobs from this source
+    const archiveResult = await db
+      .prepare(
+        `UPDATE jobs
+         SET status = 'archived', updated_at = datetime('now')
+         WHERE source_id = ? AND status NOT IN ('reported', 'archived')`,
+      )
+      .bind(source.id)
+      .run();
+    jobsArchived += archiveResult.meta?.changes ?? 0;
+
+    // Remove the dead source
+    await db.prepare(`DELETE FROM job_sources WHERE id = ?`).bind(source.id).run();
+  }
+
+  log({
+    worker: WORKER, action: "dead-board-cleanup", level: "info", traceId,
+    metadata: { deactivated: rows.length, jobsArchived },
+  });
+
+  return { deactivated: rows.length, jobsArchived };
+}
 
 // ---------------------------------------------------------------------------
 // ATS source stats
@@ -90,7 +195,7 @@ async function getSourceStats(
 }
 
 // ---------------------------------------------------------------------------
-// Trigger job ingestion
+// Phase 3: Trigger job ingestion
 // ---------------------------------------------------------------------------
 
 async function triggerIngestion(env: Env, sourceCount: number, traceId: string): Promise<void> {
@@ -186,27 +291,10 @@ export default {
       );
     }
 
-    // GET /trigger-ingest — manually trigger ingestion of stale sources
-    if (url.pathname === "/trigger-ingest") {
-      const traceId = generateTraceId();
-      const stats = await getSourceStats(env.DB);
-      await triggerIngestion(env, stats.stale, traceId);
-
-      return new Response(
-        JSON.stringify({
-          message: `Triggered ingestion for ${stats.stale} stale sources`,
-          traceId,
-          stats,
-        }),
-        { headers: { "Content-Type": "application/json" } },
-      );
-    }
-
     return new Response(
       JSON.stringify({
-        message:
-          "ATS job ingestion cron worker. Endpoints: /health, /sources, /trigger-ingest",
-        hint: "Cron runs daily at midnight UTC to trigger ingestion from known ATS sources.",
+        message: "ATS pipeline orchestrator. Endpoints: /health, /sources",
+        hint: "Cron runs daily at midnight UTC: (1) sync new boards, (2) clean dead boards, (3) trigger ingestion. All automatic.",
       }),
       { headers: { "Content-Type": "application/json" } },
     );
@@ -223,23 +311,31 @@ export default {
     log({ worker: WORKER, action: "scheduled-start", level: "info", traceId });
 
     try {
+      // Phase 1: Sync new boards discovered by crawlers into job_sources
+      const sync = await syncNewBoards(env.DB, traceId);
+
+      // Phase 2: Remove dead boards (repeated 4xx) and archive their jobs
+      const cleanup = await cleanupDeadBoards(env.DB, traceId);
+
+      // Phase 3: Trigger ingestion of stale sources
       const stats = await getSourceStats(env.DB);
 
       log({
         worker: WORKER, action: "source-stats", level: "info", traceId,
-        metadata: { total: stats.total, stale: stats.stale, byKind: stats.byKind },
+        metadata: {
+          total: stats.total,
+          stale: stats.stale,
+          byKind: stats.byKind,
+          newBoardsSynced: sync.added,
+          deadBoardsRemoved: cleanup.deactivated,
+          jobsArchived: cleanup.jobsArchived,
+        },
       });
 
       if (stats.stale > 0) {
-        log({
-          worker: WORKER, action: "trigger-ingestion", level: "info", traceId,
-          metadata: { staleSources: stats.stale },
-        });
         ctx.waitUntil(triggerIngestion(env, stats.stale, traceId));
       } else {
-        log({
-          worker: WORKER, action: "no-stale-sources", level: "info", traceId,
-        });
+        log({ worker: WORKER, action: "no-stale-sources", level: "info", traceId });
       }
 
       // Mark sync timestamp on sources we're about to ingest
@@ -253,6 +349,11 @@ export default {
       log({
         worker: WORKER, action: "scheduled-complete", level: "info", traceId,
         duration_ms: Date.now() - start,
+        metadata: {
+          newBoardsSynced: sync.added,
+          deadBoardsRemoved: cleanup.deactivated,
+          jobsArchived: cleanup.jobsArchived,
+        },
       });
     } catch (error) {
       log({

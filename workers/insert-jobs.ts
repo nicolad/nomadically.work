@@ -303,6 +303,8 @@ interface ATSJob {
   location?: string;
   description?: string;
   postedAt?: string;
+  /** Per-job company key override — used by multi-company sources (Remotive, Arbeitnow) */
+  companyKey?: string;
 }
 
 /**
@@ -435,6 +437,72 @@ async function fetchAshbyJobs(companyKey: string): Promise<ATSJob[]> {
   }));
 }
 
+function slugifyCompany(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unknown";
+}
+
+async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
+  const url = "https://remotive.com/api/remote-jobs";
+  const res = await fetchWithRetry(url);
+  if (!res.ok) {
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "remotive" },
+    });
+    if (res.status >= 400 && res.status < 500) {
+      throw new ATSFetchError(res.status, `Remotive API error (HTTP ${res.status})`);
+    }
+    return [];
+  }
+  const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
+  return (data.jobs ?? []).map((j) => ({
+    externalId: String(j.id ?? ""),
+    title: String(j.title ?? ""),
+    url: String(j.url ?? ""),
+    location: String(j.candidate_required_location ?? ""),
+    description: typeof j.description === "string" ? j.description.slice(0, 5000) : undefined,
+    postedAt: j.publication_date ? String(j.publication_date) : undefined,
+    companyKey: slugifyCompany(String(j.company_name ?? "unknown")),
+  }));
+}
+
+async function fetchArbeitnowJobs(_companyKey: string): Promise<ATSJob[]> {
+  const jobs: ATSJob[] = [];
+  let page = 1;
+  while (page <= 20) {
+    const url = `https://www.arbeitnow.com/api/job-board-api?page=${page}`;
+    const res = await fetchWithRetry(url);
+    if (!res.ok) {
+      log({
+        worker: WORKER, action: "fetch-ats", level: "error",
+        error: `HTTP ${res.status}`, metadata: { kind: "arbeitnow", page },
+      });
+      if (res.status >= 400 && res.status < 500) {
+        throw new ATSFetchError(res.status, `Arbeitnow API error (HTTP ${res.status})`);
+      }
+      break;
+    }
+    const data = (await res.json()) as { data?: Array<Record<string, unknown>> };
+    const items = data.data ?? [];
+    if (items.length === 0) break;
+    for (const j of items) {
+      jobs.push({
+        externalId: String(j.slug ?? ""),
+        title: String(j.title ?? ""),
+        url: String(j.url ?? ""),
+        location: String(j.location ?? ""),
+        description: typeof j.description === "string" ? j.description.slice(0, 5000) : undefined,
+        postedAt: j.published_at ? String(j.published_at) : undefined,
+        companyKey: slugifyCompany(String(j.company_name ?? "unknown")),
+      });
+    }
+    page++;
+    // Be polite between pages
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return jobs;
+}
+
 async function fetchWorkableJobs(companyKey: string): Promise<ATSJob[]> {
   const url = `https://apply.workable.com/api/v3/accounts/${companyKey}/jobs`;
   const res = await fetchWithRetry(url);
@@ -470,6 +538,10 @@ function getATSFetcher(kind: string): ((key: string) => Promise<ATSJob[]>) | nul
       return fetchAshbyJobs;
     case "workable":
       return fetchWorkableJobs;
+    case "remotive":
+      return fetchRemotiveJobs;
+    case "arbeitnow":
+      return fetchArbeitnowJobs;
     default:
       return null;
   }
@@ -590,7 +662,7 @@ async function autoIngestFromSources(
           externalId: atsJob.externalId,
           sourceId,
           sourceKind: kind,
-          companyKey,
+          companyKey: atsJob.companyKey ?? companyKey,
           title: atsJob.title,
           url: atsJob.url,
           location: atsJob.location,

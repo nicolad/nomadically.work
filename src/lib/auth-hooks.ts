@@ -46,7 +46,7 @@ export function useAuth(): AuthContext {
   const mappedUser = user
     ? {
         id: user.id,
-        email: user.primaryEmailAddress?.emailAddress,
+        email: user.primaryEmailAddress?.emailAddress?.toLowerCase(),
         name: user.fullName || user.username,
         emailVerified: user.primaryEmailAddress?.verification.status === "verified",
       }

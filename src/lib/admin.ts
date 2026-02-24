@@ -38,5 +38,5 @@ export async function checkIsAdmin(): Promise<{
  * @returns true if email is admin
  */
 export function isAdminEmail(email: string | null | undefined): boolean {
-  return email === ADMIN_EMAIL;
+  return email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }

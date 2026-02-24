@@ -1540,7 +1540,7 @@ export type DeepPlannerTaskQueryVariables = Exact<{
 }>;
 
 
-export type DeepPlannerTaskQuery = { __typename?: 'Query', deepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, context: string | null, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, outputArtifact: string | null, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string } | null };
+export type DeepPlannerTaskQuery = { __typename?: 'Query', deepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, context: string | null, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, totalSteps: number, progressPercent: number, outputArtifact: string | null, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string } | null };
 
 export type TriggerDeepPlannerTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -2210,6 +2210,8 @@ export const DeepPlannerTaskDocument = gql`
     status
     currentStep
     checkpointCount
+    totalSteps
+    progressPercent
     outputArtifact
     errorMessage
     startedAt

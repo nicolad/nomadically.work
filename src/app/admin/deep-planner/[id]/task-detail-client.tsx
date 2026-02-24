@@ -35,6 +35,8 @@ const DEEP_PLANNER_TASK_QUERY = gql(`
       status
       currentStep
       checkpointCount
+      totalSteps
+      progressPercent
       outputArtifact
       errorMessage
       startedAt

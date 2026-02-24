@@ -793,12 +793,14 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
+  generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
+  linkSelectionToRequirement: Application;
   linkTrackToApplication: Application;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
@@ -934,6 +936,12 @@ export type MutationGenerateInterviewPrepArgs = {
 };
 
 
+export type MutationGenerateRequirementFromSelectionArgs = {
+  applicationId: Scalars['Int']['input'];
+  selectedText: Scalars['String']['input'];
+};
+
+
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
 };
@@ -979,6 +987,13 @@ export type MutationIngest_Company_SnapshotArgs = {
   mime?: InputMaybe<Scalars['String']['input']>;
   source_url: Scalars['String']['input'];
   text_sample?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationLinkSelectionToRequirementArgs = {
+  applicationId: Scalars['Int']['input'];
+  requirement: Scalars['String']['input'];
+  sourceQuote: Scalars['String']['input'];
 };
 
 
@@ -1756,6 +1771,7 @@ export type GenerateInterviewPrepMutation = { __typename?: 'Mutation', generateI
 export type GenerateTopicDeepDiveMutationVariables = Exact<{
   applicationId: Scalars['Int']['input'];
   requirement: Scalars['String']['input'];
+  force?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
 
 
@@ -1770,6 +1786,23 @@ export type GenerateStudyTopicDeepDiveMutationVariables = Exact<{
 
 
 export type GenerateStudyTopicDeepDiveMutation = { __typename?: 'Mutation', generateStudyTopicDeepDive: { __typename?: 'Application', id: number, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } };
+
+export type GenerateRequirementFromSelectionMutationVariables = Exact<{
+  applicationId: Scalars['Int']['input'];
+  selectedText: Scalars['String']['input'];
+}>;
+
+
+export type GenerateRequirementFromSelectionMutation = { __typename?: 'Mutation', generateRequirementFromSelection: { __typename?: 'Application', id: number, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } };
+
+export type LinkSelectionToRequirementMutationVariables = Exact<{
+  applicationId: Scalars['Int']['input'];
+  requirement: Scalars['String']['input'];
+  sourceQuote: Scalars['String']['input'];
+}>;
+
+
+export type LinkSelectionToRequirementMutation = { __typename?: 'Mutation', linkSelectionToRequirement: { __typename?: 'Application', id: number, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } };
 
 export type EvidenceFieldsFragment = { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null };
 
@@ -3463,8 +3496,12 @@ export type GenerateInterviewPrepMutationHookResult = ReturnType<typeof useGener
 export type GenerateInterviewPrepMutationResult = Apollo.MutationResult<GenerateInterviewPrepMutation>;
 export type GenerateInterviewPrepMutationOptions = Apollo.BaseMutationOptions<GenerateInterviewPrepMutation, GenerateInterviewPrepMutationVariables>;
 export const GenerateTopicDeepDiveDocument = gql`
-    mutation GenerateTopicDeepDive($applicationId: Int!, $requirement: String!) {
-  generateTopicDeepDive(applicationId: $applicationId, requirement: $requirement) {
+    mutation GenerateTopicDeepDive($applicationId: Int!, $requirement: String!, $force: Boolean) {
+  generateTopicDeepDive(
+    applicationId: $applicationId
+    requirement: $requirement
+    force: $force
+  ) {
     id
     aiInterviewPrep {
       summary
@@ -3501,6 +3538,7 @@ export type GenerateTopicDeepDiveMutationFn = Apollo.MutationFunction<GenerateTo
  *   variables: {
  *      applicationId: // value for 'applicationId'
  *      requirement: // value for 'requirement'
+ *      force: // value for 'force'
  *   },
  * });
  */
@@ -3567,6 +3605,112 @@ export function useGenerateStudyTopicDeepDiveMutation(baseOptions?: Apollo.Mutat
 export type GenerateStudyTopicDeepDiveMutationHookResult = ReturnType<typeof useGenerateStudyTopicDeepDiveMutation>;
 export type GenerateStudyTopicDeepDiveMutationResult = Apollo.MutationResult<GenerateStudyTopicDeepDiveMutation>;
 export type GenerateStudyTopicDeepDiveMutationOptions = Apollo.BaseMutationOptions<GenerateStudyTopicDeepDiveMutation, GenerateStudyTopicDeepDiveMutationVariables>;
+export const GenerateRequirementFromSelectionDocument = gql`
+    mutation GenerateRequirementFromSelection($applicationId: Int!, $selectedText: String!) {
+  generateRequirementFromSelection(
+    applicationId: $applicationId
+    selectedText: $selectedText
+  ) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+        studyTopicDeepDives {
+          topic
+          deepDive
+        }
+        sourceQuote
+        deepDive
+      }
+      generatedAt
+    }
+  }
+}
+    `;
+export type GenerateRequirementFromSelectionMutationFn = Apollo.MutationFunction<GenerateRequirementFromSelectionMutation, GenerateRequirementFromSelectionMutationVariables>;
+
+/**
+ * __useGenerateRequirementFromSelectionMutation__
+ *
+ * To run a mutation, you first call `useGenerateRequirementFromSelectionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateRequirementFromSelectionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateRequirementFromSelectionMutation, { data, loading, error }] = useGenerateRequirementFromSelectionMutation({
+ *   variables: {
+ *      applicationId: // value for 'applicationId'
+ *      selectedText: // value for 'selectedText'
+ *   },
+ * });
+ */
+export function useGenerateRequirementFromSelectionMutation(baseOptions?: Apollo.MutationHookOptions<GenerateRequirementFromSelectionMutation, GenerateRequirementFromSelectionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateRequirementFromSelectionMutation, GenerateRequirementFromSelectionMutationVariables>(GenerateRequirementFromSelectionDocument, options);
+      }
+export type GenerateRequirementFromSelectionMutationHookResult = ReturnType<typeof useGenerateRequirementFromSelectionMutation>;
+export type GenerateRequirementFromSelectionMutationResult = Apollo.MutationResult<GenerateRequirementFromSelectionMutation>;
+export type GenerateRequirementFromSelectionMutationOptions = Apollo.BaseMutationOptions<GenerateRequirementFromSelectionMutation, GenerateRequirementFromSelectionMutationVariables>;
+export const LinkSelectionToRequirementDocument = gql`
+    mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!, $sourceQuote: String!) {
+  linkSelectionToRequirement(
+    applicationId: $applicationId
+    requirement: $requirement
+    sourceQuote: $sourceQuote
+  ) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+        studyTopicDeepDives {
+          topic
+          deepDive
+        }
+        sourceQuote
+        deepDive
+      }
+      generatedAt
+    }
+  }
+}
+    `;
+export type LinkSelectionToRequirementMutationFn = Apollo.MutationFunction<LinkSelectionToRequirementMutation, LinkSelectionToRequirementMutationVariables>;
+
+/**
+ * __useLinkSelectionToRequirementMutation__
+ *
+ * To run a mutation, you first call `useLinkSelectionToRequirementMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useLinkSelectionToRequirementMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [linkSelectionToRequirementMutation, { data, loading, error }] = useLinkSelectionToRequirementMutation({
+ *   variables: {
+ *      applicationId: // value for 'applicationId'
+ *      requirement: // value for 'requirement'
+ *      sourceQuote: // value for 'sourceQuote'
+ *   },
+ * });
+ */
+export function useLinkSelectionToRequirementMutation(baseOptions?: Apollo.MutationHookOptions<LinkSelectionToRequirementMutation, LinkSelectionToRequirementMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<LinkSelectionToRequirementMutation, LinkSelectionToRequirementMutationVariables>(LinkSelectionToRequirementDocument, options);
+      }
+export type LinkSelectionToRequirementMutationHookResult = ReturnType<typeof useLinkSelectionToRequirementMutation>;
+export type LinkSelectionToRequirementMutationResult = Apollo.MutationResult<LinkSelectionToRequirementMutation>;
+export type LinkSelectionToRequirementMutationOptions = Apollo.BaseMutationOptions<LinkSelectionToRequirementMutation, LinkSelectionToRequirementMutationVariables>;
 export const CreateCompanyDocument = gql`
     mutation CreateCompany($input: CreateCompanyInput!) {
   createCompany(input: $input) {

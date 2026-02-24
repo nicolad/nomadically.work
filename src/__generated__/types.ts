@@ -790,12 +790,14 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
+  generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
+  linkSelectionToRequirement: Application;
   linkTrackToApplication: Application;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
@@ -931,6 +933,12 @@ export type MutationGenerateInterviewPrepArgs = {
 };
 
 
+export type MutationGenerateRequirementFromSelectionArgs = {
+  applicationId: Scalars['Int']['input'];
+  selectedText: Scalars['String']['input'];
+};
+
+
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
 };
@@ -976,6 +984,13 @@ export type MutationIngest_Company_SnapshotArgs = {
   mime?: InputMaybe<Scalars['String']['input']>;
   source_url: Scalars['String']['input'];
   text_sample?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationLinkSelectionToRequirementArgs = {
+  applicationId: Scalars['Int']['input'];
+  requirement: Scalars['String']['input'];
+  sourceQuote: Scalars['String']['input'];
 };
 
 

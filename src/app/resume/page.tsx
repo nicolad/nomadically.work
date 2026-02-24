@@ -361,6 +361,7 @@ function JobMatchingSection({ userId }: { userId: string }) {
       await refetchMatches();
 
       setMatchStatus("done");
+      setMatchPage(0);
       setMatchToast("Skills extracted — matched jobs loaded below.");
     } catch (err) {
       setMatchStatus("error");

@@ -1,3 +1,7 @@
+import { generateText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+import { eq } from "drizzle-orm";
+import { resumes } from "@/db/schema";
 import type { GraphQLContext } from "../context";
 
 const RESUME_RAG_WORKER_URL =
@@ -38,6 +42,8 @@ export const resumeResolvers = {
       if (!context.userId) {
         throw new Error("Unauthorized");
       }
+
+      // First check the RAG worker (Vectorize)
       try {
         const response = await fetch(`${RESUME_RAG_WORKER_URL}/resume-status`, {
           method: "POST",
@@ -45,30 +51,57 @@ export const resumeResolvers = {
           body: JSON.stringify({ user_id: args.email }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Worker error: ${await response.text()}`);
+        if (response.ok) {
+          const result = (await response.json()) as {
+            success: boolean;
+            exists: boolean;
+            resume_id?: string;
+            chunk_count?: number;
+            filename?: string;
+            ingested_at?: string;
+          };
+
+          if (result.exists) {
+            return {
+              exists: true,
+              resume_id: result.resume_id ?? null,
+              chunk_count: result.chunk_count ?? null,
+              filename: result.filename ?? null,
+              ingested_at: result.ingested_at ?? null,
+            };
+          }
         }
-
-        const result = (await response.json()) as {
-          success: boolean;
-          exists: boolean;
-          resume_id?: string;
-          chunk_count?: number;
-          filename?: string;
-          ingested_at?: string;
-        };
-
-        return {
-          exists: result.exists ?? false,
-          resume_id: result.resume_id ?? null,
-          chunk_count: result.chunk_count ?? null,
-          filename: result.filename ?? null,
-          ingested_at: result.ingested_at ?? null,
-        };
-      } catch (error) {
-        console.error("Error checking resume status:", error);
-        return { exists: false };
+      } catch {
+        // RAG worker unavailable — fall through to D1 check
       }
+
+      // Fall back: check D1 skill profile (uploaded via Job Matching section)
+      const rows = await context.db
+        .select({
+          id: resumes.id,
+          filename: resumes.filename,
+          updated_at: resumes.updated_at,
+          raw_text: resumes.raw_text,
+        })
+        .from(resumes)
+        .where(eq(resumes.user_id, context.userId))
+        .limit(1);
+
+      if (rows.length > 0 && rows[0].raw_text?.trim()) {
+        const row = rows[0];
+        const updatedAt = row.updated_at instanceof Date
+          ? row.updated_at.toISOString()
+          : new Date(Number(row.updated_at) * 1000).toISOString();
+        return {
+          exists: true,
+          resume_id: row.id,
+          chunk_count: null,
+          filename: row.filename ?? null,
+          ingested_at: updatedAt,
+        };
+      }
+
+      return { exists: false };
     },
 
     async askAboutResume(
@@ -79,42 +112,52 @@ export const resumeResolvers = {
       if (!context.userId) {
         throw new Error("Unauthorized");
       }
-      try {
-        const { email, question } = args;
 
+      const { email, question } = args;
+
+      // Try RAG worker first (Vectorize-backed semantic search)
+      try {
         const response = await fetch(`${RESUME_RAG_WORKER_URL}/chat`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: email,
-            message: question,
-            resume_id: "latest",
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: email, message: question, resume_id: "latest" }),
         });
 
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(`Worker error: ${error}`);
+        if (response.ok) {
+          const result = (await response.json()) as WorkerChatResponse;
+          if (result.success && result.response) {
+            return {
+              answer: result.response,
+              context_count: result.context_count || 0,
+            };
+          }
         }
-
-        const result = (await response.json()) as WorkerChatResponse;
-
-        if (!result.success) {
-          throw new Error(result.error || "Failed to query resume");
-        }
-
-        return {
-          answer: result.response || "",
-          context_count: result.context_count || 0,
-        };
-      } catch (error) {
-        console.error("Error querying resume:", error);
-        throw new Error(
-          `Failed to query resume: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      } catch {
+        // RAG worker unavailable — fall through to D1 fallback
       }
+
+      // Fallback: answer using raw text stored in D1 from the skill-profile upload
+      const rows = await context.db
+        .select({ raw_text: resumes.raw_text, filename: resumes.filename })
+        .from(resumes)
+        .where(eq(resumes.user_id, context.userId))
+        .limit(1);
+
+      if (rows.length === 0 || !rows[0].raw_text?.trim()) {
+        throw new Error("No resume found. Please upload your resume first.");
+      }
+
+      const rawText = rows[0].raw_text.slice(0, 12000); // ~3k tokens max
+
+      const { text } = await generateText({
+        model: anthropic("claude-haiku-4-5-20251001"),
+        system: `You are a helpful assistant answering questions about a candidate's resume.
+Answer concisely and accurately based only on the resume content provided.
+If the resume doesn't contain enough information to answer, say so clearly.`,
+        prompt: `Resume content:\n\n${rawText}\n\n---\n\nQuestion: ${question}`,
+      });
+
+      return { answer: text, context_count: 1 };
     },
   },
 

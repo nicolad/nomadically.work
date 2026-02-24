@@ -49,6 +49,8 @@ export function useAuth(): AuthContext {
     };
   }
 
+  const usingDevBypass = !!(devEmail && !isSignedIn);
+
   const mappedUser =
     devEmail && !isSignedIn
       ? { id: "dev", email: devEmail, name: "Dev User", emailVerified: true }
@@ -65,7 +67,7 @@ export function useAuth(): AuthContext {
   return {
     user: mappedUser,
     session: mappedUser ? { user: mappedUser } : null,
-    isAuthenticated: isSignedIn,
+    isAuthenticated: isSignedIn || usingDevBypass,
     loading: false,
     error: null,
   };

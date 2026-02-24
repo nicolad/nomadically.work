@@ -113,8 +113,8 @@ mutation GenerateInterviewPrep($applicationId: Int!) {
   }
 }
 
-mutation GenerateTopicDeepDive($applicationId: Int!, $requirement: String!) {
-  generateTopicDeepDive(applicationId: $applicationId, requirement: $requirement) {
+mutation GenerateTopicDeepDive($applicationId: Int!, $requirement: String!, $force: Boolean) {
+  generateTopicDeepDive(applicationId: $applicationId, requirement: $requirement, force: $force) {
     id
     aiInterviewPrep {
       summary
@@ -133,6 +133,42 @@ mutation GenerateTopicDeepDive($applicationId: Int!, $requirement: String!) {
 
 mutation GenerateStudyTopicDeepDive($applicationId: Int!, $requirement: String!, $studyTopic: String!, $force: Boolean) {
   generateStudyTopicDeepDive(applicationId: $applicationId, requirement: $requirement, studyTopic: $studyTopic, force: $force) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+        studyTopicDeepDives { topic deepDive }
+        sourceQuote
+        deepDive
+      }
+      generatedAt
+    }
+  }
+}
+
+mutation GenerateRequirementFromSelection($applicationId: Int!, $selectedText: String!) {
+  generateRequirementFromSelection(applicationId: $applicationId, selectedText: $selectedText) {
+    id
+    aiInterviewPrep {
+      summary
+      requirements {
+        requirement
+        questions
+        studyTopics
+        studyTopicDeepDives { topic deepDive }
+        sourceQuote
+        deepDive
+      }
+      generatedAt
+    }
+  }
+}
+
+mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!, $sourceQuote: String!) {
+  linkSelectionToRequirement(applicationId: $applicationId, requirement: $requirement, sourceQuote: $sourceQuote) {
     id
     aiInterviewPrep {
       summary

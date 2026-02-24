@@ -793,12 +793,14 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
+  generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
+  linkSelectionToRequirement: Application;
   linkTrackToApplication: Application;
   /**
    * Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.
@@ -934,6 +936,12 @@ export type MutationGenerateInterviewPrepArgs = {
 };
 
 
+export type MutationGenerateRequirementFromSelectionArgs = {
+  applicationId: Scalars['Int']['input'];
+  selectedText: Scalars['String']['input'];
+};
+
+
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
 };
@@ -979,6 +987,13 @@ export type MutationIngest_Company_SnapshotArgs = {
   mime?: InputMaybe<Scalars['String']['input']>;
   source_url: Scalars['String']['input'];
   text_sample?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationLinkSelectionToRequirementArgs = {
+  applicationId: Scalars['Int']['input'];
+  requirement: Scalars['String']['input'];
+  sourceQuote: Scalars['String']['input'];
 };
 
 
@@ -2366,12 +2381,14 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   findCompanyEmails?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType, RequireFields<MutationFindCompanyEmailsArgs, 'companyId'>>;
   findContactEmail?: Resolver<ResolversTypes['FindContactEmailResult'], ParentType, ContextType, RequireFields<MutationFindContactEmailArgs, 'contactId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
+  generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
   generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
   importContacts?: Resolver<ResolversTypes['ImportContactsResult'], ParentType, ContextType, RequireFields<MutationImportContactsArgs, 'contacts'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
+  linkSelectionToRequirement?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationLinkSelectionToRequirementArgs, 'applicationId' | 'requirement' | 'sourceQuote'>>;
   linkTrackToApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationLinkTrackToApplicationArgs, 'applicationId' | 'trackSlug'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;

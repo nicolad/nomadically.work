@@ -26,10 +26,10 @@ function toSkillProfile(row: typeof resumes.$inferSelect) {
     taxonomyVersion: row.taxonomy_version,
     createdAt: row.created_at instanceof Date
       ? row.created_at.toISOString()
-      : new Date(row.created_at as unknown as number * 1000).toISOString(),
+      : new Date(Number(row.created_at) * 1000).toISOString(),
     updatedAt: row.updated_at instanceof Date
       ? row.updated_at.toISOString()
-      : new Date(row.updated_at as unknown as number * 1000).toISOString(),
+      : new Date(Number(row.updated_at) * 1000).toISOString(),
   };
 }
 
@@ -74,7 +74,7 @@ export const skillMatchingResolvers = {
 
       const workerUrl = process.env.JOB_MATCHER_URL;
       const workerApiKey = process.env.JOB_MATCHER_API_KEY;
-      if (!workerUrl) throw new Error("JOB_MATCHER_URL not configured");
+      if (!workerUrl) return { jobs: [], totalCount: 0, hasMore: false };
 
       const resp = await fetch(`${workerUrl}/match-jobs`, {
         method: "POST",
@@ -90,7 +90,31 @@ export const skillMatchingResolvers = {
         throw new Error(`Job matcher worker error: ${resp.status} ${err}`);
       }
 
-      return resp.json();
+      const workerData = await resp.json() as {
+        jobs: Array<{
+          job: Record<string, unknown>;
+          matchedSkills: string[];
+          missingSkills: string[];
+          matchScore: number;
+          totalRequired: number;
+          totalMatched: number;
+        }>;
+        totalCount: number;
+        hasMore: boolean;
+      };
+
+      return {
+        ...workerData,
+        jobs: workerData.jobs.map(item => ({
+          ...item,
+          job: {
+            external_id: String(item.job.id),
+            source_kind: "unknown",
+            is_remote_eu: true,
+            ...item.job,
+          },
+        })),
+      };
     },
   },
 

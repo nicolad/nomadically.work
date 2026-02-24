@@ -736,12 +736,14 @@ type Mutation {
   findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
   findContactEmail(contactId: Int!): FindContactEmailResult!
   generateInterviewPrep(applicationId: Int!): Application!
+  generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!
   generateTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!): Application!
   importContacts(contacts: [ContactInput!]!): ImportContactsResult!
   ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult
   ingest_company_snapshot(capture_timestamp: String, company_id: Int!, content_hash: String, crawl_id: String, evidence: EvidenceInput!, extracted: JSON, fetched_at: String!, http_status: Int, jsonld: JSON, mime: String, source_url: String!, text_sample: String): CompanySnapshot!
+  linkSelectionToRequirement(applicationId: Int!, requirement: String!, sourceQuote: String!): Application!
   linkTrackToApplication(applicationId: Int!, trackSlug: String!): Application!
   """
   Trigger classification/enhancement of all unprocessed jobs via the Cloudflare Worker.

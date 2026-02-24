@@ -499,6 +499,122 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
       return mapApplication(updated, effectiveJobDescription);
     },
 
+    async generateRequirementFromSelection(
+      _parent: any,
+      args: { applicationId: number; selectedText: string },
+      context: GraphQLContext,
+    ) {
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.applicationId);
+
+      const [row] = await context.db
+        .select({ app: applications, jobDescription: jobs.description })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .where(whereClause);
+
+      if (!row) throw new Error("Application not found or access denied");
+
+      let prepData: any;
+      try {
+        prepData = row.app.ai_interview_prep ? JSON.parse(row.app.ai_interview_prep) : null;
+      } catch {
+        throw new Error("Could not parse existing interview prep data");
+      }
+      if (!prepData) throw new Error("No interview prep data found. Generate interview prep first.");
+
+      const effectiveJobDescription = (row.app as any).job_description ?? row.jobDescription ?? null;
+
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.CHAT,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert interview coach. Given a selection from a job description, generate a single interview prep requirement. Return ONLY a JSON object:
+{
+  "requirement": "Requirement name (4-8 words)",
+  "questions": ["Tailored interview question 1", "Tailored interview question 2"],
+  "studyTopics": ["Study topic 1", "Study topic 2"]
+}`,
+          },
+          {
+            role: "user",
+            content: `Job: ${(row.app as any).job_title ?? "Software Engineer"} at ${(row.app as any).company_name ?? "a tech company"}\n\nSelected text: "${args.selectedText}"`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 500,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) throw new Error("Empty response from AI");
+
+      let newReq: any;
+      try {
+        newReq = JSON.parse(content);
+      } catch {
+        throw new Error("Failed to parse AI response");
+      }
+
+      newReq.sourceQuote = args.selectedText.trim().split(/\s+/).slice(0, 20).join(" ");
+      newReq.studyTopicDeepDives = [];
+
+      prepData.requirements = [...(prepData.requirements ?? []), newReq];
+
+      const [updated] = await context.db
+        .update(applications)
+        .set({ ai_interview_prep: JSON.stringify(prepData), updated_at: new Date().toISOString() } as any)
+        .where(whereClause)
+        .returning();
+
+      if (!updated) throw new Error("Failed to save requirement");
+      return mapApplication(updated, effectiveJobDescription);
+    },
+
+    async linkSelectionToRequirement(
+      _parent: any,
+      args: { applicationId: number; requirement: string; sourceQuote: string },
+      context: GraphQLContext,
+    ) {
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.applicationId);
+
+      const [row] = await context.db
+        .select({ app: applications, jobDescription: jobs.description })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .where(whereClause);
+
+      if (!row) throw new Error("Application not found or access denied");
+
+      let prepData: any;
+      try {
+        prepData = row.app.ai_interview_prep ? JSON.parse(row.app.ai_interview_prep) : null;
+      } catch {
+        throw new Error("Could not parse existing interview prep data");
+      }
+      if (!prepData) throw new Error("No interview prep data found.");
+
+      const reqEntry = prepData.requirements?.find((r: any) => r.requirement === args.requirement);
+      if (!reqEntry) throw new Error("Requirement not found");
+
+      reqEntry.sourceQuote = args.sourceQuote.trim().split(/\s+/).slice(0, 20).join(" ");
+
+      const effectiveJobDescription = (row.app as any).job_description ?? row.jobDescription ?? null;
+      const [updated] = await context.db
+        .update(applications)
+        .set({ ai_interview_prep: JSON.stringify(prepData), updated_at: new Date().toISOString() } as any)
+        .where(whereClause)
+        .returning();
+
+      if (!updated) throw new Error("Failed to save");
+      return mapApplication(updated, effectiveJobDescription);
+    },
+
     async generateStudyTopicDeepDive(
       _parent: any,
       args: { applicationId: number; requirement: string; studyTopic: string; force?: boolean },

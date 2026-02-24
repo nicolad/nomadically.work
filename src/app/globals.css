@@ -509,10 +509,52 @@ nav a:hover {
   border-top: 1px solid var(--gray-4);
   margin: 1em 0;
 }
+.deep-dive-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: var(--font-size-2);
+}
+.deep-dive-content th,
+.deep-dive-content td {
+  border: 1px solid var(--gray-5);
+  padding: 0.5em 0.75em;
+  text-align: left;
+  vertical-align: top;
+}
+.deep-dive-content th {
+  background: var(--gray-3);
+  font-weight: 700;
+  color: var(--gray-12);
+}
+.deep-dive-content tr:nth-child(even) td {
+  background: var(--gray-2);
+}
 
 /* NFR11: Disable skeleton pulse animation for users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .rt-Skeleton {
     animation: none !important;
   }
+}
+
+@keyframes toolbar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toolbar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes toolbar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

@@ -11,6 +11,8 @@ extend type Mutation {
   generateInterviewPrep(applicationId: Int!): Application!
   generateTopicDeepDive(applicationId: Int!, requirement: String!, force: Boolean): Application!
   generateStudyTopicDeepDive(applicationId: Int!, requirement: String!, studyTopic: String!, force: Boolean): Application!
+  generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
+  linkSelectionToRequirement(applicationId: Int!, requirement: String!, sourceQuote: String!): Application!
 }
 
 type AIStudyTopicDeepDive {

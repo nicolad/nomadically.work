@@ -449,7 +449,7 @@ async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
       worker: WORKER, action: "fetch-ats", level: "error",
       error: `HTTP ${res.status}`, metadata: { kind: "remotive" },
     });
-    if (res.status >= 400 && res.status < 500) {
+    if (res.status >= 400 && res.status < 500 && res.status !== 429) {
       throw new ATSFetchError(res.status, `Remotive API error (HTTP ${res.status})`);
     }
     return [];
@@ -469,7 +469,7 @@ async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
 async function fetchArbeitnowJobs(_companyKey: string): Promise<ATSJob[]> {
   const jobs: ATSJob[] = [];
   let page = 1;
-  while (page <= 20) {
+  while (page <= 2) {
     const url = `https://www.arbeitnow.com/api/job-board-api?page=${page}`;
     const res = await fetchWithRetry(url);
     if (!res.ok) {
@@ -477,7 +477,7 @@ async function fetchArbeitnowJobs(_companyKey: string): Promise<ATSJob[]> {
         worker: WORKER, action: "fetch-ats", level: "error",
         error: `HTTP ${res.status}`, metadata: { kind: "arbeitnow", page },
       });
-      if (res.status >= 400 && res.status < 500) {
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
         throw new ATSFetchError(res.status, `Arbeitnow API error (HTTP ${res.status})`);
       }
       break;

@@ -23,6 +23,7 @@ import {
   ChevronDownIcon,
   Cross1Icon,
   PlusIcon,
+  Pencil1Icon,
 } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -35,6 +36,8 @@ import {
   useGenerateInterviewPrepMutation,
   useGenerateTopicDeepDiveMutation,
   useGenerateStudyTopicDeepDiveMutation,
+  useGetCompanyQuery,
+  useUpdateCompanyMutation,
 } from "@/__generated__/hooks";
 import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import Link from "next/link";
@@ -90,6 +93,14 @@ export default function ApplicationDetailPage() {
   const { data: tracksData } = useGetTracksQuery();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  const app = data?.application;
+
+  const { data: companyData } = useGetCompanyQuery({
+    variables: { key: app?.companyKey ?? "" },
+    skip: !app?.companyKey || !isAdmin,
+  });
+  const [updateCompany] = useUpdateCompanyMutation();
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -100,8 +111,11 @@ export default function ApplicationDetailPage() {
   const [selectedStudyTopic, setSelectedStudyTopic] = useState<{ req: AiInterviewPrepRequirement; topic: string } | null>(null);
   const [studyTopicLoading, setStudyTopicLoading] = useState(false);
   const [studyTopicError, setStudyTopicError] = useState<string | null>(null);
-
-  const app = data?.application;
+  const [editingCompany, setEditingCompany] = useState(false);
+  const [companyNameValue, setCompanyNameValue] = useState("");
+  const [companyWebsiteValue, setCompanyWebsiteValue] = useState("");
+  const [companySaving, setCompanySaving] = useState(false);
+  const [companySaveError, setCompanySaveError] = useState<string | null>(null);
 
   const handleStatusChange = async (status: ApplicationStatus) => {
     if (!app) return;
@@ -166,6 +180,27 @@ export default function ApplicationDetailPage() {
       refetchQueries: ["GetApplication"],
     });
     setEditingNotes(false);
+  };
+
+  const handleSaveCompany = async () => {
+    const company = companyData?.company;
+    if (!company) return;
+    setCompanySaving(true);
+    setCompanySaveError(null);
+    try {
+      await updateCompany({
+        variables: {
+          id: company.id,
+          input: { name: companyNameValue, website: companyWebsiteValue || null },
+        },
+        refetchQueries: ["GetCompany"],
+      });
+      setEditingCompany(false);
+    } catch (e) {
+      setCompanySaveError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setCompanySaving(false);
+    }
   };
 
   const statusCol = app
@@ -237,18 +272,91 @@ export default function ApplicationDetailPage() {
           <Heading size="7" mb="1">
             {displayTitle}
           </Heading>
-          <Text size="3" color="gray">
-            {app.companyKey ? (
-              <Link href={`/companies/${app.companyKey}`} style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>
-                {app.companyName ?? "Unknown company"}
-              </Link>
-            ) : (
-              app.companyName ?? "Unknown company"
-            )}{" "}
-            &middot; Added {formatDate(app.createdAt)}
-          </Text>
+          <Flex align="center" gap="2" wrap="wrap">
+            <Text size="3" color="gray">
+              {app.companyKey ? (
+                <Link href={`/companies/${app.companyKey}`} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  {app.companyName ?? "Unknown company"}
+                </Link>
+              ) : (
+                app.companyName ?? "Unknown company"
+              )}{" "}
+              &middot; Added {formatDate(app.createdAt)}
+            </Text>
+            {isAdmin && app.companyKey && (
+              <IconButton
+                size="1"
+                variant="ghost"
+                color="gray"
+                onClick={() => {
+                  setCompanyNameValue(companyData?.company?.name ?? app.companyName ?? "");
+                  setCompanyWebsiteValue(companyData?.company?.website ?? "");
+                  setCompanySaveError(null);
+                  setEditingCompany(true);
+                }}
+              >
+                <Pencil1Icon />
+              </IconButton>
+            )}
+          </Flex>
         </Box>
       </Flex>
+
+      {/* Company edit dialog */}
+      <Dialog.Root open={editingCompany} onOpenChange={(o) => { if (!o) setEditingCompany(false); }}>
+        <Dialog.Content maxWidth="420px">
+          <Dialog.Title>Edit Company</Dialog.Title>
+          <Flex direction="column" gap="3" mt="2">
+            <Box>
+              <Text size="2" weight="medium" mb="1" as="div">Name</Text>
+              <input
+                value={companyNameValue}
+                onChange={(e) => setCompanyNameValue(e.target.value)}
+                placeholder="Company name"
+                style={{
+                  width: "100%",
+                  padding: "6px 10px",
+                  borderRadius: "var(--radius-2)",
+                  border: "1px solid var(--gray-6)",
+                  background: "var(--gray-2)",
+                  color: "var(--gray-12)",
+                  fontSize: "var(--font-size-2)",
+                  boxSizing: "border-box",
+                }}
+              />
+            </Box>
+            <Box>
+              <Text size="2" weight="medium" mb="1" as="div">Website</Text>
+              <input
+                value={companyWebsiteValue}
+                onChange={(e) => setCompanyWebsiteValue(e.target.value)}
+                placeholder="https://example.com"
+                style={{
+                  width: "100%",
+                  padding: "6px 10px",
+                  borderRadius: "var(--radius-2)",
+                  border: "1px solid var(--gray-6)",
+                  background: "var(--gray-2)",
+                  color: "var(--gray-12)",
+                  fontSize: "var(--font-size-2)",
+                  boxSizing: "border-box",
+                }}
+              />
+            </Box>
+            {companySaveError && (
+              <Text size="1" color="red">{companySaveError}</Text>
+            )}
+          </Flex>
+          <Flex gap="2" justify="end" mt="4">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" size="2">Cancel</Button>
+            </Dialog.Close>
+            <Button size="2" disabled={companySaving} onClick={handleSaveCompany}>
+              {companySaving ? "Saving…" : "Save"}
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
 
       {/* Status + Actions */}
       <Card mb="5">

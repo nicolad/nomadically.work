@@ -41,7 +41,7 @@ async function getApplicationById(id: number, userEmail: string, db: GraphQLCont
     })
     .from(applications)
     .leftJoin(jobs, eq(jobs.url, applications.job_id))
-    .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name})`)
+    .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
     .where(and(eq(applications.id, id), eq(applications.user_email, userEmail)));
   if (!row) return null;
   return mapApplication(row.app, row.jobDescription, row.jobCompanyKey ?? row.nameCompanyKey);
@@ -77,7 +77,7 @@ export const applicationResolvers = {
           })
           .from(applications)
           .leftJoin(jobs, eq(jobs.url, applications.job_id))
-          .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name})`)
+          .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
           .orderBy(desc(applications.created_at));
 
         const userApplications = context.userEmail
@@ -107,7 +107,7 @@ export const applicationResolvers = {
         })
         .from(applications)
         .leftJoin(jobs, eq(jobs.url, applications.job_id))
-        .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name})`)
+        .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
         .where(whereClause);
 
       if (!row) return null;

@@ -87,11 +87,12 @@ class ChatDeepSeek:
     def _llm_type(self) -> str:
         return "deepseek"
 
-    async def ainvoke(self, messages: list) -> AIMessage:
+    async def ainvoke(self, messages: list, max_tokens: int | None = None) -> AIMessage:
         """Invoke the model with a list of messages, return AIMessage.
 
         Args:
             messages: List of SystemMessage / HumanMessage / AIMessage
+            max_tokens: Override default max_tokens for this call
 
         Returns:
             AIMessage with the model's response
@@ -103,7 +104,7 @@ class ChatDeepSeek:
             "model": self.model,
             "messages": _to_api_messages(messages),
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens or self.max_tokens,
         })
 
         request_init = JsJSON.parse(json.dumps({

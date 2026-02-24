@@ -357,6 +357,7 @@ export type CreateTrackInput = {
 };
 
 export type DeepPlannerStatus =
+  | 'CANCELLED'
   | 'COMPLETE'
   | 'FAILED'
   | 'PENDING'
@@ -373,8 +374,10 @@ export type DeepPlannerTask = {
   id: Scalars['ID']['output'];
   outputArtifact: Maybe<Scalars['String']['output']>;
   problemDescription: Scalars['String']['output'];
+  progressPercent: Scalars['Float']['output'];
   startedAt: Maybe<Scalars['DateTime']['output']>;
   status: DeepPlannerStatus;
+  totalSteps: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
   workflowType: Scalars['String']['output'];
 };
@@ -643,6 +646,7 @@ export type MatchedJobsResult = {
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
+  cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
   createDeepPlannerTask: DeepPlannerTask;
@@ -712,6 +716,11 @@ export type Mutation = {
 export type MutationAdd_Company_FactsArgs = {
   company_id: Scalars['Int']['input'];
   facts: Array<CompanyFactInput>;
+};
+
+
+export type MutationCancelDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -1844,8 +1853,10 @@ export type DeepPlannerTaskResolvers<ContextType = GraphQLContext, ParentType ex
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   outputArtifact?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   problemDescription?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  progressPercent?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   startedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
   status?: Resolver<ResolversTypes['DeepPlannerStatus'], ParentType, ContextType>;
+  totalSteps?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   workflowType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
@@ -2056,6 +2067,7 @@ export type MatchedJobsResultResolvers<ContextType = GraphQLContext, ParentType 
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   add_company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<MutationAdd_Company_FactsArgs, 'company_id' | 'facts'>>;
+  cancelDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationCancelDeepPlannerTaskArgs, 'id'>>;
   createApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationCreateApplicationArgs, 'input'>>;
   createCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationCreateCompanyArgs, 'input'>>;
   createDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationCreateDeepPlannerTaskArgs, 'problemDescription' | 'workflowType'>>;

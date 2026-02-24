@@ -17,6 +17,7 @@ from workers import DurableObject, Response
 from helpers import sleep_ms
 from llm import ChatDeepSeek, SystemMessage, HumanMessage
 from prompts import BMAD_STEPS, PASS_TYPES, FEEDBACK_PASS_INDICES, SYSTEM_BASE, get_prompt, total_passes
+from context_data import CLAUDE_MD, SCHEMA_GRAPHQL, DB_SCHEMA
 from checkpoint import (
     save_checkpoint,
     load_checkpoint,
@@ -64,7 +65,7 @@ class DeepPlannerDO(DurableObject):
             await mark_running(self.env.DB, task_id)
 
             # Load codebase context
-            codebase_context = await self._load_codebase_context()
+            codebase_context = self._load_codebase_context()
             await self.ctx.storage.put("codebase_context", codebase_context)
             await self.ctx.storage.put("problem_description", task["problem_description"])
             await self.ctx.storage.put("task_context", task.get("context") or "")
@@ -92,6 +93,12 @@ class DeepPlannerDO(DurableObject):
             task_id = str(await self.ctx.storage.get("task_id"))
             if not task_id:
                 print("[DeepPlannerDO] No task_id in storage, stopping")
+                return
+
+            # Check if task was cancelled before proceeding
+            task_record = await get_task(self.env.DB, task_id)
+            if task_record and task_record["status"] in ("cancelled", "failed"):
+                print(f"[DeepPlannerDO] Task {task_id} is {task_record['status']}, stopping execution")
                 return
 
             # Load context from storage
@@ -158,11 +165,21 @@ class DeepPlannerDO(DurableObject):
                 critique_output=critique_output,
             )
 
+            # Determine max_tokens based on step — COMPLETE and polish need more room
+            max_tokens = 4096
+            if step == "COMPLETE":
+                max_tokens = 8192
+            elif pass_type == "polish":
+                max_tokens = 6144
+
             # Execute LLM call with retry
-            output = await self._call_llm(prompt_text)
+            output = await self._call_llm(prompt_text, max_tokens=max_tokens)
 
             if output is None:
-                error_msg = f"Workers AI returned null on step {step}, pass {pass_type} after {MAX_RETRIES} retries"
+                error_msg = (
+                    f"DeepSeek API returned no content at checkpoint {pass_index + 1}/{total} "
+                    f"(step={step}, pass={pass_type}) after {MAX_RETRIES} retries"
+                )
                 print(f"[DeepPlannerDO] {error_msg}")
                 await mark_failed(self.env.DB, task_id, error_msg, artifact_so_far or None, pass_index)
                 return
@@ -203,7 +220,15 @@ class DeepPlannerDO(DurableObject):
                 await mark_complete(self.env.DB, task_id, artifact_so_far, total)
 
         except Exception as e:
-            error_msg = f"Alarm error on pass {pass_index}: {str(e)}"
+            step_index = pass_index // len(PASS_TYPES)
+            pass_within_step = pass_index % len(PASS_TYPES)
+            step_name = BMAD_STEPS[step_index] if step_index < len(BMAD_STEPS) else "unknown"
+            pass_name = PASS_TYPES[pass_within_step] if pass_within_step < len(PASS_TYPES) else "unknown"
+            total = total_passes()
+            error_msg = (
+                f"Failed at checkpoint {pass_index + 1}/{total} "
+                f"(step={step_name}, pass={pass_name}): {str(e)}"
+            )
             print(f"[DeepPlannerDO] {error_msg}")
             if task_id:
                 await mark_failed(
@@ -214,7 +239,7 @@ class DeepPlannerDO(DurableObject):
                     pass_index,
                 )
 
-    async def _call_llm(self, prompt: str) -> str | None:
+    async def _call_llm(self, prompt: str, max_tokens: int = 4096) -> str | None:
         """Call DeepSeek via LangChain-compatible ChatDeepSeek client with retry."""
         api_key = str(getattr(self.env, "DEEPSEEK_API_KEY", "") or "")
         if not api_key:
@@ -224,17 +249,19 @@ class DeepPlannerDO(DurableObject):
         llm = ChatDeepSeek(
             api_key=api_key,
             temperature=0.7,
-            max_tokens=4096,
+            max_tokens=max_tokens,
         )
 
+        # Allow larger prompts for assembly steps
+        prompt_limit = 16000 if max_tokens > 4096 else 12000
         messages = [
             SystemMessage(content=SYSTEM_BASE),
-            HumanMessage(content=prompt[:12000]),
+            HumanMessage(content=prompt[:prompt_limit]),
         ]
 
         for attempt in range(MAX_RETRIES):
             try:
-                result = await llm.ainvoke(messages)
+                result = await llm.ainvoke(messages, max_tokens=max_tokens)
                 if result.content:
                     return result.content
                 print(f"[DeepPlannerDO] DeepSeek returned empty content, attempt {attempt + 1}/{MAX_RETRIES}")
@@ -249,28 +276,20 @@ class DeepPlannerDO(DurableObject):
 
         return None
 
-    async def _load_codebase_context(self) -> str:
-        """Load bundled codebase context files."""
-        try:
-            context_parts = []
+    def _load_codebase_context(self) -> str:
+        """Load bundled codebase context from the generated Python module."""
+        context_parts = []
 
-            claude_md = await self.ctx.storage.get("context:claude_md")
-            if claude_md:
-                context_parts.append(f"## CLAUDE.md\n{str(claude_md)}")
+        if CLAUDE_MD:
+            context_parts.append(f"## CLAUDE.md\n{CLAUDE_MD}")
 
-            schema_graphql = await self.ctx.storage.get("context:schema_graphql")
-            if schema_graphql:
-                context_parts.append(f"## GraphQL Schema\n{str(schema_graphql)}")
+        if SCHEMA_GRAPHQL:
+            context_parts.append(f"## GraphQL Schema\n{SCHEMA_GRAPHQL}")
 
-            db_schema = await self.ctx.storage.get("context:db_schema")
-            if db_schema:
-                context_parts.append(f"## Database Schema\n{str(db_schema)}")
+        if DB_SCHEMA:
+            context_parts.append(f"## Database Schema\n{DB_SCHEMA}")
 
-            if context_parts:
-                return "\n\n---\n\n".join(context_parts)
+        if context_parts:
+            return "\n\n---\n\n".join(context_parts)
 
-            return "No codebase context bundled. The worker should be deployed with context files."
-
-        except Exception as e:
-            print(f"[DeepPlannerDO] Error loading context: {e}")
-            return "Error loading codebase context."
+        return "No codebase context available."

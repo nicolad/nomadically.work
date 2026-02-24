@@ -46,16 +46,17 @@ async def save_checkpoint(
     await storage.put(f"checkpoint:{task_id}", checkpoint_data)
     await storage.put(f"checkpoint_index:{task_id}", str(pass_index))
 
-    # Update D1 task record
+    # Update D1 task record with intermediate artifact for live progress
     checkpoint_count = pass_index + 1
     await d1_run(
         db,
         """UPDATE deep_planner_tasks
            SET current_step = ?,
                checkpoint_count = ?,
+               output_artifact = ?,
                updated_at = ?
            WHERE id = ?""",
-        [f"{step}:{pass_type}", checkpoint_count, now, task_id],
+        [f"{step}:{pass_type}", checkpoint_count, artifact_so_far or None, now, task_id],
     )
 
 

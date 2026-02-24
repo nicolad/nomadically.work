@@ -441,21 +441,25 @@ function slugifyCompany(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unknown";
 }
 
-async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
-  const url = "https://remotive.com/api/remote-jobs";
-  const res = await fetchWithRetry(url);
-  if (!res.ok) {
-    log({
-      worker: WORKER, action: "fetch-ats", level: "error",
-      error: `HTTP ${res.status}`, metadata: { kind: "remotive" },
-    });
-    if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-      throw new ATSFetchError(res.status, `Remotive API error (HTTP ${res.status})`);
-    }
-    return [];
-  }
-  const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
-  return (data.jobs ?? []).map((j) => ({
+// Remotive API categories relevant to EU remote tech roles.
+// Fetched sequentially to stay within Cloudflare Workers subrequest budget.
+const REMOTIVE_CATEGORIES = [
+  "software-development",
+  "devops-sysadmin",
+  "product",
+  "data",
+  "ai-ml",
+  "backend",
+  "frontend",
+  "fullstack",
+  "mobile",
+  "design",
+  "qa",
+  "cybersecurity",
+] as const;
+
+function mapRemotiveJob(j: Record<string, unknown>): ATSJob {
+  return {
     externalId: String(j.id ?? ""),
     title: String(j.title ?? ""),
     url: String(j.url ?? ""),
@@ -463,7 +467,43 @@ async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
     description: typeof j.description === "string" ? j.description.slice(0, 5000) : undefined,
     postedAt: j.publication_date ? String(j.publication_date) : undefined,
     companyKey: slugifyCompany(String(j.company_name ?? "unknown")),
-  }));
+  };
+}
+
+async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
+  const seen = new Set<string>();
+  const all: ATSJob[] = [];
+
+  for (const category of REMOTIVE_CATEGORIES) {
+    const url = `https://remotive.com/api/remote-jobs?category=${category}`;
+    const res = await fetchWithRetry(url);
+    if (!res.ok) {
+      log({
+        worker: WORKER, action: "fetch-ats", level: "error",
+        error: `HTTP ${res.status}`, metadata: { kind: "remotive", category },
+      });
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        // Non-retriable error for this category — skip it, don't abort entire run
+        continue;
+      }
+      continue;
+    }
+    const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
+    for (const j of data.jobs ?? []) {
+      const job = mapRemotiveJob(j);
+      if (job.externalId && !seen.has(job.externalId)) {
+        seen.add(job.externalId);
+        all.push(job);
+      }
+    }
+  }
+
+  log({
+    worker: WORKER, action: "fetch-ats", level: "info",
+    metadata: { kind: "remotive", total: all.length, categories: REMOTIVE_CATEGORIES.length },
+  });
+
+  return all;
 }
 
 

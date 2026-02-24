@@ -219,31 +219,32 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 ---
 
-## BMAD Agent Teams Integration
+## Agent Teams
 
-The project uses [BMAD Method v6](https://docs.bmad-method.org/) adapted for Claude Code Agent Teams. BMAD provides role definitions and quality gates; Agent Teams provides the orchestration layer.
+Uses Claude Code Agent Teams for multi-agent coordination. No external framework — spawn prompts + task lists + checklists.
 
 | Path | Contents |
 |---|---|
-| `_bmad/` | BMAD Core + BMM module (agents, checklists, workflows) |
-| `_bmad-output/planning-artifacts/` | Planning phase outputs |
-| `_bmad-output/implementation-artifacts/` | Implementation phase outputs |
-| `.claude/team-roles/` | Spawn prompt templates for Agent Teams teammates |
+| `.claude/team-roles/` | Spawn prompts for teammates (pm, architect, dev, qa + content team) |
+| `_bmad/checklists.md` | Quality gate checklists (code review, definition of done, etc.) |
+| `_bmad-output/planning-artifacts/` | Planning phase outputs (PRDs, architecture, UX specs) |
+| `_bmad-output/implementation-artifacts/` | Implementation outputs (tech specs, sprint status) |
 | `docs/` | Working documents (PRD, architecture, stories) |
 
-**Team roles** (spawn prompts in `.claude/team-roles/`):
+**Core team** (spawn prompts in `.claude/team-roles/`):
 - `pm.md` — Product Manager: requirements, user stories, PRD
 - `architect.md` — System Architect: architecture decisions, tech design
 - `dev.md` — Developer: implementation per stories, owns `src/` and `workers/`
 - `qa.md` — QA: validation, testing, checklist enforcement
 
-**Workflow phases**: Discovery (parallel research) → Planning (PRD + architecture) → Story Creation → Implementation (parallel dev) → Review (multi-lens).
+**Content team**: `managing-editor.md`, `researcher.md`, `writer.md`, `editor.md`, `fact-checker.md`
+**UX team**: `ux-lead.md`, `ux-researcher.md`, `ui-designer.md`
 
-**Key rules**:
+**Rules**:
 - Teammates must not edit the same files — break ownership by directory/module
 - Use plan approval on teammates before implementation
 - 3-4 teammates is the sweet spot; skip the ceremony for bug fixes
-- Quality gates enforced via BMAD checklists in `_bmad/`
+- Quality gates: teammates reference `_bmad/checklists.md` before marking tasks complete
 
 ---
 

@@ -4,10 +4,9 @@ import "./globals.css";
 import { Theme, Flex, Box } from "@radix-ui/themes";
 import {
   GitHubLogoIcon,
-  BriefcaseIcon,
+  BackpackIcon,
   FileTextIcon,
-  HomeIcon,
-  BuildingIcon,
+  PersonIcon,
   ResumeIcon,
   ChatBubbleIcon,
   MagicWandIcon,
@@ -35,9 +34,9 @@ export const metadata: Metadata = {
 };
 
 const NAV_ITEMS = [
-  { href: "/", label: "jobs", icon: <BriefcaseIcon width={15} height={15} /> },
+  { href: "/", label: "jobs", icon: <BackpackIcon width={15} height={15} /> },
   { href: "/applications", label: "applications", icon: <FileTextIcon width={15} height={15} /> },
-  { href: "/companies", label: "companies", icon: <BuildingIcon width={15} height={15} /> },
+  { href: "/companies", label: "companies", icon: <PersonIcon width={15} height={15} /> },
   { href: "/prep", label: "prep", icon: <LightningBoltIcon width={15} height={15} /> },
   { href: "/resume", label: "resume", icon: <ResumeIcon width={15} height={15} /> },
   { href: "/prompts", label: "prompts", icon: <MagicWandIcon width={15} height={15} /> },

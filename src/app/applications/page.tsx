@@ -21,6 +21,7 @@ import {
   ArrowRightIcon,
 } from "@radix-ui/react-icons";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   useCreateApplicationMutation,
   useGetApplicationsQuery,
@@ -75,6 +76,7 @@ function ApplicationsList({
   onMove: (id: number, status: ApplicationStatus) => void;
   onReject: (id: number) => void;
 }) {
+  const router = useRouter();
   return (
     <Flex direction="column" style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
       {apps.map((app, i) => {
@@ -127,7 +129,18 @@ function ApplicationsList({
                 {displayTitle}
               </Text>
               <Text size="1" color="gray">
-                {app.companyName ?? "—"} · {formatDate(app.createdAt)}
+                {app.companyKey ? (
+                  <Box
+                    display="inline"
+                    onClick={(e) => { e.preventDefault(); router.push(`/companies/${app.companyKey!}`); }}
+                    style={{ textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer" }}
+                  >
+                    {app.companyName ?? "—"}
+                  </Box>
+                ) : (
+                  app.companyName ?? "—"
+                )}{" "}
+                · {formatDate(app.createdAt)}
               </Text>
             </Box>
 

@@ -95,6 +95,7 @@ export type AtsVendor =
 export type Application = {
   __typename?: 'Application';
   aiInterviewPrep: Maybe<AiInterviewPrep>;
+  companyKey: Maybe<Scalars['String']['output']>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
@@ -1235,7 +1236,6 @@ export type QueryJobArgs = {
 
 export type QueryJobsArgs = {
   excludedCompanies?: InputMaybe<Array<Scalars['String']['input']>>;
-  isRemoteEu?: InputMaybe<Scalars['Boolean']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   remoteEuConfidence?: InputMaybe<Scalars['String']['input']>;
@@ -1608,7 +1608,6 @@ export type GetJobsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   excludedCompanies?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
-  isRemoteEu?: InputMaybe<Scalars['Boolean']['input']>;
   skills?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
 }>;
 
@@ -1651,26 +1650,26 @@ export type UpdateUserSettingsMutationVariables = Exact<{
 
 export type UpdateUserSettingsMutation = { __typename?: 'Mutation', updateUserSettings: { __typename?: 'UserSettings', id: number, user_id: string, email_notifications: boolean, daily_digest: boolean, new_job_alerts: boolean, preferred_locations: Array<string> | null, preferred_skills: Array<string> | null, excluded_companies: Array<string> | null, dark_mode: boolean, jobs_per_page: number, created_at: string, updated_at: string } };
 
-export type ApplicationFieldsFragment = { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null };
+export type ApplicationFieldsFragment = { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, companyKey: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null };
 
 export type GetApplicationsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetApplicationsQuery = { __typename?: 'Query', applications: Array<{ __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null }> };
+export type GetApplicationsQuery = { __typename?: 'Query', applications: Array<{ __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, companyKey: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null }> };
 
 export type GetApplicationQueryVariables = Exact<{
   id: Scalars['Int']['input'];
 }>;
 
 
-export type GetApplicationQuery = { __typename?: 'Query', application: { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } | null };
+export type GetApplicationQuery = { __typename?: 'Query', application: { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, companyKey: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } | null };
 
 export type CreateApplicationMutationVariables = Exact<{
   input: ApplicationInput;
 }>;
 
 
-export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } };
+export type CreateApplicationMutation = { __typename?: 'Mutation', createApplication: { __typename?: 'Application', id: number, email: string, jobId: string, resume: File | null, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, companyKey: string | null, jobDescription: string | null, createdAt: string, questions: Array<{ __typename?: 'QuestionAnswer', questionId: string, questionText: string, answerText: string }>, interviewPrep: Array<{ __typename?: 'Track', id: string, slug: string, title: string, description: string | null, level: string | null }>, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } };
 
 export type UpdateApplicationMutationVariables = Exact<{
   id: Scalars['Int']['input'];
@@ -1856,6 +1855,13 @@ export type GetContactsQueryVariables = Exact<{
 
 
 export type GetContactsQuery = { __typename?: 'Query', contacts: { __typename?: 'ContactsResult', totalCount: number, contacts: Array<{ __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, linkedinUrl: string | null, position: string | null, githubHandle: string | null, telegramHandle: string | null, emailVerified: boolean | null, doNotContact: boolean, tags: Array<string>, createdAt: string }> } };
+
+export type ImportContactsMutationVariables = Exact<{
+  contacts: Array<ContactInput> | ContactInput;
+}>;
+
+
+export type ImportContactsMutation = { __typename?: 'Mutation', importContacts: { __typename?: 'ImportContactsResult', success: boolean, imported: number, failed: number, errors: Array<string> } };
 
 export type GetGreenhouseJobsQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
@@ -2068,6 +2074,7 @@ export const ApplicationFieldsFragmentDoc = gql`
   notes
   jobTitle
   companyName
+  companyKey
   jobDescription
   createdAt
   interviewPrep {
@@ -2804,7 +2811,7 @@ export type GetJobLazyQueryHookResult = ReturnType<typeof useGetJobLazyQuery>;
 export type GetJobSuspenseQueryHookResult = ReturnType<typeof useGetJobSuspenseQuery>;
 export type GetJobQueryResult = Apollo.QueryResult<GetJobQuery, GetJobQueryVariables>;
 export const GetJobsDocument = gql`
-    query GetJobs($sourceType: String, $sourceTypes: [String!], $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!], $isRemoteEu: Boolean, $skills: [String!]) {
+    query GetJobs($sourceType: String, $sourceTypes: [String!], $search: String, $limit: Int, $offset: Int, $excludedCompanies: [String!], $skills: [String!]) {
   jobs(
     sourceType: $sourceType
     sourceTypes: $sourceTypes
@@ -2812,7 +2819,6 @@ export const GetJobsDocument = gql`
     limit: $limit
     offset: $offset
     excludedCompanies: $excludedCompanies
-    isRemoteEu: $isRemoteEu
     skills: $skills
   ) {
     jobs {
@@ -2855,7 +2861,6 @@ export const GetJobsDocument = gql`
  *      limit: // value for 'limit'
  *      offset: // value for 'offset'
  *      excludedCompanies: // value for 'excludedCompanies'
- *      isRemoteEu: // value for 'isRemoteEu'
  *      skills: // value for 'skills'
  *   },
  * });
@@ -4100,6 +4105,42 @@ export type GetContactsQueryHookResult = ReturnType<typeof useGetContactsQuery>;
 export type GetContactsLazyQueryHookResult = ReturnType<typeof useGetContactsLazyQuery>;
 export type GetContactsSuspenseQueryHookResult = ReturnType<typeof useGetContactsSuspenseQuery>;
 export type GetContactsQueryResult = Apollo.QueryResult<GetContactsQuery, GetContactsQueryVariables>;
+export const ImportContactsDocument = gql`
+    mutation ImportContacts($contacts: [ContactInput!]!) {
+  importContacts(contacts: $contacts) {
+    success
+    imported
+    failed
+    errors
+  }
+}
+    `;
+export type ImportContactsMutationFn = Apollo.MutationFunction<ImportContactsMutation, ImportContactsMutationVariables>;
+
+/**
+ * __useImportContactsMutation__
+ *
+ * To run a mutation, you first call `useImportContactsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useImportContactsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [importContactsMutation, { data, loading, error }] = useImportContactsMutation({
+ *   variables: {
+ *      contacts: // value for 'contacts'
+ *   },
+ * });
+ */
+export function useImportContactsMutation(baseOptions?: Apollo.MutationHookOptions<ImportContactsMutation, ImportContactsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ImportContactsMutation, ImportContactsMutationVariables>(ImportContactsDocument, options);
+      }
+export type ImportContactsMutationHookResult = ReturnType<typeof useImportContactsMutation>;
+export type ImportContactsMutationResult = Apollo.MutationResult<ImportContactsMutation>;
+export type ImportContactsMutationOptions = Apollo.BaseMutationOptions<ImportContactsMutation, ImportContactsMutationVariables>;
 export const GetGreenhouseJobsDocument = gql`
     query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
   jobs(sourceType: "greenhouse", search: $search, limit: $limit, offset: $offset) {

@@ -92,6 +92,7 @@ export type AtsVendor =
 export type Application = {
   __typename: 'Application';
   aiInterviewPrep: Maybe<AiInterviewPrep>;
+  companyKey: Maybe<Scalars['String']['output']>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
@@ -1232,7 +1233,6 @@ export type QueryJobArgs = {
 
 export type QueryJobsArgs = {
   excludedCompanies?: InputMaybe<Array<Scalars['String']['input']>>;
-  isRemoteEu?: InputMaybe<Scalars['Boolean']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   remoteEuConfidence?: InputMaybe<Scalars['String']['input']>;

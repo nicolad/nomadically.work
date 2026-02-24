@@ -95,6 +95,7 @@ export type AtsVendor =
 export type Application = {
   __typename?: 'Application';
   aiInterviewPrep: Maybe<AiInterviewPrep>;
+  companyKey: Maybe<Scalars['String']['output']>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   email: Scalars['EmailAddress']['output'];
@@ -1235,7 +1236,6 @@ export type QueryJobArgs = {
 
 export type QueryJobsArgs = {
   excludedCompanies?: InputMaybe<Array<Scalars['String']['input']>>;
-  isRemoteEu?: InputMaybe<Scalars['Boolean']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   remoteEuConfidence?: InputMaybe<Scalars['String']['input']>;
@@ -1856,6 +1856,7 @@ export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends R
 
 export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Application'] = ResolversParentTypes['Application']> = {
   aiInterviewPrep?: Resolver<Maybe<ResolversTypes['AIInterviewPrep']>, ParentType, ContextType>;
+  companyKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   companyName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['EmailAddress'], ParentType, ContextType>;

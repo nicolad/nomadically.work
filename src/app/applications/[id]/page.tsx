@@ -238,8 +238,14 @@ export default function ApplicationDetailPage() {
             {displayTitle}
           </Heading>
           <Text size="3" color="gray">
-            {app.companyName ?? "Unknown company"} &middot; Added{" "}
-            {formatDate(app.createdAt)}
+            {app.companyKey ? (
+              <Link href={`/companies/${app.companyKey}`} style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                {app.companyName ?? "Unknown company"}
+              </Link>
+            ) : (
+              app.companyName ?? "Unknown company"
+            )}{" "}
+            &middot; Added {formatDate(app.createdAt)}
           </Text>
         </Box>
       </Flex>

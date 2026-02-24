@@ -70,13 +70,13 @@ export default function RootLayout({
                     top: 0,
                     left: 0,
                     height: "100vh",
-                    overflowY: "auto",
+                    overflowY: "hidden",
                     fontSize: 14,
                     letterSpacing: "0.01em",
                   }}
                 >
                   <nav>
-                    <Link href="/" style={{ display: "flex", alignItems: "center" }}>
+                    <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Image
                         src="/logo.svg"
                         alt="Nomadically"

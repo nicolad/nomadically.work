@@ -18,6 +18,7 @@
     "deploy": "tsx scripts/deploy.ts",
     "deploy:promptfoo": "npx wrangler deploy --config wrangler.promptfoo.toml",
     "codegen": "graphql-codegen",
+    "schema:generate": "tsx scripts/generate-worker-types.ts",
     "test:eval": "vitest run src/evals",
     "test:eval:watch": "vitest src/evals",
     "eval:export-db": "tsx scripts/export-eval-data.ts",

@@ -97,7 +97,7 @@ async function triggerIngestion(env: Env, sourceCount: number, traceId: string):
   // Method 1: Via insert-jobs HTTP endpoint (direct)
   if (env.INSERT_JOBS_URL) {
     try {
-      const url = `${env.INSERT_JOBS_URL}/ingest?limit=${Math.min(sourceCount, 20)}`;
+      const url = `${env.INSERT_JOBS_URL}/ingest?limit=${sourceCount}`;
       const res = await fetch(url, {
         method: "GET",
         headers: {

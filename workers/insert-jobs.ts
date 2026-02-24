@@ -464,7 +464,7 @@ async function autoIngestFromSources(
   queue: Queue<QueueMessage>,
   options: { maxSources?: number; stalePeriodHours?: number; traceId?: string } = {},
 ): Promise<IngestionStats> {
-  const { maxSources = 20, stalePeriodHours = 12, traceId } = options;
+  const { maxSources = 500, stalePeriodHours = 12, traceId } = options;
 
   const stats: IngestionStats = {
     sourcesChecked: 0,
@@ -480,6 +480,13 @@ async function autoIngestFromSources(
     Date.now() - stalePeriodHours * 60 * 60 * 1000,
   ).toISOString();
 
+  // Get total board count for coverage reporting (FR13)
+  const totalSourcesResult = await d1Query(
+    db,
+    `SELECT COUNT(*) as count FROM job_sources`,
+  );
+  const totalSources = Number(totalSourcesResult.rows[0]?.count ?? 0);
+
   const sources = await d1Query(
     db,
     `SELECT id, kind, company_key, canonical_url
@@ -492,7 +499,7 @@ async function autoIngestFromSources(
 
   log({
     worker: WORKER, action: "ingest-start", level: "info", traceId,
-    metadata: { staleSources: sources.rows.length },
+    metadata: { totalSources, staleSources: sources.rows.length },
   });
 
   for (const source of sources.rows) {
@@ -517,8 +524,17 @@ async function autoIngestFromSources(
         await new Promise((r) => setTimeout(r, 500));
       }
 
+      log({
+        worker: WORKER, action: "board-fetch-start", level: "info", traceId,
+        sourceId, metadata: { kind, companyKey },
+      });
+
       const atsJobs = await fetcher(companyKey);
       if (atsJobs.length === 0) {
+        log({
+          worker: WORKER, action: "board-fetch-result", level: "info", traceId,
+          sourceId, metadata: { kind, companyKey, jobsFetched: 0 },
+        });
         // Still mark as fetched to avoid re-checking immediately
         await d1Run(
           db,
@@ -530,8 +546,8 @@ async function autoIngestFromSources(
 
       stats.sourcesWithJobs++;
       log({
-        worker: WORKER, action: "fetch-ats", level: "info", traceId,
-        sourceId, metadata: { kind, companyKey, jobCount: atsJobs.length },
+        worker: WORKER, action: "board-fetch-result", level: "info", traceId,
+        sourceId, metadata: { kind, companyKey, jobsFetched: atsJobs.length },
       });
 
       // Batch insert — collect new job IDs for enqueuing
@@ -592,7 +608,7 @@ async function autoIngestFromSources(
     } catch (err) {
       const msg = `${kind}/${companyKey}: ${err instanceof Error ? err.message : String(err)}`;
       log({
-        worker: WORKER, action: "ingest-source-error", level: "error", traceId,
+        worker: WORKER, action: "board-fetch-error", level: "error", traceId,
         sourceId, error: msg, metadata: { kind, companyKey },
       });
       stats.errors.push(msg);
@@ -602,7 +618,11 @@ async function autoIngestFromSources(
   log({
     worker: WORKER, action: "ingest-complete", level: "info", traceId,
     metadata: {
+      totalSourcesInDb: totalSources,
       sourcesChecked: stats.sourcesChecked,
+      coverageRatio: totalSources > 0
+        ? `${stats.sourcesChecked}/${totalSources}`
+        : "0/0",
       sourcesWithJobs: stats.sourcesWithJobs,
       jobsInserted: stats.jobsInserted,
       jobsSkipped: stats.jobsSkipped,
@@ -828,9 +848,9 @@ export default {
       );
     }
 
-    // GET /ingest — manually trigger source ingestion
+    // GET /ingest — manually trigger source ingestion (FR12: manual trigger for fix verification)
     if (request.method === "GET" && url.pathname === "/ingest") {
-      const maxSources = Number(url.searchParams.get("limit")) || 20;
+      const maxSources = Number(url.searchParams.get("limit")) || 500;
       const stats = await autoIngestFromSources(
         env.DB,
         env.JOBS_QUEUE,
@@ -973,11 +993,11 @@ export default {
     });
 
     try {
-      // Phase 1: Auto-ingest from ATS sources
+      // Phase 1: Auto-ingest from ATS sources — no arbitrary cap; process all stale boards
       const ingestionStats = await autoIngestFromSources(
         env.DB,
         env.JOBS_QUEUE,
-        { maxSources: 15, stalePeriodHours: 12, traceId },
+        { maxSources: 500, stalePeriodHours: 12, traceId },
       );
 
       // Phase 2: Recover stalled jobs

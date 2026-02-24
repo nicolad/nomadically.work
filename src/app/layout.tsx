@@ -9,6 +9,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { AuthHeader } from "@/components/auth-header";
 import { AdminNav } from "@/components/admin-nav";
 import { Providers } from "@/components/providers";
+import { NavLink } from "@/components/ui";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -52,13 +53,13 @@ export default function RootLayout({
                     priority
                   />
                 </Link>
-                <Link href="/">jobs</Link>
-                <Link href="/applications">applications</Link>
-                <Link href="/companies">companies</Link>
-                <Link href="/prep">prep</Link>
-                <Link href="/resume">resume</Link>
-                <Link href="/prompts">prompts</Link>
-                <Link href="/chats">query</Link>
+                <NavLink href="/">jobs</NavLink>
+                <NavLink href="/applications">applications</NavLink>
+                <NavLink href="/companies">companies</NavLink>
+                <NavLink href="/prep">prep</NavLink>
+                <NavLink href="/resume">resume</NavLink>
+                <NavLink href="/prompts">prompts</NavLink>
+                <NavLink href="/chats">query</NavLink>
                 <AdminNav />
                 <span style={{ flex: 1 }} />
                 <AuthHeader />

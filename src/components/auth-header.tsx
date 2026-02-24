@@ -3,6 +3,7 @@
 import { GearIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
+import { Button } from "@/components/ui";
 
 export function AuthHeader() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -20,10 +21,10 @@ export function AuthHeader() {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Link href="/sign-in">
-          <button className="yc-cta-ghost">sign in</button>
+          <Button variant="ghost" size="sm">sign in</Button>
         </Link>
         <Link href="/sign-up">
-          <button className="yc-cta">sign up</button>
+          <Button variant="primary" size="sm">sign up</Button>
         </Link>
       </div>
     );
@@ -43,12 +44,13 @@ export function AuthHeader() {
       <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
         <GearIcon width={14} height={14} style={{ color: "var(--gray-9)" }} />
       </Link>
-      <button
-        className="yc-cta-ghost"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => signOut({ redirectUrl: "/" })}
       >
         sign out
-      </button>
+      </Button>
     </div>
   );
 }

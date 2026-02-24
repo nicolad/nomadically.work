@@ -1,0 +1,14 @@
+{
+  "name": "nomadically-work-eu-classifier",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run pywrangler sync && npx wrangler dev",
+    "deploy": "uv run pywrangler sync && npx wrangler deploy",
+    "tail": "npx wrangler tail",
+    "test": "cd ../.. && python -m pytest workers/eu-classifier/tests -v"
+  },
+  "devDependencies": {
+    "wrangler": "^4.58.0"
+  }
+}

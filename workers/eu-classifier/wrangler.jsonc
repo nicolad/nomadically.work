@@ -1,9 +1,9 @@
 {
-  "name": "nomadically-work-process-jobs",
+  "name": "nomadically-work-eu-classifier",
   "main": "src/entry.py",
   "compatibility_date": "2025-11-02",
   "compatibility_flags": ["python_workers"],
-  // Cron trigger — runs every 6 hours (same schedule as old classify-jobs worker)
+  // Cron trigger — runs every 6 hours (classifies role-match jobs)
   "triggers": {
     "crons": ["0 */6 * * *"]
   },
@@ -22,30 +22,23 @@
   "queues": {
     "producers": [
       {
-        "queue": "process-jobs-queue",
-        "binding": "PROCESS_JOBS_QUEUE",
+        "queue": "eu-classifier-queue",
+        "binding": "EU_CLASSIFIER_QUEUE",
       },
     ],
     "consumers": [
       {
-        "queue": "process-jobs-queue",
+        "queue": "eu-classifier-queue",
         "max_batch_size": 10,
         "max_batch_timeout": 30,
         "max_retries": 3,
-        "dead_letter_queue": "process-jobs-dlq",
+        "dead_letter_queue": "eu-classifier-dlq",
       },
     ],
   },
-  // Service binding to the centralized EU classifier worker
-  "services": [
-    {
-      "binding": "EU_CLASSIFIER",
-      "service": "nomadically-work-eu-classifier",
-    },
-  ],
   "vars": {
     "LANGCHAIN_TRACING_V2": "true",
-    "LANGCHAIN_PROJECT": "nomadically-work-process-jobs",
+    "LANGCHAIN_PROJECT": "nomadically-work-eu-classifier",
   },
   "observability": {
     "enabled": true,

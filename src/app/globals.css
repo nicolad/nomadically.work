@@ -78,25 +78,65 @@ a:hover svg {
   text-decoration: underline;
 }
 
-/* ---------- site nav (below topbar) ---------- */
+/* ---------- app shell (sidebar + main) ---------- */
+.yc-app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.yc-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* ---------- left sidebar nav ---------- */
 .yc-nav {
   display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--gray-6);
+  flex-direction: column;
+  gap: 0;
+  padding: 20px 16px;
+  border-right: 1px solid var(--gray-6);
   background: var(--gray-2);
   font-size: 14px;
   letter-spacing: 0.01em;
+  width: 190px;
+  flex-shrink: 0;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
+
+.yc-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 24px;
+  flex: 1;
+}
+
+.yc-nav-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-6);
+}
+
 .yc-nav a {
   color: var(--gray-11);
   text-decoration: none;
   text-transform: lowercase;
   transition: color 0.15s;
+  padding: 5px 8px;
+  border-radius: 0;
+  display: block;
 }
 .yc-nav a:hover {
   color: var(--gray-12);
+  background: var(--gray-3);
 }
 
 /* ---------- flat rows (jobs, companies) ---------- */
@@ -438,10 +478,37 @@ a:hover svg {
     font-size: 10px;
     padding: 0 8px;
   }
+  .yc-app-shell {
+    flex-direction: column;
+  }
   .yc-nav {
+    width: 100%;
+    min-height: auto;
+    height: auto;
+    position: static;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 8px;
+    padding: 8px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--gray-6);
+  }
+  .yc-nav-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 0;
+    gap: 4px;
+    flex: unset;
+  }
+  .yc-nav-footer {
+    flex-direction: row;
+    border-top: none;
+    padding-top: 0;
+    gap: 8px;
+    align-items: center;
+  }
+  .yc-nav a {
+    padding: 4px 6px;
   }
   .job-row {
     padding: 10px;

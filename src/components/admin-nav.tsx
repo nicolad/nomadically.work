@@ -22,14 +22,15 @@ export function AdminNav() {
       <Link href="/admin/deep-planner">tasks</Link>
       <Link
         href="/admin/emails"
-        style={{ display: "flex", alignItems: "center" }}
+        style={{ display: "flex", alignItems: "center", gap: 6 }}
         title="Emails"
       >
         <EnvelopeClosedIcon width={14} height={14} />
+        emails
       </Link>
       <Link
         href="/admin/reported-jobs"
-        style={{ display: "flex", alignItems: "center" }}
+        style={{ display: "flex", alignItems: "center", gap: 6 }}
         title="Reported jobs review"
       >
         <ExclamationTriangleIcon
@@ -37,6 +38,7 @@ export function AdminNav() {
           height={14}
           style={{ color: "var(--orange-9)" }}
         />
+        reported
       </Link>
     </>
   );

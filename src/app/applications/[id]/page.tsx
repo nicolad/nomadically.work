@@ -116,6 +116,8 @@ export default function ApplicationDetailPage() {
   const [companyWebsiteValue, setCompanyWebsiteValue] = useState("");
   const [companySaving, setCompanySaving] = useState(false);
   const [companySaveError, setCompanySaveError] = useState<string | null>(null);
+  const [editingJobDescription, setEditingJobDescription] = useState(false);
+  const [jobDescriptionValue, setJobDescriptionValue] = useState("");
 
   const handleStatusChange = async (status: ApplicationStatus) => {
     if (!app) return;
@@ -201,6 +203,15 @@ export default function ApplicationDetailPage() {
     } finally {
       setCompanySaving(false);
     }
+  };
+
+  const handleSaveJobDescription = async () => {
+    if (!app) return;
+    await updateApplication({
+      variables: { id: app.id, input: { jobDescription: jobDescriptionValue } },
+      refetchQueries: ["GetApplication"],
+    });
+    setEditingJobDescription(false);
   };
 
   const statusCol = app
@@ -474,17 +485,53 @@ export default function ApplicationDetailPage() {
       )}
 
       {/* Job Description */}
-      {app.jobDescription && (
-        <Card mb="5" id="job-description">
-          <Heading size="4" mb="3">
-            Job Description
-          </Heading>
+      <Card mb="5" id="job-description">
+        <Flex justify="between" align="center" mb="3">
+          <Heading size="4">Job Description</Heading>
+          {isAdmin && !editingJobDescription && (
+            <Button
+              variant="soft"
+              size="1"
+              onClick={() => {
+                setJobDescriptionValue(app.jobDescription ?? "");
+                setEditingJobDescription(true);
+              }}
+            >
+              {app.jobDescription ? "Edit" : "Add"}
+            </Button>
+          )}
+        </Flex>
+        {editingJobDescription ? (
+          <Flex direction="column" gap="2">
+            <TextArea
+              value={jobDescriptionValue}
+              onChange={(e) => setJobDescriptionValue(e.target.value)}
+              placeholder="Paste the job description here..."
+              rows={12}
+            />
+            <Flex gap="2" justify="end">
+              <Button
+                variant="soft"
+                color="gray"
+                size="1"
+                onClick={() => setEditingJobDescription(false)}
+              >
+                Cancel
+              </Button>
+              <Button size="1" onClick={handleSaveJobDescription}>
+                Save
+              </Button>
+            </Flex>
+          </Flex>
+        ) : app.jobDescription ? (
           <Box
             style={{ lineHeight: 1.7, fontSize: "var(--font-size-2)" }}
             dangerouslySetInnerHTML={{ __html: app.jobDescription }}
           />
-        </Card>
-      )}
+        ) : (
+          <Text size="2" color="gray">No job description yet.</Text>
+        )}
+      </Card>
 
       {/* Interview Prep */}
       <Card mb="5">

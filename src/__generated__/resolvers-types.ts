@@ -129,6 +129,15 @@ export type ApplicationStatus =
   | 'reviewed'
   | 'submitted';
 
+export type ApplyEmailPatternResult = {
+  __typename?: 'ApplyEmailPatternResult';
+  contacts: Array<Contact>;
+  contactsUpdated: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  pattern: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type AshbyAddress = {
   __typename?: 'AshbyAddress';
   postalAddress: Maybe<AshbyPostalAddress>;
@@ -319,6 +328,7 @@ export type CompanySnapshot = {
 
 export type Contact = {
   __typename?: 'Contact';
+  bouncedEmails: Array<Scalars['String']['output']>;
   company: Maybe<Scalars['String']['output']>;
   companyId: Maybe<Scalars['Int']['output']>;
   createdAt: Scalars['String']['output'];
@@ -462,6 +472,16 @@ export type DeleteJobResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceAllContactsResult = {
+  __typename?: 'EnhanceAllContactsResult';
+  companiesProcessed: Scalars['Int']['output'];
+  errors: Array<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  totalContactsProcessed: Scalars['Int']['output'];
+  totalEmailsFound: Scalars['Int']['output'];
+};
+
 export type EnhanceCompanyResponse = {
   __typename?: 'EnhanceCompanyResponse';
   companyId: Maybe<Scalars['Int']['output']>;
@@ -516,6 +536,16 @@ export type ExtractMethod =
   | 'JSONLD'
   | 'LLM'
   | 'META';
+
+export type FindContactEmailResult = {
+  __typename?: 'FindContactEmailResult';
+  candidatesTried: Scalars['Int']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  emailFound: Scalars['Boolean']['output'];
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  verified: Maybe<Scalars['Boolean']['output']>;
+};
 
 export type GreenhouseCompliance = {
   __typename?: 'GreenhouseCompliance';
@@ -722,6 +752,7 @@ export type MatchedJobsResult = {
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
+  applyEmailPattern: ApplyEmailPatternResult;
   cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
@@ -735,6 +766,7 @@ export type Mutation = {
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
+  enhanceAllContacts: EnhanceAllContactsResult;
   enhanceCompany: EnhanceCompanyResponse;
   /**
    * Enhance a job posting by fetching detailed data from the ATS (Applicant Tracking System).
@@ -758,6 +790,8 @@ export type Mutation = {
    */
   enhanceJobFromATS: EnhanceJobResponse;
   extractSkillProfile: SkillProfile;
+  findCompanyEmails: EnhanceAllContactsResult;
+  findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -796,6 +830,11 @@ export type Mutation = {
 export type MutationAdd_Company_FactsArgs = {
   company_id: Scalars['Int']['input'];
   facts: Array<CompanyFactInput>;
+};
+
+
+export type MutationApplyEmailPatternArgs = {
+  companyId: Scalars['Int']['input'];
 };
 
 
@@ -877,6 +916,16 @@ export type MutationEnhanceJobFromAtsArgs = {
 
 export type MutationExtractSkillProfileArgs = {
   profileId: Scalars['ID']['input'];
+};
+
+
+export type MutationFindCompanyEmailsArgs = {
+  companyId: Scalars['Int']['input'];
+};
+
+
+export type MutationFindContactEmailArgs = {
+  contactId: Scalars['Int']['input'];
 };
 
 
@@ -1449,6 +1498,7 @@ export type TrackItem = {
 };
 
 export type UpdateApplicationInput = {
+  jobDescription?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ApplicationStatus>;
 };
@@ -1618,6 +1668,7 @@ export type ResolversTypes = {
   Application: ResolverTypeWrapper<Partial<Application>>;
   ApplicationInput: ResolverTypeWrapper<Partial<ApplicationInput>>;
   ApplicationStatus: ResolverTypeWrapper<Partial<ApplicationStatus>>;
+  ApplyEmailPatternResult: ResolverTypeWrapper<Partial<ApplyEmailPatternResult>>;
   AshbyAddress: ResolverTypeWrapper<Partial<AshbyAddress>>;
   AshbyCompensation: ResolverTypeWrapper<Partial<AshbyCompensation>>;
   AshbyCompensationComponent: ResolverTypeWrapper<Partial<AshbyCompensationComponent>>;
@@ -1652,11 +1703,13 @@ export type ResolversTypes = {
   DeleteContactResult: ResolverTypeWrapper<Partial<DeleteContactResult>>;
   DeleteJobResponse: ResolverTypeWrapper<Partial<DeleteJobResponse>>;
   EmailAddress: ResolverTypeWrapper<Partial<Scalars['EmailAddress']['output']>>;
+  EnhanceAllContactsResult: ResolverTypeWrapper<Partial<EnhanceAllContactsResult>>;
   EnhanceCompanyResponse: ResolverTypeWrapper<Partial<EnhanceCompanyResponse>>;
   EnhanceJobResponse: ResolverTypeWrapper<Partial<EnhanceJobResponse>>;
   Evidence: ResolverTypeWrapper<Partial<Evidence>>;
   EvidenceInput: ResolverTypeWrapper<Partial<EvidenceInput>>;
   ExtractMethod: ResolverTypeWrapper<Partial<ExtractMethod>>;
+  FindContactEmailResult: ResolverTypeWrapper<Partial<FindContactEmailResult>>;
   Float: ResolverTypeWrapper<Partial<Scalars['Float']['output']>>;
   GreenhouseCompliance: ResolverTypeWrapper<Partial<GreenhouseCompliance>>;
   GreenhouseDataCompliance: ResolverTypeWrapper<Partial<GreenhouseDataCompliance>>;
@@ -1727,6 +1780,7 @@ export type ResolversParentTypes = {
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
   Application: Partial<Application>;
   ApplicationInput: Partial<ApplicationInput>;
+  ApplyEmailPatternResult: Partial<ApplyEmailPatternResult>;
   AshbyAddress: Partial<AshbyAddress>;
   AshbyCompensation: Partial<AshbyCompensation>;
   AshbyCompensationComponent: Partial<AshbyCompensationComponent>;
@@ -1757,10 +1811,12 @@ export type ResolversParentTypes = {
   DeleteContactResult: Partial<DeleteContactResult>;
   DeleteJobResponse: Partial<DeleteJobResponse>;
   EmailAddress: Partial<Scalars['EmailAddress']['output']>;
+  EnhanceAllContactsResult: Partial<EnhanceAllContactsResult>;
   EnhanceCompanyResponse: Partial<EnhanceCompanyResponse>;
   EnhanceJobResponse: Partial<EnhanceJobResponse>;
   Evidence: Partial<Evidence>;
   EvidenceInput: Partial<EvidenceInput>;
+  FindContactEmailResult: Partial<FindContactEmailResult>;
   Float: Partial<Scalars['Float']['output']>;
   GreenhouseCompliance: Partial<GreenhouseCompliance>;
   GreenhouseDataCompliance: Partial<GreenhouseDataCompliance>;
@@ -1869,6 +1925,14 @@ export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extend
   questions?: Resolver<Array<ResolversTypes['QuestionAnswer']>, ParentType, ContextType>;
   resume?: Resolver<Maybe<ResolversTypes['Upload']>, ParentType, ContextType>;
   status?: Resolver<ResolversTypes['ApplicationStatus'], ParentType, ContextType>;
+};
+
+export type ApplyEmailPatternResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ApplyEmailPatternResult'] = ResolversParentTypes['ApplyEmailPatternResult']> = {
+  contacts?: Resolver<Array<ResolversTypes['Contact']>, ParentType, ContextType>;
+  contactsUpdated?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  pattern?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
 };
 
 export type AshbyAddressResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbyAddress'] = ResolversParentTypes['AshbyAddress']> = {
@@ -1991,6 +2055,7 @@ export type CompanySnapshotResolvers<ContextType = GraphQLContext, ParentType ex
 };
 
 export type ContactResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Contact'] = ResolversParentTypes['Contact']> = {
+  bouncedEmails?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   company?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   companyId?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2062,6 +2127,15 @@ export interface EmailAddressScalarConfig extends GraphQLScalarTypeConfig<Resolv
   name: 'EmailAddress';
 }
 
+export type EnhanceAllContactsResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EnhanceAllContactsResult'] = ResolversParentTypes['EnhanceAllContactsResult']> = {
+  companiesProcessed?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  errors?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  totalContactsProcessed?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalEmailsFound?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
 export type EnhanceCompanyResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EnhanceCompanyResponse'] = ResolversParentTypes['EnhanceCompanyResponse']> = {
   companyId?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   companyKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -2087,6 +2161,15 @@ export type EvidenceResolvers<ContextType = GraphQLContext, ParentType extends R
   source_type?: Resolver<ResolversTypes['SourceType'], ParentType, ContextType>;
   source_url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   warc?: Resolver<Maybe<ResolversTypes['WarcPointer']>, ParentType, ContextType>;
+};
+
+export type FindContactEmailResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['FindContactEmailResult'] = ResolversParentTypes['FindContactEmailResult']> = {
+  candidatesTried?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  email?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  emailFound?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  verified?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
 };
 
 export type GreenhouseComplianceResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseCompliance'] = ResolversParentTypes['GreenhouseCompliance']> = {
@@ -2261,6 +2344,7 @@ export type MatchedJobsResultResolvers<ContextType = GraphQLContext, ParentType 
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   add_company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<MutationAdd_Company_FactsArgs, 'company_id' | 'facts'>>;
+  applyEmailPattern?: Resolver<ResolversTypes['ApplyEmailPatternResult'], ParentType, ContextType, RequireFields<MutationApplyEmailPatternArgs, 'companyId'>>;
   cancelDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationCancelDeepPlannerTaskArgs, 'id'>>;
   createApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationCreateApplicationArgs, 'input'>>;
   createCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationCreateCompanyArgs, 'input'>>;
@@ -2274,9 +2358,12 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteContact?: Resolver<ResolversTypes['DeleteContactResult'], ParentType, ContextType, RequireFields<MutationDeleteContactArgs, 'id'>>;
   deleteJob?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType, RequireFields<MutationDeleteJobArgs, 'id'>>;
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
+  enhanceAllContacts?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
   extractSkillProfile?: Resolver<ResolversTypes['SkillProfile'], ParentType, ContextType, RequireFields<MutationExtractSkillProfileArgs, 'profileId'>>;
+  findCompanyEmails?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType, RequireFields<MutationFindCompanyEmailsArgs, 'companyId'>>;
+  findContactEmail?: Resolver<ResolversTypes['FindContactEmailResult'], ParentType, ContextType, RequireFields<MutationFindContactEmailArgs, 'contactId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
@@ -2547,6 +2634,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   AIStudyTopicDeepDive?: AiStudyTopicDeepDiveResolvers<ContextType>;
   ATSBoard?: AtsBoardResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;
+  ApplyEmailPatternResult?: ApplyEmailPatternResultResolvers<ContextType>;
   AshbyAddress?: AshbyAddressResolvers<ContextType>;
   AshbyCompensation?: AshbyCompensationResolvers<ContextType>;
   AshbyCompensationComponent?: AshbyCompensationComponentResolvers<ContextType>;
@@ -2567,9 +2655,11 @@ export type Resolvers<ContextType = GraphQLContext> = {
   DeleteContactResult?: DeleteContactResultResolvers<ContextType>;
   DeleteJobResponse?: DeleteJobResponseResolvers<ContextType>;
   EmailAddress?: GraphQLScalarType;
+  EnhanceAllContactsResult?: EnhanceAllContactsResultResolvers<ContextType>;
   EnhanceCompanyResponse?: EnhanceCompanyResponseResolvers<ContextType>;
   EnhanceJobResponse?: EnhanceJobResponseResolvers<ContextType>;
   Evidence?: EvidenceResolvers<ContextType>;
+  FindContactEmailResult?: FindContactEmailResultResolvers<ContextType>;
   GreenhouseCompliance?: GreenhouseComplianceResolvers<ContextType>;
   GreenhouseDataCompliance?: GreenhouseDataComplianceResolvers<ContextType>;
   GreenhouseDemographicQuestions?: GreenhouseDemographicQuestionsResolvers<ContextType>;

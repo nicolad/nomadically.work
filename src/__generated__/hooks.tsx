@@ -129,6 +129,15 @@ export type ApplicationStatus =
   | 'reviewed'
   | 'submitted';
 
+export type ApplyEmailPatternResult = {
+  __typename?: 'ApplyEmailPatternResult';
+  contacts: Array<Contact>;
+  contactsUpdated: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  pattern: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type AshbyAddress = {
   __typename?: 'AshbyAddress';
   postalAddress: Maybe<AshbyPostalAddress>;
@@ -319,6 +328,7 @@ export type CompanySnapshot = {
 
 export type Contact = {
   __typename?: 'Contact';
+  bouncedEmails: Array<Scalars['String']['output']>;
   company: Maybe<Scalars['String']['output']>;
   companyId: Maybe<Scalars['Int']['output']>;
   createdAt: Scalars['String']['output'];
@@ -462,6 +472,16 @@ export type DeleteJobResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceAllContactsResult = {
+  __typename?: 'EnhanceAllContactsResult';
+  companiesProcessed: Scalars['Int']['output'];
+  errors: Array<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  totalContactsProcessed: Scalars['Int']['output'];
+  totalEmailsFound: Scalars['Int']['output'];
+};
+
 export type EnhanceCompanyResponse = {
   __typename?: 'EnhanceCompanyResponse';
   companyId: Maybe<Scalars['Int']['output']>;
@@ -516,6 +536,16 @@ export type ExtractMethod =
   | 'JSONLD'
   | 'LLM'
   | 'META';
+
+export type FindContactEmailResult = {
+  __typename?: 'FindContactEmailResult';
+  candidatesTried: Scalars['Int']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  emailFound: Scalars['Boolean']['output'];
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  verified: Maybe<Scalars['Boolean']['output']>;
+};
 
 export type GreenhouseCompliance = {
   __typename?: 'GreenhouseCompliance';
@@ -722,6 +752,7 @@ export type MatchedJobsResult = {
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
+  applyEmailPattern: ApplyEmailPatternResult;
   cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
@@ -735,6 +766,7 @@ export type Mutation = {
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
+  enhanceAllContacts: EnhanceAllContactsResult;
   enhanceCompany: EnhanceCompanyResponse;
   /**
    * Enhance a job posting by fetching detailed data from the ATS (Applicant Tracking System).
@@ -758,6 +790,8 @@ export type Mutation = {
    */
   enhanceJobFromATS: EnhanceJobResponse;
   extractSkillProfile: SkillProfile;
+  findCompanyEmails: EnhanceAllContactsResult;
+  findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -796,6 +830,11 @@ export type Mutation = {
 export type MutationAdd_Company_FactsArgs = {
   company_id: Scalars['Int']['input'];
   facts: Array<CompanyFactInput>;
+};
+
+
+export type MutationApplyEmailPatternArgs = {
+  companyId: Scalars['Int']['input'];
 };
 
 
@@ -877,6 +916,16 @@ export type MutationEnhanceJobFromAtsArgs = {
 
 export type MutationExtractSkillProfileArgs = {
   profileId: Scalars['ID']['input'];
+};
+
+
+export type MutationFindCompanyEmailsArgs = {
+  companyId: Scalars['Int']['input'];
+};
+
+
+export type MutationFindContactEmailArgs = {
+  contactId: Scalars['Int']['input'];
 };
 
 
@@ -1449,6 +1498,7 @@ export type TrackItem = {
 };
 
 export type UpdateApplicationInput = {
+  jobDescription?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ApplicationStatus>;
 };
@@ -1677,7 +1727,7 @@ export type UpdateApplicationMutationVariables = Exact<{
 }>;
 
 
-export type UpdateApplicationMutation = { __typename?: 'Mutation', updateApplication: { __typename?: 'Application', id: number, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null } };
+export type UpdateApplicationMutation = { __typename?: 'Mutation', updateApplication: { __typename?: 'Application', id: number, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null } };
 
 export type LinkTrackToApplicationMutationVariables = Exact<{
   applicationId: Scalars['Int']['input'];
@@ -1854,7 +1904,7 @@ export type GetContactsQueryVariables = Exact<{
 }>;
 
 
-export type GetContactsQuery = { __typename?: 'Query', contacts: { __typename?: 'ContactsResult', totalCount: number, contacts: Array<{ __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, linkedinUrl: string | null, position: string | null, githubHandle: string | null, telegramHandle: string | null, emailVerified: boolean | null, doNotContact: boolean, tags: Array<string>, createdAt: string }> } };
+export type GetContactsQuery = { __typename?: 'Query', contacts: { __typename?: 'ContactsResult', totalCount: number, contacts: Array<{ __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, bouncedEmails: Array<string>, linkedinUrl: string | null, position: string | null, githubHandle: string | null, telegramHandle: string | null, emailVerified: boolean | null, doNotContact: boolean, nbResult: string | null, tags: Array<string>, createdAt: string }> } };
 
 export type ImportContactsMutationVariables = Exact<{
   contacts: Array<ContactInput> | ContactInput;
@@ -1862,6 +1912,32 @@ export type ImportContactsMutationVariables = Exact<{
 
 
 export type ImportContactsMutation = { __typename?: 'Mutation', importContacts: { __typename?: 'ImportContactsResult', success: boolean, imported: number, failed: number, errors: Array<string> } };
+
+export type FindContactEmailMutationVariables = Exact<{
+  contactId: Scalars['Int']['input'];
+}>;
+
+
+export type FindContactEmailMutation = { __typename?: 'Mutation', findContactEmail: { __typename?: 'FindContactEmailResult', success: boolean, emailFound: boolean, email: string | null, verified: boolean | null, message: string, candidatesTried: number } };
+
+export type FindCompanyEmailsMutationVariables = Exact<{
+  companyId: Scalars['Int']['input'];
+}>;
+
+
+export type FindCompanyEmailsMutation = { __typename?: 'Mutation', findCompanyEmails: { __typename?: 'EnhanceAllContactsResult', success: boolean, message: string, companiesProcessed: number, totalContactsProcessed: number, totalEmailsFound: number, errors: Array<string> } };
+
+export type EnhanceAllContactsMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type EnhanceAllContactsMutation = { __typename?: 'Mutation', enhanceAllContacts: { __typename?: 'EnhanceAllContactsResult', success: boolean, message: string, companiesProcessed: number, totalContactsProcessed: number, totalEmailsFound: number, errors: Array<string> } };
+
+export type ApplyEmailPatternMutationVariables = Exact<{
+  companyId: Scalars['Int']['input'];
+}>;
+
+
+export type ApplyEmailPatternMutation = { __typename?: 'Mutation', applyEmailPattern: { __typename?: 'ApplyEmailPatternResult', success: boolean, message: string, contactsUpdated: number, pattern: string | null, contacts: Array<{ __typename?: 'Contact', id: number, email: string | null, emailVerified: boolean | null }> } };
 
 export type GetGreenhouseJobsQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
@@ -3223,6 +3299,7 @@ export const UpdateApplicationDocument = gql`
     notes
     jobTitle
     companyName
+    jobDescription
   }
 }
     `;
@@ -4053,12 +4130,14 @@ export const GetContactsDocument = gql`
       firstName
       lastName
       email
+      bouncedEmails
       linkedinUrl
       position
       githubHandle
       telegramHandle
       emailVerified
       doNotContact
+      nbResult
       tags
       createdAt
     }
@@ -4141,6 +4220,160 @@ export function useImportContactsMutation(baseOptions?: Apollo.MutationHookOptio
 export type ImportContactsMutationHookResult = ReturnType<typeof useImportContactsMutation>;
 export type ImportContactsMutationResult = Apollo.MutationResult<ImportContactsMutation>;
 export type ImportContactsMutationOptions = Apollo.BaseMutationOptions<ImportContactsMutation, ImportContactsMutationVariables>;
+export const FindContactEmailDocument = gql`
+    mutation FindContactEmail($contactId: Int!) {
+  findContactEmail(contactId: $contactId) {
+    success
+    emailFound
+    email
+    verified
+    message
+    candidatesTried
+  }
+}
+    `;
+export type FindContactEmailMutationFn = Apollo.MutationFunction<FindContactEmailMutation, FindContactEmailMutationVariables>;
+
+/**
+ * __useFindContactEmailMutation__
+ *
+ * To run a mutation, you first call `useFindContactEmailMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useFindContactEmailMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [findContactEmailMutation, { data, loading, error }] = useFindContactEmailMutation({
+ *   variables: {
+ *      contactId: // value for 'contactId'
+ *   },
+ * });
+ */
+export function useFindContactEmailMutation(baseOptions?: Apollo.MutationHookOptions<FindContactEmailMutation, FindContactEmailMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<FindContactEmailMutation, FindContactEmailMutationVariables>(FindContactEmailDocument, options);
+      }
+export type FindContactEmailMutationHookResult = ReturnType<typeof useFindContactEmailMutation>;
+export type FindContactEmailMutationResult = Apollo.MutationResult<FindContactEmailMutation>;
+export type FindContactEmailMutationOptions = Apollo.BaseMutationOptions<FindContactEmailMutation, FindContactEmailMutationVariables>;
+export const FindCompanyEmailsDocument = gql`
+    mutation FindCompanyEmails($companyId: Int!) {
+  findCompanyEmails(companyId: $companyId) {
+    success
+    message
+    companiesProcessed
+    totalContactsProcessed
+    totalEmailsFound
+    errors
+  }
+}
+    `;
+export type FindCompanyEmailsMutationFn = Apollo.MutationFunction<FindCompanyEmailsMutation, FindCompanyEmailsMutationVariables>;
+
+/**
+ * __useFindCompanyEmailsMutation__
+ *
+ * To run a mutation, you first call `useFindCompanyEmailsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useFindCompanyEmailsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [findCompanyEmailsMutation, { data, loading, error }] = useFindCompanyEmailsMutation({
+ *   variables: {
+ *      companyId: // value for 'companyId'
+ *   },
+ * });
+ */
+export function useFindCompanyEmailsMutation(baseOptions?: Apollo.MutationHookOptions<FindCompanyEmailsMutation, FindCompanyEmailsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<FindCompanyEmailsMutation, FindCompanyEmailsMutationVariables>(FindCompanyEmailsDocument, options);
+      }
+export type FindCompanyEmailsMutationHookResult = ReturnType<typeof useFindCompanyEmailsMutation>;
+export type FindCompanyEmailsMutationResult = Apollo.MutationResult<FindCompanyEmailsMutation>;
+export type FindCompanyEmailsMutationOptions = Apollo.BaseMutationOptions<FindCompanyEmailsMutation, FindCompanyEmailsMutationVariables>;
+export const EnhanceAllContactsDocument = gql`
+    mutation EnhanceAllContacts {
+  enhanceAllContacts {
+    success
+    message
+    companiesProcessed
+    totalContactsProcessed
+    totalEmailsFound
+    errors
+  }
+}
+    `;
+export type EnhanceAllContactsMutationFn = Apollo.MutationFunction<EnhanceAllContactsMutation, EnhanceAllContactsMutationVariables>;
+
+/**
+ * __useEnhanceAllContactsMutation__
+ *
+ * To run a mutation, you first call `useEnhanceAllContactsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useEnhanceAllContactsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [enhanceAllContactsMutation, { data, loading, error }] = useEnhanceAllContactsMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useEnhanceAllContactsMutation(baseOptions?: Apollo.MutationHookOptions<EnhanceAllContactsMutation, EnhanceAllContactsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<EnhanceAllContactsMutation, EnhanceAllContactsMutationVariables>(EnhanceAllContactsDocument, options);
+      }
+export type EnhanceAllContactsMutationHookResult = ReturnType<typeof useEnhanceAllContactsMutation>;
+export type EnhanceAllContactsMutationResult = Apollo.MutationResult<EnhanceAllContactsMutation>;
+export type EnhanceAllContactsMutationOptions = Apollo.BaseMutationOptions<EnhanceAllContactsMutation, EnhanceAllContactsMutationVariables>;
+export const ApplyEmailPatternDocument = gql`
+    mutation ApplyEmailPattern($companyId: Int!) {
+  applyEmailPattern(companyId: $companyId) {
+    success
+    message
+    contactsUpdated
+    pattern
+    contacts {
+      id
+      email
+      emailVerified
+    }
+  }
+}
+    `;
+export type ApplyEmailPatternMutationFn = Apollo.MutationFunction<ApplyEmailPatternMutation, ApplyEmailPatternMutationVariables>;
+
+/**
+ * __useApplyEmailPatternMutation__
+ *
+ * To run a mutation, you first call `useApplyEmailPatternMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApplyEmailPatternMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [applyEmailPatternMutation, { data, loading, error }] = useApplyEmailPatternMutation({
+ *   variables: {
+ *      companyId: // value for 'companyId'
+ *   },
+ * });
+ */
+export function useApplyEmailPatternMutation(baseOptions?: Apollo.MutationHookOptions<ApplyEmailPatternMutation, ApplyEmailPatternMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApplyEmailPatternMutation, ApplyEmailPatternMutationVariables>(ApplyEmailPatternDocument, options);
+      }
+export type ApplyEmailPatternMutationHookResult = ReturnType<typeof useApplyEmailPatternMutation>;
+export type ApplyEmailPatternMutationResult = Apollo.MutationResult<ApplyEmailPatternMutation>;
+export type ApplyEmailPatternMutationOptions = Apollo.BaseMutationOptions<ApplyEmailPatternMutation, ApplyEmailPatternMutationVariables>;
 export const GetGreenhouseJobsDocument = gql`
     query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
   jobs(sourceType: "greenhouse", search: $search, limit: $limit, offset: $offset) {

@@ -126,6 +126,15 @@ export type ApplicationStatus =
   | 'reviewed'
   | 'submitted';
 
+export type ApplyEmailPatternResult = {
+  __typename: 'ApplyEmailPatternResult';
+  contacts: Array<Contact>;
+  contactsUpdated: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  pattern: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type AshbyAddress = {
   __typename: 'AshbyAddress';
   postalAddress: Maybe<AshbyPostalAddress>;
@@ -316,6 +325,7 @@ export type CompanySnapshot = {
 
 export type Contact = {
   __typename: 'Contact';
+  bouncedEmails: Array<Scalars['String']['output']>;
   company: Maybe<Scalars['String']['output']>;
   companyId: Maybe<Scalars['Int']['output']>;
   createdAt: Scalars['String']['output'];
@@ -459,6 +469,16 @@ export type DeleteJobResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+export type EnhanceAllContactsResult = {
+  __typename: 'EnhanceAllContactsResult';
+  companiesProcessed: Scalars['Int']['output'];
+  errors: Array<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  totalContactsProcessed: Scalars['Int']['output'];
+  totalEmailsFound: Scalars['Int']['output'];
+};
+
 export type EnhanceCompanyResponse = {
   __typename: 'EnhanceCompanyResponse';
   companyId: Maybe<Scalars['Int']['output']>;
@@ -513,6 +533,16 @@ export type ExtractMethod =
   | 'JSONLD'
   | 'LLM'
   | 'META';
+
+export type FindContactEmailResult = {
+  __typename: 'FindContactEmailResult';
+  candidatesTried: Scalars['Int']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  emailFound: Scalars['Boolean']['output'];
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  verified: Maybe<Scalars['Boolean']['output']>;
+};
 
 export type GreenhouseCompliance = {
   __typename: 'GreenhouseCompliance';
@@ -719,6 +749,7 @@ export type MatchedJobsResult = {
 export type Mutation = {
   __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
+  applyEmailPattern: ApplyEmailPatternResult;
   cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
@@ -732,6 +763,7 @@ export type Mutation = {
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
+  enhanceAllContacts: EnhanceAllContactsResult;
   enhanceCompany: EnhanceCompanyResponse;
   /**
    * Enhance a job posting by fetching detailed data from the ATS (Applicant Tracking System).
@@ -755,6 +787,8 @@ export type Mutation = {
    */
   enhanceJobFromATS: EnhanceJobResponse;
   extractSkillProfile: SkillProfile;
+  findCompanyEmails: EnhanceAllContactsResult;
+  findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -793,6 +827,11 @@ export type Mutation = {
 export type MutationAdd_Company_FactsArgs = {
   company_id: Scalars['Int']['input'];
   facts: Array<CompanyFactInput>;
+};
+
+
+export type MutationApplyEmailPatternArgs = {
+  companyId: Scalars['Int']['input'];
 };
 
 
@@ -874,6 +913,16 @@ export type MutationEnhanceJobFromAtsArgs = {
 
 export type MutationExtractSkillProfileArgs = {
   profileId: Scalars['ID']['input'];
+};
+
+
+export type MutationFindCompanyEmailsArgs = {
+  companyId: Scalars['Int']['input'];
+};
+
+
+export type MutationFindContactEmailArgs = {
+  contactId: Scalars['Int']['input'];
 };
 
 
@@ -1446,6 +1495,7 @@ export type TrackItem = {
 };
 
 export type UpdateApplicationInput = {
+  jobDescription?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ApplicationStatus>;
 };

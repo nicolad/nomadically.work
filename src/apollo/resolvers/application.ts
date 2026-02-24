@@ -168,6 +168,7 @@ export const applicationResolvers = {
         input: {
           status?: "pending" | "submitted" | "reviewed" | "rejected" | "accepted";
           notes?: string;
+          jobDescription?: string;
         };
       },
       context: GraphQLContext,
@@ -188,6 +189,9 @@ export const applicationResolvers = {
         }
         if (args.input.notes !== undefined) {
           updateValues.notes = args.input.notes;
+        }
+        if (args.input.jobDescription !== undefined) {
+          updateValues.job_description = args.input.jobDescription;
         }
 
         const [updated] = await context.db

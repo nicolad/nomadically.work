@@ -112,6 +112,14 @@ enum ApplicationStatus {
   submitted
 }
 
+type ApplyEmailPatternResult {
+  contacts: [Contact!]!
+  contactsUpdated: Int!
+  message: String!
+  pattern: String
+  success: Boolean!
+}
+
 type AshbyAddress {
   postalAddress: AshbyPostalAddress
 }
@@ -279,6 +287,7 @@ type CompanySnapshot {
 }
 
 type Contact {
+  bouncedEmails: [String!]!
   company: String
   companyId: Int
   createdAt: String!
@@ -422,6 +431,15 @@ type DeleteJobResponse {
 
 scalar EmailAddress
 
+type EnhanceAllContactsResult {
+  companiesProcessed: Int!
+  errors: [String!]!
+  message: String!
+  success: Boolean!
+  totalContactsProcessed: Int!
+  totalEmailsFound: Int!
+}
+
 type EnhanceCompanyResponse {
   companyId: Int
   companyKey: String
@@ -473,6 +491,15 @@ enum ExtractMethod {
   JSONLD
   LLM
   META
+}
+
+type FindContactEmailResult {
+  candidatesTried: Int!
+  email: String
+  emailFound: Boolean!
+  message: String!
+  success: Boolean!
+  verified: Boolean
 }
 
 type GreenhouseCompliance {
@@ -668,6 +695,7 @@ type MatchedJobsResult {
 
 type Mutation {
   add_company_facts(company_id: Int!, facts: [CompanyFactInput!]!): [CompanyFact!]!
+  applyEmailPattern(companyId: Int!): ApplyEmailPatternResult!
   cancelDeepPlannerTask(id: ID!): DeepPlannerTask!
   createApplication(input: ApplicationInput!): Application!
   createCompany(input: CreateCompanyInput!): Company!
@@ -681,6 +709,7 @@ type Mutation {
   deleteContact(id: Int!): DeleteContactResult!
   deleteJob(id: Int!): DeleteJobResponse!
   deleteLangSmithPrompt(promptIdentifier: String!): Boolean!
+  enhanceAllContacts: EnhanceAllContactsResult!
   enhanceCompany(id: Int, key: String): EnhanceCompanyResponse!
   """
   Enhance a job posting by fetching detailed data from the ATS (Applicant Tracking System).
@@ -704,6 +733,8 @@ type Mutation {
   """
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
   extractSkillProfile(profileId: ID!): SkillProfile!
+  findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
+  findContactEmail(contactId: Int!): FindContactEmailResult!
   generateInterviewPrep(applicationId: Int!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!
@@ -992,6 +1023,7 @@ type TrackItem {
 scalar URL
 
 input UpdateApplicationInput {
+  jobDescription: String
   notes: String
   status: ApplicationStatus
 }

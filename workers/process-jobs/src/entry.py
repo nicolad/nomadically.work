@@ -86,7 +86,6 @@ SKILL_TAGS: frozenset[str] = frozenset({
 # langchain-cloudflare — Workers AI binding integration (PyPI)
 from langchain_cloudflare import ChatCloudflareWorkersAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda
 
 # langgraph-checkpoint-cloudflare-d1 removed (saves ~8MB sqlalchemy).
 # CloudflareD1Saver checkpointing is best-effort and now a no-op.
@@ -273,89 +272,7 @@ Return ONLY valid JSON:
     ),
 ])
 
-# Phase 3 — EU Remote Classification
-CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "You are an expert at classifying job postings for Remote EU eligibility. "
-        "A Remote EU position must be FULLY REMOTE and allow work from EU member countries. "
-        "Return structured JSON output with clear reasoning.",
-    ),
-    (
-        "human",
-        """Classify this job posting as Remote EU or not.
-
-JOB DETAILS:
-- Title: {title}
-- Location: {location}
-- Description: {description}
-
-STRUCTURED SIGNALS (from ATS metadata — trust these over raw text):
-{structured_signals}
-
-CLASSIFICATION RULES (apply in order):
-
-0. NEGATIVE SIGNALS (highest priority — override all other rules):
-   - "US only", "must be based in US", "US work authorization required" → isRemoteEU: false (high confidence)
-   - "No EU applicants", "cannot accept from EU" → isRemoteEU: false (high confidence)
-   - Swiss-only work permit in DACH context → isRemoteEU: false (high confidence)
-   - These override worldwide/EMEA/EU timezone when present
-
-1. FULLY REMOTE REQUIREMENT: Must explicitly state "remote", "fully remote", or similar.
-   - Hybrid, office-based, or on-site positions → isRemoteEU: false
-   - "Remote support" (providing remote support from an office) is NOT remote work
-
-2. ATS METADATA SHORTCUTS (when available):
-   - EU country code + ATS remote flag → isRemoteEU: true (high confidence)
-   - ATS workplace_type = "not remote" → isRemoteEU: false (high confidence)
-
-3. EXPLICIT EU MENTIONS: Look for clear EU indicators:
-   - "Remote - EU", "EU only", "EU members only" → isRemoteEU: true (high confidence)
-   - Specific EU countries only (e.g., "Germany, France, Spain") → isRemoteEU: true
-
-4. WORK AUTHORIZATION: Strong signal for EU remote:
-   - "EU work authorization", "EU passport", "EU residency" → isRemoteEU: true
-
-5. REGIONAL SHORTHANDS:
-   - "DACH" (Germany, Austria, Switzerland) → isRemoteEU: true (medium confidence — 2 of 3 are EU)
-   - "Nordics" (Sweden, Finland, Denmark + Norway, Iceland) → isRemoteEU: true (medium confidence — 3 of 5 are EU)
-   - "Benelux" (Belgium, Netherlands, Luxembourg) → isRemoteEU: true (high confidence — all EU)
-   - "CEE" / "Central & Eastern Europe" → isRemoteEU: true (medium confidence — mostly EU)
-
-6. BROADER REGIONS (EU workers are generally eligible):
-   - "EMEA" + EU work auth → isRemoteEU: true (high confidence)
-   - "EMEA" alone → isRemoteEU: true (medium confidence)
-   - "Europe" without EU specification → isRemoteEU: true (medium confidence)
-   - "EU + UK + Switzerland" (mixed) → isRemoteEU: true (medium confidence)
-
-7. TIMEZONE SIGNALS:
-   - "EU Timezone" → isRemoteEU: true (medium confidence)
-   - "CET ± N hours", "European business hours" → isRemoteEU: true (medium confidence)
-   - "CET timezone" alone (no EU context) → isRemoteEU: false (medium — not exclusive to EU)
-
-8. WORLDWIDE / GLOBAL:
-   - Worldwide + negative signals (US only etc.) → isRemoteEU: false (high confidence)
-   - Worldwide + EU country/office in signals → isRemoteEU: true (medium confidence)
-   - Worldwide + no EU specifics → isRemoteEU: true (LOW confidence — downgraded)
-
-9. SPECIFIC COUNTRIES/REGIONS:
-   - UK only (post-Brexit) → isRemoteEU: false
-   - Switzerland only → isRemoteEU: false
-
-10. CONFIDENCE LEVELS:
-   - HIGH: Explicit EU mention, clear remote status, work authorization required, all-EU region, negative signals
-   - MEDIUM: Mixed regions (includes EU), EEA, Europe, EMEA, DACH, Nordics, EU timezone, CET±N
-   - LOW: Too vague, worldwide with no EU specifics, preference (not requirement)
-
-RESPOND ONLY WITH VALID JSON:
-{{
-  "isRemoteEU": true/false,
-  "confidence": "high" | "medium" | "low",
-  "reason": "Brief explanation referencing the classification rules applied"
-}}""",
-    ),
-])
-
+# Phase 3 — EU Remote Classification prompt moved to workers/eu-classifier/src/prompts.py
 
 # ---------------------------------------------------------------------------
 # Helpers: JS ↔ Python conversion
@@ -1033,22 +950,6 @@ def _normalise_role_keys(raw: dict) -> dict:
     return {KEY_MAP.get(k, k): v for k, v in raw.items()}
 
 
-def _normalise_classification_keys(raw: dict) -> dict:
-    """Normalise LLM key variants into the JobClassification schema."""
-    normalised = {}
-    for k, v in raw.items():
-        lk = k.lower().replace("_", "").replace("-", "")
-        if lk in ("isremoteeu", "isremoteeuposition", "remoteeu"):
-            normalised["isRemoteEU"] = v
-        elif lk == "confidence":
-            normalised["confidence"] = v
-        elif lk in ("reason", "explanation"):
-            normalised["reason"] = v
-        else:
-            normalised[k] = v
-    return normalised
-
-
 async def _tag_with_workers_ai(job: dict, ai_binding) -> JobRoleTags | None:
     """Tier 2: Workers AI role tagging via langchain LCEL chain.
 
@@ -1312,645 +1213,76 @@ async def tag_roles_for_enhanced_jobs(
 
 
 # =========================================================================
-# Phase 3 — EU Remote Classification
-#   Primary: Workers AI via langchain LCEL chain (free, fast)
-#   Fallback: DeepSeek API for uncertain or failed Workers AI results
+# Phase 3 — EU Remote Classification (delegated to eu-classifier worker)
 #
-#   Only runs on jobs at status='role-match' — irrelevant jobs never
-#   reach this phase, which is the primary cost-saving mechanism.
+#   All classification logic (signal extraction, heuristic, LLM tiers) is
+#   centralized in workers/eu-classifier/. This worker delegates via the
+#   EU_CLASSIFIER service binding (or falls back to HTTP fetch).
 #
-#   Three-tier strategy (cheapest first):
+#   The eu-classifier worker owns:
 #     Tier 0 — Keyword heuristic + ATS signals  (free, CPU-only)
 #     Tier 1 — Workers AI via langchain          (free, Cloudflare quota)
 #     Tier 2 — DeepSeek API                      (paid, fallback only)
 # =========================================================================
 
-# EU member state + EEA ISO 3166-1 alpha-2 codes
-EU_ISO_CODES: frozenset[str] = frozenset({
-    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
-    "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
-    "PL", "PT", "RO", "SK", "SI", "ES", "SE",
-    # EEA (EU labour market access)
-    "NO", "IS", "LI",
-})
-
-# EU + EEA country names (lowercase) for text matching
-EU_COUNTRY_NAMES: frozenset[str] = frozenset({
-    "austria", "belgium", "bulgaria", "croatia", "cyprus", "czech republic",
-    "czechia", "denmark", "estonia", "finland", "france", "germany", "greece",
-    "hungary", "ireland", "italy", "latvia", "lithuania", "luxembourg", "malta",
-    "netherlands", "poland", "portugal", "romania", "slovakia", "slovenia",
-    "spain", "sweden",
-    # EEA
-    "norway", "iceland", "liechtenstein",
-})
-
-# Country name → ISO code mapping (covers common ATS values)
-_COUNTRY_NAME_TO_ISO: dict[str, str] = {
-    "austria": "AT", "belgium": "BE", "bulgaria": "BG", "croatia": "HR",
-    "cyprus": "CY", "czech republic": "CZ", "czechia": "CZ", "denmark": "DK",
-    "estonia": "EE", "finland": "FI", "france": "FR", "germany": "DE",
-    "greece": "GR", "hungary": "HU", "ireland": "IE", "italy": "IT",
-    "latvia": "LV", "lithuania": "LT", "luxembourg": "LU", "malta": "MT",
-    "netherlands": "NL", "poland": "PL", "portugal": "PT", "romania": "RO",
-    "slovakia": "SK", "slovenia": "SI", "spain": "ES", "sweden": "SE",
-    # EEA
-    "norway": "NO", "iceland": "IS", "liechtenstein": "LI",
-    # Non-EU (for correct negative classification)
-    "united states": "US", "usa": "US", "u.s.a.": "US", "u.s.": "US",
-    "united kingdom": "GB", "uk": "GB", "switzerland": "CH",
-    "canada": "CA", "australia": "AU", "new zealand": "NZ",
-    "japan": "JP", "singapore": "SG", "india": "IN", "brazil": "BR",
-    "israel": "IL", "south korea": "KR", "china": "CN",
-}
-
-
-def _normalize_text_for_signals(text: str) -> str:
-    """Generic text normalization: dehyphenate compound words for regex matching.
-
-    Converts e.g. "work-from-anywhere" → "work from anywhere",
-    "remote-first" → "remote first", "location-agnostic" → "location agnostic".
-    Preserves actual hyphenated tokens like "on-site" which are also in patterns.
-    """
-    return re.sub(r"(?<=\w)-(?=\w)", " ", text)
-
-
-# Reusable langchain runnable for text normalization in LCEL chains
-normalize_signal_text = RunnableLambda(_normalize_text_for_signals)
-
-
-# Negative signal patterns — US-only, no-EU, Swiss-only
-_NEGATIVE_EU_PATTERN = re.compile(
-    r"\b("
-    r"us only|us-only|united states only"
-    r"|must be based in the us|must be based in the united states"
-    r"|us work authorization|authorized to work in the united states"
-    r"|us citizens? (?:and|or) permanent residents?"
-    r"|no eu applicants?|cannot accept applications? from eu"
-    r"|outside the european union"
-    r"|must be based in switzerland|swiss work permit"
-    r")\b",
-    re.IGNORECASE,
-)
-
-# US-implicit signal patterns — salary in USD, US benefits, US government
-_US_IMPLICIT_PATTERN = re.compile(
-    r"("
-    r"\$\d{2,3}k"                          # $100k, $200K
-    r"|\$\d{3},?\d{3}"                     # $100,000 or $100000
-    r"|USD\s*\d"                            # USD 100...
-    r"|401\(?k\)?"                          # 401k, 401(k)
-    r"|medical,?\s*dental,?\s*(?:and\s*)?vision"  # US benefits trio
-    r"|\bDoD\b|\bSBIR\b"                   # US defense
-    r"|\bsecurity clearance\b"             # US clearance
-    r"|\bW-?2\b"                           # W2 employment
-    r"|\bUS\s*(?:holidays?|PTO)\b"         # US time off
-    r")",
-    re.IGNORECASE,
-)
-
-# EU timezone / business hours patterns
-_EU_TIMEZONE_PATTERN = re.compile(
-    r"("
-    r"\beu\s*timezone\b"
-    r"|\beuropean business hours\b"
-    r"|cet\s*[±+-]\s*\d"
-    r"|[±+-]\s*\d+\s*hours?\s*cet"
-    r"|\boverlap with (?:cet|european)\b"
-    r")",
-    re.IGNORECASE,
-)
-
-
-def _extract_eu_signals(job: dict) -> dict:
-    """Extract deterministic EU-related signals from ATS-enriched job data.
-
-    Returns a dict of boolean/string signals that the keyword heuristic
-    and LLM prompt can use for classification.
-    """
-    signals: dict = {
-        "ats_remote": False,
-        "eu_country_code": False,
-        "country_code": None,
-        "negative_signals": [],
-        "us_implicit_signals": [],
-        "eu_timezone": False,
-        "eu_countries_in_location": [],
-        "all_locations": [],
-    }
-
-    # ATS remote flag — from ashby_is_remote or workplace_type
-    ashby_remote = job.get("ashby_is_remote")
-    workplace = (job.get("workplace_type") or "").lower()
-    location_lower = (job.get("location") or "").lower().strip()
-    if (ashby_remote == 1 or ashby_remote is True
-            or workplace == "remote"
-            or location_lower == "remote"
-            or location_lower.startswith("remote ")):
-        signals["ats_remote"] = True
-
-    # Country code → EU membership check
-    # Accept ISO codes (2-3 uppercase letters) or full country names
-    raw_country = (job.get("country") or "").strip()
-    country = raw_country.upper()
-    if country and re.fullmatch(r"[A-Z]{2,3}", country):
-        # Already an ISO code
-        signals["country_code"] = country
-        if country in EU_ISO_CODES:
-            signals["eu_country_code"] = True
-    elif raw_country:
-        # Try mapping full country name → ISO code
-        iso = _COUNTRY_NAME_TO_ISO.get(raw_country.lower())
-        if iso:
-            signals["country_code"] = iso
-            if iso in EU_ISO_CODES:
-                signals["eu_country_code"] = True
-
-    # Fallback: extract country from ashby_address if still no country_code
-    if not signals["country_code"]:
-        try:
-            addr = job.get("ashby_address")
-            if isinstance(addr, str):
-                addr = json.loads(addr)
-            if isinstance(addr, dict):
-                postal = addr.get("postalAddress") or addr
-                addr_country = (postal.get("addressCountry") or "").strip()
-                addr_locality = (postal.get("addressLocality") or "").strip()
-                # Try addressCountry first, then addressLocality as fallback
-                for candidate in [addr_country, addr_locality]:
-                    if not candidate:
-                        continue
-                    upper = candidate.upper()
-                    if re.fullmatch(r"[A-Z]{2,3}", upper):
-                        signals["country_code"] = upper
-                        if upper in EU_ISO_CODES:
-                            signals["eu_country_code"] = True
-                        break
-                    iso = _COUNTRY_NAME_TO_ISO.get(candidate.lower())
-                    if iso:
-                        signals["country_code"] = iso
-                        if iso in EU_ISO_CODES:
-                            signals["eu_country_code"] = True
-                        break
-        except Exception:
-            pass
-
-    # Fallback: extract country from location string (e.g. "USA | Remote", "US - Remote")
-    if not signals["country_code"] and location_lower:
-        for token in re.split(r"[|,/\-–—]+", location_lower):
-            token = token.strip().rstrip(".")
-            if not token or token == "remote":
-                continue
-            # Try dict lookup first (handles "usa" → "US", "uk" → "GB", etc.)
-            iso = _COUNTRY_NAME_TO_ISO.get(token)
-            if iso:
-                signals["country_code"] = iso
-                if iso in EU_ISO_CODES:
-                    signals["eu_country_code"] = True
-                break
-            # Then try raw 2-letter ISO code (e.g. "DE", "FR")
-            upper = token.upper()
-            if re.fullmatch(r"[A-Z]{2}", upper):
-                signals["country_code"] = upper
-                if upper in EU_ISO_CODES:
-                    signals["eu_country_code"] = True
-                break
-
-    # Negative signals via regex on description
-    desc = (job.get("description") or "")[:8000].lower()
-    location = (job.get("location") or "").lower()
-    full_text = _normalize_text_for_signals(f"{location} {desc}")
-    for m in _NEGATIVE_EU_PATTERN.finditer(full_text):
-        signals["negative_signals"].append(m.group(0))
-
-    # US-implicit signals via regex on description
-    us_implicit: list[str] = []
-    for m in _US_IMPLICIT_PATTERN.finditer(full_text):
-        us_implicit.append(m.group(0))
-    signals["us_implicit_signals"] = us_implicit
-
-    # EU timezone / business hours
-    if _EU_TIMEZONE_PATTERN.search(full_text):
-        signals["eu_timezone"] = True
-
-    # EU country names in location string
-    for name in EU_COUNTRY_NAMES:
-        if name in location:
-            signals["eu_countries_in_location"].append(name)
-
-    # Aggregate all ATS locations
-    all_locs: list[str] = []
-    if job.get("location"):
-        all_locs.append(job["location"])
-
-    # offices (Greenhouse JSON array)
-    try:
-        offices = job.get("offices")
-        if isinstance(offices, str):
-            offices = json.loads(offices)
-        if isinstance(offices, list):
-            for o in offices:
-                name = o.get("name") or o.get("location") if isinstance(o, dict) else str(o)
-                if name:
-                    all_locs.append(name)
-    except Exception:
-        pass
-
-    # categories.allLocations (Ashby/Lever JSON)
-    try:
-        cats = job.get("categories")
-        if isinstance(cats, str):
-            cats = json.loads(cats)
-        if isinstance(cats, dict):
-            for loc in (cats.get("allLocations") or []):
-                if loc and loc not in all_locs:
-                    all_locs.append(loc)
-    except Exception:
-        pass
-
-    # ashby_secondary_locations
-    try:
-        sec = job.get("ashby_secondary_locations")
-        if isinstance(sec, str):
-            sec = json.loads(sec)
-        if isinstance(sec, list):
-            for s in sec:
-                loc_name = s.get("location") if isinstance(s, dict) else str(s)
-                if loc_name and loc_name not in all_locs:
-                    all_locs.append(loc_name)
-    except Exception:
-        pass
-
-    signals["all_locations"] = all_locs
-    return signals
-
-
-def _keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
-    """Tier 0: deterministic EU classification heuristic.
-
-    Returns high-confidence results only for unambiguous cases.
-    Returns None for anything ambiguous → falls through to LLM.
-    """
-    location = (job.get("location") or "").lower()
-
-    # Negative signals → reject
-    if signals["negative_signals"]:
-        return JobClassification(
-            isRemoteEU=False,
-            confidence="high",
-            reason=f"Heuristic: negative signals found: {', '.join(signals['negative_signals'][:3])}",
-        )
-
-    # ATS says not remote and location is not remote → reject
-    if not signals["ats_remote"] and "remote" not in location:
-        # Only if there's strong on-site signal
-        desc_lower = (job.get("description") or "").lower()
-        if ("on-site" in desc_lower or "onsite" in desc_lower or "hybrid" in location
-                or "in office" in desc_lower):
-            return JobClassification(
-                isRemoteEU=False,
-                confidence="high",
-                reason="Heuristic: not a remote position",
-            )
-
-    # EU country code + remote flag → accept
-    if signals["eu_country_code"] and signals["ats_remote"]:
-        return JobClassification(
-            isRemoteEU=True,
-            confidence="high",
-            reason=f"Heuristic: EU country code ({signals['country_code']}) + ATS remote flag",
-        )
-
-    # Explicit "Remote - EU" / "Remote | EU" in location
-    if re.search(r"\bremote\b.*\beu\b(?!\s*timezone)", location, re.IGNORECASE):
-        return JobClassification(
-            isRemoteEU=True,
-            confidence="high",
-            reason="Heuristic: explicit 'Remote EU' in location",
-        )
-
-    # EU country in location + remote → accept (e.g., "Oslo, Norway" + remote flag)
-    if signals["eu_countries_in_location"] and signals["ats_remote"]:
-        countries = ", ".join(signals["eu_countries_in_location"][:3])
-        return JobClassification(
-            isRemoteEU=True,
-            confidence="high",
-            reason=f"Heuristic: EU/EEA country in location ({countries}) + ATS remote flag",
-        )
-
-    # US-implicit signals + no EU signals → escalate to LLM (don't auto-accept)
-    if (signals.get("us_implicit_signals")
-            and not signals["eu_country_code"]
-            and not signals["eu_timezone"]
-            and not signals["eu_countries_in_location"]):
-        return None  # Ambiguous — let Workers AI / DeepSeek reason about full context
-
-    # Worldwide remote: ATS remote flag + no country code + no negative signals
-    # Policy: worldwide remote jobs are available to EU workers
-    if signals["ats_remote"] and not signals["country_code"]:
-        return JobClassification(
-            isRemoteEU=True,
-            confidence="medium",
-            reason="Heuristic: worldwide remote (ATS remote flag, no country restriction)",
-        )
-
-    # Non-EU country but ATS remote + description signals worldwide/global scope
-    # Two tiers: explicit phrases auto-accept, vague phrases escalate to LLM
-    desc_lower = _normalize_text_for_signals((job.get("description") or "").lower())
-    if signals["ats_remote"] and signals["country_code"] and not signals["eu_country_code"]:
-        # Tier A: Explicit "work from anywhere" phrases → auto-accept
-        _explicit_worldwide_pattern = re.compile(
-            r"\b(anywhere in the world|work from anywhere"
-            r"|location.agnostic|digital nomad)\b",
-            re.IGNORECASE,
-        )
-        explicit_match = _explicit_worldwide_pattern.search(desc_lower)
-        if explicit_match:
-            return JobClassification(
-                isRemoteEU=True,
-                confidence="medium",
-                reason=f"Heuristic: non-EU HQ ({signals['country_code']}) but worldwide remote ({explicit_match.group(0)})",
-            )
-
-        # Tier B: Vague phrases (global, distributed, remote-first, etc.)
-        # → escalate to LLM for proper reasoning about EU eligibility
-        _vague_worldwide_pattern = re.compile(
-            r"\b(global(?:ly)?|worldwide|distributed team|fully distributed"
-            r"|remote.first|remote.friendly)\b",
-            re.IGNORECASE,
-        )
-        vague_match = _vague_worldwide_pattern.search(desc_lower)
-        if vague_match:
-            return None  # Ambiguous — let LLM reason about EU eligibility
-
-    # Check description for explicit EU eligibility even without ATS signals
-    if signals["ats_remote"]:
-        eu_desc_match = re.search(
-            r"\b(eu\s+(?:based|eligible|residents?|citizens?|work\s*(?:authorization|permit))"
-            r"|european\s+(?:union|economic\s+area)"
-            r"|remote.*\beu\b"
-            r"|emea)"
-            r"\b",
-            desc_lower,
-            re.IGNORECASE,
-        )
-        if eu_desc_match:
-            return JobClassification(
-                isRemoteEU=True,
-                confidence="medium",
-                reason=f"Heuristic: EU signal in description ({eu_desc_match.group(0)})",
-            )
-
-    return None  # Ambiguous — escalate to LLM
-
-
-def _format_signals(signals: dict) -> str:
-    """Format extracted signals as a text block for the LLM prompt."""
-    parts: list[str] = []
-
-    if signals["ats_remote"]:
-        parts.append("- ATS remote flag: YES")
-    if signals["country_code"]:
-        eu_label = " (EU member)" if signals["eu_country_code"] else " (NOT EU)"
-        parts.append(f"- Country code: {signals['country_code']}{eu_label}")
-    if signals["negative_signals"]:
-        parts.append(f"- Negative signals: {', '.join(signals['negative_signals'][:5])}")
-    if signals["eu_timezone"]:
-        parts.append("- EU timezone/business hours signal detected")
-    if signals["eu_countries_in_location"]:
-        parts.append(f"- EU countries in location: {', '.join(signals['eu_countries_in_location'][:5])}")
-    if len(signals["all_locations"]) > 1:
-        parts.append(f"- All ATS locations: {', '.join(signals['all_locations'][:8])}")
-
-    return "\n".join(parts) if parts else "- No structured ATS signals available"
-
-def _build_classification_chain(ai_binding):
-    """Build the langchain LCEL EU-classification chain."""
-    llm = ChatCloudflareWorkersAI(
-        model_name=WORKERS_AI_MODEL,
-        binding=ai_binding,
-        temperature=0.2,
-    )
-    return CLASSIFICATION_PROMPT | llm
-
-
-async def classify_with_workers_ai(job: dict, ai_binding, signals_text: str = "") -> JobClassification | None:
-    """Phase 3 Tier 1: EU classification via Workers AI + langchain LCEL chain.
-
-    Returns a validated JobClassification or None if unavailable/failed.
-    Does NOT use with_structured_output() — see _guard_content() docstring.
-    """
-    if ai_binding is None:
-        return None
-
-    try:
-        chain    = _build_classification_chain(ai_binding)
-        response = await chain.ainvoke({
-            "title":       job.get("title", "N/A"),
-            "location":    job.get("location") or "Not specified",
-            "description": (job.get("description") or "")[:6000],
-            "structured_signals": signals_text or "None available",
-        })
-
-        content_str = _guard_content(response.content)
-        if not content_str:
-            print("   ⚠️  Workers AI (classify) returned null content")
-            return None
-
-        json_str   = _extract_json_object(content_str)
-        raw        = json.loads(json_str)
-        normalised = _normalise_classification_keys(raw)
-        return JobClassification.model_validate(normalised)
-
-    except Exception as e:
-        print(f"   ⚠️  Workers AI classification failed: {e}")
-        return None
-
-
-async def classify_with_deepseek(
-    job: dict, api_key: str, base_url: str, model: str, signals_text: str = ""
-) -> JobClassification:
-    """Phase 3 Tier 2: EU classification via DeepSeek API.
-
-    Called only when Workers AI fails or returns low/medium confidence.
-    Uses fetch_json (JS fetch) — no httpx needed in CF Workers.
-    Never raises — returns a low-confidence default on any error.
-    """
-    prompt_msgs = CLASSIFICATION_PROMPT.format_messages(
-        title       = job.get("title", "N/A"),
-        location    = job.get("location") or "Not specified",
-        description = (job.get("description") or "")[:6000],
-        structured_signals = signals_text or "None available",
-    )
-    role_map = {"system": "system", "human": "user", "ai": "assistant"}
-    messages = [{"role": role_map.get(m.type, m.type), "content": m.content} for m in prompt_msgs]
-
-    try:
-        url     = f"{base_url.rstrip('/')}/chat/completions"
-        payload = json.dumps({
-            "model":           model,
-            "temperature":     0.3,
-            "response_format": {"type": "json_object"},
-            "messages":        messages,
-        })
-
-        data = await fetch_json(
-            url,
-            method  = "POST",
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type":  "application/json",
-            },
-            body    = payload,
-            retries = 3,
-        )
-
-        content = (
-            (data.get("choices") or [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
-        if not content.strip():
-            raise ValueError("Empty content in DeepSeek classify response")
-
-        raw        = json.loads(content)
-        normalised = _normalise_classification_keys(raw)
-        return JobClassification.model_validate(normalised)
-
-    except Exception as e:
-        print(f"   ⚠️  DeepSeek classification failed: {e}")
-        return JobClassification(
-            isRemoteEU=False,
-            confidence="low",
-            reason=f"Classification failed: {e}",
-        )
-
 
 async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
-    """Phase 3: EU-remote classify all jobs at status='role-match'.
+    """Phase 3: Delegate EU-remote classification to the eu-classifier worker.
 
-    Strategy:
-      1. Workers AI via langchain LCEL (free) — use directly if high confidence.
-      2. DeepSeek fallback (paid) — if Workers AI fails or is uncertain.
-      3. Accept Workers AI as-is if no DeepSeek key is configured.
+    Uses the EU_CLASSIFIER service binding for zero-latency inter-worker
+    calls. Falls back to HTTP fetch if the binding is not configured.
     """
-    api_key  = getattr(env, "DEEPSEEK_API_KEY", None) or getattr(env, "OPENAI_API_KEY", None)
-    base_url = getattr(env, "DEEPSEEK_BASE_URL", None) or "https://api.deepseek.com/beta"
-    model    = getattr(env, "DEEPSEEK_MODEL", None) or "deepseek-chat"
-    ai_binding = getattr(env, "AI", None)
+    eu_classifier = getattr(env, "EU_CLASSIFIER", None)
 
-    if not ai_binding and not api_key:
-        raise Exception(
-            "No classification backend available. "
-            "Provide either the AI binding (Workers AI) or DEEPSEEK_API_KEY."
-        )
+    if eu_classifier is not None:
+        # Service binding — call the eu-classifier worker directly
+        print("🔍 Phase 3 — Delegating to eu-classifier via service binding...")
+        try:
+            request_body = json.dumps({"limit": limit})
+            response = await eu_classifier.fetch(
+                "https://eu-classifier/classify",
+                to_js_obj({
+                    "method": "POST",
+                    "headers": {"Content-Type": "application/json"},
+                    "body": request_body,
+                }),
+            )
+            data = to_py(await response.json())
+            if data.get("success"):
+                stats = data.get("stats", {})
+                print(f"📋 eu-classifier: {stats.get('processed', 0)} classified, "
+                      f"{stats.get('euRemote', 0)} EU, {stats.get('nonEuRemote', 0)} non-EU")
+                return stats
+            else:
+                print(f"   ⚠️  eu-classifier returned error: {data.get('error', 'unknown')}")
+        except Exception as e:
+            print(f"   ⚠️  eu-classifier service binding failed: {e}")
 
-    print("🔍 Phase 3 — Fetching jobs ready for EU classification...")
+    # Fallback: HTTP fetch to eu-classifier worker URL (if configured)
+    eu_classifier_url = getattr(env, "EU_CLASSIFIER_URL", None)
+    if eu_classifier_url:
+        print("🔍 Phase 3 — Delegating to eu-classifier via HTTP...")
+        try:
+            data = await fetch_json(
+                f"{eu_classifier_url.rstrip('/')}/classify",
+                method="POST",
+                headers={"Content-Type": "application/json"},
+                body=json.dumps({"limit": limit}),
+                retries=2,
+            )
+            if data.get("success"):
+                stats = data.get("stats", {})
+                print(f"📋 eu-classifier: {stats.get('processed', 0)} classified")
+                return stats
+        except Exception as e:
+            print(f"   ⚠️  eu-classifier HTTP fallback failed: {e}")
 
-    rows = await d1_all(
-        db,
-        """SELECT id, title, location, description,
-                  country, workplace_type, offices, categories,
-                  ashby_is_remote, ashby_secondary_locations, ashby_address,
-                  source_kind
-           FROM jobs WHERE status IN (?, ?, ?) ORDER BY created_at DESC LIMIT ?""",
-        [JobStatus.ROLE_MATCH.value, JobStatus.ROLE_NOMATCH.value,
-         JobStatus.ENHANCED.value, limit],
-    )
-
-    print(f"📋 Found {len(rows)} jobs to classify")
-
-    stats = {
+    # No eu-classifier available — return empty stats
+    print("   ⚠️  No eu-classifier binding or URL configured. Skipping Phase 3.")
+    return {
         "processed": 0, "euRemote": 0, "nonEuRemote": 0,
         "errors": 0, "workersAI": 0, "deepseek": 0,
     }
-
-    for job in rows:
-        try:
-            print(f"\n🤖 Classifying job {job['id']}: {job.get('title')}")
-
-            # Tier 0 — Extract ATS signals and try keyword heuristic
-            eu_signals = _extract_eu_signals(job)
-            signals_text = _format_signals(eu_signals)
-
-            classification: JobClassification | None = None
-            wa_result:      JobClassification | None = None
-            source = "workers-ai"
-
-            # Tier 0 — Keyword heuristic (free, no LLM)
-            heuristic_result = _keyword_eu_classify(job, eu_signals)
-            if heuristic_result is not None:
-                classification = heuristic_result
-                source = "heuristic"
-                stats.setdefault("heuristic", 0)
-                stats["heuristic"] += 1
-                print(f"   ⚡ Heuristic ({heuristic_result.confidence}): {heuristic_result.reason}")
-
-            # Tier 1 — Workers AI (primary, free) — only if heuristic didn't resolve
-            if classification is None and ai_binding:
-                wa_result = await classify_with_workers_ai(job, ai_binding, signals_text)
-                if wa_result and wa_result.confidence == "high":
-                    classification = wa_result
-                    stats["workersAI"] += 1
-                    print("   ⚡ Workers AI (high confidence)")
-
-            # Tier 2 — DeepSeek fallback
-            if classification is None and api_key:
-                classification = await classify_with_deepseek(job, api_key, base_url, model, signals_text)
-                source = "deepseek"
-                stats["deepseek"] += 1
-                print("   🔄 DeepSeek fallback")
-
-            # Accept Workers AI as-is when no DeepSeek key
-            if classification is None and wa_result is not None:
-                classification = wa_result
-                stats["workersAI"] += 1
-                print("   ⚡ Workers AI (accepted, no DeepSeek fallback)")
-
-            if classification is None:
-                print("   ❌ No classification produced")
-                stats["errors"] += 1
-                continue
-
-            is_eu       = classification.isRemoteEU
-            confidence  = classification.confidence
-            # evidence: key text excerpts that informed this classification decision
-            evidence    = f"title:{job.get('title','')[:100]} | loc:{job.get('location','N/A')[:80]}"
-            reason      = f"[{source}] {classification.reason} | evidence:{evidence}"
-            score       = {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence, 0.3)
-            job_status  = JobStatus.EU_REMOTE.value if is_eu else JobStatus.NON_EU.value
-
-            print(f"   {'✅ EU Remote' if is_eu else '❌ Non-EU'} ({confidence}): {reason}")
-
-            await d1_run(
-                db,
-                """
-                UPDATE jobs
-                SET score = ?, score_reason = ?, status = ?,
-                    is_remote_eu = ?, remote_eu_confidence = ?, remote_eu_reason = ?,
-                    updated_at = datetime('now')
-                WHERE id = ?
-                """,
-                [score, reason, job_status,
-                 1 if is_eu else 0, confidence, classification.reason,
-                 job["id"]],
-            )
-
-            stats["processed"] += 1
-            if is_eu:
-                stats["euRemote"] += 1
-            else:
-                stats["nonEuRemote"] += 1
-
-            # Workers AI: same-machine binding, no rate limit
-            # DeepSeek: 200ms sufficient to stay under rate limits
-            await sleep_ms(200 if source == "deepseek" else 50)
-
-        except Exception as e:
-            print(f"   ❌ Error classifying job {job['id']}: {e}")
-            stats["errors"] += 1
-
-    return stats
 
 
 # =========================================================================
@@ -2418,15 +1750,11 @@ class Default(WorkerEntrypoint):
         )
 
     async def handle_classify_one(self, request, cors_headers: dict):
-        """Classify a single job by ID — called from the Next.js Re-classify button.
+        """Classify a single job by ID — delegates to the eu-classifier worker.
 
         POST /classify-one
         Body: { "job_id": <number> }
         Response: { "success": true, "isRemoteEU": bool, "confidence": "...", "reason": "..." }
-
-        Runs the full signal-extraction + heuristic + LLM pipeline on the
-        requested job regardless of its current status, and saves the result
-        to D1 before returning.
         """
         try:
             body   = to_py(await request.json())
@@ -2445,89 +1773,26 @@ class Default(WorkerEntrypoint):
                 headers=cors_headers,
             )
 
-        rows = await d1_all(
-            self.env.DB,
-            """SELECT id, title, location, description,
-                      country, workplace_type, offices, categories,
-                      ashby_is_remote, ashby_secondary_locations, ashby_address,
-                      source_kind
-               FROM jobs WHERE id = ? LIMIT 1""",
-            [job_id],
-        )
-
-        if not rows:
-            return Response.json(
-                {"success": False, "error": f"Job {job_id} not found"},
-                status=404,
-                headers=cors_headers,
-            )
-
-        job = rows[0]
-
-        api_key    = getattr(self.env, "DEEPSEEK_API_KEY", None) or getattr(self.env, "OPENAI_API_KEY", None)
-        base_url   = getattr(self.env, "DEEPSEEK_BASE_URL", None) or "https://api.deepseek.com/beta"
-        model      = getattr(self.env, "DEEPSEEK_MODEL", None) or "deepseek-chat"
-        ai_binding = getattr(self.env, "AI", None)
-
-        eu_signals   = _extract_eu_signals(job)
-        signals_text = _format_signals(eu_signals)
-
-        classification: JobClassification | None = None
-        wa_result:      JobClassification | None = None
-        source = "workers-ai"
-
-        heuristic_result = _keyword_eu_classify(job, eu_signals)
-        if heuristic_result is not None:
-            classification = heuristic_result
-            source = "heuristic"
-
-        if classification is None and ai_binding:
-            wa_result = await classify_with_workers_ai(job, ai_binding, signals_text)
-            if wa_result and wa_result.confidence == "high":
-                classification = wa_result
-
-        if classification is None and api_key:
-            classification = await classify_with_deepseek(job, api_key, base_url, model, signals_text)
-            source = "deepseek"
-
-        if classification is None and wa_result is not None:
-            classification = wa_result
-
-        if classification is None:
-            return Response.json(
-                {"success": False, "error": "Classification produced no result"},
-                status=500,
-                headers=cors_headers,
-            )
-
-        is_eu      = classification.isRemoteEU
-        confidence = classification.confidence
-        evidence   = f"title:{job.get('title','')[:100]} | loc:{job.get('location','N/A')[:80]}"
-        reason     = f"[{source}] {classification.reason} | evidence:{evidence}"
-        score      = {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence, 0.3)
-        job_status = JobStatus.EU_REMOTE.value if is_eu else JobStatus.NON_EU.value
-
-        await d1_run(
-            self.env.DB,
-            """
-            UPDATE jobs
-            SET score = ?, score_reason = ?, status = ?,
-                is_remote_eu = ?, remote_eu_confidence = ?, remote_eu_reason = ?,
-                updated_at = datetime('now')
-            WHERE id = ?
-            """,
-            [score, reason, job_status,
-             1 if is_eu else 0, confidence, classification.reason,
-             job_id],
-        )
+        eu_classifier = getattr(self.env, "EU_CLASSIFIER", None)
+        if eu_classifier is not None:
+            try:
+                request_body = json.dumps({"job_id": job_id})
+                response = await eu_classifier.fetch(
+                    "https://eu-classifier/classify-one",
+                    to_js_obj({
+                        "method": "POST",
+                        "headers": {"Content-Type": "application/json"},
+                        "body": request_body,
+                    }),
+                )
+                data = to_py(await response.json())
+                return Response.json(data, headers=cors_headers)
+            except Exception as e:
+                print(f"   ⚠️  eu-classifier classify-one failed: {e}")
 
         return Response.json(
-            {
-                "success":    True,
-                "isRemoteEU": is_eu,
-                "confidence": confidence,
-                "reason":     classification.reason,
-            },
+            {"success": False, "error": "EU classifier service not available"},
+            status=503,
             headers=cors_headers,
         )
 

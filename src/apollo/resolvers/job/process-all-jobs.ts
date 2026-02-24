@@ -16,10 +16,10 @@ const EMPTY_STATS = {
  * GraphQL mutation resolver: one-click enhancement + classification.
  *
  * 1. Fires off Trigger.dev enhancement (fan-out to individual ATS jobs) — fire-and-forget
- * 2. Calls the classify-jobs Cloudflare Worker (waits for response)
+ * 2. Calls the EU classifier Cloudflare Worker (waits for response)
  *
  * Both pipelines run concurrently. Enhancement enriches jobs from Greenhouse/Ashby APIs;
- * classification runs the DeepSeek remote-EU pipeline on all unclassified jobs.
+ * classification runs the centralized EU remote pipeline (workers/eu-classifier/).
  */
 export async function processAllJobs(
   _parent: any,
@@ -36,15 +36,17 @@ export async function processAllJobs(
     return { success: false, message: "Forbidden — admin access required", ...EMPTY_STATS };
   }
 
-  // Resolve worker URL — the classify-jobs CF worker
+  // Resolve worker URL — the centralized eu-classifier CF worker
+  // Accepts both new EU_CLASSIFIER_WORKER_URL and legacy CLASSIFY_JOBS_WORKER_URL
   const workerUrl =
+    process.env.EU_CLASSIFIER_WORKER_URL ??
     process.env.CLASSIFY_JOBS_WORKER_URL ??
     process.env.NEXT_PUBLIC_CLASSIFY_JOBS_WORKER_URL;
 
   if (!workerUrl) {
     return {
       success: false,
-      message: "CLASSIFY_JOBS_WORKER_URL is not configured. Set it in your environment.",
+      message: "EU_CLASSIFIER_WORKER_URL is not configured. Set it in your environment.",
       ...EMPTY_STATS,
     };
   }
@@ -66,9 +68,9 @@ export async function processAllJobs(
     messages.push(`Enhancement skipped: ${msg}`);
   }
 
-  // --- Step 2: Classification worker ---
+  // --- Step 2: EU classifier worker ---
   try {
-    console.log(`[ProcessAllJobs] Triggering classify-jobs worker at ${workerUrl}`);
+    console.log(`[ProcessAllJobs] Triggering eu-classifier worker at ${workerUrl}`);
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (cronSecret) {

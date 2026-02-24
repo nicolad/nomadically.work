@@ -1,0 +1,19 @@
+query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
+  contacts(companyId: $companyId, search: $search, limit: $limit, offset: $offset) {
+    contacts {
+      id
+      firstName
+      lastName
+      email
+      linkedinUrl
+      position
+      githubHandle
+      telegramHandle
+      emailVerified
+      doNotContact
+      tags
+      createdAt
+    }
+    totalCount
+  }
+}

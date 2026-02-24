@@ -212,6 +212,7 @@ export type Company = {
   ats_boards: Array<AtsBoard>;
   canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
+  contacts: Array<Contact>;
   created_at: Scalars['String']['output'];
   description: Maybe<Scalars['String']['output']>;
   facts: Array<CompanyFact>;
@@ -315,6 +316,53 @@ export type CompanySnapshot = {
   text_sample: Maybe<Scalars['String']['output']>;
 };
 
+export type Contact = {
+  __typename?: 'Contact';
+  company: Maybe<Scalars['String']['output']>;
+  companyId: Maybe<Scalars['Int']['output']>;
+  createdAt: Scalars['String']['output'];
+  doNotContact: Scalars['Boolean']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  emailVerified: Maybe<Scalars['Boolean']['output']>;
+  emails: Array<Scalars['String']['output']>;
+  firstName: Scalars['String']['output'];
+  githubHandle: Maybe<Scalars['String']['output']>;
+  id: Scalars['Int']['output'];
+  lastName: Scalars['String']['output'];
+  linkedinUrl: Maybe<Scalars['String']['output']>;
+  nbExecutionTimeMs: Maybe<Scalars['Int']['output']>;
+  nbFlags: Array<Scalars['String']['output']>;
+  nbResult: Maybe<Scalars['String']['output']>;
+  nbRetryToken: Maybe<Scalars['String']['output']>;
+  nbStatus: Maybe<Scalars['String']['output']>;
+  nbSuggestedCorrection: Maybe<Scalars['String']['output']>;
+  position: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  telegramHandle: Maybe<Scalars['String']['output']>;
+  updatedAt: Scalars['String']['output'];
+  userId: Maybe<Scalars['String']['output']>;
+};
+
+export type ContactInput = {
+  company?: InputMaybe<Scalars['String']['input']>;
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName: Scalars['String']['input'];
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName: Scalars['String']['input'];
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ContactsResult = {
+  __typename?: 'ContactsResult';
+  contacts: Array<Contact>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type CreateCompanyInput = {
   canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
@@ -330,6 +378,19 @@ export type CreateCompanyInput = {
   size?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   website?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreateContactInput = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName: Scalars['String']['input'];
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreateLangSmithPromptInput = {
@@ -385,6 +446,12 @@ export type DeepPlannerTask = {
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteContactResult = {
+  __typename?: 'DeleteContactResult';
+  message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
 };
 
@@ -510,6 +577,14 @@ export type GreenhouseQuestionField = {
   __typename?: 'GreenhouseQuestionField';
   name: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type ImportContactsResult = {
+  __typename?: 'ImportContactsResult';
+  errors: Array<Scalars['String']['output']>;
+  failed: Scalars['Int']['output'];
+  imported: Scalars['Int']['output'];
+  success: Scalars['Boolean']['output'];
 };
 
 export type Job = {
@@ -649,12 +724,14 @@ export type Mutation = {
   cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
+  createContact: Contact;
   createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
+  deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
@@ -684,6 +761,7 @@ export type Mutation = {
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
+  importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   linkTrackToApplication: Application;
@@ -704,6 +782,7 @@ export type Mutation = {
   unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
+  updateContact: Contact;
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
@@ -734,6 +813,11 @@ export type MutationCreateCompanyArgs = {
 };
 
 
+export type MutationCreateContactArgs = {
+  input: CreateContactInput;
+};
+
+
 export type MutationCreateDeepPlannerTaskArgs = {
   context?: InputMaybe<Scalars['String']['input']>;
   problemDescription: Scalars['String']['input'];
@@ -758,6 +842,11 @@ export type MutationCreateTrackArgs = {
 
 
 export type MutationDeleteCompanyArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type MutationDeleteContactArgs = {
   id: Scalars['Int']['input'];
 };
 
@@ -812,6 +901,11 @@ export type MutationGenerateTopicDeepDiveArgs = {
   applicationId: Scalars['Int']['input'];
   force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
+};
+
+
+export type MutationImportContactsArgs = {
+  contacts: Array<ContactInput>;
 };
 
 
@@ -880,6 +974,12 @@ export type MutationUpdateApplicationArgs = {
 export type MutationUpdateCompanyArgs = {
   id: Scalars['Int']['input'];
   input: UpdateCompanyInput;
+};
+
+
+export type MutationUpdateContactArgs = {
+  id: Scalars['Int']['input'];
+  input: UpdateContactInput;
 };
 
 
@@ -1029,6 +1129,9 @@ export type Query = {
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
+  contact: Maybe<Contact>;
+  contactByEmail: Maybe<Contact>;
+  contacts: ContactsResult;
   deepPlannerTask: Maybe<DeepPlannerTask>;
   deepPlannerTasks: Array<DeepPlannerTask>;
   executeSql: TextToSqlResult;
@@ -1094,6 +1197,24 @@ export type QueryCompany_SnapshotsArgs = {
   company_id: Scalars['Int']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryContactArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type QueryContactByEmailArgs = {
+  email: Scalars['String']['input'];
+};
+
+
+export type QueryContactsArgs = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1348,6 +1469,19 @@ export type UpdateCompanyInput = {
   size?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   website?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateContactInput = {
+  doNotContact?: InputMaybe<Scalars['Boolean']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName?: InputMaybe<Scalars['String']['input']>;
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateLangSmithPromptInput = {
@@ -1710,6 +1844,16 @@ export type CompanyAuditQueryVariables = Exact<{
 
 
 export type CompanyAuditQuery = { __typename?: 'Query', company: { __typename?: 'Company', facts_count: number, snapshots_count: number, id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, canonical_domain: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, facts: Array<{ __typename?: 'CompanyFact', id: number, company_id: number, field: string, value_json: any | null, value_text: string | null, normalized_value: any | null, confidence: number, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, snapshots: Array<{ __typename?: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id: string | null, capture_timestamp: string | null, fetched_at: string, http_status: number | null, mime: string | null, content_hash: string | null, text_sample: string | null, jsonld: any | null, extracted: any | null, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, ashby_enrichment: { __typename?: 'AshbyEnrichment', company_name: string | null, industry_tags: Array<string>, tech_signals: Array<string>, size_signal: string | null, enriched_at: string | null } | null } | null };
+
+export type GetContactsQueryVariables = Exact<{
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetContactsQuery = { __typename?: 'Query', contacts: { __typename?: 'ContactsResult', totalCount: number, contacts: Array<{ __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, linkedinUrl: string | null, position: string | null, githubHandle: string | null, telegramHandle: string | null, emailVerified: boolean | null, doNotContact: boolean, tags: Array<string>, createdAt: string }> } };
 
 export type GetGreenhouseJobsQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
@@ -3890,6 +4034,66 @@ export type CompanyAuditQueryHookResult = ReturnType<typeof useCompanyAuditQuery
 export type CompanyAuditLazyQueryHookResult = ReturnType<typeof useCompanyAuditLazyQuery>;
 export type CompanyAuditSuspenseQueryHookResult = ReturnType<typeof useCompanyAuditSuspenseQuery>;
 export type CompanyAuditQueryResult = Apollo.QueryResult<CompanyAuditQuery, CompanyAuditQueryVariables>;
+export const GetContactsDocument = gql`
+    query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
+  contacts(companyId: $companyId, search: $search, limit: $limit, offset: $offset) {
+    contacts {
+      id
+      firstName
+      lastName
+      email
+      linkedinUrl
+      position
+      githubHandle
+      telegramHandle
+      emailVerified
+      doNotContact
+      tags
+      createdAt
+    }
+    totalCount
+  }
+}
+    `;
+
+/**
+ * __useGetContactsQuery__
+ *
+ * To run a query within a React component, call `useGetContactsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetContactsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetContactsQuery({
+ *   variables: {
+ *      companyId: // value for 'companyId'
+ *      search: // value for 'search'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
+ *   },
+ * });
+ */
+export function useGetContactsQuery(baseOptions?: Apollo.QueryHookOptions<GetContactsQuery, GetContactsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetContactsQuery, GetContactsQueryVariables>(GetContactsDocument, options);
+      }
+export function useGetContactsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetContactsQuery, GetContactsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetContactsQuery, GetContactsQueryVariables>(GetContactsDocument, options);
+        }
+// @ts-ignore
+export function useGetContactsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetContactsQuery, GetContactsQueryVariables>): Apollo.UseSuspenseQueryResult<GetContactsQuery, GetContactsQueryVariables>;
+export function useGetContactsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContactsQuery, GetContactsQueryVariables>): Apollo.UseSuspenseQueryResult<GetContactsQuery | undefined, GetContactsQueryVariables>;
+export function useGetContactsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContactsQuery, GetContactsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetContactsQuery, GetContactsQueryVariables>(GetContactsDocument, options);
+        }
+export type GetContactsQueryHookResult = ReturnType<typeof useGetContactsQuery>;
+export type GetContactsLazyQueryHookResult = ReturnType<typeof useGetContactsLazyQuery>;
+export type GetContactsSuspenseQueryHookResult = ReturnType<typeof useGetContactsSuspenseQuery>;
+export type GetContactsQueryResult = Apollo.QueryResult<GetContactsQuery, GetContactsQueryVariables>;
 export const GetGreenhouseJobsDocument = gql`
     query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
   jobs(sourceType: "greenhouse", search: $search, limit: $limit, offset: $offset) {

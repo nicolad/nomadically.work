@@ -1,0 +1,95 @@
+extend type Query {
+  contacts(companyId: Int, search: String, limit: Int, offset: Int): ContactsResult!
+  contact(id: Int!): Contact
+  contactByEmail(email: String!): Contact
+}
+
+extend type Mutation {
+  createContact(input: CreateContactInput!): Contact!
+  updateContact(id: Int!, input: UpdateContactInput!): Contact!
+  deleteContact(id: Int!): DeleteContactResult!
+  importContacts(contacts: [ContactInput!]!): ImportContactsResult!
+}
+
+type Contact {
+  id: Int!
+  firstName: String!
+  lastName: String!
+  linkedinUrl: String
+  email: String
+  emails: [String!]!
+  company: String
+  companyId: Int
+  position: String
+  userId: String
+  nbStatus: String
+  nbResult: String
+  nbFlags: [String!]!
+  nbSuggestedCorrection: String
+  nbRetryToken: String
+  nbExecutionTimeMs: Int
+  emailVerified: Boolean
+  githubHandle: String
+  telegramHandle: String
+  doNotContact: Boolean!
+  tags: [String!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ContactsResult {
+  contacts: [Contact!]!
+  totalCount: Int!
+}
+
+type DeleteContactResult {
+  success: Boolean!
+  message: String!
+}
+
+type ImportContactsResult {
+  success: Boolean!
+  imported: Int!
+  failed: Int!
+  errors: [String!]!
+}
+
+input ContactInput {
+  firstName: String!
+  lastName: String!
+  linkedinUrl: String
+  email: String
+  emails: [String!]
+  company: String
+  companyId: Int
+  position: String
+  githubHandle: String
+  telegramHandle: String
+  tags: [String!]
+}
+
+input CreateContactInput {
+  firstName: String!
+  lastName: String
+  email: String
+  emails: [String!]
+  linkedinUrl: String
+  position: String
+  githubHandle: String
+  telegramHandle: String
+  companyId: Int
+  tags: [String!]
+}
+
+input UpdateContactInput {
+  firstName: String
+  lastName: String
+  email: String
+  emails: [String!]
+  linkedinUrl: String
+  position: String
+  githubHandle: String
+  telegramHandle: String
+  doNotContact: Boolean
+  tags: [String!]
+}

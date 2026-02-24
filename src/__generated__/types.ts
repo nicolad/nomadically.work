@@ -209,6 +209,7 @@ export type Company = {
   ats_boards: Array<AtsBoard>;
   canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
+  contacts: Array<Contact>;
   created_at: Scalars['String']['output'];
   description: Maybe<Scalars['String']['output']>;
   facts: Array<CompanyFact>;
@@ -312,6 +313,53 @@ export type CompanySnapshot = {
   text_sample: Maybe<Scalars['String']['output']>;
 };
 
+export type Contact = {
+  __typename: 'Contact';
+  company: Maybe<Scalars['String']['output']>;
+  companyId: Maybe<Scalars['Int']['output']>;
+  createdAt: Scalars['String']['output'];
+  doNotContact: Scalars['Boolean']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  emailVerified: Maybe<Scalars['Boolean']['output']>;
+  emails: Array<Scalars['String']['output']>;
+  firstName: Scalars['String']['output'];
+  githubHandle: Maybe<Scalars['String']['output']>;
+  id: Scalars['Int']['output'];
+  lastName: Scalars['String']['output'];
+  linkedinUrl: Maybe<Scalars['String']['output']>;
+  nbExecutionTimeMs: Maybe<Scalars['Int']['output']>;
+  nbFlags: Array<Scalars['String']['output']>;
+  nbResult: Maybe<Scalars['String']['output']>;
+  nbRetryToken: Maybe<Scalars['String']['output']>;
+  nbStatus: Maybe<Scalars['String']['output']>;
+  nbSuggestedCorrection: Maybe<Scalars['String']['output']>;
+  position: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  telegramHandle: Maybe<Scalars['String']['output']>;
+  updatedAt: Scalars['String']['output'];
+  userId: Maybe<Scalars['String']['output']>;
+};
+
+export type ContactInput = {
+  company?: InputMaybe<Scalars['String']['input']>;
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName: Scalars['String']['input'];
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName: Scalars['String']['input'];
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ContactsResult = {
+  __typename: 'ContactsResult';
+  contacts: Array<Contact>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type CreateCompanyInput = {
   canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
@@ -327,6 +375,19 @@ export type CreateCompanyInput = {
   size?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   website?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreateContactInput = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName: Scalars['String']['input'];
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreateLangSmithPromptInput = {
@@ -382,6 +443,12 @@ export type DeepPlannerTask = {
 export type DeleteCompanyResponse = {
   __typename: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteContactResult = {
+  __typename: 'DeleteContactResult';
+  message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
 };
 
@@ -507,6 +574,14 @@ export type GreenhouseQuestionField = {
   __typename: 'GreenhouseQuestionField';
   name: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type ImportContactsResult = {
+  __typename: 'ImportContactsResult';
+  errors: Array<Scalars['String']['output']>;
+  failed: Scalars['Int']['output'];
+  imported: Scalars['Int']['output'];
+  success: Scalars['Boolean']['output'];
 };
 
 export type Job = {
@@ -646,12 +721,14 @@ export type Mutation = {
   cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
+  createContact: Contact;
   createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
+  deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
@@ -681,6 +758,7 @@ export type Mutation = {
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
+  importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   linkTrackToApplication: Application;
@@ -701,6 +779,7 @@ export type Mutation = {
   unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
+  updateContact: Contact;
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
@@ -731,6 +810,11 @@ export type MutationCreateCompanyArgs = {
 };
 
 
+export type MutationCreateContactArgs = {
+  input: CreateContactInput;
+};
+
+
 export type MutationCreateDeepPlannerTaskArgs = {
   context?: InputMaybe<Scalars['String']['input']>;
   problemDescription: Scalars['String']['input'];
@@ -755,6 +839,11 @@ export type MutationCreateTrackArgs = {
 
 
 export type MutationDeleteCompanyArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type MutationDeleteContactArgs = {
   id: Scalars['Int']['input'];
 };
 
@@ -809,6 +898,11 @@ export type MutationGenerateTopicDeepDiveArgs = {
   applicationId: Scalars['Int']['input'];
   force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
+};
+
+
+export type MutationImportContactsArgs = {
+  contacts: Array<ContactInput>;
 };
 
 
@@ -877,6 +971,12 @@ export type MutationUpdateApplicationArgs = {
 export type MutationUpdateCompanyArgs = {
   id: Scalars['Int']['input'];
   input: UpdateCompanyInput;
+};
+
+
+export type MutationUpdateContactArgs = {
+  id: Scalars['Int']['input'];
+  input: UpdateContactInput;
 };
 
 
@@ -1026,6 +1126,9 @@ export type Query = {
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
+  contact: Maybe<Contact>;
+  contactByEmail: Maybe<Contact>;
+  contacts: ContactsResult;
   deepPlannerTask: Maybe<DeepPlannerTask>;
   deepPlannerTasks: Array<DeepPlannerTask>;
   executeSql: TextToSqlResult;
@@ -1091,6 +1194,24 @@ export type QueryCompany_SnapshotsArgs = {
   company_id: Scalars['Int']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryContactArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type QueryContactByEmailArgs = {
+  email: Scalars['String']['input'];
+};
+
+
+export type QueryContactsArgs = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1345,6 +1466,19 @@ export type UpdateCompanyInput = {
   size?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   website?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateContactInput = {
+  doNotContact?: InputMaybe<Scalars['Boolean']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName?: InputMaybe<Scalars['String']['input']>;
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateLangSmithPromptInput = {

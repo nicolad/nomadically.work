@@ -203,6 +203,7 @@ type Company {
   facts_count: Int!
   snapshots(limit: Int, offset: Int): [CompanySnapshot!]!
   snapshots_count: Int!
+  contacts: [Contact!]!
 }
 
 type CompaniesResponse {

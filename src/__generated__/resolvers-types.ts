@@ -212,6 +212,7 @@ export type Company = {
   ats_boards: Array<AtsBoard>;
   canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
+  contacts: Array<Contact>;
   created_at: Scalars['String']['output'];
   description: Maybe<Scalars['String']['output']>;
   facts: Array<CompanyFact>;
@@ -315,6 +316,53 @@ export type CompanySnapshot = {
   text_sample: Maybe<Scalars['String']['output']>;
 };
 
+export type Contact = {
+  __typename?: 'Contact';
+  company: Maybe<Scalars['String']['output']>;
+  companyId: Maybe<Scalars['Int']['output']>;
+  createdAt: Scalars['String']['output'];
+  doNotContact: Scalars['Boolean']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  emailVerified: Maybe<Scalars['Boolean']['output']>;
+  emails: Array<Scalars['String']['output']>;
+  firstName: Scalars['String']['output'];
+  githubHandle: Maybe<Scalars['String']['output']>;
+  id: Scalars['Int']['output'];
+  lastName: Scalars['String']['output'];
+  linkedinUrl: Maybe<Scalars['String']['output']>;
+  nbExecutionTimeMs: Maybe<Scalars['Int']['output']>;
+  nbFlags: Array<Scalars['String']['output']>;
+  nbResult: Maybe<Scalars['String']['output']>;
+  nbRetryToken: Maybe<Scalars['String']['output']>;
+  nbStatus: Maybe<Scalars['String']['output']>;
+  nbSuggestedCorrection: Maybe<Scalars['String']['output']>;
+  position: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  telegramHandle: Maybe<Scalars['String']['output']>;
+  updatedAt: Scalars['String']['output'];
+  userId: Maybe<Scalars['String']['output']>;
+};
+
+export type ContactInput = {
+  company?: InputMaybe<Scalars['String']['input']>;
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName: Scalars['String']['input'];
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName: Scalars['String']['input'];
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ContactsResult = {
+  __typename?: 'ContactsResult';
+  contacts: Array<Contact>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type CreateCompanyInput = {
   canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
@@ -330,6 +378,19 @@ export type CreateCompanyInput = {
   size?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   website?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreateContactInput = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName: Scalars['String']['input'];
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreateLangSmithPromptInput = {
@@ -385,6 +446,12 @@ export type DeepPlannerTask = {
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteContactResult = {
+  __typename?: 'DeleteContactResult';
+  message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
 };
 
@@ -510,6 +577,14 @@ export type GreenhouseQuestionField = {
   __typename?: 'GreenhouseQuestionField';
   name: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type ImportContactsResult = {
+  __typename?: 'ImportContactsResult';
+  errors: Array<Scalars['String']['output']>;
+  failed: Scalars['Int']['output'];
+  imported: Scalars['Int']['output'];
+  success: Scalars['Boolean']['output'];
 };
 
 export type Job = {
@@ -649,12 +724,14 @@ export type Mutation = {
   cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
+  createContact: Contact;
   createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteCompany: DeleteCompanyResponse;
+  deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   enhanceCompany: EnhanceCompanyResponse;
@@ -684,6 +761,7 @@ export type Mutation = {
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
+  importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
   ingest_company_snapshot: CompanySnapshot;
   linkTrackToApplication: Application;
@@ -704,6 +782,7 @@ export type Mutation = {
   unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
+  updateContact: Contact;
   updateLangSmithPrompt: LangSmithPrompt;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
@@ -734,6 +813,11 @@ export type MutationCreateCompanyArgs = {
 };
 
 
+export type MutationCreateContactArgs = {
+  input: CreateContactInput;
+};
+
+
 export type MutationCreateDeepPlannerTaskArgs = {
   context?: InputMaybe<Scalars['String']['input']>;
   problemDescription: Scalars['String']['input'];
@@ -758,6 +842,11 @@ export type MutationCreateTrackArgs = {
 
 
 export type MutationDeleteCompanyArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type MutationDeleteContactArgs = {
   id: Scalars['Int']['input'];
 };
 
@@ -812,6 +901,11 @@ export type MutationGenerateTopicDeepDiveArgs = {
   applicationId: Scalars['Int']['input'];
   force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
+};
+
+
+export type MutationImportContactsArgs = {
+  contacts: Array<ContactInput>;
 };
 
 
@@ -880,6 +974,12 @@ export type MutationUpdateApplicationArgs = {
 export type MutationUpdateCompanyArgs = {
   id: Scalars['Int']['input'];
   input: UpdateCompanyInput;
+};
+
+
+export type MutationUpdateContactArgs = {
+  id: Scalars['Int']['input'];
+  input: UpdateContactInput;
 };
 
 
@@ -1029,6 +1129,9 @@ export type Query = {
   company_ats_boards: Array<AtsBoard>;
   company_facts: Array<CompanyFact>;
   company_snapshots: Array<CompanySnapshot>;
+  contact: Maybe<Contact>;
+  contactByEmail: Maybe<Contact>;
+  contacts: ContactsResult;
   deepPlannerTask: Maybe<DeepPlannerTask>;
   deepPlannerTasks: Array<DeepPlannerTask>;
   executeSql: TextToSqlResult;
@@ -1094,6 +1197,24 @@ export type QueryCompany_SnapshotsArgs = {
   company_id: Scalars['Int']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryContactArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type QueryContactByEmailArgs = {
+  email: Scalars['String']['input'];
+};
+
+
+export type QueryContactsArgs = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1350,6 +1471,19 @@ export type UpdateCompanyInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateContactInput = {
+  doNotContact?: InputMaybe<Scalars['Boolean']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emails?: InputMaybe<Array<Scalars['String']['input']>>;
+  firstName?: InputMaybe<Scalars['String']['input']>;
+  githubHandle?: InputMaybe<Scalars['String']['input']>;
+  lastName?: InputMaybe<Scalars['String']['input']>;
+  linkedinUrl?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  telegramHandle?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateLangSmithPromptInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1502,7 +1636,11 @@ export type ResolversTypes = {
   CompanyFilterInput: ResolverTypeWrapper<Partial<CompanyFilterInput>>;
   CompanyOrderBy: ResolverTypeWrapper<Partial<CompanyOrderBy>>;
   CompanySnapshot: ResolverTypeWrapper<Partial<CompanySnapshot>>;
+  Contact: ResolverTypeWrapper<Partial<Contact>>;
+  ContactInput: ResolverTypeWrapper<Partial<ContactInput>>;
+  ContactsResult: ResolverTypeWrapper<Partial<ContactsResult>>;
   CreateCompanyInput: ResolverTypeWrapper<Partial<CreateCompanyInput>>;
+  CreateContactInput: ResolverTypeWrapper<Partial<CreateContactInput>>;
   CreateLangSmithPromptInput: ResolverTypeWrapper<Partial<CreateLangSmithPromptInput>>;
   CreatePromptInput: ResolverTypeWrapper<Partial<CreatePromptInput>>;
   CreateTrackInput: ResolverTypeWrapper<Partial<CreateTrackInput>>;
@@ -1510,6 +1648,7 @@ export type ResolversTypes = {
   DeepPlannerStatus: ResolverTypeWrapper<Partial<DeepPlannerStatus>>;
   DeepPlannerTask: ResolverTypeWrapper<Partial<DeepPlannerTask>>;
   DeleteCompanyResponse: ResolverTypeWrapper<Partial<DeleteCompanyResponse>>;
+  DeleteContactResult: ResolverTypeWrapper<Partial<DeleteContactResult>>;
   DeleteJobResponse: ResolverTypeWrapper<Partial<DeleteJobResponse>>;
   EmailAddress: ResolverTypeWrapper<Partial<Scalars['EmailAddress']['output']>>;
   EnhanceCompanyResponse: ResolverTypeWrapper<Partial<EnhanceCompanyResponse>>;
@@ -1527,6 +1666,7 @@ export type ResolversTypes = {
   GreenhouseQuestion: ResolverTypeWrapper<Partial<GreenhouseQuestion>>;
   GreenhouseQuestionField: ResolverTypeWrapper<Partial<GreenhouseQuestionField>>;
   ID: ResolverTypeWrapper<Partial<Scalars['ID']['output']>>;
+  ImportContactsResult: ResolverTypeWrapper<Partial<ImportContactsResult>>;
   Int: ResolverTypeWrapper<Partial<Scalars['Int']['output']>>;
   JSON: ResolverTypeWrapper<Partial<Scalars['JSON']['output']>>;
   Job: ResolverTypeWrapper<Partial<Job>>;
@@ -1568,6 +1708,7 @@ export type ResolversTypes = {
   URL: ResolverTypeWrapper<Partial<Scalars['URL']['output']>>;
   UpdateApplicationInput: ResolverTypeWrapper<Partial<UpdateApplicationInput>>;
   UpdateCompanyInput: ResolverTypeWrapper<Partial<UpdateCompanyInput>>;
+  UpdateContactInput: ResolverTypeWrapper<Partial<UpdateContactInput>>;
   UpdateLangSmithPromptInput: ResolverTypeWrapper<Partial<UpdateLangSmithPromptInput>>;
   Upload: ResolverTypeWrapper<Partial<Scalars['Upload']['output']>>;
   UserSettings: ResolverTypeWrapper<Partial<UserSettings>>;
@@ -1601,13 +1742,18 @@ export type ResolversParentTypes = {
   CompanyFactInput: Partial<CompanyFactInput>;
   CompanyFilterInput: Partial<CompanyFilterInput>;
   CompanySnapshot: Partial<CompanySnapshot>;
+  Contact: Partial<Contact>;
+  ContactInput: Partial<ContactInput>;
+  ContactsResult: Partial<ContactsResult>;
   CreateCompanyInput: Partial<CreateCompanyInput>;
+  CreateContactInput: Partial<CreateContactInput>;
   CreateLangSmithPromptInput: Partial<CreateLangSmithPromptInput>;
   CreatePromptInput: Partial<CreatePromptInput>;
   CreateTrackInput: Partial<CreateTrackInput>;
   DateTime: Partial<Scalars['DateTime']['output']>;
   DeepPlannerTask: Partial<DeepPlannerTask>;
   DeleteCompanyResponse: Partial<DeleteCompanyResponse>;
+  DeleteContactResult: Partial<DeleteContactResult>;
   DeleteJobResponse: Partial<DeleteJobResponse>;
   EmailAddress: Partial<Scalars['EmailAddress']['output']>;
   EnhanceCompanyResponse: Partial<EnhanceCompanyResponse>;
@@ -1624,6 +1770,7 @@ export type ResolversParentTypes = {
   GreenhouseQuestion: Partial<GreenhouseQuestion>;
   GreenhouseQuestionField: Partial<GreenhouseQuestionField>;
   ID: Partial<Scalars['ID']['output']>;
+  ImportContactsResult: Partial<ImportContactsResult>;
   Int: Partial<Scalars['Int']['output']>;
   JSON: Partial<Scalars['JSON']['output']>;
   Job: Partial<Job>;
@@ -1662,6 +1809,7 @@ export type ResolversParentTypes = {
   URL: Partial<Scalars['URL']['output']>;
   UpdateApplicationInput: Partial<UpdateApplicationInput>;
   UpdateCompanyInput: Partial<UpdateCompanyInput>;
+  UpdateContactInput: Partial<UpdateContactInput>;
   UpdateLangSmithPromptInput: Partial<UpdateLangSmithPromptInput>;
   Upload: Partial<Scalars['Upload']['output']>;
   UserSettings: Partial<UserSettings>;
@@ -1784,6 +1932,7 @@ export type CompanyResolvers<ContextType = GraphQLContext, ParentType extends Re
   ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType>;
   canonical_domain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['CompanyCategory'], ParentType, ContextType>;
+  contacts?: Resolver<Array<ResolversTypes['Contact']>, ParentType, ContextType>;
   created_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, Partial<CompanyFactsArgs>>;
@@ -1839,6 +1988,37 @@ export type CompanySnapshotResolvers<ContextType = GraphQLContext, ParentType ex
   text_sample?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
+export type ContactResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Contact'] = ResolversParentTypes['Contact']> = {
+  company?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  companyId?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  doNotContact?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  email?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  emailVerified?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
+  emails?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  firstName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  githubHandle?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  lastName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  linkedinUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  nbExecutionTimeMs?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  nbFlags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  nbResult?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  nbRetryToken?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  nbStatus?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  nbSuggestedCorrection?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  position?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  telegramHandle?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  userId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
+export type ContactsResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ContactsResult'] = ResolversParentTypes['ContactsResult']> = {
+  contacts?: Resolver<Array<ResolversTypes['Contact']>, ParentType, ContextType>;
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['DateTime'], any> {
   name: 'DateTime';
 }
@@ -1863,6 +2043,11 @@ export type DeepPlannerTaskResolvers<ContextType = GraphQLContext, ParentType ex
 
 export type DeleteCompanyResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeleteCompanyResponse'] = ResolversParentTypes['DeleteCompanyResponse']> = {
   message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+};
+
+export type DeleteContactResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeleteContactResult'] = ResolversParentTypes['DeleteContactResult']> = {
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
 };
 
@@ -1955,6 +2140,13 @@ export type GreenhouseQuestionResolvers<ContextType = GraphQLContext, ParentType
 export type GreenhouseQuestionFieldResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['GreenhouseQuestionField'] = ResolversParentTypes['GreenhouseQuestionField']> = {
   name?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type ImportContactsResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ImportContactsResult'] = ResolversParentTypes['ImportContactsResult']> = {
+  errors?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  failed?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  imported?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
 };
 
 export interface JsonScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['JSON'], any> {
@@ -2070,12 +2262,14 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   cancelDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationCancelDeepPlannerTaskArgs, 'id'>>;
   createApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationCreateApplicationArgs, 'input'>>;
   createCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationCreateCompanyArgs, 'input'>>;
+  createContact?: Resolver<ResolversTypes['Contact'], ParentType, ContextType, RequireFields<MutationCreateContactArgs, 'input'>>;
   createDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationCreateDeepPlannerTaskArgs, 'problemDescription' | 'workflowType'>>;
   createLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationCreateLangSmithPromptArgs, 'promptIdentifier'>>;
   createPrompt?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationCreatePromptArgs, 'input'>>;
   createTrack?: Resolver<ResolversTypes['Track'], ParentType, ContextType, RequireFields<MutationCreateTrackArgs, 'input'>>;
   deleteAllJobs?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType>;
   deleteCompany?: Resolver<ResolversTypes['DeleteCompanyResponse'], ParentType, ContextType, RequireFields<MutationDeleteCompanyArgs, 'id'>>;
+  deleteContact?: Resolver<ResolversTypes['DeleteContactResult'], ParentType, ContextType, RequireFields<MutationDeleteContactArgs, 'id'>>;
   deleteJob?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType, RequireFields<MutationDeleteJobArgs, 'id'>>;
   deleteLangSmithPrompt?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteLangSmithPromptArgs, 'promptIdentifier'>>;
   enhanceCompany?: Resolver<ResolversTypes['EnhanceCompanyResponse'], ParentType, ContextType, Partial<MutationEnhanceCompanyArgs>>;
@@ -2085,6 +2279,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
   generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
+  importContacts?: Resolver<ResolversTypes['ImportContactsResult'], ParentType, ContextType, RequireFields<MutationImportContactsArgs, 'contacts'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;
   ingest_company_snapshot?: Resolver<ResolversTypes['CompanySnapshot'], ParentType, ContextType, RequireFields<MutationIngest_Company_SnapshotArgs, 'company_id' | 'evidence' | 'fetched_at' | 'source_url'>>;
   linkTrackToApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationLinkTrackToApplicationArgs, 'applicationId' | 'trackSlug'>>;
@@ -2095,6 +2290,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   unlinkTrackFromApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUnlinkTrackFromApplicationArgs, 'applicationId' | 'trackSlug'>>;
   updateApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUpdateApplicationArgs, 'id' | 'input'>>;
   updateCompany?: Resolver<ResolversTypes['Company'], ParentType, ContextType, RequireFields<MutationUpdateCompanyArgs, 'id' | 'input'>>;
+  updateContact?: Resolver<ResolversTypes['Contact'], ParentType, ContextType, RequireFields<MutationUpdateContactArgs, 'id' | 'input'>>;
   updateLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationUpdateLangSmithPromptArgs, 'input' | 'promptIdentifier'>>;
   updatePromptLabel?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationUpdatePromptLabelArgs, 'label' | 'name' | 'version'>>;
   updateUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType, RequireFields<MutationUpdateUserSettingsArgs, 'settings' | 'userId'>>;
@@ -2176,6 +2372,9 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   company_ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType, RequireFields<QueryCompany_Ats_BoardsArgs, 'company_id'>>;
   company_facts?: Resolver<Array<ResolversTypes['CompanyFact']>, ParentType, ContextType, RequireFields<QueryCompany_FactsArgs, 'company_id'>>;
   company_snapshots?: Resolver<Array<ResolversTypes['CompanySnapshot']>, ParentType, ContextType, RequireFields<QueryCompany_SnapshotsArgs, 'company_id'>>;
+  contact?: Resolver<Maybe<ResolversTypes['Contact']>, ParentType, ContextType, RequireFields<QueryContactArgs, 'id'>>;
+  contactByEmail?: Resolver<Maybe<ResolversTypes['Contact']>, ParentType, ContextType, RequireFields<QueryContactByEmailArgs, 'email'>>;
+  contacts?: Resolver<ResolversTypes['ContactsResult'], ParentType, ContextType, Partial<QueryContactsArgs>>;
   deepPlannerTask?: Resolver<Maybe<ResolversTypes['DeepPlannerTask']>, ParentType, ContextType, RequireFields<QueryDeepPlannerTaskArgs, 'id'>>;
   deepPlannerTasks?: Resolver<Array<ResolversTypes['DeepPlannerTask']>, ParentType, ContextType>;
   executeSql?: Resolver<ResolversTypes['TextToSqlResult'], ParentType, ContextType, RequireFields<QueryExecuteSqlArgs, 'sql'>>;
@@ -2358,9 +2557,12 @@ export type Resolvers<ContextType = GraphQLContext> = {
   Company?: CompanyResolvers<ContextType>;
   CompanyFact?: CompanyFactResolvers<ContextType>;
   CompanySnapshot?: CompanySnapshotResolvers<ContextType>;
+  Contact?: ContactResolvers<ContextType>;
+  ContactsResult?: ContactsResultResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeepPlannerTask?: DeepPlannerTaskResolvers<ContextType>;
   DeleteCompanyResponse?: DeleteCompanyResponseResolvers<ContextType>;
+  DeleteContactResult?: DeleteContactResultResolvers<ContextType>;
   DeleteJobResponse?: DeleteJobResponseResolvers<ContextType>;
   EmailAddress?: GraphQLScalarType;
   EnhanceCompanyResponse?: EnhanceCompanyResponseResolvers<ContextType>;
@@ -2374,6 +2576,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   GreenhouseOffice?: GreenhouseOfficeResolvers<ContextType>;
   GreenhouseQuestion?: GreenhouseQuestionResolvers<ContextType>;
   GreenhouseQuestionField?: GreenhouseQuestionFieldResolvers<ContextType>;
+  ImportContactsResult?: ImportContactsResultResolvers<ContextType>;
   JSON?: GraphQLScalarType;
   Job?: JobResolvers<ContextType>;
   JobSkill?: JobSkillResolvers<ContextType>;

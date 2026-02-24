@@ -570,3 +570,47 @@ export const resumes = sqliteTable("resumes", {
 
 export type SkillResume = typeof resumes.$inferSelect;
 export type NewSkillResume = typeof resumes.$inferInsert;
+
+// Contacts (from CRM — recruiters and company contacts)
+export const contacts = sqliteTable(
+  "contacts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    first_name: text("first_name").notNull(),
+    last_name: text("last_name").notNull(),
+    linkedin_url: text("linkedin_url"),
+    email: text("email"),
+    emails: text("emails"), // JSON array
+    company: text("company"),
+    company_id: integer("company_id").references(() => companies.id, {
+      onDelete: "set null",
+    }),
+    position: text("position"),
+    user_id: text("user_id"),
+    nb_status: text("nb_status"),
+    nb_result: text("nb_result"),
+    nb_flags: text("nb_flags"), // JSON array
+    nb_suggested_correction: text("nb_suggested_correction"),
+    nb_retry_token: text("nb_retry_token"),
+    nb_execution_time_ms: integer("nb_execution_time_ms"),
+    email_verified: integer("email_verified", { mode: "boolean" }).default(false),
+    github_handle: text("github_handle"),
+    telegram_handle: text("telegram_handle"),
+    do_not_contact: integer("do_not_contact", { mode: "boolean" }).default(false),
+    tags: text("tags"), // JSON array
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    emailIdx: index("idx_contacts_email").on(table.email),
+    companyIdIdx: index("idx_contacts_company_id").on(table.company_id),
+    linkedinUrlIdx: index("idx_contacts_linkedin_url").on(table.linkedin_url),
+  }),
+);
+
+export type Contact = typeof contacts.$inferSelect;
+export type NewContact = typeof contacts.$inferInsert;

@@ -186,6 +186,7 @@ type Company {
   ats_boards: [ATSBoard!]!
   canonical_domain: String
   category: CompanyCategory!
+  contacts: [Contact!]!
   created_at: String!
   description: String
   facts(field: String, limit: Int, offset: Int): [CompanyFact!]!
@@ -276,6 +277,51 @@ type CompanySnapshot {
   text_sample: String
 }
 
+type Contact {
+  company: String
+  companyId: Int
+  createdAt: String!
+  doNotContact: Boolean!
+  email: String
+  emailVerified: Boolean
+  emails: [String!]!
+  firstName: String!
+  githubHandle: String
+  id: Int!
+  lastName: String!
+  linkedinUrl: String
+  nbExecutionTimeMs: Int
+  nbFlags: [String!]!
+  nbResult: String
+  nbRetryToken: String
+  nbStatus: String
+  nbSuggestedCorrection: String
+  position: String
+  tags: [String!]!
+  telegramHandle: String
+  updatedAt: String!
+  userId: String
+}
+
+input ContactInput {
+  company: String
+  companyId: Int
+  email: String
+  emails: [String!]
+  firstName: String!
+  githubHandle: String
+  lastName: String!
+  linkedinUrl: String
+  position: String
+  tags: [String!]
+  telegramHandle: String
+}
+
+type ContactsResult {
+  contacts: [Contact!]!
+  totalCount: Int!
+}
+
 input CreateCompanyInput {
   canonical_domain: String
   category: CompanyCategory
@@ -291,6 +337,19 @@ input CreateCompanyInput {
   size: String
   tags: [String!]
   website: String
+}
+
+input CreateContactInput {
+  companyId: Int
+  email: String
+  emails: [String!]
+  firstName: String!
+  githubHandle: String
+  lastName: String
+  linkedinUrl: String
+  position: String
+  tags: [String!]
+  telegramHandle: String
 }
 
 input CreateLangSmithPromptInput {
@@ -347,6 +406,11 @@ type DeepPlannerTask {
 
 type DeleteCompanyResponse {
   message: String
+  success: Boolean!
+}
+
+type DeleteContactResult {
+  message: String!
   success: Boolean!
 }
 
@@ -463,6 +527,13 @@ type GreenhouseQuestion {
 type GreenhouseQuestionField {
   name: String
   type: String!
+}
+
+type ImportContactsResult {
+  errors: [String!]!
+  failed: Int!
+  imported: Int!
+  success: Boolean!
 }
 
 scalar JSON
@@ -599,12 +670,14 @@ type Mutation {
   cancelDeepPlannerTask(id: ID!): DeepPlannerTask!
   createApplication(input: ApplicationInput!): Application!
   createCompany(input: CreateCompanyInput!): Company!
+  createContact(input: CreateContactInput!): Contact!
   createDeepPlannerTask(context: String, problemDescription: String!, workflowType: String!): DeepPlannerTask!
   createLangSmithPrompt(input: CreateLangSmithPromptInput, promptIdentifier: String!): LangSmithPrompt!
   createPrompt(input: CreatePromptInput!): Prompt!
   createTrack(input: CreateTrackInput!): Track!
   deleteAllJobs: DeleteJobResponse!
   deleteCompany(id: Int!): DeleteCompanyResponse!
+  deleteContact(id: Int!): DeleteContactResult!
   deleteJob(id: Int!): DeleteJobResponse!
   deleteLangSmithPrompt(promptIdentifier: String!): Boolean!
   enhanceCompany(id: Int, key: String): EnhanceCompanyResponse!
@@ -634,6 +707,7 @@ type Mutation {
   generateResearch(goalDescription: String!): [ResearchItem!]!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!
   generateTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!): Application!
+  importContacts(contacts: [ContactInput!]!): ImportContactsResult!
   ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult
   ingest_company_snapshot(capture_timestamp: String, company_id: Int!, content_hash: String, crawl_id: String, evidence: EvidenceInput!, extracted: JSON, fetched_at: String!, http_status: Int, jsonld: JSON, mime: String, source_url: String!, text_sample: String): CompanySnapshot!
   linkTrackToApplication(applicationId: Int!, trackSlug: String!): Application!
@@ -654,6 +728,7 @@ type Mutation {
   unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
   updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
+  updateContact(id: Int!, input: UpdateContactInput!): Contact!
   updateLangSmithPrompt(input: UpdateLangSmithPromptInput!, promptIdentifier: String!): LangSmithPrompt!
   updatePromptLabel(label: String!, name: String!, version: Int!): Prompt!
   updateUserSettings(settings: UserSettingsInput!, userId: String!): UserSettings!
@@ -763,6 +838,9 @@ type Query {
   company_ats_boards(company_id: Int!): [ATSBoard!]!
   company_facts(company_id: Int!, field: String, limit: Int, offset: Int): [CompanyFact!]!
   company_snapshots(company_id: Int!, limit: Int, offset: Int): [CompanySnapshot!]!
+  contact(id: Int!): Contact
+  contactByEmail(email: String!): Contact
+  contacts(companyId: Int, limit: Int, offset: Int, search: String): ContactsResult!
   deepPlannerTask(id: ID!): DeepPlannerTask
   deepPlannerTasks: [DeepPlannerTask!]!
   executeSql(sql: String!): TextToSqlResult!
@@ -934,6 +1012,19 @@ input UpdateCompanyInput {
   size: String
   tags: [String!]
   website: String
+}
+
+input UpdateContactInput {
+  doNotContact: Boolean
+  email: String
+  emails: [String!]
+  firstName: String
+  githubHandle: String
+  lastName: String
+  linkedinUrl: String
+  position: String
+  tags: [String!]
+  telegramHandle: String
 }
 
 input UpdateLangSmithPromptInput {

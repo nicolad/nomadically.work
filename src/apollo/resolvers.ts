@@ -10,6 +10,7 @@ import { resumeResolvers } from "./resolvers/resume";
 import { trackResolvers } from "./resolvers/track";
 import { deepPlannerResolvers } from "./resolvers/deep-planner";
 import { skillMatchingResolvers } from "./resolvers/skill-matching";
+import { contactResolvers } from "./resolvers/contacts";
 import { merge } from "lodash";
 
 export const resolvers = merge(
@@ -26,4 +27,5 @@ export const resolvers = merge(
   trackResolvers,
   deepPlannerResolvers,
   skillMatchingResolvers,
+  contactResolvers,
 );

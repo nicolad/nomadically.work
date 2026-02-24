@@ -8,6 +8,7 @@ import {
   companyFacts,
   companySnapshots,
   userSettings,
+  contacts,
 } from "@/db/schema";
 import type {
   JobSkillTag,
@@ -16,6 +17,7 @@ import type {
   CompanyFact,
   CompanySnapshot,
   UserSettings,
+  Contact,
 } from "@/db/schema";
 
 // D1/SQLite safe upper bound for IN (...) variable bindings
@@ -119,6 +121,24 @@ export function createLoaders(db: DbInstance) {
           .where(inArray(userSettings.user_id, [...userIds]));
         const byUser = new Map(rows.map((r) => [r.user_id, r]));
         return userIds.map((id) => byUser.get(id) ?? null);
+      },
+      { maxBatchSize: BATCH_SIZE },
+    ),
+
+    contactsByCompany: new DataLoader<number, Contact[]>(
+      async (companyIds) => {
+        const rows = await db
+          .select()
+          .from(contacts)
+          .where(inArray(contacts.company_id, [...companyIds]));
+        const byCompany = new Map<number, Contact[]>();
+        for (const row of rows) {
+          if (row.company_id == null) continue;
+          const arr = byCompany.get(row.company_id);
+          if (arr) arr.push(row);
+          else byCompany.set(row.company_id, [row]);
+        }
+        return companyIds.map((id) => byCompany.get(id) ?? []);
       },
       { maxBatchSize: BATCH_SIZE },
     ),

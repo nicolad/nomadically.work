@@ -6,6 +6,7 @@ import {
   useGetCompanyQuery,
   useEnhanceCompanyMutation,
   useGetJobsQuery,
+  useGetContactsQuery,
 } from "@/__generated__/hooks";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
@@ -24,7 +25,9 @@ import {
   Link as RadixLink,
   Separator,
   Strong,
+  Tabs,
   Text,
+  TextField,
 } from "@radix-ui/themes";
 import {
   ExternalLinkIcon,
@@ -33,6 +36,10 @@ import {
   MagicWandIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  LinkedInLogoIcon,
+  EnvelopeClosedIcon,
+  GitHubLogoIcon,
+  MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
 
 type Props = {
@@ -353,6 +360,149 @@ function KeyFactsCard({
   );
 }
 
+function ContactsTab({ companyId }: { companyId: number }) {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearch = useCallback((val: string) => {
+    setSearch(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
+  }, []);
+
+  const { data, loading } = useGetContactsQuery({
+    variables: {
+      companyId,
+      search: debouncedSearch || undefined,
+      limit: 100,
+    },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const contactsList = data?.contacts?.contacts ?? [];
+  const totalCount = data?.contacts?.totalCount ?? 0;
+
+  return (
+    <Box>
+      <Flex align="center" justify="between" gap="3" mb="4">
+        <Text size="2" color="gray">
+          {loading ? "Loading…" : `${totalCount} contact${totalCount !== 1 ? "s" : ""}`}
+        </Text>
+        <Box style={{ width: 240 }}>
+          <TextField.Root
+            size="2"
+            placeholder="Search contacts…"
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+          >
+            <TextField.Slot>
+              <MagnifyingGlassIcon />
+            </TextField.Slot>
+          </TextField.Root>
+        </Box>
+      </Flex>
+
+      {!loading && contactsList.length === 0 ? (
+        <Callout.Root color="gray" variant="soft">
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>No contacts found.</Callout.Text>
+        </Callout.Root>
+      ) : (
+        <Flex direction="column" gap="2">
+          {contactsList.map((contact) => (
+            <Card key={contact.id}>
+              <Box p="3">
+                <Flex align="start" justify="between" gap="3" wrap="wrap">
+                  <Box style={{ minWidth: 0 }}>
+                    <Flex align="center" gap="2" wrap="wrap">
+                      <Text size="3" weight="medium">
+                        {contact.firstName} {contact.lastName}
+                      </Text>
+                      {contact.emailVerified && (
+                        <Badge color="green" variant="soft" size="1">
+                          verified
+                        </Badge>
+                      )}
+                      {contact.doNotContact && (
+                        <Badge color="red" variant="soft" size="1">
+                          do not contact
+                        </Badge>
+                      )}
+                    </Flex>
+
+                    {contact.position && (
+                      <Text size="2" color="gray" mt="1" as="p">
+                        {contact.position}
+                      </Text>
+                    )}
+
+                    <Flex gap="3" mt="2" wrap="wrap" align="center">
+                      {contact.email && (
+                        <Flex align="center" gap="1">
+                          <EnvelopeClosedIcon color="gray" />
+                          <RadixLink
+                            href={`mailto:${contact.email}`}
+                            size="2"
+                            color="gray"
+                          >
+                            {contact.email}
+                          </RadixLink>
+                        </Flex>
+                      )}
+                      {contact.linkedinUrl && (
+                        <Flex align="center" gap="1">
+                          <LinkedInLogoIcon color="gray" />
+                          <RadixLink
+                            href={contact.linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            size="2"
+                            color="gray"
+                          >
+                            LinkedIn
+                            <ExternalLinkIcon style={{ marginLeft: 4 }} />
+                          </RadixLink>
+                        </Flex>
+                      )}
+                      {contact.githubHandle && (
+                        <Flex align="center" gap="1">
+                          <GitHubLogoIcon color="gray" />
+                          <RadixLink
+                            href={`https://github.com/${contact.githubHandle}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            size="2"
+                            color="gray"
+                          >
+                            {contact.githubHandle}
+                          </RadixLink>
+                        </Flex>
+                      )}
+                    </Flex>
+
+                    {contact.tags && contact.tags.length > 0 && (
+                      <Flex gap="1" mt="2" wrap="wrap">
+                        {contact.tags.map((tag) => (
+                          <Badge key={tag} color="gray" variant="surface" size="1">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </Flex>
+                    )}
+                  </Box>
+                </Flex>
+              </Box>
+            </Card>
+          ))}
+        </Flex>
+      )}
+    </Box>
+  );
+}
+
 export function CompanyDetail({ companyKey }: Props) {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -646,236 +796,252 @@ export function CompanyDetail({ companyKey }: Props) {
           )}
         </Flex>
 
-        {/* Balanced 2/3 + 1/3 layout (no giant empty left column) */}
-        <Flex
-          direction={{ initial: "column", md: "row" }}
-          gap="4"
-          align="start"
-        >
-          {/* Left: put the taller content here to match sidebar height */}
-          <Box style={{ flex: 2, minWidth: 0 }}>
-            <Flex direction="column" gap="4">
-              {company.description ? (
-                <SectionCard title="About">
-                  <Text
-                    as="p"
-                    size="3"
-                    color="gray"
-                    style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
-                  >
-                    {company.description}
-                  </Text>
-                </SectionCard>
-              ) : null}
+        {/* Tabs */}
+        <Tabs.Root defaultValue="overview">
+          <Tabs.List>
+            <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
+            <Tabs.Trigger value="contacts">
+              Contacts {companyJobs.length > 0 ? null : null}
+            </Tabs.Trigger>
+            <Tabs.Trigger value="jobs">
+              Jobs {companyJobs.length > 0 ? `(${companyJobs.length})` : ""}
+            </Tabs.Trigger>
+          </Tabs.List>
 
-              {/* Move Services left to reduce "empty space under About" */}
-              {company.services?.length ? (
-                <SectionCard title="Services">
-                  <CollapsibleList items={company.services} visibleCount={7} />
-                </SectionCard>
-              ) : null}
-            </Flex>
-          </Box>
+          {/* Overview tab */}
+          <Tabs.Content value="overview">
+            <Box pt="4">
+              <Flex direction="column" gap="5">
+                {/* Balanced 2/3 + 1/3 layout */}
+                <Flex
+                  direction={{ initial: "column", md: "row" }}
+                  gap="4"
+                  align="start"
+                >
+                  <Box style={{ flex: 2, minWidth: 0 }}>
+                    <Flex direction="column" gap="4">
+                      {company.description ? (
+                        <SectionCard title="About">
+                          <Text
+                            as="p"
+                            size="3"
+                            color="gray"
+                            style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+                          >
+                            {company.description}
+                          </Text>
+                        </SectionCard>
+                      ) : null}
 
-          {/* Right: smaller/medium cards */}
-          <Box style={{ flex: 1, minWidth: 0 }}>
-            <Flex direction="column" gap="4">
-              <KeyFactsCard
-                canonicalDomain={company.canonical_domain}
-                score={company.score}
-                careerPagesCount={company.ats_boards?.length ?? 0}
-              />
+                      {company.services?.length ? (
+                        <SectionCard title="Services">
+                          <CollapsibleList items={company.services} visibleCount={7} />
+                        </SectionCard>
+                      ) : null}
+                    </Flex>
+                  </Box>
 
-              {company.industries?.length ? (
-                <SectionCard title="Industries">
-                  <CollapsibleChips
-                    items={company.industries}
-                    visibleCount={8}
-                  />
-                </SectionCard>
-              ) : null}
+                  <Box style={{ flex: 1, minWidth: 0 }}>
+                    <Flex direction="column" gap="4">
+                      <KeyFactsCard
+                        canonicalDomain={company.canonical_domain}
+                        score={company.score}
+                        careerPagesCount={company.ats_boards?.length ?? 0}
+                      />
 
-              {/* Keep Tags on the right: medium-height balances Industries */}
-              {company.tags?.length ? (
-                <SectionCard title="Tags">
-                  <CollapsibleChips items={company.tags} visibleCount={10} />
-                </SectionCard>
-              ) : null}
-            </Flex>
-          </Box>
-        </Flex>
+                      {company.industries?.length ? (
+                        <SectionCard title="Industries">
+                          <CollapsibleChips
+                            items={company.industries}
+                            visibleCount={8}
+                          />
+                        </SectionCard>
+                      ) : null}
 
-        {/* Ashby crawler enrichment */}
-        {company.ashby_enrichment?.enriched_at ? (
-          <SectionCard title="Ashby Enrichment">
-            <Flex direction="column" gap="3">
+                      {company.tags?.length ? (
+                        <SectionCard title="Tags">
+                          <CollapsibleChips items={company.tags} visibleCount={10} />
+                        </SectionCard>
+                      ) : null}
+                    </Flex>
+                  </Box>
+                </Flex>
 
-              {/* Row: Company · Size */}
-              <Flex gap="4" align="center" wrap="wrap">
-                {company.ashby_enrichment.company_name ? (
-                  <Flex gap="2" align="center">
-                    <Text size="2" color="gray">Company</Text>
-                    <Text size="2" weight="medium">{company.ashby_enrichment.company_name}</Text>
-                  </Flex>
+                {/* Ashby crawler enrichment */}
+                {company.ashby_enrichment?.enriched_at ? (
+                  <SectionCard title="Ashby Enrichment">
+                    <Flex direction="column" gap="3">
+                      <Flex gap="4" align="center" wrap="wrap">
+                        {company.ashby_enrichment.company_name ? (
+                          <Flex gap="2" align="center">
+                            <Text size="2" color="gray">Company</Text>
+                            <Text size="2" weight="medium">{company.ashby_enrichment.company_name}</Text>
+                          </Flex>
+                        ) : null}
+                        {company.ashby_enrichment.size_signal ? (
+                          <Flex gap="2" align="center">
+                            <Text size="2" color="gray">Size signal</Text>
+                            <Badge color="amber" variant="soft" radius="full">
+                              {company.ashby_enrichment.size_signal}
+                            </Badge>
+                          </Flex>
+                        ) : null}
+                      </Flex>
+
+                      {company.ashby_enrichment.industry_tags.length ? (
+                        <Flex gap="2" wrap="wrap" align="center">
+                          <Text size="2" color="gray" style={{ minWidth: 90 }}>Industries</Text>
+                          {company.ashby_enrichment.industry_tags.map((tag) => (
+                            <Badge key={tag} color="blue" variant="soft" radius="full">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </Flex>
+                      ) : null}
+
+                      {company.ashby_enrichment.tech_signals.length ? (
+                        <Flex gap="2" wrap="wrap" align="center">
+                          <Text size="2" color="gray" style={{ minWidth: 90 }}>Tech</Text>
+                          {company.ashby_enrichment.tech_signals.map((sig) => (
+                            <Badge key={sig} color="violet" variant="soft" radius="full">
+                              {sig}
+                            </Badge>
+                          ))}
+                        </Flex>
+                      ) : null}
+
+                      <Text size="1" color="gray">
+                        Enriched {new Date(company.ashby_enrichment.enriched_at).toLocaleDateString()}
+                      </Text>
+                    </Flex>
+                  </SectionCard>
                 ) : null}
-                {company.ashby_enrichment.size_signal ? (
-                  <Flex gap="2" align="center">
-                    <Text size="2" color="gray">Size signal</Text>
-                    <Badge color="amber" variant="soft" radius="full">
-                      {company.ashby_enrichment.size_signal}
-                    </Badge>
-                  </Flex>
+
+                {/* Career pages */}
+                {company.ats_boards?.length ? (
+                  <SectionCard title={`Career pages (${company.ats_boards.length})`}>
+                    <Flex direction="column">
+                      {company.ats_boards.map((board, idx) => {
+                        const confidence =
+                          typeof board.confidence === "number" &&
+                          Number.isFinite(board.confidence)
+                            ? Math.round(board.confidence * 100)
+                            : null;
+                        const boardHref = coerceExternalUrl(board.url) ?? board.url;
+                        return (
+                          <Box key={board.id}>
+                            <Flex align="center" justify="between" gap="3" wrap="wrap">
+                              <Flex gap="2" wrap="wrap" align="center">
+                                <Chip>{board.vendor}</Chip>
+                                <Chip>{board.board_type}</Chip>
+                                {confidence !== null ? (
+                                  <Badge color="gray" variant="outline">
+                                    {confidence}% confidence
+                                  </Badge>
+                                ) : null}
+                                {board.is_active ? (
+                                  <Badge color="green" variant="soft">active</Badge>
+                                ) : (
+                                  <Badge color="gray" variant="soft">inactive</Badge>
+                                )}
+                              </Flex>
+                              <RadixLink
+                                href={boardHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                color="gray"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  maxWidth: "100%",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={boardHref}
+                              >
+                                {prettyUrl(boardHref)}
+                                <ExternalLinkIcon />
+                              </RadixLink>
+                            </Flex>
+                            {idx < company.ats_boards.length - 1 ? (
+                              <Separator size="4" my="3" />
+                            ) : null}
+                          </Box>
+                        );
+                      })}
+                    </Flex>
+                  </SectionCard>
+                ) : null}
+
+                {company.score_reasons?.length ? (
+                  <SectionCard title="Score breakdown">
+                    <Flex direction="column" gap="2">
+                      {company.score_reasons.map((reason: string, idx: number) => (
+                        <Text key={`${idx}-${reason}`} size="2" color="gray">
+                          • {reason}
+                        </Text>
+                      ))}
+                    </Flex>
+                  </SectionCard>
                 ) : null}
               </Flex>
+            </Box>
+          </Tabs.Content>
 
-              {/* Industries */}
-              {company.ashby_enrichment.industry_tags.length ? (
-                <Flex gap="2" wrap="wrap" align="center">
-                  <Text size="2" color="gray" style={{ minWidth: 90 }}>Industries</Text>
-                  {company.ashby_enrichment.industry_tags.map((tag) => (
-                    <Badge key={tag} color="blue" variant="soft" radius="full">
-                      {tag}
-                    </Badge>
-                  ))}
+          {/* Contacts tab */}
+          <Tabs.Content value="contacts">
+            <Box pt="4">
+              <ContactsTab companyId={company.id} />
+            </Box>
+          </Tabs.Content>
+
+          {/* Jobs tab */}
+          <Tabs.Content value="jobs">
+            <Box pt="4">
+              {companyJobs.length === 0 ? (
+                <Callout.Root color="gray" variant="soft">
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text>No jobs found for this company.</Callout.Text>
+                </Callout.Root>
+              ) : (
+                <Flex direction="column">
+                  {companyJobs.map((job, idx) => {
+                    const jobId = extractJobSlug(job.external_id, job.id);
+                    const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
+                    return (
+                      <Box key={job.id}>
+                        <Link href={jobHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
+                          <Flex justify="between" align="center" gap="4" py="2" style={{ cursor: "pointer" }}>
+                            <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
+                              <Text size="3" weight="medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {job.title}
+                              </Text>
+                              {job.location && (
+                                <Text size="2" color="gray">
+                                  {job.location}
+                                </Text>
+                              )}
+                            </Flex>
+                            {job.publishedAt && (
+                              <Text size="1" color="gray" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+                                {new Date(job.publishedAt).toLocaleDateString()}
+                              </Text>
+                            )}
+                          </Flex>
+                        </Link>
+                        {idx < companyJobs.length - 1 ? <Separator size="4" /> : null}
+                      </Box>
+                    );
+                  })}
                 </Flex>
-              ) : null}
-
-              {/* Tech signals */}
-              {company.ashby_enrichment.tech_signals.length ? (
-                <Flex gap="2" wrap="wrap" align="center">
-                  <Text size="2" color="gray" style={{ minWidth: 90 }}>Tech</Text>
-                  {company.ashby_enrichment.tech_signals.map((sig) => (
-                    <Badge key={sig} color="violet" variant="soft" radius="full">
-                      {sig}
-                    </Badge>
-                  ))}
-                </Flex>
-              ) : null}
-
-              <Text size="1" color="gray">
-                Enriched {new Date(company.ashby_enrichment.enriched_at).toLocaleDateString()}
-              </Text>
-            </Flex>
-          </SectionCard>
-        ) : null}
-
-        {/* Full-width sections (prevents awkward column gaps) */}
-        {company.ats_boards?.length ? (
-          <SectionCard title={`Career pages (${company.ats_boards.length})`}>
-            <Flex direction="column">
-              {company.ats_boards.map((board, idx) => {
-                const confidence =
-                  typeof board.confidence === "number" &&
-                  Number.isFinite(board.confidence)
-                    ? Math.round(board.confidence * 100)
-                    : null;
-
-                const boardHref = coerceExternalUrl(board.url) ?? board.url;
-
-                return (
-                  <Box key={board.id}>
-                    <Flex
-                      align="center"
-                      justify="between"
-                      gap="3"
-                      wrap="wrap"
-                    >
-                      <Flex gap="2" wrap="wrap" align="center">
-                        <Chip>{board.vendor}</Chip>
-                        <Chip>{board.board_type}</Chip>
-                        {confidence !== null ? (
-                          <Badge color="gray" variant="outline">
-                            {confidence}% confidence
-                          </Badge>
-                        ) : null}
-                        {board.is_active ? (
-                          <Badge color="green" variant="soft">
-                            active
-                          </Badge>
-                        ) : (
-                          <Badge color="gray" variant="soft">
-                            inactive
-                          </Badge>
-                        )}
-                      </Flex>
-
-                      <RadixLink
-                        href={boardHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="gray"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          maxWidth: "100%",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                        title={boardHref}
-                      >
-                        {prettyUrl(boardHref)}
-                        <ExternalLinkIcon />
-                      </RadixLink>
-                    </Flex>
-
-                    {idx < company.ats_boards.length - 1 ? (
-                      <Separator size="4" my="3" />
-                    ) : null}
-                  </Box>
-                );
-              })}
-            </Flex>
-          </SectionCard>
-        ) : null}
-
-        {company.score_reasons?.length ? (
-          <SectionCard title="Score breakdown">
-            <Flex direction="column" gap="2">
-              {company.score_reasons.map((reason: string, idx: number) => (
-                <Text key={`${idx}-${reason}`} size="2" color="gray">
-                  • {reason}
-                </Text>
-              ))}
-            </Flex>
-          </SectionCard>
-        ) : null}
-
-        {companyJobs.length > 0 ? (
-          <SectionCard title={`Jobs (${companyJobs.length})`}>
-            <Flex direction="column">
-              {companyJobs.map((job, idx) => {
-                const jobId = extractJobSlug(job.external_id, job.id);
-                const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
-                return (
-                <Box key={job.id}>
-                  <Link href={jobHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
-                    <Flex justify="between" align="center" gap="4" py="2" style={{ cursor: "pointer" }}>
-                      <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
-                        <Text size="3" weight="medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {job.title}
-                        </Text>
-                        {job.location && (
-                          <Text size="2" color="gray">
-                            {job.location}
-                          </Text>
-                        )}
-                      </Flex>
-                      {job.publishedAt && (
-                        <Text size="1" color="gray" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {new Date(job.publishedAt).toLocaleDateString()}
-                        </Text>
-                      )}
-                    </Flex>
-                  </Link>
-                  {idx < companyJobs.length - 1 ? <Separator size="4" /> : null}
-                </Box>
-                );
-              })}
-            </Flex>
-          </SectionCard>
-        ) : null}
+              )}
+            </Box>
+          </Tabs.Content>
+        </Tabs.Root>
       </Flex>
     </Container>
   );

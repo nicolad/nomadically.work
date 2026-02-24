@@ -42,46 +42,18 @@ from dataclasses import dataclass, field
 from workers import Response, WorkerEntrypoint
 
 # ---------------------------------------------------------------------------
-# Skill taxonomy — canonical tags (mirrored from src/lib/skills/taxonomy.ts)
+# Skill taxonomy + enums — imported from auto-generated schema contracts.
+# Source of truth: src/schema/contracts/ → pnpm schema:generate
 # ---------------------------------------------------------------------------
 
-SKILL_TAGS: frozenset[str] = frozenset({
-    # Programming Languages
-    "javascript", "typescript", "python", "java", "csharp", "ruby", "php",
-    "go", "rust", "swift", "kotlin", "scala", "elixir",
-    # Frontend Frameworks
-    "react", "vue", "angular", "svelte", "nextjs",
-    # Backend Frameworks
-    "nodejs", "express", "django", "flask", "laravel", "fastapi", "spring-boot",
-    # Mobile
-    "react-native", "flutter", "ios", "android",
-    # Databases
-    "postgresql", "mysql", "mongodb", "redis", "elasticsearch", "cassandra",
-    "dynamodb", "sqlite", "sql",
-    # Cloud & DevOps
-    "aws", "gcp", "azure", "docker", "kubernetes", "terraform", "ansible",
-    "jenkins", "ci-cd", "circleci", "serverless",
-    # Architecture
-    "microservices", "rest-api", "graphql", "grpc", "websocket", "event-driven",
-    # Tools
-    "git", "linux", "agile", "tdd", "webpack", "jest", "pytest", "tailwind",
-    # Data Science & ML
-    "machine-learning", "deep-learning", "tensorflow", "pytorch", "pandas",
-    "numpy", "scikit", "nlp", "computer-vision",
-    # AI / LLM / GenAI
-    "llm", "rag", "prompt-engineering", "fine-tuning", "embeddings",
-    "transformers", "agents", "agentic-ai", "langchain", "langgraph",
-    "openai", "anthropic", "vercel-ai-sdk", "vector-db", "pinecone",
-    "weaviate", "chromadb", "mlops", "huggingface", "model-evaluation",
-    "structured-output", "function-calling", "mastra", "langfuse", "promptfoo",
-    # Cloudflare ecosystem
-    "cloudflare-workers", "cloudflare-workers-ai", "cloudflare-d1", "cloudflare-vectorize",
-    # Frontend (extended)
-    "next-auth", "radix-ui", "shadcn-ui", "storybook", "playwright", "cypress",
-    "vitest", "react-query", "zustand", "apollo-client", "remix", "astro",
-    # Backend (extended)
-    "drizzle-orm", "prisma", "trpc", "hono", "bun", "deno",
-})
+from _generated_schema import (  # noqa: E402
+    SKILL_TAGS,
+    JobStatus as _GenJobStatus,
+    ClassificationConfidence as _GenConfidence,
+    SkillLevel as _GenSkillLevel,
+    JOB_STATUS_PYTHON_MAP,
+    JOB_STATUS_CANONICAL_MAP,
+)
 
 # langchain-cloudflare — Workers AI binding integration (PyPI)
 from langchain_cloudflare import ChatCloudflareWorkersAI
@@ -93,23 +65,19 @@ from langchain_core.runnables import RunnableLambda
 
 
 # ---------------------------------------------------------------------------
-# Job status enum — drives the processing pipeline
+# Job status enum — drives the processing pipeline.
+# Canonical values are underscore-delimited (role_match, eu_remote).
+# The D1 database stores the hyphenated Python-style values (role-match, eu-remote).
+# Use JOB_STATUS_PYTHON_MAP / JOB_STATUS_CANONICAL_MAP for conversion.
+#
+# Pipeline lifecycle:
+#   new → enhanced → role-match → eu-remote | non-eu
+#                 └→ role-nomatch  (terminal — skips EU classification)
 # ---------------------------------------------------------------------------
 
-class JobStatus(str, Enum):
-    """Status values for the three-phase job processing pipeline.
-
-    Lifecycle:
-      new → enhanced → role-match → eu-remote | non-eu
-                    └→ role-nomatch  (terminal — skips EU classification)
-    """
-    NEW          = "new"           # Ingested, needs ATS enhancement
-    ENHANCED     = "enhanced"      # ATS data fetched, ready for role tagging
-    ROLE_MATCH   = "role-match"    # Target role confirmed — proceed to Phase 3
-    ROLE_NOMATCH = "role-nomatch"  # Not a target role — terminal, skip Phase 3
-    EU_REMOTE    = "eu-remote"     # Classified as fully remote EU position
-    NON_EU       = "non-eu"        # Classified as NOT remote EU
-    ERROR        = "error"         # Processing failed
+# The generated enum uses canonical (underscore) values.
+# For backwards-compat with D1 column values, map to hyphenated form in SQL writes.
+JobStatus = _GenJobStatus
 
 
 # ---------------------------------------------------------------------------

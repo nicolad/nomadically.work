@@ -80,8 +80,8 @@ export default function RootLayout({
                       <Image
                         src="/logo.svg"
                         alt="Nomadically"
-                        width={190}
-                        height={30}
+                        width={196}
+                        height={40}
                         priority
                       />
                     </Link>

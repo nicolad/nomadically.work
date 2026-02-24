@@ -15,12 +15,24 @@ export { ApolloProvider };
 let apolloClient: ApolloClient<any> | undefined;
 
 function createIsomorphLink() {
+  const headers: Record<string, string> = {};
+
+  // Dev-only: allow Playwright (or any local test runner) to impersonate a user
+  // without going through Clerk. Set NEXT_PUBLIC_PLAYWRIGHT_EMAIL in .env.local.
+  if (
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_PLAYWRIGHT_EMAIL
+  ) {
+    headers["x-playwright-email"] = process.env.NEXT_PUBLIC_PLAYWRIGHT_EMAIL;
+  }
+
   return new HttpLink({
     uri:
       typeof window === "undefined"
         ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/graphql"
         : "/api/graphql",
     credentials: "same-origin",
+    headers,
   });
 }
 

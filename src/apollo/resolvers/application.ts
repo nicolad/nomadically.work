@@ -1,6 +1,6 @@
 import type { GraphQLContext } from "../context";
 import { applications, applicationTracks, jobs, companies } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { mockTracks } from "./track";
 import { createDeepSeekClient, DEEPSEEK_MODELS } from "@/deepseek";
 
@@ -36,14 +36,15 @@ async function getApplicationById(id: number, userEmail: string, db: GraphQLCont
     .select({
       app: applications,
       jobDescription: jobs.description,
-      companyKey: companies.key,
+      jobCompanyKey: jobs.company_key,
+      nameCompanyKey: companies.key,
     })
     .from(applications)
     .leftJoin(jobs, eq(jobs.url, applications.job_id))
-    .leftJoin(companies, eq(companies.id, jobs.company_id))
+    .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name})`)
     .where(and(eq(applications.id, id), eq(applications.user_email, userEmail)));
   if (!row) return null;
-  return mapApplication(row.app, row.jobDescription, row.companyKey);
+  return mapApplication(row.app, row.jobDescription, row.jobCompanyKey ?? row.nameCompanyKey);
 }
 
 export const applicationResolvers = {
@@ -71,19 +72,20 @@ export const applicationResolvers = {
           .select({
             app: applications,
             jobDescription: jobs.description,
-            companyKey: companies.key,
+            jobCompanyKey: jobs.company_key,
+            nameCompanyKey: companies.key,
           })
           .from(applications)
           .leftJoin(jobs, eq(jobs.url, applications.job_id))
-          .leftJoin(companies, eq(companies.id, jobs.company_id))
+          .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name})`)
           .orderBy(desc(applications.created_at));
 
         const userApplications = context.userEmail
           ? await query.where(eq(applications.user_email, context.userEmail))
           : await query;
 
-        return userApplications.map(({ app, jobDescription, companyKey }) =>
-          mapApplication(app, jobDescription, companyKey),
+        return userApplications.map(({ app, jobDescription, jobCompanyKey, nameCompanyKey }) =>
+          mapApplication(app, jobDescription, jobCompanyKey ?? nameCompanyKey),
         );
       } catch (error) {
         console.error("Error fetching applications:", error);
@@ -100,15 +102,16 @@ export const applicationResolvers = {
         .select({
           app: applications,
           jobDescription: jobs.description,
-          companyKey: companies.key,
+          jobCompanyKey: jobs.company_key,
+          nameCompanyKey: companies.key,
         })
         .from(applications)
         .leftJoin(jobs, eq(jobs.url, applications.job_id))
-        .leftJoin(companies, eq(companies.id, jobs.company_id))
+        .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name})`)
         .where(whereClause);
 
       if (!row) return null;
-      return mapApplication(row.app, row.jobDescription, row.companyKey);
+      return mapApplication(row.app, row.jobDescription, row.jobCompanyKey ?? row.nameCompanyKey);
     },
   },
   Mutation: {

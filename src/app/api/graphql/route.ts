@@ -20,14 +20,19 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
   {
     context: async (req) => {
       try {
-        const { userId } = await auth();
-        
-        // Use D1 HTTP API - works in both development and production
-        // Environment variables should be set in .env.local (see docs/D1_SETUP.md)
         const d1Client = createD1HttpClient();
         const db = getDb(d1Client as any); // Cast to D1Database type
-
         const loaders = createLoaders(db);
+
+        // Dev-only: Playwright testing bypass — set x-playwright-email header to skip Clerk auth
+        if (process.env.NODE_ENV === "development") {
+          const playwrightEmail = req.headers.get("x-playwright-email");
+          if (playwrightEmail) {
+            return { userId: "playwright-dev", userEmail: playwrightEmail, db, loaders };
+          }
+        }
+
+        const { userId } = await auth();
 
         if (!userId) {
           return { userId: null, userEmail: null, db, loaders };

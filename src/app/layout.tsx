@@ -76,7 +76,7 @@ export default function RootLayout({
                   }}
                 >
                   <nav>
-                    <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 10 }}>
                       <Image
                         src="/logo.svg"
                         alt="Nomadically"

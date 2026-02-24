@@ -470,27 +470,28 @@ function mapRemotiveJob(j: Record<string, unknown>): ATSJob {
   };
 }
 
+async function fetchRemotiveCategory(category: string): Promise<ATSJob[]> {
+  const url = `https://remotive.com/api/remote-jobs?category=${category}`;
+  const res = await fetchWithRetry(url);
+  if (!res.ok) {
+    log({
+      worker: WORKER, action: "fetch-ats", level: "error",
+      error: `HTTP ${res.status}`, metadata: { kind: "remotive", category },
+    });
+    return [];
+  }
+  const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
+  return (data.jobs ?? []).map(mapRemotiveJob);
+}
+
 async function fetchRemotiveJobs(_companyKey: string): Promise<ATSJob[]> {
+  // Fetch all categories in parallel to stay within HTTP time budget
+  const results = await Promise.all(REMOTIVE_CATEGORIES.map(fetchRemotiveCategory));
+
   const seen = new Set<string>();
   const all: ATSJob[] = [];
-
-  for (const category of REMOTIVE_CATEGORIES) {
-    const url = `https://remotive.com/api/remote-jobs?category=${category}`;
-    const res = await fetchWithRetry(url);
-    if (!res.ok) {
-      log({
-        worker: WORKER, action: "fetch-ats", level: "error",
-        error: `HTTP ${res.status}`, metadata: { kind: "remotive", category },
-      });
-      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-        // Non-retriable error for this category — skip it, don't abort entire run
-        continue;
-      }
-      continue;
-    }
-    const data = (await res.json()) as { jobs?: Array<Record<string, unknown>> };
-    for (const j of data.jobs ?? []) {
-      const job = mapRemotiveJob(j);
+  for (const jobs of results) {
+    for (const job of jobs) {
       if (job.externalId && !seen.has(job.externalId)) {
         seen.add(job.externalId);
         all.push(job);

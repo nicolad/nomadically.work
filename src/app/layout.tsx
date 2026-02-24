@@ -66,10 +66,8 @@ export default function RootLayout({
                     width: 200,
                     borderRight: "1px solid var(--gray-6)",
                     background: "var(--gray-2)",
-                    position: "sticky",
-                    top: 0,
-                    height: "100vh",
-                    overflowY: "auto",
+                    position: "static",
+                    minHeight: "100vh",
                     fontSize: 14,
                     letterSpacing: "0.01em",
                   }}

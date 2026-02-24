@@ -7,5 +7,8 @@ type Props = {
 };
 
 export function CompanyDetailProvider({ companyKey }: Props) {
-  return <CompanyDetail companyKey={companyKey} />;
+  const numericId = /^\d+$/.test(companyKey) ? parseInt(companyKey, 10) : null;
+  return numericId
+    ? <CompanyDetail companyId={numericId} />
+    : <CompanyDetail companyKey={companyKey} />;
 }

@@ -7,6 +7,7 @@ import {
   useEnhanceCompanyMutation,
   useGetJobsQuery,
   useGetContactsQuery,
+  useImportContactsMutation,
 } from "@/__generated__/hooks";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
@@ -20,6 +21,7 @@ import {
   Callout,
   Card,
   Container,
+  Dialog,
   Flex,
   Heading,
   Link as RadixLink,
@@ -27,6 +29,7 @@ import {
   Strong,
   Tabs,
   Text,
+  TextArea,
   TextField,
 } from "@radix-ui/themes";
 import {
@@ -43,7 +46,8 @@ import {
 } from "@radix-ui/react-icons";
 
 type Props = {
-  companyKey: string;
+  companyKey?: string;
+  companyId?: number;
 };
 
 function coerceExternalUrl(raw?: string | null): string | null {
@@ -360,9 +364,62 @@ function KeyFactsCard({
   );
 }
 
-function ContactsTab({ companyId }: { companyId: number }) {
+function parseLinkedInHTML(html: string) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const contacts: Array<{
+    name: string;
+    title: string;
+    profileUrl: string;
+  }> = [];
+
+  const cards = doc.querySelectorAll(
+    "li.org-people-profile-card__profile-card-spacing",
+  );
+
+  cards.forEach((card) => {
+    const nameElement = card.querySelector(
+      ".artdeco-entity-lockup__title .lt-line-clamp",
+    );
+    const name = nameElement?.textContent?.trim() || "";
+
+    const profileLink = card.querySelector('a[href*="/in/"]');
+    let profileUrl = profileLink?.getAttribute("href") || "";
+    if (profileUrl) {
+      profileUrl = profileUrl.split("?")[0];
+      if (!profileUrl.startsWith("http")) {
+        profileUrl = `https://www.linkedin.com${profileUrl}`;
+      }
+    }
+
+    const titleElement = card.querySelector(
+      ".artdeco-entity-lockup__subtitle .lt-line-clamp",
+    );
+    const title = titleElement?.textContent?.trim() || "";
+
+    if (name && profileUrl && name !== "LinkedIn Member") {
+      contacts.push({ name, title, profileUrl });
+    }
+  });
+
+  return contacts;
+}
+
+function ContactsTab({
+  companyId,
+  companyName,
+  isAdmin,
+}: {
+  companyId: number;
+  companyName?: string | null;
+  isAdmin?: boolean;
+}) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [showImport, setShowImport] = useState(false);
+  const [linkedinHtml, setLinkedinHtml] = useState("");
+  const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearch = useCallback((val: string) => {
@@ -371,7 +428,7 @@ function ContactsTab({ companyId }: { companyId: number }) {
     debounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
   }, []);
 
-  const { data, loading } = useGetContactsQuery({
+  const { data, loading, refetch } = useGetContactsQuery({
     variables: {
       companyId,
       search: debouncedSearch || undefined,
@@ -379,6 +436,50 @@ function ContactsTab({ companyId }: { companyId: number }) {
     },
     fetchPolicy: "cache-and-network",
   });
+
+  const [importContacts, { loading: importing }] = useImportContactsMutation();
+
+  const handleImportContacts = useCallback(async () => {
+    if (!linkedinHtml) return;
+    setImportStatus(null);
+
+    const parsed = parseLinkedInHTML(linkedinHtml);
+    if (parsed.length === 0) {
+      setImportStatus({ type: "error", message: "No contacts found in the HTML. Make sure you copied the LinkedIn company People page source." });
+      return;
+    }
+
+    try {
+      const { data: result } = await importContacts({
+        variables: {
+          contacts: parsed.map((c) => ({
+            firstName: c.name.split(" ")[0] || "",
+            lastName: c.name.split(" ").slice(1).join(" ") || "",
+            linkedinUrl: c.profileUrl || null,
+            email: null,
+            company: companyName || null,
+            companyId,
+            position: c.title || null,
+          })),
+        },
+      });
+
+      const imported = result?.importContacts?.imported ?? 0;
+      const failed = result?.importContacts?.failed ?? 0;
+
+      if (failed === 0) {
+        setImportStatus({ type: "success", message: `Imported ${imported} contact${imported !== 1 ? "s" : ""} successfully.` });
+      } else {
+        setImportStatus({ type: "error", message: `Imported ${imported}, failed ${failed}.` });
+      }
+
+      setLinkedinHtml("");
+      await refetch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Import failed.";
+      setImportStatus({ type: "error", message: msg });
+    }
+  }, [linkedinHtml, importContacts, companyId, companyName, refetch]);
 
   const contactsList = data?.contacts?.contacts ?? [];
   const totalCount = data?.contacts?.totalCount ?? 0;
@@ -389,18 +490,77 @@ function ContactsTab({ companyId }: { companyId: number }) {
         <Text size="2" color="gray">
           {loading ? "Loading…" : `${totalCount} contact${totalCount !== 1 ? "s" : ""}`}
         </Text>
-        <Box style={{ width: 240 }}>
-          <TextField.Root
-            size="2"
-            placeholder="Search contacts…"
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-          >
-            <TextField.Slot>
-              <MagnifyingGlassIcon />
-            </TextField.Slot>
-          </TextField.Root>
-        </Box>
+        <Flex gap="2" align="center">
+          {isAdmin && (
+            <Dialog.Root
+              open={showImport}
+              onOpenChange={(open) => {
+                setShowImport(open);
+                if (!open) {
+                  setLinkedinHtml("");
+                  setImportStatus(null);
+                }
+              }}
+            >
+              <Dialog.Trigger>
+                <Button size="2" variant="soft" color="gray">
+                  <LinkedInLogoIcon />
+                  Import from LinkedIn
+                </Button>
+              </Dialog.Trigger>
+
+              <Dialog.Content maxWidth="520px">
+                <Dialog.Title>Import LinkedIn contacts</Dialog.Title>
+                <Dialog.Description size="2" color="gray" mb="4">
+                  Go to the company's LinkedIn page → People tab → right-click → View Page Source → copy all HTML → paste below.
+                </Dialog.Description>
+
+                {importStatus && (
+                  <Callout.Root color={importStatus.type === "success" ? "green" : "red"} mb="3">
+                    <Callout.Icon>
+                      <InfoCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text>{importStatus.message}</Callout.Text>
+                  </Callout.Root>
+                )}
+
+                <TextArea
+                  placeholder="Paste LinkedIn page HTML here…"
+                  value={linkedinHtml}
+                  onChange={(e) => setLinkedinHtml(e.target.value)}
+                  rows={12}
+                  style={{ fontFamily: "monospace", fontSize: 12 }}
+                />
+
+                <Flex gap="3" mt="4" justify="end">
+                  <Dialog.Close>
+                    <Button variant="soft" color="gray">
+                      Cancel
+                    </Button>
+                  </Dialog.Close>
+                  <Button
+                    onClick={handleImportContacts}
+                    disabled={!linkedinHtml.trim() || importing}
+                  >
+                    {importing ? "Importing…" : "Import contacts"}
+                  </Button>
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
+          )}
+          <Box style={{ width: 240 }}>
+            <TextField.Root
+              size="2"
+              placeholder="Search contacts…"
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+            >
+              <TextField.Slot>
+                <MagnifyingGlassIcon />
+              </TextField.Slot>
+            </TextField.Root>
+          </Box>
+        </Flex>
       </Flex>
 
       {!loading && contactsList.length === 0 ? (
@@ -503,7 +663,7 @@ function ContactsTab({ companyId }: { companyId: number }) {
   );
 }
 
-export function CompanyDetail({ companyKey }: Props) {
+export function CompanyDetail({ companyKey, companyId }: Props) {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -511,7 +671,8 @@ export function CompanyDetail({ companyKey }: Props) {
   const [enhanceSuccess, setEnhanceSuccess] = useState<string | null>(null);
 
   const { loading, error, data, refetch } = useGetCompanyQuery({
-    variables: { key: companyKey },
+    variables: companyId ? { id: companyId } : { key: companyKey },
+    skip: !companyKey && !companyId,
     fetchPolicy: "cache-and-network",
   });
 
@@ -528,12 +689,15 @@ export function CompanyDetail({ companyKey }: Props) {
   });
 
   const company = data?.company ?? null;
+  // When a numeric ID is passed, derive the slug from the loaded company record
+  const effectiveKey = companyKey ?? company?.key;
 
   const { data: jobsData, loading: jobsLoading } = useGetJobsQuery({
-    variables: { search: companyKey, limit: 100, status: "active" },
+    variables: { search: effectiveKey, limit: 100, status: "active" },
+    skip: !effectiveKey,
   });
   const companyJobs = (jobsData?.jobs?.jobs ?? []).filter(
-    (j) => j.company_key === companyKey,
+    (j) => j.company_key === effectiveKey,
   );
 
   const websiteHref = useMemo(
@@ -615,7 +779,7 @@ export function CompanyDetail({ companyKey }: Props) {
       <Container size="3" p={{ initial: "4", md: "6" }}>
         <Flex direction="column" gap="5">
           <Heading size="8" style={{ textTransform: "capitalize" }}>
-            {companyKey}
+            {effectiveKey}
           </Heading>
           <SectionCard title={`Jobs (${companyJobs.length})`}>
             <Flex direction="column">
@@ -993,7 +1157,11 @@ export function CompanyDetail({ companyKey }: Props) {
           {/* Contacts tab */}
           <Tabs.Content value="contacts">
             <Box pt="4">
-              <ContactsTab companyId={company.id} />
+              <ContactsTab
+                companyId={company.id}
+                companyName={company.name}
+                isAdmin={isAdmin}
+              />
             </Box>
           </Tabs.Content>
 

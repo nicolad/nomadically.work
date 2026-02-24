@@ -357,6 +357,7 @@ export type CreateTrackInput = {
 };
 
 export type DeepPlannerStatus =
+  | 'CANCELLED'
   | 'COMPLETE'
   | 'FAILED'
   | 'PENDING'
@@ -373,8 +374,10 @@ export type DeepPlannerTask = {
   id: Scalars['ID']['output'];
   outputArtifact: Maybe<Scalars['String']['output']>;
   problemDescription: Scalars['String']['output'];
+  progressPercent: Scalars['Float']['output'];
   startedAt: Maybe<Scalars['DateTime']['output']>;
   status: DeepPlannerStatus;
+  totalSteps: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
   workflowType: Scalars['String']['output'];
 };
@@ -643,6 +646,7 @@ export type MatchedJobsResult = {
 export type Mutation = {
   __typename?: 'Mutation';
   add_company_facts: Array<CompanyFact>;
+  cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
   createDeepPlannerTask: DeepPlannerTask;
@@ -712,6 +716,11 @@ export type Mutation = {
 export type MutationAdd_Company_FactsArgs = {
   company_id: Scalars['Int']['input'];
   facts: Array<CompanyFactInput>;
+};
+
+
+export type MutationCancelDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -1405,10 +1414,17 @@ export type TriggerDeepPlannerTaskMutationVariables = Exact<{
 
 export type TriggerDeepPlannerTaskMutation = { __typename?: 'Mutation', triggerDeepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, status: DeepPlannerStatus, currentStep: string | null } };
 
+export type CancelDeepPlannerTaskMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type CancelDeepPlannerTaskMutation = { __typename?: 'Mutation', cancelDeepPlannerTask: { __typename?: 'DeepPlannerTask', id: string, status: DeepPlannerStatus } };
+
 export type DeepPlannerTasksQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DeepPlannerTasksQuery = { __typename?: 'Query', deepPlannerTasks: Array<{ __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string }> };
+export type DeepPlannerTasksQuery = { __typename?: 'Query', deepPlannerTasks: Array<{ __typename?: 'DeepPlannerTask', id: string, workflowType: string, problemDescription: string, status: DeepPlannerStatus, currentStep: string | null, checkpointCount: number, totalSteps: number, progressPercent: number, errorMessage: string | null, startedAt: string | null, completedAt: string | null, createdAt: string, updatedAt: string }> };
 
 export type CreateDeepPlannerTaskMutationVariables = Exact<{
   workflowType: Scalars['String']['input'];
@@ -2128,6 +2144,40 @@ export function useTriggerDeepPlannerTaskMutation(baseOptions?: Apollo.MutationH
 export type TriggerDeepPlannerTaskMutationHookResult = ReturnType<typeof useTriggerDeepPlannerTaskMutation>;
 export type TriggerDeepPlannerTaskMutationResult = Apollo.MutationResult<TriggerDeepPlannerTaskMutation>;
 export type TriggerDeepPlannerTaskMutationOptions = Apollo.BaseMutationOptions<TriggerDeepPlannerTaskMutation, TriggerDeepPlannerTaskMutationVariables>;
+export const CancelDeepPlannerTaskDocument = gql`
+    mutation CancelDeepPlannerTask($id: ID!) {
+  cancelDeepPlannerTask(id: $id) {
+    id
+    status
+  }
+}
+    `;
+export type CancelDeepPlannerTaskMutationFn = Apollo.MutationFunction<CancelDeepPlannerTaskMutation, CancelDeepPlannerTaskMutationVariables>;
+
+/**
+ * __useCancelDeepPlannerTaskMutation__
+ *
+ * To run a mutation, you first call `useCancelDeepPlannerTaskMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCancelDeepPlannerTaskMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [cancelDeepPlannerTaskMutation, { data, loading, error }] = useCancelDeepPlannerTaskMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useCancelDeepPlannerTaskMutation(baseOptions?: Apollo.MutationHookOptions<CancelDeepPlannerTaskMutation, CancelDeepPlannerTaskMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CancelDeepPlannerTaskMutation, CancelDeepPlannerTaskMutationVariables>(CancelDeepPlannerTaskDocument, options);
+      }
+export type CancelDeepPlannerTaskMutationHookResult = ReturnType<typeof useCancelDeepPlannerTaskMutation>;
+export type CancelDeepPlannerTaskMutationResult = Apollo.MutationResult<CancelDeepPlannerTaskMutation>;
+export type CancelDeepPlannerTaskMutationOptions = Apollo.BaseMutationOptions<CancelDeepPlannerTaskMutation, CancelDeepPlannerTaskMutationVariables>;
 export const DeepPlannerTasksDocument = gql`
     query DeepPlannerTasks {
   deepPlannerTasks {
@@ -2137,6 +2187,8 @@ export const DeepPlannerTasksDocument = gql`
     status
     currentStep
     checkpointCount
+    totalSteps
+    progressPercent
     errorMessage
     startedAt
     completedAt

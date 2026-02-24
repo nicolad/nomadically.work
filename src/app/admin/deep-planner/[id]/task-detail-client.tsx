@@ -20,6 +20,7 @@ import {
 } from "@radix-ui/themes";
 import {
   ArrowLeftIcon,
+  CrossCircledIcon,
   ExclamationTriangleIcon,
   PlayIcon,
 } from "@radix-ui/react-icons";
@@ -54,11 +55,21 @@ const TRIGGER_DEEP_PLANNER_TASK = gql(`
   }
 `);
 
-const STATUS_COLORS: Record<string, "gray" | "blue" | "green" | "red"> = {
+const CANCEL_DEEP_PLANNER_TASK = gql(`
+  mutation CancelDeepPlannerTask($id: ID!) {
+    cancelDeepPlannerTask(id: $id) {
+      id
+      status
+    }
+  }
+`);
+
+const STATUS_COLORS: Record<string, "gray" | "blue" | "green" | "red" | "orange"> = {
   PENDING: "gray",
   RUNNING: "blue",
   COMPLETE: "green",
   FAILED: "red",
+  CANCELLED: "orange",
 };
 
 function formatDate(iso: string | null | undefined): string {
@@ -99,6 +110,11 @@ export default function TaskDetailClient() {
   const task = data?.deepPlannerTask;
 
   const [triggerTask, { loading: triggering }] = useMutation(TRIGGER_DEEP_PLANNER_TASK, {
+    variables: { id },
+    refetchQueries: ["DeepPlannerTask"],
+  });
+
+  const [cancelTask, { loading: cancelling }] = useMutation(CANCEL_DEEP_PLANNER_TASK, {
     variables: { id },
     refetchQueries: ["DeepPlannerTask"],
   });
@@ -178,15 +194,28 @@ export default function TaskDetailClient() {
             <ArrowLeftIcon /> Back to Tasks
           </Link>
         </Button>
-        {(task.status === "PENDING" || task.status === "FAILED") && (
-          <Button
-            onClick={() => triggerTask()}
-            disabled={triggering}
-            loading={triggering}
-          >
-            <PlayIcon /> {task.status === "FAILED" ? "Retry" : "Start"} Task
-          </Button>
-        )}
+        <Flex gap="2">
+          {task.status === "RUNNING" && (
+            <Button
+              color="red"
+              variant="soft"
+              onClick={() => cancelTask()}
+              disabled={cancelling}
+              loading={cancelling}
+            >
+              <CrossCircledIcon /> Cancel
+            </Button>
+          )}
+          {(task.status === "PENDING" || task.status === "FAILED" || task.status === "CANCELLED") && (
+            <Button
+              onClick={() => triggerTask()}
+              disabled={triggering}
+              loading={triggering}
+            >
+              <PlayIcon /> {task.status === "PENDING" ? "Start" : "Retry"} Task
+            </Button>
+          )}
+        </Flex>
       </Flex>
 
       <Card mb="4">
@@ -254,9 +283,11 @@ export default function TaskDetailClient() {
             </Box>
             <Box>
               <Text size="1" color="gray">
-                Checkpoints
+                Progress
               </Text>
-              <Text size="2">{task.checkpointCount}</Text>
+              <Text size="2">
+                {task.checkpointCount}/{task.totalSteps} ({task.progressPercent}%)
+              </Text>
             </Box>
             {task.currentStep && (
               <Box>
@@ -268,7 +299,37 @@ export default function TaskDetailClient() {
             )}
           </Flex>
 
-          {task.status === "FAILED" && task.errorMessage && (
+          {task.status === "RUNNING" && (
+            <>
+              <Separator size="4" />
+              <Box>
+                <Text size="1" color="gray" mb="1">
+                  Execution Progress
+                </Text>
+                <Box
+                  style={{
+                    width: "100%",
+                    height: 8,
+                    background: "var(--gray-4)",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    style={{
+                      width: `${task.progressPercent}%`,
+                      height: "100%",
+                      background: "var(--blue-9)",
+                      borderRadius: 4,
+                      transition: "width 0.5s ease",
+                    }}
+                  />
+                </Box>
+              </Box>
+            </>
+          )}
+
+          {(task.status === "FAILED" || task.status === "CANCELLED") && task.errorMessage && (
             <>
               <Separator size="4" />
               <Box>
@@ -291,6 +352,16 @@ export default function TaskDetailClient() {
               Partial artifact — task failed before completion
             </Badge>
           )}
+          {task.status === "CANCELLED" && (
+            <Badge color="orange" mb="3">
+              Partial artifact — task was cancelled
+            </Badge>
+          )}
+          {task.status === "RUNNING" && (
+            <Badge color="blue" mb="3">
+              Live preview — task is still running ({task.progressPercent}%)
+            </Badge>
+          )}
           <Box className="markdown-content" style={{ lineHeight: 1.7 }}>
             <ReactMarkdown>{task.outputArtifact}</ReactMarkdown>
           </Box>
@@ -301,10 +372,10 @@ export default function TaskDetailClient() {
         <Card>
           <Flex direction="column" align="center" gap="3" p="6">
             <Text color="blue" size="3">
-              Task is running...
+              Task is running... ({task.progressPercent}%)
             </Text>
             <Text color="gray" size="2">
-              The artifact will appear here when the worker completes execution.
+              The artifact will appear here as sections are completed.
             </Text>
           </Flex>
         </Card>

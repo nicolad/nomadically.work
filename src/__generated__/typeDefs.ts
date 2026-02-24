@@ -320,6 +320,7 @@ input CreateTrackInput {
 scalar DateTime
 
 enum DeepPlannerStatus {
+  CANCELLED
   COMPLETE
   FAILED
   PENDING
@@ -336,8 +337,10 @@ type DeepPlannerTask {
   id: ID!
   outputArtifact: String
   problemDescription: String!
+  progressPercent: Float!
   startedAt: DateTime
   status: DeepPlannerStatus!
+  totalSteps: Int!
   updatedAt: DateTime!
   workflowType: String!
 }
@@ -593,6 +596,7 @@ type MatchedJobsResult {
 
 type Mutation {
   add_company_facts(company_id: Int!, facts: [CompanyFactInput!]!): [CompanyFact!]!
+  cancelDeepPlannerTask(id: ID!): DeepPlannerTask!
   createApplication(input: ApplicationInput!): Application!
   createCompany(input: CreateCompanyInput!): Company!
   createDeepPlannerTask(context: String, problemDescription: String!, workflowType: String!): DeepPlannerTask!

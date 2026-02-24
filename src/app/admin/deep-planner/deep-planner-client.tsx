@@ -36,6 +36,8 @@ const DEEP_PLANNER_TASKS_QUERY = gql(`
       status
       currentStep
       checkpointCount
+      totalSteps
+      progressPercent
       errorMessage
       startedAt
       completedAt
@@ -65,11 +67,12 @@ const CREATE_DEEP_PLANNER_TASK_MUTATION = gql(`
   }
 `);
 
-const STATUS_COLORS: Record<string, "gray" | "blue" | "green" | "red"> = {
+const STATUS_COLORS: Record<string, "gray" | "blue" | "green" | "red" | "orange"> = {
   PENDING: "gray",
   RUNNING: "blue",
   COMPLETE: "green",
   FAILED: "red",
+  CANCELLED: "orange",
 };
 
 function formatDate(iso: string | null | undefined): string {
@@ -329,7 +332,7 @@ export default function DeepPlannerClient() {
                     {formatDate(task.createdAt)}
                   </Text>
                   <Text size="1" color="gray">
-                    {task.checkpointCount} checkpoints
+                    {task.checkpointCount}/{task.totalSteps} ({task.progressPercent}%)
                   </Text>
                   {task.completedAt && (
                     <Text size="1" color="gray">

@@ -230,12 +230,131 @@ describe("deepPlannerResolvers", () => {
     });
   });
 
+  describe("Mutation.cancelDeepPlannerTask", () => {
+    it("cancels a running task", async () => {
+      const cancelledRow = {
+        ...FAKE_RUNNING_ROW,
+        status: "cancelled",
+        error_message: "Cancelled by admin",
+        completed_at: "2026-02-23T10:05:00.000Z",
+        updated_at: "2026-02-23T10:05:00.000Z",
+      };
+      const selectChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([FAKE_RUNNING_ROW]),
+      };
+      const updateChain = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([cancelledRow]),
+      };
+      const dbMock = {
+        select: vi.fn().mockReturnValue(selectChain),
+        update: vi.fn().mockReturnValue(updateChain),
+      };
+      const ctx = { ...ADMIN_CONTEXT, db: dbMock as any };
+
+      const result = await deepPlannerResolvers.Mutation.cancelDeepPlannerTask(
+        null,
+        { id: FAKE_RUNNING_ROW.id },
+        ctx
+      );
+
+      expect(result.status).toBe("CANCELLED");
+      expect(dbMock.update).toHaveBeenCalled();
+    });
+
+    it("rejects cancelling non-running tasks", async () => {
+      const dbMock = makeSelectWhereMock([FAKE_TASK_ROW]); // pending
+      const ctx = { ...ADMIN_CONTEXT, db: dbMock as any };
+
+      await expect(
+        deepPlannerResolvers.Mutation.cancelDeepPlannerTask(
+          null,
+          { id: FAKE_TASK_ROW.id },
+          ctx
+        )
+      ).rejects.toThrow("Only running tasks can be cancelled");
+    });
+
+    it("rejects non-admin users", async () => {
+      const dbMock = makeSelectWhereMock([]);
+      const ctx = { ...NON_ADMIN_CONTEXT, db: dbMock as any };
+
+      await expect(
+        deepPlannerResolvers.Mutation.cancelDeepPlannerTask(
+          null,
+          { id: "any" },
+          ctx
+        )
+      ).rejects.toThrow("Forbidden");
+    });
+  });
+
+  describe("progress fields", () => {
+    it("calculates progressPercent for running task", async () => {
+      const row = { ...FAKE_RUNNING_ROW, checkpoint_count: 51 }; // 51/102 = 50%
+      const dbMock = makeSelectWhereMock([row]);
+      const ctx = { ...ADMIN_CONTEXT, db: dbMock as any };
+
+      const result = await deepPlannerResolvers.Query.deepPlannerTask(
+        null,
+        { id: row.id },
+        ctx
+      );
+
+      expect(result!.totalSteps).toBe(102);
+      expect(result!.progressPercent).toBe(50);
+    });
+
+    it("returns 100% for complete tasks", async () => {
+      const dbMock = makeSelectWhereMock([FAKE_COMPLETE_ROW]);
+      const ctx = { ...ADMIN_CONTEXT, db: dbMock as any };
+
+      const result = await deepPlannerResolvers.Query.deepPlannerTask(
+        null,
+        { id: FAKE_COMPLETE_ROW.id },
+        ctx
+      );
+
+      expect(result!.progressPercent).toBe(100);
+    });
+
+    it("returns 0% for pending tasks", async () => {
+      const dbMock = makeSelectWhereMock([FAKE_TASK_ROW]);
+      const ctx = { ...ADMIN_CONTEXT, db: dbMock as any };
+
+      const result = await deepPlannerResolvers.Query.deepPlannerTask(
+        null,
+        { id: FAKE_TASK_ROW.id },
+        ctx
+      );
+
+      expect(result!.progressPercent).toBe(0);
+    });
+
+    it("caps at 99% for in-progress tasks", async () => {
+      const row = { ...FAKE_RUNNING_ROW, checkpoint_count: 101 }; // almost done but not complete
+      const dbMock = makeSelectWhereMock([row]);
+      const ctx = { ...ADMIN_CONTEXT, db: dbMock as any };
+
+      const result = await deepPlannerResolvers.Query.deepPlannerTask(
+        null,
+        { id: row.id },
+        ctx
+      );
+
+      expect(result!.progressPercent).toBe(99);
+    });
+  });
+
   describe("status enum mapping", () => {
     it.each([
       ["pending", "PENDING"],
       ["running", "RUNNING"],
       ["complete", "COMPLETE"],
       ["failed", "FAILED"],
+      ["cancelled", "CANCELLED"],
     ])("maps DB status '%s' to GraphQL '%s'", async (dbStatus, gqlStatus) => {
       const row = { ...FAKE_TASK_ROW, status: dbStatus };
       const dbMock = makeSelectWhereMock([row]);

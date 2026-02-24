@@ -354,6 +354,7 @@ export type CreateTrackInput = {
 };
 
 export type DeepPlannerStatus =
+  | 'CANCELLED'
   | 'COMPLETE'
   | 'FAILED'
   | 'PENDING'
@@ -370,8 +371,10 @@ export type DeepPlannerTask = {
   id: Scalars['ID']['output'];
   outputArtifact: Maybe<Scalars['String']['output']>;
   problemDescription: Scalars['String']['output'];
+  progressPercent: Scalars['Float']['output'];
   startedAt: Maybe<Scalars['DateTime']['output']>;
   status: DeepPlannerStatus;
+  totalSteps: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
   workflowType: Scalars['String']['output'];
 };
@@ -640,6 +643,7 @@ export type MatchedJobsResult = {
 export type Mutation = {
   __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
+  cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
   createDeepPlannerTask: DeepPlannerTask;
@@ -709,6 +713,11 @@ export type Mutation = {
 export type MutationAdd_Company_FactsArgs = {
   company_id: Scalars['Int']['input'];
   facts: Array<CompanyFactInput>;
+};
+
+
+export type MutationCancelDeepPlannerTaskArgs = {
+  id: Scalars['ID']['input'];
 };
 
 

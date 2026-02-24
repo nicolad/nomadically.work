@@ -101,6 +101,7 @@ export default function RootLayout({
                       direction="column"
                       gap="3"
                       pt="3"
+                      mt="auto"
                       style={{ borderTop: "1px solid var(--gray-6)" }}
                     >
                       <AuthHeader />

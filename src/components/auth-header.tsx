@@ -19,38 +19,48 @@ export function AuthHeader() {
 
   if (!isSignedIn) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <Link href="/sign-in">
-          <Button variant="ghost" size="sm">sign in</Button>
+          <Button variant="ghost" size="sm" style={{ width: "100%" }}>sign in</Button>
         </Link>
         <Link href="/sign-up">
-          <Button variant="primary" size="sm">sign up</Button>
+          <Button variant="primary" size="sm" style={{ width: "100%" }}>sign up</Button>
         </Link>
       </div>
     );
   }
 
+  const displayName =
+    user.fullName ||
+    user.primaryEmailAddress?.emailAddress ||
+    user.username;
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span
         style={{
           color: "var(--gray-9)",
+          fontSize: 12,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
+        title={displayName ?? undefined}
       >
-        {user.fullName ||
-          user.primaryEmailAddress?.emailAddress ||
-          user.username}
+        {displayName}
       </span>
-      <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
-        <GearIcon width={14} height={14} style={{ color: "var(--gray-9)" }} />
-      </Link>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => signOut({ redirectUrl: "/" })}
-      >
-        sign out
-      </Button>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
+          <GearIcon width={14} height={14} style={{ color: "var(--gray-9)" }} />
+        </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => signOut({ redirectUrl: "/" })}
+        >
+          sign out
+        </Button>
+      </div>
     </div>
   );
 }

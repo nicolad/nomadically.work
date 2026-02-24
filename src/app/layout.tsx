@@ -66,8 +66,11 @@ export default function RootLayout({
                     width: 200,
                     borderRight: "1px solid var(--gray-6)",
                     background: "var(--gray-2)",
-                    position: "static",
-                    minHeight: "100vh",
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    height: "100vh",
+                    overflowY: "auto",
                     fontSize: 14,
                     letterSpacing: "0.01em",
                   }}
@@ -120,7 +123,7 @@ export default function RootLayout({
                 </Flex>
 
                 {/* ── main content ── */}
-                <Box flexGrow="1" minWidth="0" style={{ overflowY: "auto" }}>
+                <Box flexGrow="1" minWidth="0" style={{ marginLeft: 200 }}>
                   {children}
                 </Box>
               </Flex>

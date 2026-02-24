@@ -302,9 +302,10 @@ export const applicationResolvers = {
       if (!reqEntry) throw new Error("Requirement not found in interview prep data");
 
       // Return immediately if already generated (unless force regeneration requested)
-      if (reqEntry.deepDive && !args.force) return mapApplication(row.app, row.jobDescription);
+      const effectiveJobDescriptionForTopic = (row.app as any).job_description ?? row.jobDescription ?? null;
+      if (reqEntry.deepDive && !args.force) return mapApplication(row.app, effectiveJobDescriptionForTopic);
 
-      const plainJobDesc = (row.jobDescription ?? "")
+      const plainJobDesc = (effectiveJobDescriptionForTopic ?? "")
         .replace(/(<([^>]+)>)/gi, " ")
         .replace(/\s+/g, " ")
         .trim()
@@ -375,7 +376,7 @@ What weak or under-prepared candidates get wrong. Be blunt and specific.
 
       if (!updated) throw new Error("Failed to save deep dive");
 
-      return mapApplication(updated, row.jobDescription);
+      return mapApplication(updated, effectiveJobDescriptionForTopic);
     },
 
     async generateInterviewPrep(
@@ -395,12 +396,17 @@ What weak or under-prepared candidates get wrong. Be blunt and specific.
         .where(whereClause);
 
       if (!row) throw new Error("Application not found or access denied");
-      if (!row.jobDescription) {
+
+      // Prefer the user-supplied job_description on the application row; fall back to the
+      // denormalized description from the jobs table (populated via the leftJoin above).
+      const effectiveJobDescription = (row.app as any).job_description ?? row.jobDescription ?? null;
+
+      if (!effectiveJobDescription) {
         throw new Error("No job description available for this application");
       }
 
       // Strip HTML tags and truncate to ~8000 chars to stay within model context
-      const plainText = row.jobDescription
+      const plainText = effectiveJobDescription
         .replace(/(<([^>]+)>)/gi, " ")
         .replace(/\s+/g, " ")
         .trim()
@@ -484,7 +490,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
 
       if (!updated) throw new Error("Failed to save interview prep");
 
-      return mapApplication(updated, row.jobDescription);
+      return mapApplication(updated, effectiveJobDescription);
     },
 
     async generateStudyTopicDeepDive(
@@ -519,9 +525,11 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
 
       reqEntry.studyTopicDeepDives = reqEntry.studyTopicDeepDives ?? [];
       const existing = reqEntry.studyTopicDeepDives.find((d: any) => d.topic === args.studyTopic);
-      if (existing?.deepDive && !args.force) return mapApplication(row.app, row.jobDescription);
+      // Prefer the user-supplied job_description on the application row; fall back to the jobs table value.
+      const effectiveJobDescriptionForStudyTopic = (row.app as any).job_description ?? row.jobDescription ?? null;
+      if (existing?.deepDive && !args.force) return mapApplication(row.app, effectiveJobDescriptionForStudyTopic);
 
-      const plainJobDesc = (row.jobDescription ?? "")
+      const plainJobDesc = (effectiveJobDescriptionForStudyTopic ?? "")
         .replace(/(<([^>]+)>)/gi, " ")
         .replace(/\s+/g, " ")
         .trim()
@@ -582,7 +590,7 @@ A real production scenario (incident, design decision, or architectural choice) 
 
       if (!updated) throw new Error("Failed to save study topic deep dive");
 
-      return mapApplication(updated, row.jobDescription);
+      return mapApplication(updated, effectiveJobDescriptionForStudyTopic);
     },
   },
 };

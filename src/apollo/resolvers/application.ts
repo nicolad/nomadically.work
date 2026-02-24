@@ -169,6 +169,7 @@ export const applicationResolvers = {
           status?: "pending" | "submitted" | "reviewed" | "rejected" | "accepted";
           notes?: string;
           jobDescription?: string;
+          companyName?: string;
         };
       },
       context: GraphQLContext,
@@ -193,6 +194,9 @@ export const applicationResolvers = {
         if (args.input.jobDescription !== undefined) {
           updateValues.job_description = args.input.jobDescription;
         }
+        if (args.input.companyName !== undefined) {
+          updateValues.company_name = args.input.companyName;
+        }
 
         const [updated] = await context.db
           .update(applications)
@@ -209,7 +213,9 @@ export const applicationResolvers = {
           throw new Error("Application not found or access denied");
         }
 
-        return mapApplication(updated);
+        // Re-fetch with JOINs so companyKey resolves correctly
+        const result = await getApplicationById(updated.id, context.userEmail!, context.db);
+        return result ?? mapApplication(updated);
       } catch (error) {
         console.error("Error updating application:", error);
         throw new Error("Failed to update application");

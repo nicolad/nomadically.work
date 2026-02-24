@@ -1498,6 +1498,7 @@ export type TrackItem = {
 };
 
 export type UpdateApplicationInput = {
+  companyName?: InputMaybe<Scalars['String']['input']>;
   jobDescription?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ApplicationStatus>;
@@ -1727,7 +1728,7 @@ export type UpdateApplicationMutationVariables = Exact<{
 }>;
 
 
-export type UpdateApplicationMutation = { __typename?: 'Mutation', updateApplication: { __typename?: 'Application', id: number, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, jobDescription: string | null } };
+export type UpdateApplicationMutation = { __typename?: 'Mutation', updateApplication: { __typename?: 'Application', id: number, jobId: string, status: ApplicationStatus, notes: string | null, jobTitle: string | null, companyName: string | null, companyKey: string | null, jobDescription: string | null } };
 
 export type LinkTrackToApplicationMutationVariables = Exact<{
   applicationId: Scalars['Int']['input'];
@@ -3299,6 +3300,7 @@ export const UpdateApplicationDocument = gql`
     notes
     jobTitle
     companyName
+    companyKey
     jobDescription
   }
 }

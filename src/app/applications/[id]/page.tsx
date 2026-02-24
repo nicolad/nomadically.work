@@ -43,6 +43,7 @@ import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generate
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
+import { CompanyPicker } from "@/components/company-picker";
 
 const InterviewPrepFlow = lazy(() => import("@/components/interview-prep-flow"));
 
@@ -312,6 +313,19 @@ export default function ApplicationDetailPage() {
                 <Pencil1Icon />
               </IconButton>
             )}
+            {isAdmin && !app.companyKey && (
+              <CompanyPicker
+                companyKey={app.companyKey}
+                companyName={app.companyName}
+                onLinked={async (_key, name) => {
+                  // Update application's company_name so the LEFT JOIN resolves
+                  await updateApplication({
+                    variables: { id: app.id, input: { companyName: name } },
+                    refetchQueries: ["GetApplication"],
+                  });
+                }}
+              />
+            )}
           </Flex>
         </Box>
       </Flex>
@@ -540,16 +554,12 @@ export default function ApplicationDetailPage() {
         <Flex justify="between" align="center" mb="3">
           <Flex align="center" gap="2">
             <Heading size="4">Interview Prep</Heading>
-            {app.companyKey && app.aiInterviewPrep && (
-              <a
-                href={`/prep/${app.companyKey}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--gray-9)", display: "inline-flex" }}
-                title="Open prep in full page"
-              >
-                <ExternalLinkIcon />
-              </a>
+            {app.aiInterviewPrep && (app.companyKey || app.companyName) && (
+              <Button variant="soft" size="1" asChild>
+                <Link href={`/prep/${app.companyKey || app.companyName?.toLowerCase().replace(/\s+/g, "")}`} target="_blank">
+                  <ExternalLinkIcon /> Full Page
+                </Link>
+              </Button>
             )}
           </Flex>
           {isAdmin && (

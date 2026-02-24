@@ -87,4 +87,5 @@ input UpdateApplicationInput {
   status: ApplicationStatus
   notes: String
   jobDescription: String
+  companyName: String
 }

@@ -1495,6 +1495,7 @@ export type TrackItem = {
 };
 
 export type UpdateApplicationInput = {
+  companyName?: InputMaybe<Scalars['String']['input']>;
   jobDescription?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ApplicationStatus>;

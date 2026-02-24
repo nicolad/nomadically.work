@@ -1023,6 +1023,7 @@ type TrackItem {
 scalar URL
 
 input UpdateApplicationInput {
+  companyName: String
   jobDescription: String
   notes: String
   status: ApplicationStatus

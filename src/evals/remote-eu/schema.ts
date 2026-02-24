@@ -1,16 +1,18 @@
 import { z } from "zod";
+import { ClassificationConfidence } from "@/schema/contracts/enums";
 
 /**
  * Schema for Remote EU job classification results.
- * 
+ *
  * Defines the structure of classification outputs including
  * boolean decision, confidence level, and reasoning.
+ *
+ * Uses ClassificationConfidence from the unified schema contracts
+ * to keep confidence levels in sync across all workers.
  */
 export const remoteEUClassificationSchema = z.object({
   isRemoteEU: z.boolean().describe("Whether the job is a Remote EU position"),
-  confidence: z
-    .enum(["high", "medium", "low"])
-    .describe("Confidence level of the classification"),
+  confidence: ClassificationConfidence.describe("Confidence level of the classification"),
   reason: z.string().describe("Explanation for the classification decision"),
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ExclamationTriangleIcon, EnvelopeClosedIcon, CheckboxIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, EnvelopeClosedIcon, CheckboxIcon, GearIcon } from "@radix-ui/react-icons";
 import { useUser } from "@clerk/nextjs";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
@@ -45,6 +45,14 @@ export function AdminNav() {
           style={{ color: "var(--orange-9)" }}
         />
         reported
+      </Link>
+      <Link
+        href="/admin/workers"
+        style={{ display: "flex", alignItems: "center", gap: 6 }}
+        title="Workers"
+      >
+        <GearIcon width={14} height={14} />
+        workers
       </Link>
     </>
   );

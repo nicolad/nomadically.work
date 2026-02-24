@@ -538,7 +538,20 @@ export default function ApplicationDetailPage() {
       {/* Interview Prep */}
       <Card mb="5">
         <Flex justify="between" align="center" mb="3">
-          <Heading size="4">Interview Prep</Heading>
+          <Flex align="center" gap="2">
+            <Heading size="4">Interview Prep</Heading>
+            {app.companyKey && app.aiInterviewPrep && (
+              <a
+                href={`/prep/${app.companyKey}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--gray-9)", display: "inline-flex" }}
+                title="Open prep in full page"
+              >
+                <ExternalLinkIcon />
+              </a>
+            )}
+          </Flex>
           {isAdmin && (
           <Flex gap="2" align="center">
             <Button

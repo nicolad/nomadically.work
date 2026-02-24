@@ -588,6 +588,7 @@ interface InterviewPrepFlowProps {
   };
   onRequirementClick?: (req: AiInterviewPrepRequirement) => void;
   onStudyTopicClick?: (req: AiInterviewPrepRequirement, topic: string) => void;
+  height?: string;
 }
 
 function InterviewPrepFlowInner({
@@ -595,6 +596,7 @@ function InterviewPrepFlowInner({
   aiInterviewPrep,
   onRequirementClick,
   onStudyTopicClick,
+  height,
 }: InterviewPrepFlowProps) {
   const { flowToScreenPosition } = useReactFlow();
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
@@ -649,7 +651,7 @@ function InterviewPrepFlowInner({
     <div
       style={{
         width: "100%",
-        height: "clamp(400px, 60vh, 700px)",
+        height: height ?? "clamp(400px, 60vh, 700px)",
         borderRadius: 8,
         overflow: "hidden",
         position: "relative",

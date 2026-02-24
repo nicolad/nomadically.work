@@ -16,6 +16,7 @@ import {
 import type { GraphQLContext } from "../../context";
 import type { QueryJobsArgs } from "@/__generated__/resolvers-types";
 import { EXCLUDED_LOCATIONS } from "./constants";
+import { REMOTE_EU_ONLY } from "@/lib/constants";
 
 export async function jobsQuery(
   _parent: unknown,
@@ -38,11 +39,9 @@ export async function jobsQuery(
       );
     }
 
-    // Filter by is_remote_eu when requested
-    if (args.isRemoteEu === true) {
+    // Always filter to remote EU jobs (REMOTE_EU_ONLY = true in src/lib/constants.ts)
+    if (REMOTE_EU_ONLY) {
       conditions.push(eq(jobs.is_remote_eu, true));
-    } else if (args.isRemoteEu === false) {
-      conditions.push(eq(jobs.is_remote_eu, false));
     }
 
     // Filter by sourceType (ATS provider) — single value, kept for backward compat

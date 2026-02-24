@@ -32,7 +32,6 @@ type Job = GetJobsQuery["jobs"]["jobs"][number];
 
 interface JobsListProps {
   searchFilter?: string;
-  isRemoteEu?: boolean;
   sourceTypes?: string[];
 }
 
@@ -62,7 +61,7 @@ function companyInitials(key: string): string {
     .slice(0, 2);
 }
 
-export function JobsList({ searchFilter = "", isRemoteEu, sourceTypes }: JobsListProps) {
+export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
@@ -143,12 +142,11 @@ export function JobsList({ searchFilter = "", isRemoteEu, sourceTypes }: JobsLis
       search: searchFilter || undefined,
       limit: 20,
       offset: 0,
-      isRemoteEu: isRemoteEu || undefined,
       sourceTypes: sourceTypes && sourceTypes.length > 0 ? sourceTypes : undefined,
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
     }),
-    [searchFilter, excludedCompanies, isRemoteEu, sourceTypes, preferredSkills],
+    [searchFilter, excludedCompanies, sourceTypes, preferredSkills],
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({

@@ -33,7 +33,7 @@ function createApolloClient() {
         Query: {
           fields: {
             jobs: {
-              keyArgs: ["sourceType", "status", "search", "excludedCompanies", "isRemoteEu", "skills"],
+              keyArgs: ["sourceType", "status", "search", "excludedCompanies", "skills"],
               merge(existing, incoming, { args }) {
                 if (!incoming) return existing;
                 if (!existing || !args?.offset) {

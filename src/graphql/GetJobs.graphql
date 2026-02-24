@@ -5,7 +5,6 @@ query GetJobs(
   $limit: Int
   $offset: Int
   $excludedCompanies: [String!]
-  $isRemoteEu: Boolean
   $skills: [String!]
 ) {
   jobs(
@@ -15,7 +14,6 @@ query GetJobs(
     limit: $limit
     offset: $offset
     excludedCompanies: $excludedCompanies
-    isRemoteEu: $isRemoteEu
     skills: $skills
   ) {
     jobs {

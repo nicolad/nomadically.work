@@ -6,7 +6,6 @@ extend type Query {
     limit: Int
     offset: Int
     excludedCompanies: [String!]
-    isRemoteEu: Boolean
     remoteEuConfidence: String
     skills: [String!]
   ): JobsResponse!

@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Container, Box, Flex, Badge, Text } from "@radix-ui/themes";
+import { Container, Box, Flex, Text } from "@radix-ui/themes";
 import { SearchQueryBar } from "./SearchQueryBar";
 import { UserPreferences } from "./user-preferences";
 import { JobsList } from "./jobs-list";
@@ -12,7 +12,6 @@ export function UnifiedJobsProvider() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchFilter = searchParams.get("q") ?? "";
-  const remoteEuFilter = searchParams.get("remote_eu") === "1";
   const sourcesFilter = (searchParams.get("source") ?? "").split(",").filter(Boolean);
 
   const handleSearch = useCallback(
@@ -28,17 +27,6 @@ export function UnifiedJobsProvider() {
     },
     [router, searchParams],
   );
-
-  const handleRemoteEuToggle = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (remoteEuFilter) {
-      params.delete("remote_eu");
-    } else {
-      params.set("remote_eu", "1");
-    }
-    params.delete("offset");
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [router, searchParams, remoteEuFilter]);
 
   const handleSourcesChange = useCallback(
     (sources: string[]) => {
@@ -71,19 +59,11 @@ export function UnifiedJobsProvider() {
           initialQuery={searchFilter}
         />
         <Flex mt="2" gap="2" align="center" wrap="wrap">
-          <Badge
-            variant={remoteEuFilter ? "solid" : "outline"}
-            color="green"
-            style={{ cursor: "pointer", userSelect: "none" }}
-            onClick={handleRemoteEuToggle}
-          >
-            remote EU only
-          </Badge>
           <SourceFilter selected={sourcesFilter} onChange={handleSourcesChange} />
         </Flex>
       </Box>
       <Box mt="4">
-        <JobsList searchFilter={searchFilter} isRemoteEu={remoteEuFilter} sourceTypes={sourcesFilter} />
+        <JobsList searchFilter={searchFilter} sourceTypes={sourcesFilter} />
       </Box>
     </Container>
   );

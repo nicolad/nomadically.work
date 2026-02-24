@@ -5,6 +5,9 @@ from js import JSON, JSON as JsJSON, fetch
 from pyodide.ffi import to_js  # noqa: F401 — kept for future use
 from workers import Response, WorkerEntrypoint
 
+# Remote EU filter — source of truth: src/lib/constants.ts (REMOTE_EU_ONLY)
+REMOTE_EU_ONLY = True
+
 DEEPSEEK_BASE_URL_DEFAULT = "https://api.deepseek.com/beta"
 DEEPSEEK_MODEL_DEFAULT    = "deepseek-chat"
 TARGET_ROLES = [
@@ -176,7 +179,7 @@ class Default(WorkerEntrypoint):
                 f"""SELECT DISTINCT jst.job_id, j.title
                     FROM job_skill_tags jst
                     JOIN jobs j ON j.id = jst.job_id
-                    WHERE jst.tag IN ({ph}) AND j.is_remote_eu = 1
+                    WHERE jst.tag IN ({ph}) AND j.is_remote_eu = 1  -- REMOTE_EU_ONLY
                     LIMIT {MAX_CANDIDATES}""",
                 skills,
             )

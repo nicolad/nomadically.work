@@ -20,7 +20,7 @@ function mapApplication(
     jobTitle: (app as any).job_title ?? null,
     companyName: (app as any).company_name ?? null,
     companyKey: companyKey ?? null,
-    jobDescription: jobDescription ?? null,
+    jobDescription: (app as any).job_description ?? jobDescription ?? null,
     createdAt: app.created_at,
     aiInterviewPrep: app.ai_interview_prep
       ? (() => {

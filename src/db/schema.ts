@@ -471,6 +471,7 @@ export const applications = sqliteTable("applications", {
   notes: text("notes"), // Free-text notes on this application
   job_title: text("job_title"), // Denormalized job title for display
   company_name: text("company_name"), // Denormalized company name for display
+  job_description: text("job_description"), // User-supplied job description override
   ai_interview_prep: text("ai_interview_prep"), // JSON: AIInterviewPrep shape
   created_at: text("created_at")
     .notNull()
@@ -594,6 +595,7 @@ export const contacts = sqliteTable(
     nb_retry_token: text("nb_retry_token"),
     nb_execution_time_ms: integer("nb_execution_time_ms"),
     email_verified: integer("email_verified", { mode: "boolean" }).default(false),
+    bounced_emails: text("bounced_emails"), // JSON array of known-bad email addresses
     github_handle: text("github_handle"),
     telegram_handle: text("telegram_handle"),
     do_not_contact: integer("do_not_contact", { mode: "boolean" }).default(false),

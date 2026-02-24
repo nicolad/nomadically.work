@@ -6,8 +6,6 @@ import {
   useGetCompanyQuery,
   useEnhanceCompanyMutation,
   useGetJobsQuery,
-  useGetContactsQuery,
-  useImportContactsMutation,
 } from "@/__generated__/hooks";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
@@ -21,7 +19,6 @@ import {
   Callout,
   Card,
   Container,
-  Dialog,
   Flex,
   Heading,
   Link as RadixLink,
@@ -29,20 +26,16 @@ import {
   Strong,
   Tabs,
   Text,
-  TextArea,
-  TextField,
 } from "@radix-ui/themes";
 import {
+  CheckCircledIcon,
   ExternalLinkIcon,
   GlobeIcon,
   InfoCircledIcon,
   MagicWandIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  LinkedInLogoIcon,
-  EnvelopeClosedIcon,
-  GitHubLogoIcon,
-  MagnifyingGlassIcon,
+  PersonIcon,
 } from "@radix-ui/react-icons";
 
 type Props = {
@@ -230,12 +223,14 @@ type KeyFactsCardProps = {
   canonicalDomain?: string | null;
   score?: number | null;
   careerPagesCount?: number | null;
+  isAdmin?: boolean;
 };
 
 function KeyFactsCard({
   canonicalDomain,
   score,
   careerPagesCount,
+  isAdmin = false,
 }: KeyFactsCardProps) {
   const domainHref = useMemo(
     () => coerceExternalUrl(canonicalDomain),
@@ -291,16 +286,20 @@ function KeyFactsCard({
         <Text size="2">—</Text>
       ),
     },
+    ...(isAdmin
+      ? [
+          {
+            label: "Crawl confidence",
+            value: (
+              <Text size="2" style={{ fontVariantNumeric: "tabular-nums" }}>
+                {formatScore(score)}
+              </Text>
+            ),
+          },
+        ]
+      : []),
     {
-      label: "Score",
-      value: (
-        <Text size="2" style={{ fontVariantNumeric: "tabular-nums" }}>
-          {formatScore(score)}
-        </Text>
-      ),
-    },
-    {
-      label: "Career pages",
+      label: "Hiring platforms",
       value: (
         <Text size="2" style={{ fontVariantNumeric: "tabular-nums" }}>
           {typeof careerPagesCount === "number" && Number.isFinite(careerPagesCount)
@@ -364,304 +363,6 @@ function KeyFactsCard({
   );
 }
 
-function parseLinkedInHTML(html: string) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  const contacts: Array<{
-    name: string;
-    title: string;
-    profileUrl: string;
-  }> = [];
-
-  const cards = doc.querySelectorAll(
-    "li.org-people-profile-card__profile-card-spacing",
-  );
-
-  cards.forEach((card) => {
-    const nameElement = card.querySelector(
-      ".artdeco-entity-lockup__title .lt-line-clamp",
-    );
-    const name = nameElement?.textContent?.trim() || "";
-
-    const profileLink = card.querySelector('a[href*="/in/"]');
-    let profileUrl = profileLink?.getAttribute("href") || "";
-    if (profileUrl) {
-      profileUrl = profileUrl.split("?")[0];
-      if (!profileUrl.startsWith("http")) {
-        profileUrl = `https://www.linkedin.com${profileUrl}`;
-      }
-    }
-
-    const titleElement = card.querySelector(
-      ".artdeco-entity-lockup__subtitle .lt-line-clamp",
-    );
-    const title = titleElement?.textContent?.trim() || "";
-
-    if (name && profileUrl && name !== "LinkedIn Member") {
-      contacts.push({ name, title, profileUrl });
-    }
-  });
-
-  return contacts;
-}
-
-function ContactsTab({
-  companyId,
-  companyName,
-  isAdmin,
-}: {
-  companyId: number;
-  companyName?: string | null;
-  isAdmin?: boolean;
-}) {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  const [showImport, setShowImport] = useState(false);
-  const [linkedinHtml, setLinkedinHtml] = useState("");
-  const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleSearch = useCallback((val: string) => {
-    setSearch(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
-  }, []);
-
-  const { data, loading, refetch } = useGetContactsQuery({
-    variables: {
-      companyId,
-      search: debouncedSearch || undefined,
-      limit: 100,
-    },
-    fetchPolicy: "cache-and-network",
-  });
-
-  const [importContacts, { loading: importing }] = useImportContactsMutation();
-
-  const handleImportContacts = useCallback(async () => {
-    if (!linkedinHtml) return;
-    setImportStatus(null);
-
-    const parsed = parseLinkedInHTML(linkedinHtml);
-    if (parsed.length === 0) {
-      setImportStatus({ type: "error", message: "No contacts found in the HTML. Make sure you copied the LinkedIn company People page source." });
-      return;
-    }
-
-    try {
-      const { data: result } = await importContacts({
-        variables: {
-          contacts: parsed.map((c) => ({
-            firstName: c.name.split(" ")[0] || "",
-            lastName: c.name.split(" ").slice(1).join(" ") || "",
-            linkedinUrl: c.profileUrl || null,
-            email: null,
-            company: companyName || null,
-            companyId,
-            position: c.title || null,
-          })),
-        },
-      });
-
-      const imported = result?.importContacts?.imported ?? 0;
-      const failed = result?.importContacts?.failed ?? 0;
-
-      if (failed === 0) {
-        setImportStatus({ type: "success", message: `Imported ${imported} contact${imported !== 1 ? "s" : ""} successfully.` });
-      } else {
-        setImportStatus({ type: "error", message: `Imported ${imported}, failed ${failed}.` });
-      }
-
-      setLinkedinHtml("");
-      await refetch();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Import failed.";
-      setImportStatus({ type: "error", message: msg });
-    }
-  }, [linkedinHtml, importContacts, companyId, companyName, refetch]);
-
-  const contactsList = data?.contacts?.contacts ?? [];
-  const totalCount = data?.contacts?.totalCount ?? 0;
-
-  return (
-    <Box>
-      <Flex align="center" justify="between" gap="3" mb="4">
-        <Text size="2" color="gray">
-          {loading ? "Loading…" : `${totalCount} contact${totalCount !== 1 ? "s" : ""}`}
-        </Text>
-        <Flex gap="2" align="center">
-          {isAdmin && (
-            <Dialog.Root
-              open={showImport}
-              onOpenChange={(open) => {
-                setShowImport(open);
-                if (!open) {
-                  setLinkedinHtml("");
-                  setImportStatus(null);
-                }
-              }}
-            >
-              <Dialog.Trigger>
-                <Button size="2" variant="soft" color="gray">
-                  <LinkedInLogoIcon />
-                  Import from LinkedIn
-                </Button>
-              </Dialog.Trigger>
-
-              <Dialog.Content maxWidth="520px">
-                <Dialog.Title>Import LinkedIn contacts</Dialog.Title>
-                <Dialog.Description size="2" color="gray" mb="4">
-                  Go to the company's LinkedIn page → People tab → right-click → View Page Source → copy all HTML → paste below.
-                </Dialog.Description>
-
-                {importStatus && (
-                  <Callout.Root color={importStatus.type === "success" ? "green" : "red"} mb="3">
-                    <Callout.Icon>
-                      <InfoCircledIcon />
-                    </Callout.Icon>
-                    <Callout.Text>{importStatus.message}</Callout.Text>
-                  </Callout.Root>
-                )}
-
-                <TextArea
-                  placeholder="Paste LinkedIn page HTML here…"
-                  value={linkedinHtml}
-                  onChange={(e) => setLinkedinHtml(e.target.value)}
-                  rows={12}
-                  style={{ fontFamily: "monospace", fontSize: 12 }}
-                />
-
-                <Flex gap="3" mt="4" justify="end">
-                  <Dialog.Close>
-                    <Button variant="soft" color="gray">
-                      Cancel
-                    </Button>
-                  </Dialog.Close>
-                  <Button
-                    onClick={handleImportContacts}
-                    disabled={!linkedinHtml.trim() || importing}
-                  >
-                    {importing ? "Importing…" : "Import contacts"}
-                  </Button>
-                </Flex>
-              </Dialog.Content>
-            </Dialog.Root>
-          )}
-          <Box style={{ width: 240 }}>
-            <TextField.Root
-              size="2"
-              placeholder="Search contacts…"
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-            >
-              <TextField.Slot>
-                <MagnifyingGlassIcon />
-              </TextField.Slot>
-            </TextField.Root>
-          </Box>
-        </Flex>
-      </Flex>
-
-      {!loading && contactsList.length === 0 ? (
-        <Callout.Root color="gray" variant="soft">
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>No contacts found.</Callout.Text>
-        </Callout.Root>
-      ) : (
-        <Flex direction="column" gap="2">
-          {contactsList.map((contact) => (
-            <Card key={contact.id}>
-              <Box p="3">
-                <Flex align="start" justify="between" gap="3" wrap="wrap">
-                  <Box style={{ minWidth: 0 }}>
-                    <Flex align="center" gap="2" wrap="wrap">
-                      <Text size="3" weight="medium">
-                        {contact.firstName} {contact.lastName}
-                      </Text>
-                      {contact.emailVerified && (
-                        <Badge color="green" variant="soft" size="1">
-                          verified
-                        </Badge>
-                      )}
-                      {contact.doNotContact && (
-                        <Badge color="red" variant="soft" size="1">
-                          do not contact
-                        </Badge>
-                      )}
-                    </Flex>
-
-                    {contact.position && (
-                      <Text size="2" color="gray" mt="1" as="p">
-                        {contact.position}
-                      </Text>
-                    )}
-
-                    <Flex gap="3" mt="2" wrap="wrap" align="center">
-                      {contact.email && (
-                        <Flex align="center" gap="1">
-                          <EnvelopeClosedIcon color="gray" />
-                          <RadixLink
-                            href={`mailto:${contact.email}`}
-                            size="2"
-                            color="gray"
-                          >
-                            {contact.email}
-                          </RadixLink>
-                        </Flex>
-                      )}
-                      {contact.linkedinUrl && (
-                        <Flex align="center" gap="1">
-                          <LinkedInLogoIcon color="gray" />
-                          <RadixLink
-                            href={contact.linkedinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="2"
-                            color="gray"
-                          >
-                            LinkedIn
-                            <ExternalLinkIcon style={{ marginLeft: 4 }} />
-                          </RadixLink>
-                        </Flex>
-                      )}
-                      {contact.githubHandle && (
-                        <Flex align="center" gap="1">
-                          <GitHubLogoIcon color="gray" />
-                          <RadixLink
-                            href={`https://github.com/${contact.githubHandle}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="2"
-                            color="gray"
-                          >
-                            {contact.githubHandle}
-                          </RadixLink>
-                        </Flex>
-                      )}
-                    </Flex>
-
-                    {contact.tags && contact.tags.length > 0 && (
-                      <Flex gap="1" mt="2" wrap="wrap">
-                        {contact.tags.map((tag) => (
-                          <Badge key={tag} color="gray" variant="surface" size="1">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </Flex>
-                    )}
-                  </Box>
-                </Flex>
-              </Box>
-            </Card>
-          ))}
-        </Flex>
-      )}
-    </Box>
-  );
-}
 
 export function CompanyDetail({ companyKey, companyId }: Props) {
   const { user } = useAuth();
@@ -700,6 +401,12 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
     (j) => j.company_key === effectiveKey,
   );
 
+  const remoteEuConfirmed = companyJobs.some(
+    (j) => j.is_remote_eu === true && j.remote_eu_confidence === "high",
+  );
+  const remoteEuLikely =
+    !remoteEuConfirmed && companyJobs.some((j) => j.is_remote_eu === true);
+
   const websiteHref = useMemo(
     () => coerceExternalUrl(company?.website),
     [company?.website]
@@ -708,11 +415,6 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
     () => prettyUrl(company?.website),
     [company?.website]
   );
-
-  const scoreText = useMemo(() => {
-    const v = company?.score;
-    return typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "—";
-  }, [company?.score]);
 
   const handleEnhance = useCallback(async () => {
     if (!company) return;
@@ -880,6 +582,7 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
               src={company.logo_url || undefined}
               fallback={initialsFromName(company.name)}
               radius="large"
+              aria-label={`${company.name} logo`}
             />
 
             <Box style={{ flex: 1, minWidth: 0 }}>
@@ -914,29 +617,25 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                   </Flex>
                 )}
 
-                <Text size="2" color="gray">
-                  •
-                </Text>
+                {companyJobs.length > 0 && (
+                  <Badge color="indigo" variant="soft">
+                    {companyJobs.length} open role{companyJobs.length !== 1 ? "s" : ""}
+                  </Badge>
+                )}
 
-                <Text size="2" color="gray">
-                  Score <Strong>{scoreText}</Strong>
-                </Text>
+                {remoteEuConfirmed && (
+                  <Badge color="green" variant="soft">
+                    <CheckCircledIcon />
+                    Remote EU confirmed
+                  </Badge>
+                )}
 
-                <Text size="2" color="gray">
-                  •
-                </Text>
-
-                <Text size="2" color="gray">
-                  ATS <Strong>{company.ats_boards?.length ?? 0}</Strong>
-                </Text>
-
-                <Text size="2" color="gray">
-                  •
-                </Text>
-
-                <Text size="2" color="gray">
-                  Tags <Strong>{company.tags?.length ?? 0}</Strong>
-                </Text>
+                {remoteEuLikely && (
+                  <Badge color="amber" variant="soft">
+                    <CheckCircledIcon />
+                    Remote EU likely
+                  </Badge>
+                )}
               </Flex>
 
               <Flex gap="2" wrap="wrap" mt="3">
@@ -947,30 +646,96 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
             </Box>
           </Flex>
 
-          {isAdmin && (
-            <Button
-              onClick={handleEnhance}
-              disabled={isEnhancing}
-              color="orange"
-              variant="solid"
-            >
-              <MagicWandIcon />
-              {isEnhancing ? "Enhancing…" : "Enhance"}
-            </Button>
-          )}
+          <Flex gap="2" align="center">
+            {isAdmin && (
+              <Link
+                href={`/companies/${effectiveKey}/contacts`}
+                style={{ textDecoration: "none" }}
+              >
+                <Button size="2" variant="soft" color="gray">
+                  <PersonIcon />
+                  Contacts
+                </Button>
+              </Link>
+            )}
+            {isAdmin && (
+              <Button
+                onClick={handleEnhance}
+                disabled={isEnhancing}
+                color="orange"
+                variant="solid"
+              >
+                <MagicWandIcon />
+                {isEnhancing ? "Enhancing…" : "Enhance"}
+              </Button>
+            )}
+          </Flex>
         </Flex>
 
         {/* Tabs */}
-        <Tabs.Root defaultValue="overview">
+        <Tabs.Root
+          defaultValue={companyJobs.length > 0 ? "jobs" : "overview"}
+          aria-label="Company sections"
+        >
           <Tabs.List>
-            <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-            <Tabs.Trigger value="contacts">
-              Contacts {companyJobs.length > 0 ? null : null}
-            </Tabs.Trigger>
             <Tabs.Trigger value="jobs">
-              Jobs {companyJobs.length > 0 ? `(${companyJobs.length})` : ""}
+              Jobs{companyJobs.length > 0 ? ` (${companyJobs.length})` : ""}
             </Tabs.Trigger>
+            <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
           </Tabs.List>
+
+          {/* Jobs tab */}
+          <Tabs.Content value="jobs">
+            <Box pt="4">
+              {companyJobs.length === 0 ? (
+                <Callout.Root color="gray" variant="soft">
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text>No open roles at this company right now.</Callout.Text>
+                </Callout.Root>
+              ) : (
+                <Flex direction="column">
+                  {companyJobs.map((job, idx) => {
+                    const jobId = extractJobSlug(job.external_id, job.id);
+                    const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
+                    return (
+                      <Box key={job.id}>
+                        <Link href={jobHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
+                          <Flex justify="between" align="center" gap="4" py="2" style={{ cursor: "pointer" }}>
+                            <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
+                              <Text size="3" weight="medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {job.title}
+                              </Text>
+                              <Flex gap="2" align="center" wrap="wrap">
+                                {job.location && (
+                                  <Text size="2" color="gray">
+                                    {job.location}
+                                  </Text>
+                                )}
+                                {job.is_remote_eu && (
+                                  <Badge color="green" variant="soft" size="1">
+                                    <CheckCircledIcon />
+                                    Remote EU
+                                  </Badge>
+                                )}
+                              </Flex>
+                            </Flex>
+                            {job.publishedAt && (
+                              <Text size="1" color="gray" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+                                {new Date(job.publishedAt).toLocaleDateString()}
+                              </Text>
+                            )}
+                          </Flex>
+                        </Link>
+                        {idx < companyJobs.length - 1 ? <Separator size="4" /> : null}
+                      </Box>
+                    );
+                  })}
+                </Flex>
+              )}
+            </Box>
+          </Tabs.Content>
 
           {/* Overview tab */}
           <Tabs.Content value="overview">
@@ -1011,6 +776,7 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                         canonicalDomain={company.canonical_domain}
                         score={company.score}
                         careerPagesCount={company.ats_boards?.length ?? 0}
+                        isAdmin={isAdmin}
                       />
 
                       {company.industries?.length ? (
@@ -1018,6 +784,15 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                           <CollapsibleChips
                             items={company.industries}
                             visibleCount={8}
+                          />
+                        </SectionCard>
+                      ) : null}
+
+                      {company.ashby_enrichment?.tech_signals?.length ? (
+                        <SectionCard title="Tech stack">
+                          <CollapsibleChips
+                            items={company.ashby_enrichment.tech_signals}
+                            visibleCount={10}
                           />
                         </SectionCard>
                       ) : null}
@@ -1031,59 +806,9 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                   </Box>
                 </Flex>
 
-                {/* Ashby crawler enrichment */}
-                {company.ashby_enrichment?.enriched_at ? (
-                  <SectionCard title="Ashby Enrichment">
-                    <Flex direction="column" gap="3">
-                      <Flex gap="4" align="center" wrap="wrap">
-                        {company.ashby_enrichment.company_name ? (
-                          <Flex gap="2" align="center">
-                            <Text size="2" color="gray">Company</Text>
-                            <Text size="2" weight="medium">{company.ashby_enrichment.company_name}</Text>
-                          </Flex>
-                        ) : null}
-                        {company.ashby_enrichment.size_signal ? (
-                          <Flex gap="2" align="center">
-                            <Text size="2" color="gray">Size signal</Text>
-                            <Badge color="amber" variant="soft" radius="full">
-                              {company.ashby_enrichment.size_signal}
-                            </Badge>
-                          </Flex>
-                        ) : null}
-                      </Flex>
-
-                      {company.ashby_enrichment.industry_tags.length ? (
-                        <Flex gap="2" wrap="wrap" align="center">
-                          <Text size="2" color="gray" style={{ minWidth: 90 }}>Industries</Text>
-                          {company.ashby_enrichment.industry_tags.map((tag) => (
-                            <Badge key={tag} color="blue" variant="soft" radius="full">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </Flex>
-                      ) : null}
-
-                      {company.ashby_enrichment.tech_signals.length ? (
-                        <Flex gap="2" wrap="wrap" align="center">
-                          <Text size="2" color="gray" style={{ minWidth: 90 }}>Tech</Text>
-                          {company.ashby_enrichment.tech_signals.map((sig) => (
-                            <Badge key={sig} color="violet" variant="soft" radius="full">
-                              {sig}
-                            </Badge>
-                          ))}
-                        </Flex>
-                      ) : null}
-
-                      <Text size="1" color="gray">
-                        Enriched {new Date(company.ashby_enrichment.enriched_at).toLocaleDateString()}
-                      </Text>
-                    </Flex>
-                  </SectionCard>
-                ) : null}
-
                 {/* Career pages */}
                 {company.ats_boards?.length ? (
-                  <SectionCard title={`Career pages (${company.ats_boards.length})`}>
+                  <SectionCard title={`Hiring platforms (${company.ats_boards.length})`}>
                     <Flex direction="column">
                       {company.ats_boards.map((board, idx) => {
                         const confidence =
@@ -1098,7 +823,7 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                               <Flex gap="2" wrap="wrap" align="center">
                                 <Chip>{board.vendor}</Chip>
                                 <Chip>{board.board_type}</Chip>
-                                {confidence !== null ? (
+                                {confidence !== null && isAdmin ? (
                                   <Badge color="gray" variant="outline">
                                     {confidence}% confidence
                                   </Badge>
@@ -1139,7 +864,47 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                   </SectionCard>
                 ) : null}
 
-                {company.score_reasons?.length ? (
+                {/* Admin-only: Ashby enrichment raw data */}
+                {isAdmin && company.ashby_enrichment?.enriched_at ? (
+                  <SectionCard title="Ashby Enrichment">
+                    <Flex direction="column" gap="3">
+                      <Flex gap="4" align="center" wrap="wrap">
+                        {company.ashby_enrichment.company_name ? (
+                          <Flex gap="2" align="center">
+                            <Text size="2" color="gray">Company</Text>
+                            <Text size="2" weight="medium">{company.ashby_enrichment.company_name}</Text>
+                          </Flex>
+                        ) : null}
+                        {company.ashby_enrichment.size_signal ? (
+                          <Flex gap="2" align="center">
+                            <Text size="2" color="gray">Size signal</Text>
+                            <Badge color="amber" variant="soft" radius="full">
+                              {company.ashby_enrichment.size_signal}
+                            </Badge>
+                          </Flex>
+                        ) : null}
+                      </Flex>
+
+                      {company.ashby_enrichment.industry_tags.length ? (
+                        <Flex gap="2" wrap="wrap" align="center">
+                          <Text size="2" color="gray" style={{ minWidth: 90 }}>Industries</Text>
+                          {company.ashby_enrichment.industry_tags.map((tag) => (
+                            <Badge key={tag} color="blue" variant="soft" radius="full">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </Flex>
+                      ) : null}
+
+                      <Text size="1" color="gray">
+                        Enriched {new Date(company.ashby_enrichment.enriched_at).toLocaleDateString()}
+                      </Text>
+                    </Flex>
+                  </SectionCard>
+                ) : null}
+
+                {/* Admin-only: Score breakdown */}
+                {isAdmin && company.score_reasons?.length ? (
                   <SectionCard title="Score breakdown">
                     <Flex direction="column" gap="2">
                       {company.score_reasons.map((reason: string, idx: number) => (
@@ -1153,65 +918,8 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
               </Flex>
             </Box>
           </Tabs.Content>
-
-          {/* Contacts tab */}
-          <Tabs.Content value="contacts">
-            <Box pt="4">
-              <ContactsTab
-                companyId={company.id}
-                companyName={company.name}
-                isAdmin={isAdmin}
-              />
-            </Box>
-          </Tabs.Content>
-
-          {/* Jobs tab */}
-          <Tabs.Content value="jobs">
-            <Box pt="4">
-              {companyJobs.length === 0 ? (
-                <Callout.Root color="gray" variant="soft">
-                  <Callout.Icon>
-                    <InfoCircledIcon />
-                  </Callout.Icon>
-                  <Callout.Text>No jobs found for this company.</Callout.Text>
-                </Callout.Root>
-              ) : (
-                <Flex direction="column">
-                  {companyJobs.map((job, idx) => {
-                    const jobId = extractJobSlug(job.external_id, job.id);
-                    const jobHref = `/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`;
-                    return (
-                      <Box key={job.id}>
-                        <Link href={jobHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
-                          <Flex justify="between" align="center" gap="4" py="2" style={{ cursor: "pointer" }}>
-                            <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
-                              <Text size="3" weight="medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {job.title}
-                              </Text>
-                              {job.location && (
-                                <Text size="2" color="gray">
-                                  {job.location}
-                                </Text>
-                              )}
-                            </Flex>
-                            {job.publishedAt && (
-                              <Text size="1" color="gray" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
-                                {new Date(job.publishedAt).toLocaleDateString()}
-                              </Text>
-                            )}
-                          </Flex>
-                        </Link>
-                        {idx < companyJobs.length - 1 ? <Separator size="4" /> : null}
-                      </Box>
-                    );
-                  })}
-                </Flex>
-              )}
-            </Box>
-          </Tabs.Content>
         </Tabs.Root>
       </Flex>
     </Container>
   );
 }
-

@@ -25,7 +25,7 @@ import {
   PlusIcon,
   Pencil1Icon,
 } from "@radix-ui/react-icons";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   useGetApplicationQuery,
@@ -43,6 +43,8 @@ import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generate
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
+
+const InterviewPrepFlow = lazy(() => import("@/components/interview-prep-flow"));
 
 const COLUMNS: {
   status: ApplicationStatus;
@@ -118,6 +120,7 @@ export default function ApplicationDetailPage() {
   const [companySaveError, setCompanySaveError] = useState<string | null>(null);
   const [editingJobDescription, setEditingJobDescription] = useState(false);
   const [jobDescriptionValue, setJobDescriptionValue] = useState("");
+  const [prepView, setPrepView] = useState<"list" | "graph">("list");
 
   const handleStatusChange = async (status: ApplicationStatus) => {
     if (!app) return;
@@ -656,12 +659,48 @@ export default function ApplicationDetailPage() {
         )}
         {app.aiInterviewPrep && (
           <Box mt="4" pt="4" style={{ borderTop: "1px solid var(--gray-4)" }}>
-            <Text size="1" color="gray" weight="medium" mb="3" as="div">
-              AI-GENERATED PREP
-            </Text>
+            <Flex justify="between" align="center" mb="3">
+              <Text size="1" color="gray" weight="medium" as="div">
+                AI-GENERATED PREP
+              </Text>
+              <Flex gap="1">
+                <Button
+                  variant={prepView === "list" ? "solid" : "soft"}
+                  color="gray"
+                  size="1"
+                  onClick={() => setPrepView("list")}
+                >
+                  List
+                </Button>
+                <Button
+                  variant={prepView === "graph" ? "solid" : "soft"}
+                  color="gray"
+                  size="1"
+                  onClick={() => setPrepView("graph")}
+                >
+                  Graph
+                </Button>
+              </Flex>
+            </Flex>
             <Text size="2" color="gray" mb="4" as="div">
               {app.aiInterviewPrep.summary}
             </Text>
+            {prepView === "graph" ? (
+              <Suspense fallback={<Skeleton height="500px" />}>
+                <InterviewPrepFlow
+                  jobTitle={displayTitle}
+                  aiInterviewPrep={app.aiInterviewPrep}
+                  onRequirementClick={(req) => handleOpenTopic(req)}
+                  onStudyTopicClick={(req, topic) =>
+                    handleOpenStudyTopic(
+                      { stopPropagation: () => {} } as React.MouseEvent,
+                      req,
+                      topic,
+                    )
+                  }
+                />
+              </Suspense>
+            ) : (
             <Flex direction="column" gap="2">
               {app.aiInterviewPrep.requirements.map((req: AiInterviewPrepRequirement) => (
                 <Box
@@ -736,6 +775,7 @@ export default function ApplicationDetailPage() {
                 </Box>
               ))}
             </Flex>
+            )}
           </Box>
         )}
       </Card>
@@ -836,19 +876,29 @@ export default function ApplicationDetailPage() {
                 STUDY TOPICS
               </Text>
               <Flex gap="2" wrap="wrap" mb="4">
-                {selectedReq.studyTopics.map((t) => (
-                  <Text
-                    key={t}
-                    size="1"
-                    style={{
-                      padding: "2px 8px",
-                      backgroundColor: "var(--violet-3)",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    {t}
-                  </Text>
-                ))}
+                {selectedReq.studyTopics.map((t) => {
+                  const hasDeepDive = selectedReq.studyTopicDeepDives?.some((d) => d.topic === t && d.deepDive);
+                  return (
+                    <Text
+                      key={t}
+                      size="1"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => handleOpenStudyTopic(e, selectedReq, t)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") handleOpenStudyTopic(e as any, selectedReq, t);
+                      }}
+                      style={{
+                        padding: "2px 8px",
+                        backgroundColor: hasDeepDive ? "var(--violet-5)" : "var(--violet-3)",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t}
+                    </Text>
+                  );
+                })}
               </Flex>
 
               {/* Deep dive section */}

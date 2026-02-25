@@ -188,7 +188,6 @@ Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST 
 - **N+1 queries** for skills, company, and ATS board sub-fields — no DataLoader.
 
 ### Security
-- `enhanceJobFromATS` mutation has no auth check.
 - CORS on D1 Gateway is `*`.
 - No GraphQL query complexity/depth limiting.
 
@@ -197,7 +196,8 @@ Copy `.env.example` to `.env.local`. Key groups: D1 Gateway (or Cloudflare REST 
 - 283+ `any` types in resolvers.
 
 ### Dead code
-- `workers/janitor.ts` and `workers/insert-jobs.ts` still reference Turso (libsql) instead of D1.
+- `scripts/ingest-jobs.ts` still documents Turso env vars in its help text (stale).
+- `@libsql/client` and `pg` are likely unused after D1 migration — can be removed from dependencies.
 
 ### Dependencies
 - `@ai-sdk/anthropic` pinned to `"latest"` — should use specific version.

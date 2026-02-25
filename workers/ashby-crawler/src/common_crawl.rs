@@ -20,7 +20,14 @@ pub fn extract_board_token(url: &str, provider: AtsProvider) -> Option<String> {
     {
         return None;
     }
-    Some(token.to_lowercase())
+    let lowered = token.to_lowercase();
+    // Reject tokens where more than 40% of characters are digits — these are
+    // spam/SEO-poisoned board tokens, not real company slugs.
+    let digit_count = lowered.chars().filter(|c| c.is_ascii_digit()).count();
+    if lowered.len() > 0 && digit_count * 10 > lowered.len() * 4 {
+        return None;
+    }
+    Some(lowered)
 }
 
 pub async fn list_cc_indexes() -> Result<Vec<String>> {

@@ -15,11 +15,17 @@ database_id = "632b9c57-8262-40bd-86c2-bc08beab713b"
 # Environment variables
 [vars]
 APP_URL = "https://nomadically.work"
-# Set INSERT_JOBS_URL to auto-trigger ingestion after discovery
-# INSERT_JOBS_URL = "https://nomadically-work-insert-jobs.<subdomain>.workers.dev"
 
-# Secrets (set via: npx wrangler secret put SECRET_NAME)
-# - INSERT_JOBS_URL (optional — set as secret or var to trigger insert-jobs after discovery)
+# Secrets (set via: npx wrangler secret put SECRET_NAME --name nomadically-janitor)
+# - INSERT_JOBS_URL  REQUIRED — URL of deployed insert-jobs worker so janitor can trigger
+#                   ingestion immediately after board discovery (Phase 3).
+#                   Get the URL after deploying insert-jobs:
+#                     npx wrangler deploy --config wrangler.insert-jobs.toml
+#                   Then set it:
+#                     echo "https://nomadically-work-insert-jobs.<your-subdomain>.workers.dev" | \
+#                       npx wrangler secret put INSERT_JOBS_URL --name nomadically-janitor
+#                   Without this, the janitor defers to insert-jobs' own 12h cron (still works,
+#                   but ingestion won't start immediately after board discovery).
 
 # Observability
 [observability]

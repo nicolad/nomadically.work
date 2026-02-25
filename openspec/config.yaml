@@ -1,0 +1,40 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Next.js 16, React 19, TypeScript 5.9, Apollo Server 5 (GraphQL), Drizzle ORM, Cloudflare D1
+  Architecture: App Router, GraphQL API (/api/graphql), D1 Gateway Worker, Trigger.dev background jobs
+  Workers: Rust/WASM (ashby-crawler), Python (process-jobs, resume-rag), TypeScript (janitor, d1-gateway)
+  AI/ML: Vercel AI SDK, Anthropic Claude, DeepSeek, skill extraction + resume matching pipelines
+  Testing: Vitest (evals), Promptfoo (LLM evaluation)
+  Style: ESLint (next lint), kebab-case files, PascalCase components, pnpm 10.10
+  Deploy: Vercel (app), Cloudflare Workers (workers)
+  Auth: Clerk
+  UI: Radix UI (Themes + Icons)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+    - Reference OPTIMIZATION-STRATEGY.md constraints when touching AI/ML pipelines
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Follow D1 Gateway pattern for database access (never direct D1 binding from Vercel)
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns from CLAUDE.md (Drizzle ORM, Apollo resolvers, Trigger.dev tasks)
+    - Run pnpm codegen after any schema/**/*.graphql change
+    - Use generated types from src/__generated__/, never hand-write
+    - Admin mutations must include isAdminEmail() guard
+  verify:
+    - Run pnpm build to catch type errors
+    - Run pnpm lint for style conformance
+    - Compare implementation against every spec scenario
+  archive:
+    - Warn before merging destructive deltas (large removals)

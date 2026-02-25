@@ -203,10 +203,12 @@ type Company {
   id: Int!
   industries: [String!]!
   industry: String
+  job_board_url: String
   key: String!
   last_seen_capture_timestamp: String
   last_seen_crawl_id: String
   last_seen_source_url: String
+  linkedin_url: String
   location: String
   logo_url: String
   name: String!
@@ -1037,7 +1039,9 @@ input UpdateCompanyInput {
   description: String
   industries: [String!]
   industry: String
+  job_board_url: String
   key: String
+  linkedin_url: String
   location: String
   logo_url: String
   name: String

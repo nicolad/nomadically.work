@@ -490,6 +490,8 @@ export const companyResolvers = {
           industry?: string;
           size?: string;
           location?: string;
+          linkedin_url?: string;
+          job_board_url?: string;
           canonical_domain?: string;
           category?: string;
           tags?: string[];

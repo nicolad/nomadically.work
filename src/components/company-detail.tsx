@@ -395,10 +395,11 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
     website: company?.website ?? "",
     description: company?.description ?? "",
     logo_url: company?.logo_url ?? "",
-    location: company?.location ?? "",
     size: company?.size ?? "",
     industry: company?.industry ?? "",
     canonical_domain: company?.canonical_domain ?? "",
+    linkedin_url: company?.linkedin_url ?? "",
+    job_board_url: company?.job_board_url ?? "",
     category: (company?.category as CompanyCategory | null | undefined) ?? null,
     tags: (company?.tags ?? []).join(", "),
     services: (company?.services ?? []).join("\n"),
@@ -421,10 +422,11 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
       website: company?.website ?? "",
       description: company?.description ?? "",
       logo_url: company?.logo_url ?? "",
-      location: company?.location ?? "",
       size: company?.size ?? "",
       industry: company?.industry ?? "",
       canonical_domain: company?.canonical_domain ?? "",
+      linkedin_url: company?.linkedin_url ?? "",
+      job_board_url: company?.job_board_url ?? "",
       category: (company?.category as CompanyCategory | null | undefined) ?? null,
       tags: (company?.tags ?? []).join(", "),
       services: (company?.services ?? []).join("\n"),
@@ -452,10 +454,11 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
           website: form.website || undefined,
           description: form.description || undefined,
           logo_url: form.logo_url || undefined,
-          location: form.location || undefined,
           size: form.size || undefined,
           industry: form.industry || undefined,
           canonical_domain: form.canonical_domain || undefined,
+          linkedin_url: form.linkedin_url || undefined,
+          job_board_url: form.job_board_url || undefined,
           category: form.category ?? undefined,
           tags: tags.length > 0 ? tags : undefined,
           services: services.length > 0 ? services : undefined,
@@ -527,14 +530,6 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
 
           <Flex gap="3">
             <Flex direction="column" gap="1" style={{ flex: 1 }}>
-              <Text size="2" weight="medium">Location</Text>
-              <TextField.Root
-                value={form.location}
-                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                placeholder="e.g. Remote, Berlin"
-              />
-            </Flex>
-            <Flex direction="column" gap="1" style={{ flex: 1 }}>
               <Text size="2" weight="medium">Size</Text>
               <TextField.Root
                 value={form.size}
@@ -542,9 +537,6 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
                 placeholder="e.g. 51-200"
               />
             </Flex>
-          </Flex>
-
-          <Flex gap="3">
             <Flex direction="column" gap="1" style={{ flex: 1 }}>
               <Text size="2" weight="medium">Industry</Text>
               <TextField.Root
@@ -553,25 +545,44 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
                 placeholder="e.g. Software"
               />
             </Flex>
-            <Flex direction="column" gap="1" style={{ flex: 1 }}>
-              <Text size="2" weight="medium">Category</Text>
-              <Select.Root
-                value={form.category ?? ""}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, category: (v as CompanyCategory) || null }))
-                }
-              >
-                <Select.Trigger placeholder="Select…" style={{ width: "100%" }} />
-                <Select.Content>
-                  <Select.Item value="">— none —</Select.Item>
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <Select.Item key={c} value={c}>
-                      {c}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </Flex>
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">LinkedIn URL</Text>
+            <TextField.Root
+              value={form.linkedin_url}
+              onChange={(e) => setForm((f) => ({ ...f, linkedin_url: e.target.value }))}
+              placeholder="https://linkedin.com/company/..."
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Job board URL</Text>
+            <TextField.Root
+              value={form.job_board_url}
+              onChange={(e) => setForm((f) => ({ ...f, job_board_url: e.target.value }))}
+              placeholder="https://jobs.ashbyhq.com/..."
+            />
+          </Flex>
+
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Category</Text>
+            <Select.Root
+              value={form.category ?? "__none__"}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, category: v === "__none__" ? null : (v as CompanyCategory) }))
+              }
+            >
+              <Select.Trigger placeholder="Select…" style={{ width: "100%" }} />
+              <Select.Content>
+                <Select.Item value="__none__">— none —</Select.Item>
+                {CATEGORY_OPTIONS.map((c) => (
+                  <Select.Item key={c} value={c}>
+                    {c}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
           </Flex>
 
           <Flex direction="column" gap="1">

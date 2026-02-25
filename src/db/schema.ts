@@ -32,6 +32,9 @@ export const companies = sqliteTable("companies", {
   service_taxonomy: text("service_taxonomy"), // JSON array of normalized taxonomy IDs
   industries: text("industries"), // JSON array for multi-industry
 
+  linkedin_url: text("linkedin_url"),
+  job_board_url: text("job_board_url"),
+
   score: real("score").notNull().default(0.5), // 0..1
   score_reasons: text("score_reasons"), // JSON array
 

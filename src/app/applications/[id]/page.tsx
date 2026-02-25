@@ -1,6 +1,7 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Container,
   Heading,
@@ -1155,7 +1156,7 @@ export default function ApplicationDetailPage() {
                   </Text>
                 ) : selectedReq.deepDive ? (
                   <Box className="deep-dive-content">
-                    <ReactMarkdown>{selectedReq.deepDive}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedReq.deepDive}</ReactMarkdown>
                   </Box>
                 ) : null}
               </Box>
@@ -1276,7 +1277,7 @@ export default function ApplicationDetailPage() {
                   );
                   return d?.deepDive ? (
                     <Box className="deep-dive-content">
-                      <ReactMarkdown>{d.deepDive}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{d.deepDive}</ReactMarkdown>
                     </Box>
                   ) : null;
                 })()}

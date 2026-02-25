@@ -101,6 +101,60 @@ async function syncNewBoards(
 }
 
 // ---------------------------------------------------------------------------
+// Phase 1b: Purge existing spam board tokens
+// ---------------------------------------------------------------------------
+
+/**
+ * Removes job_sources rows whose company_key looks like a raw ATS board token
+ * (more than 40% digit characters). These were inserted before the digit-ratio
+ * guard existed in syncNewBoards. Also archives their associated jobs.
+ */
+async function purgeSpamBoards(
+  db: D1Database,
+  traceId: string,
+): Promise<{ purged: number; jobsArchived: number }> {
+  // SQLite: compute length of key with all digits stripped; if that length is
+  // <= 60% of original length, more than 40% of chars are digits → spam.
+  const spamRows = await db
+    .prepare(
+      `SELECT id, kind, company_key FROM job_sources
+       WHERE CAST(
+         LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(company_key,
+           '0',''),'1',''),'2',''),'3',''),'4',''),
+           '5',''),'6',''),'7',''),'8',''),'9',''))
+         AS REAL) <= LENGTH(company_key) * 0.6`,
+    )
+    .all<{ id: number; kind: string; company_key: string }>();
+
+  const rows = spamRows.results ?? [];
+  if (rows.length === 0) return { purged: 0, jobsArchived: 0 };
+
+  let jobsArchived = 0;
+  for (const source of rows) {
+    log({
+      worker: WORKER, action: "spam-board-found", level: "warn", traceId,
+      metadata: { sourceId: source.id, kind: source.kind, companyKey: source.company_key },
+    });
+    const archiveResult = await db
+      .prepare(
+        `UPDATE jobs SET status = 'archived', updated_at = datetime('now')
+         WHERE source_id = ? AND status NOT IN ('reported', 'archived')`,
+      )
+      .bind(source.id)
+      .run();
+    jobsArchived += archiveResult.meta?.changes ?? 0;
+    await db.prepare(`DELETE FROM job_sources WHERE id = ?`).bind(source.id).run();
+  }
+
+  log({
+    worker: WORKER, action: "spam-board-purge", level: "info", traceId,
+    metadata: { purged: rows.length, jobsArchived },
+  });
+  return { purged: rows.length, jobsArchived };
+}
+
+// ---------------------------------------------------------------------------
 // Phase 2: Dead board cleanup
 // ---------------------------------------------------------------------------
 
@@ -319,6 +373,9 @@ export default {
       // Phase 1: Sync new boards discovered by crawlers into job_sources
       const sync = await syncNewBoards(env.DB, traceId);
 
+      // Phase 1b: Purge existing spam board tokens that pre-date the digit-ratio guard
+      const spamPurge = await purgeSpamBoards(env.DB, traceId);
+
       // Phase 2: Remove dead boards (repeated 4xx) and archive their jobs
       const cleanup = await cleanupDeadBoards(env.DB, traceId);
 
@@ -332,6 +389,8 @@ export default {
           stale: stats.stale,
           byKind: stats.byKind,
           newBoardsSynced: sync.added,
+          spamBoardsPurged: spamPurge.purged,
+          spamJobsArchived: spamPurge.jobsArchived,
           deadBoardsRemoved: cleanup.deactivated,
           jobsArchived: cleanup.jobsArchived,
         },

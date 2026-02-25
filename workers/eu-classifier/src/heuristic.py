@@ -69,8 +69,22 @@ def keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
             and not signals["eu_countries_in_location"]):
         return None
 
-    # Worldwide remote: ATS remote flag + no country code + no negative signals
+    # Worldwide remote: ATS remote flag + no country code + no negative signals.
+    # Require a meaningful description and a plausible company key (not a raw
+    # ATS board token filled with digits) before auto-accepting.
     if signals["ats_remote"] and not signals["country_code"]:
+        company_key = (job.get("company_key") or "")
+        digit_ratio = (
+            sum(1 for c in company_key if c.isdigit()) / len(company_key)
+            if company_key else 0.0
+        )
+        if digit_ratio > 0.4:
+            # Suspicious board token — escalate to LLM rather than auto-accept
+            return None
+        desc_len = len((job.get("description") or "").strip())
+        if desc_len < 100:
+            # Near-empty description — not enough signal to auto-accept
+            return None
         return JobClassification(
             isRemoteEU=True,
             confidence="medium",

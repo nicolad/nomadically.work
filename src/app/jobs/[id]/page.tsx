@@ -38,6 +38,13 @@ import type { JobClassificationResponse } from "@/lib/classify-job";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSkillLabel, formatConfidence } from "@/lib/skills/taxonomy";
 
+/** Returns false if the company key looks like a raw ATS board token (>40% digits). */
+function isValidCompanyKey(key: string): boolean {
+  if (!key) return false;
+  const digits = (key.match(/\d/g) ?? []).length;
+  return digits / key.length <= 0.4;
+}
+
 function JobPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -349,7 +356,7 @@ function JobPageContent() {
           </Flex>
         </Flex>
         <Flex gap="4" mb="4" align="center">
-          {job.company_key && (
+          {job.company_key && isValidCompanyKey(job.company_key) && (
             <>
               <Link
                 href={`/companies/${job.company?.key ?? job.company_key}${job.source_kind ? `?source=${job.source_kind}` : ""}`}
@@ -366,7 +373,7 @@ function JobPageContent() {
                     textUnderlineOffset: "2px",
                   }}
                 >
-                  {job.company_key}
+                  {job.company_name ?? job.company_key}
                 </Text>
               </Link>
               {user && (

@@ -751,6 +751,16 @@ async function autoIngestFromSources(
       for (const atsJob of atsJobs) {
         if (!atsJob.externalId || !atsJob.title) continue;
 
+        const effectiveKey = atsJob.companyKey ?? companyKey;
+        const keyDigits = (effectiveKey.match(/\d/g) ?? []).length;
+        if (keyDigits / effectiveKey.length > 0.4) {
+          log({
+            worker: WORKER, action: "ingest-skip", level: "warn", traceId,
+            metadata: { kind, companyKey: effectiveKey, reason: "spam-company-key" },
+          });
+          continue;
+        }
+
         const result = await insertJob(db, {
           externalId: atsJob.externalId,
           sourceId,

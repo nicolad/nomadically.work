@@ -308,9 +308,16 @@ const Query: QueryResolvers = {
    */
   async job(_parent, args, context) {
     try {
+      const spamKeyFilter = sql<boolean>`(
+        CAST(LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${jobs.company_key},
+          '0',''),'1',''),'2',''),'3',''),'4',''),
+          '5',''),'6',''),'7',''),'8',''),'9',''))
+        AS REAL) > LENGTH(${jobs.company_key}) * 0.6
+      )`;
       const baseConditions = REMOTE_EU_ONLY
-        ? [ne(jobs.status, "reported"), eq(jobs.is_remote_eu, true)]
-        : [ne(jobs.status, "reported")];
+        ? [ne(jobs.status, "reported"), eq(jobs.is_remote_eu, true), spamKeyFilter]
+        : [ne(jobs.status, "reported"), spamKeyFilter];
 
       // 1. Exact match on external_id (Ashby UUIDs, bare IDs)
       const exactResults = await context.db

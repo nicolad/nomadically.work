@@ -8,9 +8,9 @@ Two-tier LLM strategy:
 import json
 import re
 
-from .constants import WORKERS_AI_MODEL
-from .models import JobClassification
-from .prompts import CLASSIFICATION_PROMPT
+from constants import WORKERS_AI_MODEL
+from models import JobClassification
+from prompts import CLASSIFICATION_PROMPT
 
 # langchain-cloudflare -- Workers AI binding integration (PyPI)
 from langchain_cloudflare import ChatCloudflareWorkersAI

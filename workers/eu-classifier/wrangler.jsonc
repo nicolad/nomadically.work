@@ -19,23 +19,9 @@
       "remote": true,
     },
   ],
-  "queues": {
-    "producers": [
-      {
-        "queue": "eu-classifier-queue",
-        "binding": "EU_CLASSIFIER_QUEUE",
-      },
-    ],
-    "consumers": [
-      {
-        "queue": "eu-classifier-queue",
-        "max_batch_size": 10,
-        "max_batch_timeout": 30,
-        "max_retries": 3,
-        "dead_letter_queue": "eu-classifier-dlq",
-      },
-    ],
-  },
+  // queues: disabled — eu-classifier-queue/dlq not yet created (wrangler queues create fails on current plan).
+  // The cron + HTTP /classify endpoint are the primary triggers; queue consumer is optional.
+  // Re-enable once queues are created via CF dashboard.
   "vars": {
     "LANGCHAIN_TRACING_V2": "true",
     "LANGCHAIN_PROJECT": "nomadically-work-eu-classifier",

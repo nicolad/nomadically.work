@@ -8,7 +8,7 @@ heuristic and the LLM classification prompt.
 import json
 import re
 
-from .constants import (
+from constants import (
     EU_ISO_CODES,
     EU_COUNTRY_NAMES,
     COUNTRY_NAME_TO_ISO,

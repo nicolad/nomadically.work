@@ -656,7 +656,6 @@ interface IngestionStats {
 
 async function autoIngestFromSources(
   db: D1Database,
-  queue: Queue<QueueMessage>,
   options: { maxSources?: number; stalePeriodHours?: number; traceId?: string } = {},
 ): Promise<IngestionStats> {
   const { maxSources = 500, stalePeriodHours = 12, traceId } = options;
@@ -845,26 +844,8 @@ async function autoIngestFromSources(
         }
       }
 
-      // Enqueue new jobs in batches with correlation IDs
-      if (newJobIds.length > 0 && queue) {
-        const batchMessages = newJobIds.map((jobId) => ({
-          body: { jobId, traceId } as QueueMessage,
-        }));
-        // sendBatch supports up to 100 messages per call
-        for (let i = 0; i < batchMessages.length; i += 100) {
-          const chunk = batchMessages.slice(i, i + 100);
-          try {
-            await queue.sendBatch(chunk);
-            stats.jobsEnqueued += chunk.length;
-          } catch (err) {
-            log({
-              worker: WORKER, action: "queue-send", level: "error", traceId,
-              error: err instanceof Error ? err.message : String(err),
-              metadata: { chunkSize: chunk.length, kind, companyKey },
-            });
-          }
-        }
-      }
+      // Track inserted count for single trigger at end of ingest (not per-job queue messages)
+      stats.jobsEnqueued += newJobIds.length;
 
       // Update last_fetched_at and reset consecutive_errors on success
       await d1Run(
@@ -922,7 +903,6 @@ async function autoIngestFromSources(
 
 async function recoverStalledJobs(
   db: D1Database,
-  queue: Queue<QueueMessage>,
   traceId?: string,
 ): Promise<{ recovered: number }> {
   // Find jobs stuck in 'new' status for more than 6 hours
@@ -957,22 +937,7 @@ async function recoverStalledJobs(
     );
   }
 
-  // Re-enqueue in batches with correlation IDs
-  const batchMessages = ids.map((jobId) => ({
-    body: { jobId, traceId } as QueueMessage,
-  }));
-  for (let i = 0; i < batchMessages.length; i += 100) {
-    try {
-      await queue.sendBatch(batchMessages.slice(i, i + 100));
-    } catch (err) {
-      log({
-        worker: WORKER, action: "recover-queue-send", level: "error", traceId,
-        error: err instanceof Error ? err.message : String(err),
-        metadata: { batchIndex: i, totalIds: ids.length },
-      });
-    }
-  }
-
+  // Caller sends a single trigger to process-jobs-queue (not per-job messages)
   return { recovered: ids.length };
 }
 
@@ -1135,9 +1100,12 @@ export default {
       const maxSources = Number(url.searchParams.get("limit")) || 500;
       const stats = await autoIngestFromSources(
         env.DB,
-        env.JOBS_QUEUE,
         { maxSources, traceId },
       );
+      // Single trigger instead of per-job queue messages
+      if (stats.jobsInserted > 0) {
+        await triggerProcessing(env.PROCESS_JOBS_QUEUE, stats.jobsInserted, traceId);
+      }
       return jsonResponse(
         { success: true, message: "Ingestion complete", traceId, stats },
         { headers: corsHeaders },
@@ -1200,24 +1168,16 @@ export default {
       const newJobs = successful.filter((r) => r.isNew);
       const failed = insertResults.filter((r) => !r.success);
 
-      // Enqueue only genuinely new jobs with correlation IDs
-      let enqueued = 0;
+      // Single trigger for new jobs (1 queue op instead of N_jobs ops)
       if (newJobs.length > 0) {
-        const batchMessages = newJobs.map((r) => ({
-          body: { jobId: r.jobId!, traceId } as QueueMessage,
-        }));
-        for (let i = 0; i < batchMessages.length; i += 100) {
-          const chunk = batchMessages.slice(i, i + 100);
-          await env.JOBS_QUEUE.sendBatch(chunk);
-          enqueued += chunk.length;
-        }
+        await triggerProcessing(env.PROCESS_JOBS_QUEUE, newJobs.length, traceId);
       }
 
       log({
         worker: WORKER, action: "insert-batch", level: "info", traceId,
         metadata: {
           total: body.jobs.length, success: successful.length,
-          new: newJobs.length, enqueued, failed: failed.length,
+          new: newJobs.length, failed: failed.length,
         },
       });
 
@@ -1225,14 +1185,13 @@ export default {
         {
           success: failed.length === 0,
           traceId,
-          message: `Inserted ${successful.length}/${body.jobs.length} jobs (${newJobs.length} new); enqueued ${enqueued}`,
+          message: `Inserted ${successful.length}/${body.jobs.length} jobs (${newJobs.length} new)`,
           data: {
             totalJobs: body.jobs.length,
             successCount: successful.length,
             newCount: newJobs.length,
             skippedCount: successful.length - newJobs.length,
             failCount: failed.length,
-            enqueuedCount: enqueued,
             jobIds: successful.map((r) => r.jobId),
             failures: failed.map((r) => r.error),
           },
@@ -1278,16 +1237,17 @@ export default {
       // Phase 1: Auto-ingest from ATS sources — no arbitrary cap; process all stale boards
       const ingestionStats = await autoIngestFromSources(
         env.DB,
-        env.JOBS_QUEUE,
         { maxSources: 500, stalePeriodHours: 12, traceId },
       );
 
       // Phase 2: Recover stalled jobs
-      const recovery = await recoverStalledJobs(
-        env.DB,
-        env.JOBS_QUEUE,
-        traceId,
-      );
+      const recovery = await recoverStalledJobs(env.DB, traceId);
+
+      // Phase 3: Single trigger to process-jobs (1 queue op instead of N_jobs ops)
+      const totalToProcess = ingestionStats.jobsInserted + recovery.recovered;
+      if (totalToProcess > 0) {
+        await triggerProcessing(env.PROCESS_JOBS_QUEUE, totalToProcess, traceId);
+      }
 
       log({
         worker: WORKER, action: "scheduled-complete", level: "info", traceId,

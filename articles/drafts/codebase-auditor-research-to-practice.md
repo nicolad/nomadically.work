@@ -1,13 +1,13 @@
 ---
-title: "From Research to Practice: An AI Codebase Auditor That Traces Execution Paths, Not Just Patterns"
-description: "How TraceCoder, TrajAD, Graph-RAG, and Architecture-Aware Evaluation shaped a code auditing agent that investigates like a senior engineer — with playbooks for performance, security, type safety, and dead code."
+title: "Your Linter Can't Trace Execution Paths. This Agent Can."
+description: "Linters catch patterns. This AI agent traces N+1 queries from resolver to database and back. Four research papers shaped an auditor with playbooks for perf, security, types, and dead code."
 date: "2026-02-25"
 author: "nomadically.work"
-tags: ["autonomous-agents", "code-auditing", "self-improvement", "software-quality"]
-status: published
+tags: ["autonomous-agents", "code-auditing", "self-improvement", "software-quality", "AI-code-review"]
+status: draft
 ---
 
-# From Research to Practice: An AI Codebase Auditor That Traces Execution Paths, Not Just Patterns
+# Your Linter Can't Trace Execution Paths. This Agent Can.
 
 Static analysis tools find pattern violations. Linters catch style issues. But neither traces an N+1 query from a GraphQL resolver through a DataLoader absence to a frontend performance degradation. That requires understanding execution paths — and that's what the Codebase Auditor does.
 
@@ -17,7 +17,13 @@ Four research papers shaped its design, curated from the [VoltAgent/awesome-ai-a
 
 > **Note:** The implementation has since evolved from a generic codebase auditor into a goal-driven "Discovery Expander" focused on finding more AI engineering companies and job boards. The research principles described here still underpin the architecture. The playbooks and data structures below reflect the original design that these papers informed.
 
-## The Research Foundation
+## What Linters Miss
+
+ESLint will tell you about an unused variable. SonarQube will flag a code smell. Neither will tell you that your `enhance-job.ts` resolver fetches every job in the database to find one by `external_id` — a full table scan that degrades with every job you add. Neither will trace a missing admin guard from mutation definition through resolver to production exposure. The gap between pattern matching and execution path tracing is where real bugs live.
+
+Google's 2025 DORA Report found that 90% AI adoption increase correlates with a 91% increase in code review time. More AI-generated code means more code to review — and linters aren't scaling to meet the need. What's needed isn't a faster linter. It's an agent that investigates like a senior engineer: following imports, reading callers, tracing data flow across layers.
+
+## Four Papers, One Auditor
 
 ### TraceCoder: Observe-Analyze-Repair
 
@@ -115,11 +121,13 @@ A subtle but important feature: the auditor reads CLAUDE.md's "Known issues" sec
 
 This prevents the improvement pipeline from generating redundant work. The team already knows about CORS `*` on the gateway. The auditor's job is to find what the team doesn't know.
 
-## Why This Matters
+## Read-Only by Design
 
 Traditional static analysis operates at the syntax level. Code review by humans operates at the understanding level but doesn't scale. The Codebase Auditor sits between these — it traces execution paths like a human reviewer but does so systematically across the entire codebase, guided by playbooks that encode institutional knowledge about what to look for.
 
 The read-only constraint is fundamental. By never modifying code, the auditor can be aggressive in its investigation without risk. It can report 20 findings per audit (its configured limit), each with confidence scores, and let the downstream Code Improver decide which ones to actually fix. This separation of diagnosis from treatment mirrors how senior engineers work: the person who identifies the problem isn't always the person who fixes it.
+
+Your linter will keep catching semicolons. This agent will keep tracing the execution paths where the real problems hide.
 
 ## References
 

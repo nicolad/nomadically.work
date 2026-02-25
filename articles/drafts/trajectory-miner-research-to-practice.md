@@ -1,13 +1,13 @@
 ---
-title: "From Research to Practice: Building a Trajectory Miner for Autonomous Code Improvement"
-description: "How we turned four academic papers — AutoRefine, ProcMEM, SWE-Replay, and Beyond Static Summarization — into a working trajectory mining agent that learns from past coding sessions."
+title: "Why Do AI Agents Keep Making the Same Mistakes?"
+description: "AI agents start fresh every session, repeating errors. We built a trajectory miner that extracts patterns from past sessions — here's the architecture, grounded in 4 research papers."
 date: "2026-02-25"
 author: "nomadically.work"
-tags: ["autonomous-agents", "self-improvement", "trajectory-mining", "claude-code"]
-status: published
+tags: ["autonomous-agents", "self-improvement", "trajectory-mining", "claude-code", "agent-memory"]
+status: draft
 ---
 
-# From Research to Practice: Building a Trajectory Miner for Autonomous Code Improvement
+# Why Do AI Agents Keep Making the Same Mistakes?
 
 Every Claude Code session leaves a trace — tool calls made, files read, edits applied, errors encountered, and ultimately a score reflecting how well the task was completed. Most systems discard this history. We built an agent that mines it.
 
@@ -17,7 +17,13 @@ The design draws from four research papers, curated from the [VoltAgent/awesome-
 
 > **Note:** The implementation has since evolved from a generic trajectory mining agent into a goal-driven "Pipeline Monitor" focused on job search pipeline health. The research principles described here still underpin the architecture, but the agent's focus has shifted to domain-specific priorities. The data structures and patterns below reflect the original design that these papers informed.
 
-## The Research Foundation
+## The Stateless Agent Problem
+
+Devin, SWE-agent, OpenHands, Cursor — every major AI coding agent starts each session with a blank slate. They have no memory of what worked yesterday, no record of which approaches failed last week, no institutional knowledge accumulated over hundreds of sessions. Gartner reported a 1,445% surge in multi-agent system inquiries from Q1 2024 to Q2 2025, yet almost none of these systems learn from their own history.
+
+The result is predictable: agents repeat the same mistakes. They grep for patterns when they should trace imports. They edit files they haven't read. They propose fixes that were already tried and rejected. Research on trajectory reduction (AgentDiet) shows that "useless, redundant, and expired information is widespread in agent trajectories" — but the solution isn't just trimming waste. It's extracting what worked and making it available for next time.
+
+## Four Papers That Solved Pieces of the Puzzle
 
 ### AutoRefine: Extracting Reusable Expertise from Trajectories
 
@@ -99,7 +105,7 @@ The paper shows that agents that question their own conclusions produce more rel
 
 This prevents the most common failure mode we observed in early versions: the miner would identify a "pattern" that was actually just a side effect of context window truncation. The self-questioning catches this by forcing the agent to consider simpler explanations before proposing complex ones.
 
-## How It Fits in the Pipeline
+## How It Fits in a Six-Agent Pipeline
 
 The Trajectory Miner is the first agent in the improvement pipeline:
 
@@ -116,13 +122,15 @@ The miner's output — a structured mining report at `~/.claude/state/mining-rep
 
 The Meta-Optimizer coordinates this flow, deciding when to mine, what to prioritize, and whether the system is in an improvement phase or approaching saturation.
 
-## Why This Matters
+## What We Learned Building It
 
 Most autonomous coding systems are stateless across sessions. Each invocation starts fresh, repeating mistakes and rediscovering solutions. The Trajectory Miner breaks this pattern by creating institutional memory — not as a monolithic knowledge base, but as structured patterns, procedures, and replay candidates that other agents can act on.
 
 The key design choice was making the miner a pure analyst. It never writes code, never edits prompts, never makes decisions about what to fix. It only produces intelligence. This separation of concerns means it can be aggressive in its analysis without risk — the worst case is a false pattern that gets filtered out by downstream agents.
 
 Seven rules govern its behavior, but the most important is rule 7: "Be skeptical — correlation is not causation." In a system designed to improve itself, the biggest risk is false positives that trigger unnecessary changes, creating churn instead of improvement. The miner's job is not to find everything — it's to find the patterns that are real.
+
+The answer to "why do AI agents keep making the same mistakes" turns out to be simple: nobody built the memory system. The hard part isn't the mining — it's the discipline to only act on patterns that are real.
 
 ## References
 

@@ -4,7 +4,7 @@ description: "How Agentic Uncertainty, TrajAD, Confidence Calibration, LUMINA, a
 date: "2026-02-25"
 author: "nomadically.work"
 tags: ["autonomous-agents", "verification", "self-improvement", "quality-assurance"]
-status: draft
+status: published
 ---
 
 # From Research to Practice: Why Autonomous Systems Need Autonomous Verification
@@ -13,7 +13,9 @@ An autonomous improvement system without verification is just autonomous damage.
 
 The Verification Gate is the fifth agent in our six-agent autonomous self-improvement pipeline for [nomadically.work](https://nomadically.work). It validates every change made by the Skill Evolver and Code Improver before those changes are accepted. It never modifies code or skills — it only reads, checks, and reports a verdict.
 
-Five research papers shaped its design. The common thread: autonomous systems need calibrated self-awareness about the quality of their own outputs.
+Five research papers shaped its design, curated from the [VoltAgent/awesome-ai-agent-papers](https://github.com/VoltAgent/awesome-ai-agent-papers) collection. The common thread: autonomous systems need calibrated self-awareness about the quality of their own outputs.
+
+> **Note:** The implementation has since evolved from a generic verification gate into a goal-driven "Application Coach" focused on learning from application patterns and improving interview preparation. The research principles described here still underpin the architecture. The verification checks and verdict system below reflect the original design that these papers informed.
 
 ## The Research Foundation
 
@@ -128,15 +130,15 @@ Rule 5 says it directly: "Be honest about confidence — don't rubber-stamp chan
 
 ## References
 
-1. Xu, Z., et al. "Agentic Uncertainty: Uncertainty Quantification for LLM Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.01750](https://arxiv.org/abs/2502.01750)
+1. Kaddour, J., et al. "Agentic Uncertainty Reveals Agentic Overconfidence." arXiv preprint, 2026. [https://arxiv.org/abs/2602.06948](https://arxiv.org/abs/2602.06948)
 
-2. Li, Z., et al. "TrajAD: LLM-based Trajectory Anomaly Detection for Autonomous Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.07092](https://arxiv.org/abs/2502.07092)
+2. Pathak, D., et al. "Detecting Silent Failures in Multi-Agentic AI Trajectories." arXiv preprint, 2025. [https://arxiv.org/abs/2511.04032](https://arxiv.org/abs/2511.04032)
 
-3. Wang, R., et al. "Agentic Confidence Calibration for Holistic Trajectory Assessment." arXiv preprint, 2025. [https://arxiv.org/abs/2502.06431](https://arxiv.org/abs/2502.06431)
+3. "Agentic Confidence Calibration." arXiv preprint, 2026. [https://arxiv.org/abs/2601.15778](https://arxiv.org/abs/2601.15778)
 
-4. Zhang, L., et al. "LUMINA: Counterfactual Evaluation of LLM Agent Decisions." arXiv preprint, 2025. [https://arxiv.org/abs/2502.08745](https://arxiv.org/abs/2502.08745)
+4. "LUMINA: Long-horizon Understanding for Multi-turn Interactive Agents." arXiv preprint, 2026. [https://arxiv.org/abs/2601.16649](https://arxiv.org/abs/2601.16649)
 
-5. Park, S., et al. "Determinism-Faithfulness Harness for Evaluating Agent Trajectories." arXiv preprint, 2025. [https://arxiv.org/abs/2502.05892](https://arxiv.org/abs/2502.05892)
+5. Khatchadourian, R. "Replayable Financial Agents: A Determinism-Faithfulness Assurance Harness for Tool-Using LLM Agents." arXiv preprint, 2026. [https://arxiv.org/abs/2601.15322](https://arxiv.org/abs/2601.15322)
 
 ---
 

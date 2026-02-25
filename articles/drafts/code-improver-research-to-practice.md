@@ -4,7 +4,7 @@ description: "How Agyn, Team of Rivals, TraceCoder, Optimizing Agentic Workflows
 date: "2026-02-25"
 author: "nomadically.work"
 tags: ["autonomous-agents", "automated-repair", "self-improvement", "software-engineering"]
-status: draft
+status: published
 ---
 
 # From Research to Practice: Structured Code Repair with the Code Improver Agent
@@ -13,7 +13,9 @@ There's a difference between an AI that can edit code and an AI that can repair 
 
 The Code Improver is the fourth agent in our six-agent autonomous self-improvement pipeline for [nomadically.work](https://nomadically.work). It's the only agent that writes application code. The Trajectory Miner finds patterns, the Codebase Auditor diagnoses issues, and the Skill Evolver improves instructions — but the Code Improver is the one that actually opens files and changes them.
 
-Five research papers informed its design. The central insight across all of them: structured repair workflows outperform ad-hoc fixing.
+Five research papers informed its design, curated from the [VoltAgent/awesome-ai-agent-papers](https://github.com/VoltAgent/awesome-ai-agent-papers) collection. The central insight across all of them: structured repair workflows outperform ad-hoc fixing.
+
+> **Note:** The implementation has since evolved from a generic code improver into a goal-driven "Skill Optimizer" focused on AI/ML skill taxonomy, extraction, and matching for the job search pipeline. The research principles described here still underpin the architecture. The meta-tools and scope constraints below reflect the original design that these papers informed.
 
 ## The Research Foundation
 
@@ -120,15 +122,15 @@ This structured approach produces something that ad-hoc AI code editing cannot: 
 
 ## References
 
-1. Wu, T., et al. "Agyn: An Agentic Framework for Autonomous Software Engineering." arXiv preprint, 2025. [https://arxiv.org/abs/2502.09614](https://arxiv.org/abs/2502.09614)
+1. Benkovich, N. and Valkov, V. "Agyn: A Multi-Agent System for Team-Based Autonomous Software Engineering." arXiv preprint, 2026. [https://arxiv.org/abs/2602.01465](https://arxiv.org/abs/2602.01465)
 
-2. Liang, X., et al. "Team of Rivals: Multi-Agent Debate for Code Generation." arXiv preprint, 2025. [https://arxiv.org/abs/2502.04834](https://arxiv.org/abs/2502.04834)
+2. Vijayaraghavan, G., et al. "If You Want Coherence, Orchestrate a Team of Rivals: Multi-Agent Models of Organizational Intelligence." arXiv preprint, 2026. [https://arxiv.org/abs/2601.14351](https://arxiv.org/abs/2601.14351)
 
-3. He, K., et al. "TraceCoder: Trace-Guided Code Debugging with LLMs." arXiv preprint, 2025. [https://arxiv.org/abs/2501.11438](https://arxiv.org/abs/2501.11438)
+3. Huang, J., et al. "TraceCoder: A Trace-Driven Multi-Agent Framework for Automated Debugging of LLM-Generated Code." ICSE 2026. [https://conf.researchr.org/details/icse-2026/icse-2026-research-track/145/](https://conf.researchr.org/details/icse-2026/icse-2026-research-track/145/)
 
-4. Chen, R., et al. "Optimizing Agentic Workflows with Meta-Tools." arXiv preprint, 2025. [https://arxiv.org/abs/2502.07610](https://arxiv.org/abs/2502.07610)
+4. "Optimizing Agentic Workflows using Meta-tools." arXiv preprint, 2026. [https://arxiv.org/abs/2601.22037](https://arxiv.org/abs/2601.22037)
 
-5. Chen, Y., et al. "PatchIsland: Diverse LLM Agent Ensemble for Automated Program Repair." arXiv preprint, 2025. [https://arxiv.org/abs/2502.05985](https://arxiv.org/abs/2502.05985)
+5. "PatchIsland: Orchestration of LLM Agents for Continuous Vulnerability Repair." arXiv preprint, 2026. [https://arxiv.org/abs/2601.17471](https://arxiv.org/abs/2601.17471)
 
 ---
 

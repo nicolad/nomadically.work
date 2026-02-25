@@ -453,6 +453,12 @@ export type DeepPlannerTask = {
   workflowType: Scalars['String']['output'];
 };
 
+export type DeleteApplicationResponse = {
+  __typename: 'DeleteApplicationResponse';
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type DeleteCompanyResponse = {
   __typename: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -761,6 +767,7 @@ export type Mutation = {
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
+  deleteApplication: DeleteApplicationResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
@@ -879,6 +886,11 @@ export type MutationCreatePromptArgs = {
 
 export type MutationCreateTrackArgs = {
   input: CreateTrackInput;
+};
+
+
+export type MutationDeleteApplicationArgs = {
+  id: Scalars['Int']['input'];
 };
 
 

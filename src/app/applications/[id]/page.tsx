@@ -25,6 +25,7 @@ import {
   PlusIcon,
   Pencil1Icon,
   Link2Icon,
+  TrashIcon,
 } from "@radix-ui/react-icons";
 import { useState, useRef, useCallback, useMemo, useEffect, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -41,6 +42,7 @@ import {
   useUpdateCompanyMutation,
   useGenerateRequirementFromSelectionMutation,
   useLinkSelectionToRequirementMutation,
+  useDeleteApplicationMutation,
 } from "@/__generated__/hooks";
 import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import { useTextSelection } from "@/hooks/useTextSelection";
@@ -96,6 +98,9 @@ export default function ApplicationDetailPage() {
   });
 
   const [updateApplication] = useUpdateApplicationMutation();
+  const [deleteApplication] = useDeleteApplicationMutation();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [linkTrack] = useLinkTrackToApplicationMutation();
   const [unlinkTrack] = useUnlinkTrackFromApplicationMutation();
   const [generateInterviewPrep] = useGenerateInterviewPrepMutation();
@@ -389,13 +394,49 @@ export default function ApplicationDetailPage() {
   return (
     <Container size="3" p={{ initial: "4", md: "8" }}>
       {/* Back link */}
-      <Box mb="6">
+      <Flex justify="between" align="center" mb="6">
         <Button variant="ghost" asChild>
           <Link href="/applications">
             <ArrowLeftIcon /> Back to Applications
           </Link>
         </Button>
-      </Box>
+        <Button variant="soft" color="red" size="2" onClick={() => setDeleteDialogOpen(true)}>
+          <TrashIcon /> Delete
+        </Button>
+      </Flex>
+
+      {/* Delete confirmation dialog */}
+      <Dialog.Root open={deleteDialogOpen} onOpenChange={(o) => { if (!o && !deleting) setDeleteDialogOpen(false); }}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>Delete application?</Dialog.Title>
+          <Dialog.Description size="2" color="gray">
+            This will permanently delete this application and all associated data. This action cannot be undone.
+          </Dialog.Description>
+          <Flex gap="2" justify="end" mt="4">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" size="2" disabled={deleting}>Cancel</Button>
+            </Dialog.Close>
+            <Button
+              color="red"
+              size="2"
+              disabled={deleting}
+              onClick={async () => {
+                if (!app) return;
+                setDeleting(true);
+                try {
+                  await deleteApplication({ variables: { id: app.id } });
+                  router.push("/applications");
+                } catch {
+                  setDeleting(false);
+                  setDeleteDialogOpen(false);
+                }
+              }}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
 
       {/* Header */}
       <Flex gap="4" align="start" mb="6">

@@ -714,5 +714,20 @@ A real production scenario (incident, design decision, or architectural choice) 
 
       return mapApplication(updated, effectiveJobDescriptionForStudyTopic);
     },
+
+    async deleteApplication(_parent: any, args: { id: number }, context: GraphQLContext) {
+      if (!context.userId || !context.userEmail) {
+        throw new Error("Unauthorized");
+      }
+      const whereClause = and(
+        eq(applications.id, args.id),
+        eq(applications.user_email, context.userEmail),
+      );
+      const deleted = await context.db.delete(applications).where(whereClause).returning();
+      if (deleted.length === 0) {
+        return { success: false, message: "Application not found or access denied" };
+      }
+      return { success: true, message: "Application deleted" };
+    },
   },
 };

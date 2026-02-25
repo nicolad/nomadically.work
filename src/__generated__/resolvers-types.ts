@@ -456,6 +456,12 @@ export type DeepPlannerTask = {
   workflowType: Scalars['String']['output'];
 };
 
+export type DeleteApplicationResponse = {
+  __typename?: 'DeleteApplicationResponse';
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -764,6 +770,7 @@ export type Mutation = {
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
+  deleteApplication: DeleteApplicationResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
@@ -882,6 +889,11 @@ export type MutationCreatePromptArgs = {
 
 export type MutationCreateTrackArgs = {
   input: CreateTrackInput;
+};
+
+
+export type MutationDeleteApplicationArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -1719,6 +1731,7 @@ export type ResolversTypes = {
   DateTime: ResolverTypeWrapper<Partial<Scalars['DateTime']['output']>>;
   DeepPlannerStatus: ResolverTypeWrapper<Partial<DeepPlannerStatus>>;
   DeepPlannerTask: ResolverTypeWrapper<Partial<DeepPlannerTask>>;
+  DeleteApplicationResponse: ResolverTypeWrapper<Partial<DeleteApplicationResponse>>;
   DeleteCompanyResponse: ResolverTypeWrapper<Partial<DeleteCompanyResponse>>;
   DeleteContactResult: ResolverTypeWrapper<Partial<DeleteContactResult>>;
   DeleteJobResponse: ResolverTypeWrapper<Partial<DeleteJobResponse>>;
@@ -1827,6 +1840,7 @@ export type ResolversParentTypes = {
   CreateTrackInput: Partial<CreateTrackInput>;
   DateTime: Partial<Scalars['DateTime']['output']>;
   DeepPlannerTask: Partial<DeepPlannerTask>;
+  DeleteApplicationResponse: Partial<DeleteApplicationResponse>;
   DeleteCompanyResponse: Partial<DeleteCompanyResponse>;
   DeleteContactResult: Partial<DeleteContactResult>;
   DeleteJobResponse: Partial<DeleteJobResponse>;
@@ -2130,6 +2144,11 @@ export type DeepPlannerTaskResolvers<ContextType = GraphQLContext, ParentType ex
   workflowType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type DeleteApplicationResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeleteApplicationResponse'] = ResolversParentTypes['DeleteApplicationResponse']> = {
+  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+};
+
 export type DeleteCompanyResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeleteCompanyResponse'] = ResolversParentTypes['DeleteCompanyResponse']> = {
   message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -2376,6 +2395,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createPrompt?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationCreatePromptArgs, 'input'>>;
   createTrack?: Resolver<ResolversTypes['Track'], ParentType, ContextType, RequireFields<MutationCreateTrackArgs, 'input'>>;
   deleteAllJobs?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType>;
+  deleteApplication?: Resolver<ResolversTypes['DeleteApplicationResponse'], ParentType, ContextType, RequireFields<MutationDeleteApplicationArgs, 'id'>>;
   deleteCompany?: Resolver<ResolversTypes['DeleteCompanyResponse'], ParentType, ContextType, RequireFields<MutationDeleteCompanyArgs, 'id'>>;
   deleteContact?: Resolver<ResolversTypes['DeleteContactResult'], ParentType, ContextType, RequireFields<MutationDeleteContactArgs, 'id'>>;
   deleteJob?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType, RequireFields<MutationDeleteJobArgs, 'id'>>;
@@ -2675,6 +2695,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ContactsResult?: ContactsResultResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeepPlannerTask?: DeepPlannerTaskResolvers<ContextType>;
+  DeleteApplicationResponse?: DeleteApplicationResponseResolvers<ContextType>;
   DeleteCompanyResponse?: DeleteCompanyResponseResolvers<ContextType>;
   DeleteContactResult?: DeleteContactResultResolvers<ContextType>;
   DeleteJobResponse?: DeleteJobResponseResolvers<ContextType>;

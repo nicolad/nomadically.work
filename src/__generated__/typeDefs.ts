@@ -416,6 +416,11 @@ type DeepPlannerTask {
   workflowType: String!
 }
 
+type DeleteApplicationResponse {
+  message: String
+  success: Boolean!
+}
+
 type DeleteCompanyResponse {
   message: String
   success: Boolean!
@@ -707,6 +712,7 @@ type Mutation {
   createPrompt(input: CreatePromptInput!): Prompt!
   createTrack(input: CreateTrackInput!): Track!
   deleteAllJobs: DeleteJobResponse!
+  deleteApplication(id: Int!): DeleteApplicationResponse!
   deleteCompany(id: Int!): DeleteCompanyResponse!
   deleteContact(id: Int!): DeleteContactResult!
   deleteJob(id: Int!): DeleteJobResponse!

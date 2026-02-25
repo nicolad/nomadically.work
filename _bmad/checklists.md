@@ -73,3 +73,47 @@ When a mid-sprint change is needed:
 - [ ] Path forward evaluated (adjust / rollback / reduce scope)
 - [ ] Recommended approach justified with effort/risk analysis
 - [ ] User approval obtained before implementing changes
+
+## Spec Quality (PM)
+
+Before marking a spec as `ready`:
+
+- [ ] Problem statement is specific — not vague or aspirational
+- [ ] Every success criterion is a testable checkbox (QA can objectively pass/fail it)
+- [ ] Requirements use precise language — no "should ideally" or "nice to have"
+- [ ] Scope boundaries are explicit — in-scope and out-of-scope listed
+- [ ] Dependencies identified with resolution path
+- [ ] Open questions listed (or "None" if fully resolved)
+- [ ] Correct template used (feature / bugfix / refactor)
+- [ ] Constitution constraints acknowledged (technical boundaries, quality bars)
+- [ ] `status.yaml` created and updated
+
+## Spec Plan Review (Architect)
+
+Before marking a plan as `done`:
+
+- [ ] Every spec requirement has a corresponding component or task
+- [ ] File ownership boundaries defined — no teammate conflicts
+- [ ] Schema changes specified (GraphQL and/or Drizzle)
+- [ ] Data flow documented for new data paths
+- [ ] Architecture decisions include rationale and alternatives considered
+- [ ] Risks identified with mitigations
+- [ ] Dependencies listed — nothing blocks implementation unexpectedly
+- [ ] Constitution compliance verified (D1, Drizzle, Apollo, auth guards)
+- [ ] Tasks are ordered by dependency with parallelizable tasks marked
+- [ ] Verification tasks included (codegen, lint, build, eval)
+
+## Spec Validation (QA)
+
+Before marking a spec as `completed`:
+
+- [ ] Every success criterion from `spec.md` verified — pass or fail recorded
+- [ ] All tasks in `tasks.md` checked off
+- [ ] Code Review checklist passed
+- [ ] Definition of Done checklist passed
+- [ ] `pnpm lint` passes
+- [ ] `pnpm build` passes
+- [ ] No regressions in existing tests
+- [ ] `pnpm test:eval` passes (if AI/classification affected)
+- [ ] `status.yaml` updated with final state and validation counts
+- [ ] Spec moved to `specs/completed/` (or sent back to Dev with failure details)

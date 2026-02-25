@@ -1,0 +1,58 @@
+# Spec Status Tracker
+# Updated by each teammate as they complete their phase
+
+slug: "{slug}"
+title: "{title}"
+size: "S" # S / M / L
+created: "{date}"
+
+lifecycle:
+  state: "draft" # draft | ready | in-progress | review | completed | rejected | deferred
+
+phases:
+  specify:
+    status: "done" # pending | in-progress | done | skipped
+    owner: "pm"
+    completed_at: null
+
+  clarify:
+    status: "pending"
+    owner: "pm+architect"
+    completed_at: null
+    notes: ""
+
+  plan:
+    status: "pending"
+    owner: "architect"
+    completed_at: null
+
+  tasks:
+    status: "pending"
+    owner: "architect"
+    completed_at: null
+
+  analyze:
+    status: "pending"
+    owner: "qa"
+    completed_at: null
+    verdict: null # approved | approved-with-conditions | blocked | rejected
+
+  implement:
+    status: "pending"
+    owner: "dev"
+    completed_at: null
+    tasks_total: 0
+    tasks_done: 0
+
+  validate:
+    status: "pending"
+    owner: "qa"
+    completed_at: null
+    criteria_total: 0
+    criteria_passed: 0
+
+history:
+  - date: "{date}"
+    action: "created"
+    by: "pm"
+    note: "Initial spec created"

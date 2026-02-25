@@ -219,6 +219,60 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 ---
 
+## Spec-Driven Development
+
+Every change starts with a spec. Inspired by spec-driven methodology, powered by Claude Code Agent Teams.
+
+### Spec Lifecycle
+
+```
+Specify (PM) → Clarify (PM+Architect) → Plan (Architect) → Tasks (Architect)
+    → Analyze (QA) → Implement (Dev) → Validate (QA)
+```
+
+### Directory Structure
+
+| Path | Contents |
+|---|---|
+| `specs/constitution.md` | Governing principles — all specs must comply |
+| `specs/templates/` | Templates: `feature-spec.md`, `bugfix-spec.md`, `refactor-spec.md`, `plan.md`, `tasks.md`, `analysis.md`, `status.yaml` |
+| `specs/active/{slug}/` | Active specs with `spec.md`, `plan.md`, `tasks.md`, `analysis.md`, `status.yaml` |
+| `specs/completed/` | Archived completed specs |
+| `specs/rejected/` | Rejected/deferred specs |
+
+### Commands
+
+| Command | What it does |
+|---|---|
+| `/spec-team` | Full lifecycle orchestration — spawns PM, Architect, Dev, QA as needed |
+| `/spec-specify` | Create a new spec (PM phase) |
+| `/spec-plan` | Plan and break into tasks (Architect phase) |
+| `/spec-analyze` | QA consistency and coverage analysis |
+| `/spec-implement` | Execute tasks from plan (Dev phase) |
+| `/spec-validate` | Validate implementation against spec criteria (QA phase) |
+| `/spec-status` | Show status of all active specs or a specific one |
+
+### Phase Ownership
+
+| Phase | Owner | Output |
+|---|---|---|
+| Specify | PM | `spec.md` — requirements, success criteria, scope |
+| Clarify | PM + Architect | Updated `spec.md` with resolved ambiguities |
+| Plan | Architect | `plan.md` — components, data flow, schema changes |
+| Tasks | Architect | `tasks.md` — ordered implementation steps |
+| Analyze | QA | `analysis.md` — consistency, coverage, verdict |
+| Implement | Dev | Code changes, task checkboxes in `tasks.md` |
+| Validate | QA | Pass/fail on each success criterion |
+
+### Sizing Shortcuts
+
+- **S (bugfix/config):** Specify → Implement → Validate
+- **M (feature):** Full lifecycle, skip Analyze
+- **L (cross-cutting):** Full lifecycle with Analyze
+- **XL:** Must be decomposed into M/L specs first
+
+---
+
 ## Agent Teams
 
 Uses Claude Code Agent Teams for multi-agent coordination. No external framework — spawn prompts + task lists + checklists.
@@ -226,16 +280,16 @@ Uses Claude Code Agent Teams for multi-agent coordination. No external framework
 | Path | Contents |
 |---|---|
 | `.claude/team-roles/` | Spawn prompts for teammates (pm, architect, dev, qa + content team) |
-| `_bmad/checklists.md` | Quality gate checklists (code review, definition of done, etc.) |
+| `_bmad/checklists.md` | Quality gate checklists (code review, definition of done, spec quality, etc.) |
 | `_bmad-output/planning-artifacts/` | Planning phase outputs (PRDs, architecture, UX specs) |
 | `_bmad-output/implementation-artifacts/` | Implementation outputs (tech specs, sprint status) |
 | `docs/` | Working documents (PRD, architecture, stories) |
 
 **Core team** (spawn prompts in `.claude/team-roles/`):
-- `pm.md` — Product Manager: requirements, user stories, PRD
-- `architect.md` — System Architect: architecture decisions, tech design
-- `dev.md` — Developer: implementation per stories, owns `src/` and `workers/`
-- `qa.md` — QA: validation, testing, checklist enforcement
+- `pm.md` — Product Manager: spec authoring (Specify/Clarify), requirements, user stories
+- `architect.md` — System Architect: spec planning (Plan/Tasks), architecture decisions
+- `dev.md` — Developer: spec implementation, owns `src/` and `workers/`
+- `qa.md` — QA: spec analysis and validation, testing, checklist enforcement
 
 **Content team**: `managing-editor.md`, `researcher.md`, `writer.md`, `editor.md`, `fact-checker.md`
 **UX team**: `ux-lead.md`, `ux-researcher.md`, `ui-designer.md`
@@ -245,11 +299,13 @@ Uses Claude Code Agent Teams for multi-agent coordination. No external framework
 - Use plan approval on teammates before implementation
 - 3-4 teammates is the sweet spot; skip the ceremony for bug fixes
 - Quality gates: teammates reference `_bmad/checklists.md` before marking tasks complete
+- Spec-driven: every non-trivial change should have a spec in `specs/active/`
 
 ---
 
 ## Additional resources
 
+- **[specs/constitution.md](./specs/constitution.md)** — Spec-driven development governing principles.
 - **[SKILLS-REMOTE-WORK-EU.md](./SKILLS-REMOTE-WORK-EU.md)** — Curated agent skills and subagents for remote EU job market focus.
 - **[OPTIMIZATION-STRATEGY.md](./OPTIMIZATION-STRATEGY.md)** — Full Two-Layer Model strategy document.
 

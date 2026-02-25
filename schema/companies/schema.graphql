@@ -178,6 +178,8 @@ type Company {
   industry: String
   size: String
   location: String
+  linkedin_url: String
+  job_board_url: String
   created_at: String!
   updated_at: String!
 
@@ -237,6 +239,8 @@ input UpdateCompanyInput {
   industry: String
   size: String
   location: String
+  linkedin_url: String
+  job_board_url: String
   canonical_domain: String
   category: CompanyCategory
   tags: [String!]

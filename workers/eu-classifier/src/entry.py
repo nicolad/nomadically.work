@@ -198,7 +198,12 @@ async def classify_job_and_persist(
 
 
 async def classify_batch(db, env, limit: int = 50) -> dict:
-    """Classify all jobs at status='role-match' (+ enhanced/role-nomatch).
+    """Classify all jobs at status='role-match' only.
+
+    Only processes jobs that have passed role tagging (role-match) to ensure
+    role_ai_engineer is already set before EU classification runs.
+    Previously included role-nomatch and enhanced, which caused eu-remote jobs
+    to exit the pipeline without role_ai_engineer ever being set.
 
     Three-tier strategy:
       1. Workers AI via langchain LCEL (free) -- use directly if high confidence.
@@ -224,8 +229,8 @@ async def classify_batch(db, env, limit: int = 50) -> dict:
                   country, workplace_type, offices, categories,
                   ashby_is_remote, ashby_secondary_locations, ashby_address,
                   source_kind
-           FROM jobs WHERE status IN (?, ?, ?) ORDER BY created_at DESC LIMIT ?""",
-        [STATUS_ROLE_MATCH, STATUS_ROLE_NOMATCH, STATUS_ENHANCED, limit],
+           FROM jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?""",
+        [STATUS_ROLE_MATCH, limit],
     )
 
     print(f"Found {len(rows)} jobs to classify")

@@ -10,13 +10,25 @@ from constants import normalize_text_for_signals
 from models import JobClassification
 
 
+# Remote aggregator source kinds that post worldwide jobs — need EU-specific
+# location signals before heuristic can auto-accept.
+AGGREGATOR_SOURCE_KINDS = frozenset({"remoteok", "remotive", "himalayas", "jobicy"})
+
+
 def keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
     """Tier 0: deterministic EU classification heuristic.
 
     Returns high-confidence results only for unambiguous cases.
     Returns None for anything ambiguous -> falls through to LLM.
+
+    For remote aggregator sources (remoteok, remotive, himalayas, jobicy),
+    the heuristic requires explicit EU location signals before auto-accepting
+    worldwide remote. This prevents non-EU worldwide jobs from flooding the
+    eu-remote bucket.
     """
     location = (job.get("location") or "").lower()
+    source_kind = (job.get("source_kind") or "").lower()
+    is_aggregator = source_kind in AGGREGATOR_SOURCE_KINDS
 
     # Negative signals -> reject
     if signals["negative_signals"]:
@@ -53,13 +65,21 @@ def keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
             reason="Heuristic: explicit 'Remote EU' in location",
         )
 
-    # EU country in location + remote -> accept
+    # EU country names in location (e.g. "Europe", "Americas, Europe, Israel")
     if signals["eu_countries_in_location"] and signals["ats_remote"]:
         countries = ", ".join(signals["eu_countries_in_location"][:3])
         return JobClassification(
             isRemoteEU=True,
             confidence="high",
             reason=f"Heuristic: EU/EEA country in location ({countries}) + ATS remote flag",
+        )
+
+    # "Europe" or "EMEA" in location string for aggregator sources — accept with medium confidence
+    if is_aggregator and re.search(r"\b(europe|emea|european)\b", location, re.IGNORECASE):
+        return JobClassification(
+            isRemoteEU=True,
+            confidence="medium",
+            reason=f"Heuristic: Europe/EMEA in aggregator location ({location[:60]})",
         )
 
     # US-implicit signals + no EU signals -> escalate to LLM
@@ -72,7 +92,12 @@ def keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:
     # Worldwide remote: ATS remote flag + no country code + no negative signals.
     # Require a meaningful description and a plausible company key (not a raw
     # ATS board token filled with digits) before auto-accepting.
+    # For remote aggregator sources, escalate to LLM unless explicit EU signals present —
+    # "Worldwide" from remoteok/remotive is too broad to auto-accept.
     if signals["ats_remote"] and not signals["country_code"]:
+        if is_aggregator:
+            # Aggregator worldwide jobs need LLM review — too many false positives
+            return None
         company_key = (job.get("company_key") or "")
         digit_ratio = (
             sum(1 for c in company_key if c.isdigit()) / len(company_key)

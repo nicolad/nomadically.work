@@ -191,6 +191,10 @@ AI/ML/LLM ENGINEER INDICATOR:
 - Look for: AI, Machine Learning, LLM, RAG, embeddings, vector search, transformers, PyTorch
 - Look for: "AI Engineer", "ML Engineer", "Data Scientist (ML-focused)", "LLM Engineer"
 - Look for: "NLP", "computer vision", "deep learning", "neural networks", "fine-tuning"
+- Look for: "MLOps", "AI Architect", "ML Platform", "AI Infrastructure", "AI/ML"
+- Look for: "GenAI", "Generative AI", "Foundation Model", "Prompt Engineer"
+- Look for: "Applied Scientist", "Research Engineer", "Research Scientist"
+- Look for: "AI Trainer" (if training AI models, not just annotating data)
 - HIGH confidence if: Title or description explicitly includes AI/ML terminology
 
 DUAL ROLES:
@@ -907,7 +911,11 @@ def _keyword_role_tag(job: dict) -> JobRoleTags | None:
         r"|data scientist|applied scientist|research engineer|research scientist"
         r"|nlp engineer|computer vision|genai|generative ai|prompt engineer"
         r"|ai architect|ml platform|machine learning engineer"
-        r"|ai infrastructure|deep learning)\b", text
+        r"|ai infrastructure|deep learning"
+        r"|foundation model|ai specialist|ml specialist|llm specialist"
+        r"|ai product|ai software|ml software|ai developer|ml developer"
+        r"|intelligence engineer|language model|model engineer"
+        r"|ai lead|ml lead|head of ai|head of ml)\b", text
     ))
     has_ai_stack = any(
         x in text for x in
@@ -916,7 +924,11 @@ def _keyword_role_tag(job: dict) -> JobRoleTags | None:
          "openai", "anthropic", "claude", "gpt-", "neural network",
          "deep learning", "reinforcement learning", "natural language processing",
          "computer vision", "model training", "model serving", "mlflow",
-         "weights & biases", "wandb", "feature store", "model deploy"]
+         "weights & biases", "wandb", "feature store", "model deploy",
+         "vllm", "ollama", "mistral", "llama", "gemini", "vertex ai",
+         "sagemaker", "bedrock", "azure openai", "semantic kernel",
+         "vector search", "retrieval augmented", "knowledge graph",
+         "diffusion model", "stable diffusion", "multimodal"]
     )
 
     if has_react and has_frontend:
@@ -1215,6 +1227,99 @@ async def tag_roles_for_enhanced_jobs(
     print(
         f"✅ Role tagging complete: {stats['targetRole']} target, "
         f"{stats['irrelevant']} irrelevant, {stats['errors']} errors"
+    )
+    return stats
+
+
+async def backfill_role_tags_for_eu_remote_jobs(
+    db,
+    ai_binding,
+    deepseek_api_key: str | None = None,
+    deepseek_base_url: str       = "https://api.deepseek.com/beta",
+    deepseek_model: str          = "deepseek-chat",
+    limit: int                   = 100,
+) -> dict:
+    """Phase 2b: Backfill role tags for eu-remote jobs missing role_ai_engineer.
+
+    These are jobs that were EU-classified before role tagging ran, meaning
+    the pipeline moved them to 'eu-remote' without ever setting role_ai_engineer.
+    We run the role tagger on them now without changing their status.
+
+    This is an idempotent repair pass — safe to run multiple times.
+    """
+    print("🔍 Phase 2b — Finding eu-remote jobs missing role_ai_engineer...")
+
+    rows = await d1_all(
+        db,
+        """SELECT id, title, location, description
+           FROM jobs
+           WHERE status = 'eu-remote'
+             AND role_ai_engineer IS NULL
+           ORDER BY created_at DESC
+           LIMIT ?""",
+        [limit],
+    )
+
+    print(f"📋 Found {len(rows)} eu-remote jobs to backfill role tags")
+
+    stats = {
+        "processed": 0, "ai_engineer": 0, "not_target": 0,
+        "errors": 0, "workersAI": 0, "deepseek": 0,
+    }
+
+    for job in rows:
+        job_id = job.get("id", "unknown")
+        try:
+            print(f"🏷️  Backfill role-tag for eu-remote job {job_id}: {job.get('title')}")
+
+            tags, source = await _run_role_tier_pipeline(
+                job, ai_binding, deepseek_api_key, deepseek_base_url, deepseek_model, stats
+            )
+
+            is_ai = tags.isAIEngineer
+            print(f"   {'AI Engineer' if is_ai else 'Not AI'} [{source}] ({tags.confidence}) — {tags.reason}")
+
+            # Update role columns only — do NOT change status (job stays eu-remote)
+            try:
+                await d1_run(
+                    db,
+                    """UPDATE jobs
+                       SET role_frontend_react = ?,
+                           role_ai_engineer    = ?,
+                           role_confidence     = ?,
+                           role_reason         = ?,
+                           role_source         = ?,
+                           updated_at          = datetime('now')
+                       WHERE id = ?""",
+                    [
+                        int(tags.isFrontendReact),
+                        int(tags.isAIEngineer),
+                        tags.confidence,
+                        tags.reason,
+                        source,
+                        job_id,
+                    ],
+                )
+            except Exception as persist_err:
+                print(f"   ⚠️  Persist failed: {persist_err}")
+                stats["errors"] += 1
+                continue
+
+            stats["processed"] += 1
+            if is_ai:
+                stats["ai_engineer"] += 1
+            else:
+                stats["not_target"] += 1
+
+        except Exception as e:
+            print(f"   ❌ Unhandled error backfilling job {job_id}: {e}")
+            stats["errors"] += 1
+
+        await sleep_ms(100)
+
+    print(
+        f"✅ Backfill complete: {stats['ai_engineer']} AI engineer, "
+        f"{stats['not_target']} not target, {stats['errors']} errors"
     )
     return stats
 
@@ -1540,6 +1645,8 @@ class Default(WorkerEntrypoint):
 
             if path == "backfill-published":
                 return await self.handle_backfill_published(request, cors_headers)
+            elif path == "backfill-role-tags":
+                return await self.handle_backfill_role_tags(request, cors_headers)
             elif path == "enhance":
                 return await self.handle_enhance(request, cors_headers)
             elif path == "tag":
@@ -1585,6 +1692,14 @@ class Default(WorkerEntrypoint):
                 deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
                 limit             = 10000,
             )
+            # Phase 2b: Backfill role tags for eu-remote jobs that bypassed role tagging
+            await backfill_role_tags_for_eu_remote_jobs(
+                db, getattr(self.env, "AI", None),
+                deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+                deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+                deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+                limit             = 200,
+            )
             classify_stats = await classify_unclassified_jobs(db, self.env, 10000)
             skill_stats    = await extract_skills_for_classified_jobs(db, self.env, 10000)
 
@@ -1629,6 +1744,16 @@ class Default(WorkerEntrypoint):
                         limit             = limit,
                     )
                     print(f"   Tagged: {stats['processed']}, Target: {stats['targetRole']}, Skip: {stats['irrelevant']}")
+
+                elif action == "backfill-role-tags":
+                    stats = await backfill_role_tags_for_eu_remote_jobs(
+                        db, getattr(self.env, "AI", None),
+                        deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+                        deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+                        deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+                        limit             = limit,
+                    )
+                    print(f"   Backfilled: {stats['processed']}, AI engineer: {stats['ai_engineer']}")
 
                 elif action == "classify":
                     stats = await classify_unclassified_jobs(db, self.env, limit)
@@ -1715,6 +1840,30 @@ class Default(WorkerEntrypoint):
         total = stats["ashby_copied"] + stats["greenhouse_fetched"]
         return Response.json(
             {"success": True, "message": f"Backfilled {total} jobs", "stats": stats},
+            headers=cors_headers,
+        )
+
+    async def handle_backfill_role_tags(self, request, cors_headers: dict):
+        """Phase 2b — Backfill role tags for eu-remote jobs missing role_ai_engineer.
+
+        Repairs jobs that were EU-classified before role tagging ran, so
+        role_ai_engineer was never set. Safe to run multiple times.
+        """
+        limit = await self._parse_limit(request)
+        stats = await backfill_role_tags_for_eu_remote_jobs(
+            self.env.DB,
+            getattr(self.env, "AI", None),
+            deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
+            deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
+            deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
+            limit             = limit,
+        )
+        return Response.json(
+            {
+                "success": True,
+                "message": f"Backfilled role tags for {stats['processed']} eu-remote jobs",
+                "stats": stats,
+            },
             headers=cors_headers,
         )
 

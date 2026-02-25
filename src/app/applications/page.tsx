@@ -201,12 +201,11 @@ function AddApplicationDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobUrl) return;
     try {
       await createApplication({
         variables: {
           input: {
-            jobId: jobUrl,
+            jobId: jobUrl || null,
             questions: [],
             jobTitle: jobTitle || undefined,
             companyName: companyName || undefined,
@@ -243,14 +242,13 @@ function AddApplicationDialog({
           <Flex direction="column" gap="3">
             <label>
               <Text size="2" weight="medium" mb="1" as="div">
-                Job URL *
+                Job URL
               </Text>
               <TextField.Root
                 placeholder="https://jobs.example.com/..."
                 type="url"
                 value={jobUrl}
                 onChange={(e) => setJobUrl(e.target.value)}
-                required
               />
             </label>
             <label>
@@ -280,7 +278,7 @@ function AddApplicationDialog({
                 Cancel
               </Button>
             </Dialog.Close>
-            <Button type="submit" disabled={loading || !jobUrl}>
+            <Button type="submit" disabled={loading}>
               {loading ? "Saving..." : "Save Job"}
             </Button>
           </Flex>

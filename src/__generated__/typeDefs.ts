@@ -94,7 +94,7 @@ type Application {
 
 input ApplicationInput {
   companyName: String
-  jobId: String!
+  jobId: String
   jobTitle: String
   questions: [QuestionAnswerInput!]!
   resume: Upload

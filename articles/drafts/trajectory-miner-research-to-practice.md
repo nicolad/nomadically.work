@@ -4,7 +4,7 @@ description: "How we turned four academic papers — AutoRefine, ProcMEM, SWE-Re
 date: "2026-02-25"
 author: "nomadically.work"
 tags: ["autonomous-agents", "self-improvement", "trajectory-mining", "claude-code"]
-status: draft
+status: published
 ---
 
 # From Research to Practice: Building a Trajectory Miner for Autonomous Code Improvement
@@ -13,7 +13,9 @@ Every Claude Code session leaves a trace — tool calls made, files read, edits 
 
 The Trajectory Miner is the first agent in our six-agent autonomous self-improvement pipeline for [nomadically.work](https://nomadically.work), a remote EU job board aggregator. Its job: analyze past sessions, extract recurring patterns and reusable skills, and feed structured intelligence to the rest of the team. It writes no code. It produces raw material that other agents — the Codebase Auditor, Skill Evolver, and Code Improver — consume.
 
-The design draws from four research papers. Here's what each paper contributes and how we translated academic ideas into a working system.
+The design draws from four research papers, curated from the [VoltAgent/awesome-ai-agent-papers](https://github.com/VoltAgent/awesome-ai-agent-papers) collection. Here is what each paper contributes and how we translated academic ideas into a working system.
+
+> **Note:** The implementation has since evolved from a generic trajectory mining agent into a goal-driven "Pipeline Monitor" focused on job search pipeline health. The research principles described here still underpin the architecture, but the agent's focus has shifted to domain-specific priorities. The data structures and patterns below reflect the original design that these papers informed.
 
 ## The Research Foundation
 
@@ -124,13 +126,13 @@ Seven rules govern its behavior, but the most important is rule 7: "Be skeptical
 
 ## References
 
-1. Cao, Y., et al. "AutoRefine: Self-Refinement of Agent Trajectories via Reusable Experience Extraction." arXiv preprint, 2025. [https://arxiv.org/abs/2501.02867](https://arxiv.org/abs/2501.02867)
+1. "AutoRefine: From Trajectories to Reusable Expertise for Continual LLM Agent Refinement." arXiv preprint, 2026. [https://arxiv.org/abs/2601.22758](https://arxiv.org/abs/2601.22758)
 
-2. Xu, L., et al. "ProcMEM: Procedural Memory for Efficient Instructional Video Summarization." arXiv preprint, 2025. [https://arxiv.org/abs/2504.07916](https://arxiv.org/abs/2504.07916)
+2. Fang, R., et al. "Mem^p: Exploring Agent Procedural Memory." arXiv preprint, 2025. [https://arxiv.org/abs/2508.06433](https://arxiv.org/abs/2508.06433)
 
-3. Ning, X., et al. "SWE-Replay: Improving SWE Agents with Trajectory Replay and Retrieval." arXiv preprint, 2025. [https://arxiv.org/abs/2504.01453](https://arxiv.org/abs/2504.01453)
+3. "SWE-Replay: Efficient Test-Time Scaling for Software Engineering Agents." arXiv preprint, 2026. [https://arxiv.org/abs/2601.22129](https://arxiv.org/abs/2601.22129)
 
-4. Li, Y., et al. "Beyond Static Summarization: Proactive Self-Questioning for LLM Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.13762](https://arxiv.org/abs/2502.13762)
+4. Yang, C., et al. "Beyond Static Summarization: Proactive Memory Extraction for LLM Agents." arXiv preprint, 2026. [https://arxiv.org/abs/2601.04463](https://arxiv.org/abs/2601.04463)
 
 ---
 

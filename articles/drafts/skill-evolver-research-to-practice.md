@@ -4,7 +4,7 @@ description: "How Meta Context Engineering, CASTER, REprompt, EvoConfig, and Aut
 date: "2026-02-25"
 author: "nomadically.work"
 tags: ["autonomous-agents", "self-improvement", "meta-learning", "prompt-engineering"]
-status: draft
+status: published
 ---
 
 # From Research to Practice: A Skill Evolver That Improves Its Own Instructions
@@ -13,7 +13,9 @@ Most AI systems have a hard boundary between the instructions they follow and th
 
 The Skill Evolver is the third agent in our six-agent autonomous self-improvement pipeline for [nomadically.work](https://nomadically.work). Its scope is precisely defined: it can edit skill files, commands, hooks, CLAUDE.md, and memory files. It cannot touch application source code — that's the Code Improver's job. This agent improves the instructions that all other agents follow.
 
-Five research papers informed its design. Each one solved a different aspect of the self-modification problem.
+Five research papers informed its design, curated from the [VoltAgent/awesome-ai-agent-papers](https://github.com/VoltAgent/awesome-ai-agent-papers) collection. Each one solved a different aspect of the self-modification problem.
+
+> **Note:** The implementation has since evolved from a generic skill evolver into a goal-driven "Classifier Tuner" focused on reducing false negatives in remote EU job classification. The research principles described here still underpin the architecture. The data structures and anti-patterns below reflect the original design that these papers informed.
 
 ## The Research Foundation
 
@@ -123,15 +125,15 @@ The maximum of 5 evolutions per run, the requirement that every change links to 
 
 ## References
 
-1. Chen, X., et al. "Meta Context Engineering: Self-Evolving Context for Autonomous Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.08198](https://arxiv.org/abs/2502.08198)
+1. Ye, H., et al. "Meta Context Engineering via Agentic Skill Evolution." arXiv preprint, 2026. [https://arxiv.org/abs/2601.21557](https://arxiv.org/abs/2601.21557)
 
-2. Park, J., et al. "EvoConfig: Self-Evolving Configuration for Multi-Agent Systems." arXiv preprint, 2025. [https://arxiv.org/abs/2502.06783](https://arxiv.org/abs/2502.06783)
+2. Guo, X., et al. "EvoConfig: Self-Evolving Multi-Agent Systems for Efficient Autonomous Environment Configuration." arXiv preprint, 2026. [https://arxiv.org/abs/2601.16489](https://arxiv.org/abs/2601.16489)
 
-3. Liu, Y., et al. "CASTER: Context-Aware Strategy for Task Efficient Routing." arXiv preprint, 2026. [https://arxiv.org/abs/2601.19793](https://arxiv.org/abs/2601.19793)
+3. Liu, S., et al. "CASTER: Context-Aware Strategy for Task Efficient Routing." arXiv preprint, 2026. [https://arxiv.org/abs/2601.19793](https://arxiv.org/abs/2601.19793)
 
-4. Zhang, W., et al. "REprompt: Requirements-Guided Prompt Optimization for LLM Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.06680](https://arxiv.org/abs/2502.06680)
+4. Shi, J., et al. "REprompt: Prompt Generation for Intelligent Software Development Guided by Requirements Engineering." arXiv preprint, 2026. [https://arxiv.org/abs/2601.16507](https://arxiv.org/abs/2601.16507)
 
-5. Wang, H., et al. "Autonomous Question Formation for LLM Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.04265](https://arxiv.org/abs/2502.04265)
+5. "Autonomous Question Formation for Large Language Model-Driven AI Systems." arXiv preprint, 2026. [https://arxiv.org/abs/2602.01556](https://arxiv.org/abs/2602.01556)
 
 ---
 

@@ -4,7 +4,7 @@ description: "How TraceCoder, TrajAD, Graph-RAG, and Architecture-Aware Evaluati
 date: "2026-02-25"
 author: "nomadically.work"
 tags: ["autonomous-agents", "code-auditing", "self-improvement", "software-quality"]
-status: draft
+status: published
 ---
 
 # From Research to Practice: An AI Codebase Auditor That Traces Execution Paths, Not Just Patterns
@@ -13,7 +13,9 @@ Static analysis tools find pattern violations. Linters catch style issues. But n
 
 The Codebase Auditor is the second agent in our six-agent autonomous self-improvement pipeline for [nomadically.work](https://nomadically.work). It receives pattern IDs from the Trajectory Miner, investigates the actual code exhaustively, and produces findings with exact `file:line` references. It never modifies code — it only reads and reports.
 
-Four research papers shaped its design. Here's how each one translated into practice.
+Four research papers shaped its design, curated from the [VoltAgent/awesome-ai-agent-papers](https://github.com/VoltAgent/awesome-ai-agent-papers) collection. Here is how each one translated into practice.
+
+> **Note:** The implementation has since evolved from a generic codebase auditor into a goal-driven "Discovery Expander" focused on finding more AI engineering companies and job boards. The research principles described here still underpin the architecture. The playbooks and data structures below reflect the original design that these papers informed.
 
 ## The Research Foundation
 
@@ -121,13 +123,13 @@ The read-only constraint is fundamental. By never modifying code, the auditor ca
 
 ## References
 
-1. He, K., et al. "TraceCoder: Trace-Guided Code Debugging with LLMs." arXiv preprint, 2025. [https://arxiv.org/abs/2501.11438](https://arxiv.org/abs/2501.11438)
+1. Huang, J., et al. "TraceCoder: A Trace-Driven Multi-Agent Framework for Automated Debugging of LLM-Generated Code." ICSE 2026. [https://conf.researchr.org/details/icse-2026/icse-2026-research-track/145/](https://conf.researchr.org/details/icse-2026/icse-2026-research-track/145/)
 
-2. Li, Z., et al. "TrajAD: LLM-based Trajectory Anomaly Detection for Autonomous Agents." arXiv preprint, 2025. [https://arxiv.org/abs/2502.07092](https://arxiv.org/abs/2502.07092)
+2. Pathak, D., et al. "Detecting Silent Failures in Multi-Agentic AI Trajectories." arXiv preprint, 2025. [https://arxiv.org/abs/2511.04032](https://arxiv.org/abs/2511.04032)
 
-3. Zhang, Y., et al. "Reliable Graph-RAG for Code Repository Understanding." arXiv preprint, 2025. [https://arxiv.org/abs/2502.04864](https://arxiv.org/abs/2502.04864)
+3. "Reliable Graph-RAG for Codebases: AST-Derived Graphs vs LLM-Extracted Knowledge Graphs." arXiv preprint, 2026. [https://arxiv.org/abs/2601.08773](https://arxiv.org/abs/2601.08773)
 
-4. Wang, X., et al. "Architecture-Aware Evaluation of LLM Agent Systems." arXiv preprint, 2025. [https://arxiv.org/abs/2502.05356](https://arxiv.org/abs/2502.05356)
+4. "Toward Architecture-Aware Evaluation Metrics for LLM Agents." arXiv preprint, 2026. [https://arxiv.org/abs/2601.19583](https://arxiv.org/abs/2601.19583)
 
 ---
 

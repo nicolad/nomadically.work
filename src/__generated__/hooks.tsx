@@ -456,6 +456,12 @@ export type DeepPlannerTask = {
   workflowType: Scalars['String']['output'];
 };
 
+export type DeleteApplicationResponse = {
+  __typename?: 'DeleteApplicationResponse';
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type DeleteCompanyResponse = {
   __typename?: 'DeleteCompanyResponse';
   message: Maybe<Scalars['String']['output']>;
@@ -764,6 +770,7 @@ export type Mutation = {
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
+  deleteApplication: DeleteApplicationResponse;
   deleteCompany: DeleteCompanyResponse;
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
@@ -882,6 +889,11 @@ export type MutationCreatePromptArgs = {
 
 export type MutationCreateTrackArgs = {
   input: CreateTrackInput;
+};
+
+
+export type MutationDeleteApplicationArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -1798,6 +1810,13 @@ export type GenerateRequirementFromSelectionMutationVariables = Exact<{
 
 
 export type GenerateRequirementFromSelectionMutation = { __typename?: 'Mutation', generateRequirementFromSelection: { __typename?: 'Application', id: number, aiInterviewPrep: { __typename?: 'AIInterviewPrep', summary: string, generatedAt: string, requirements: Array<{ __typename?: 'AIInterviewPrepRequirement', requirement: string, questions: Array<string>, studyTopics: Array<string>, sourceQuote: string | null, deepDive: string | null, studyTopicDeepDives: Array<{ __typename?: 'AIStudyTopicDeepDive', topic: string, deepDive: string }> }> } | null } };
+
+export type DeleteApplicationMutationVariables = Exact<{
+  id: Scalars['Int']['input'];
+}>;
+
+
+export type DeleteApplicationMutation = { __typename?: 'Mutation', deleteApplication: { __typename?: 'DeleteApplicationResponse', success: boolean, message: string | null } };
 
 export type LinkSelectionToRequirementMutationVariables = Exact<{
   applicationId: Scalars['Int']['input'];
@@ -3662,6 +3681,40 @@ export function useGenerateRequirementFromSelectionMutation(baseOptions?: Apollo
 export type GenerateRequirementFromSelectionMutationHookResult = ReturnType<typeof useGenerateRequirementFromSelectionMutation>;
 export type GenerateRequirementFromSelectionMutationResult = Apollo.MutationResult<GenerateRequirementFromSelectionMutation>;
 export type GenerateRequirementFromSelectionMutationOptions = Apollo.BaseMutationOptions<GenerateRequirementFromSelectionMutation, GenerateRequirementFromSelectionMutationVariables>;
+export const DeleteApplicationDocument = gql`
+    mutation DeleteApplication($id: Int!) {
+  deleteApplication(id: $id) {
+    success
+    message
+  }
+}
+    `;
+export type DeleteApplicationMutationFn = Apollo.MutationFunction<DeleteApplicationMutation, DeleteApplicationMutationVariables>;
+
+/**
+ * __useDeleteApplicationMutation__
+ *
+ * To run a mutation, you first call `useDeleteApplicationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteApplicationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteApplicationMutation, { data, loading, error }] = useDeleteApplicationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteApplicationMutation(baseOptions?: Apollo.MutationHookOptions<DeleteApplicationMutation, DeleteApplicationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteApplicationMutation, DeleteApplicationMutationVariables>(DeleteApplicationDocument, options);
+      }
+export type DeleteApplicationMutationHookResult = ReturnType<typeof useDeleteApplicationMutation>;
+export type DeleteApplicationMutationResult = Apollo.MutationResult<DeleteApplicationMutation>;
+export type DeleteApplicationMutationOptions = Apollo.BaseMutationOptions<DeleteApplicationMutation, DeleteApplicationMutationVariables>;
 export const LinkSelectionToRequirementDocument = gql`
     mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!, $sourceQuote: String!) {
   linkSelectionToRequirement(

@@ -167,6 +167,13 @@ mutation GenerateRequirementFromSelection($applicationId: Int!, $selectedText: S
   }
 }
 
+mutation DeleteApplication($id: Int!) {
+  deleteApplication(id: $id) {
+    success
+    message
+  }
+}
+
 mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!, $sourceQuote: String!) {
   linkSelectionToRequirement(applicationId: $applicationId, requirement: $requirement, sourceQuote: $sourceQuote) {
     id

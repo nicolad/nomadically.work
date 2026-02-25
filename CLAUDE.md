@@ -228,8 +228,10 @@ Uses [agent-teams-lite](https://github.com/Gentleman-Programming/agent-teams-lit
 | Path | Contents |
 |---|---|
 | `.claude/skills/sdd-*/SKILL.md` | 9 SDD sub-agent skill files (explore, propose, spec, design, tasks, apply, verify, archive, init) |
+| `.claude/skills/improve-*/SKILL.md` | 6 job search self-improvement skills (mine, audit, evolve, apply, verify, meta) |
+| `.claude/skills/codefix-*/SKILL.md` | 6 codebase self-improvement skills (mine, audit, evolve, apply, verify, meta) |
 | `openspec/` | Specs, change proposals, designs, and task breakdowns (created by `sdd-init`) |
-| `.claude/commands/` | Project-specific commands (build-and-push, gql-agent) |
+| `.claude/commands/` | Project-specific commands (build-and-push, gql-agent, improve, codefix) |
 
 ### SDD Commands
 
@@ -261,6 +263,83 @@ proposal → specs ──→ tasks → apply → verify → archive
 ```
 
 Specs and design run in parallel; tasks depends on both; verify is optional but recommended before archive.
+
+---
+
+## Autonomous Self-Improvement Team
+
+Goal-driven team of 6 specialists focused on helping find a fully remote EU AI engineering role. Grounded in autonomous agent research (AutoRefine, Meta Context Engineering, CASTER, ROMA, Phase Transition theory).
+
+### Structure
+
+| Path | Agent | Mission |
+|---|---|---|
+| `.claude/skills/improve-mine/SKILL.md` | Pipeline Monitor | Is the pipeline healthy? Are AI jobs flowing? |
+| `.claude/skills/improve-audit/SKILL.md` | Discovery Expander | Find more companies hiring AI engineers remotely in EU |
+| `.claude/skills/improve-evolve/SKILL.md` | Classifier Tuner | Reduce missed opportunities in remote EU classification |
+| `.claude/skills/improve-apply/SKILL.md` | Skill Optimizer | Better AI/ML skill taxonomy, extraction, and matching |
+| `.claude/skills/improve-verify/SKILL.md` | Application Coach | Learn from application patterns, improve interview prep |
+| `.claude/skills/improve-meta/SKILL.md` | Strategy Brain | Coordinate toward the goal: get hired |
+| `.claude/commands/improve.md` | Orchestrator | Entry point and team coordination |
+
+### Commands
+
+| Command | Action |
+|---|---|
+| `/improve` | Full autonomous cycle (Strategy Brain decides what to do) |
+| `/improve status` | Pipeline health check |
+| `/improve discover` | Find new AI engineering job sources |
+| `/improve classify` | Tune classification accuracy |
+| `/improve skills` | Optimize AI/ML skill matching |
+| `/improve coach` | Application coaching and prep improvement |
+
+### Goal Phases
+
+| Phase | Focus | Trigger |
+|---|---|---|
+| **BUILDING** | Discovery + classification | < 5 AI jobs/week |
+| **OPTIMIZING** | Classifier + skills | Jobs flowing but low relevance |
+| **APPLYING** | Coaching + prep | Good jobs surfacing, need to convert |
+| **INTERVIEWING** | Deep prep + research | Applications converting to interviews |
+
+### Integration
+
+- **stop_hook.py** + **improvement_agent.py** → session scoring and learning
+- **Langfuse** → observability and score trends
+- **Strategy Enforcer** → validates changes align with optimization strategy
+- State files in `~/.claude/state/` → continuity across sessions
+
+---
+
+## Autonomous Codebase Self-Improvement Team
+
+Separate team focused purely on code quality, performance, type safety, security, and dead code — independent of business goals.
+
+### Structure
+
+| Path | Agent | Role |
+|---|---|---|
+| `.claude/skills/codefix-mine/SKILL.md` | Trajectory Miner | Mine session transcripts for code quality patterns |
+| `.claude/skills/codefix-audit/SKILL.md` | Codebase Auditor | Deep code investigation with file:line findings |
+| `.claude/skills/codefix-evolve/SKILL.md` | Skill Evolver | Improve skills, prompts, CLAUDE.md |
+| `.claude/skills/codefix-apply/SKILL.md` | Code Improver | Implement fixes (perf, types, security, dead code) |
+| `.claude/skills/codefix-verify/SKILL.md` | Verification Gate | Validate changes, run builds, catch regressions |
+| `.claude/skills/codefix-meta/SKILL.md` | Meta-Optimizer | Coordinate, prioritize, track progress |
+| `.claude/commands/codefix.md` | Orchestrator | Entry point |
+
+### Commands
+
+| Command | Action |
+|---|---|
+| `/codefix` | Full autonomous cycle |
+| `/codefix audit [target]` | Targeted audit (resolvers, workers, security, types, etc.) |
+| `/codefix apply` | Implement pending findings |
+| `/codefix verify` | Verify recent changes |
+| `/codefix status` | Show meta-state |
+
+### Pipeline: `mine → audit → evolve/apply → verify`
+
+Safety: Max 3 code changes + 2 skill evolutions per cycle. Phase detection (IMPROVEMENT/SATURATION/COLLAPSE_RISK). Mandatory verification. State in `~/.claude/state/codefix-*.json`.
 
 ---
 

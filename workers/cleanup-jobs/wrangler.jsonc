@@ -3,9 +3,10 @@
   "main": "src/entry.py",
   "compatibility_date": "2025-11-02",
   "compatibility_flags": ["python_workers"],
-  "triggers": {
-    "crons": ["0 2 * * *"]
-  },
+  // Cron disabled — freed slot for nomadically-work-eu-classifier (5-cron free plan limit).
+  // cleanup-jobs is triggered on-demand via queue consumer or manual HTTP call.
+  // Original: "crons": ["0 2 * * *"]
+  "triggers": { "crons": [] },
   "d1_databases": [
     {
       "binding": "DB",

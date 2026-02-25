@@ -6,8 +6,8 @@ Returns None for anything ambiguous, signalling escalation to the LLM tier.
 
 import re
 
-from .constants import normalize_text_for_signals
-from .models import JobClassification
+from constants import normalize_text_for_signals
+from models import JobClassification
 
 
 def keyword_eu_classify(job: dict, signals: dict) -> JobClassification | None:

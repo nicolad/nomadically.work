@@ -700,6 +700,19 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
     """
     print("🔍 Phase 1 — Finding jobs with status='new'...")
 
+    # Non-ATS sources (remotive, remoteok, himalayas, jobicy, etc.) arrive pre-enriched.
+    # Promote them directly to 'enhanced' — no ATS API fetch needed.
+    non_ats_result = await d1_run(
+        db,
+        """UPDATE jobs SET status = ?, updated_at = datetime('now')
+           WHERE (status IS NULL OR status = ?)
+             AND source_kind NOT IN ('greenhouse', 'lever', 'ashby')""",
+        [JobStatus.ENHANCED.value, JobStatus.NEW.value],
+    )
+    non_ats_promoted = non_ats_result.get("changes", 0) if non_ats_result else 0
+    if non_ats_promoted:
+        print(f"⏩ Auto-promoted {non_ats_promoted} non-ATS jobs to 'enhanced'")
+
     rows = await d1_all(
         db,
         """
@@ -714,9 +727,9 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
         [JobStatus.NEW.value, limit],
     )
 
-    print(f"📋 Found {len(rows)} jobs to enhance")
+    print(f"📋 Found {len(rows)} ATS jobs to enhance")
 
-    stats = {"enhanced": 0, "errors": 0}
+    stats = {"enhanced": non_ats_promoted, "errors": 0}
 
     for job in rows:
         company_key = job.get("company_key") or ""
@@ -856,7 +869,7 @@ WORKERS_AI_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8"
 # when backend job descriptions incidentally mention ML tooling.
 _NON_TARGET_PATTERN = re.compile(
     r"\b(backend engineer|java developer|\.net developer|devops engineer"
-    r"|data analyst|data scientist|platform engineer|sre|site reliability)\b"
+    r"|data analyst|sre|site reliability)\b"
 )
 
 
@@ -888,11 +901,22 @@ def _keyword_role_tag(job: dict) -> JobRoleTags | None:
     has_react    = bool(re.search(r"\breact(\.js)?\b", text)) or "next.js" in text
     has_frontend = bool(re.search(r"\b(frontend|ui engineer|web ui)\b", text))
 
-    # AI Engineer signals
-    has_ai_title = bool(re.search(r"\b(ai engineer|ml engineer|llm engineer|ai/ml)\b", text))
+    # AI Engineer signals — broad title matching + stack confirmation
+    has_ai_title = bool(re.search(
+        r"\b(ai engineer|ml engineer|llm engineer|ai/ml|mlops"
+        r"|data scientist|applied scientist|research engineer|research scientist"
+        r"|nlp engineer|computer vision|genai|generative ai|prompt engineer"
+        r"|ai architect|ml platform|machine learning engineer"
+        r"|ai infrastructure|deep learning)\b", text
+    ))
     has_ai_stack = any(
         x in text for x in
-        ["machine learning", "llm", "rag", "embedding", "vector db", "fine-tun"]
+        ["machine learning", "llm", "rag", "embedding", "vector db", "fine-tun",
+         "pytorch", "tensorflow", "langchain", "hugging face", "transformers",
+         "openai", "anthropic", "claude", "gpt-", "neural network",
+         "deep learning", "reinforcement learning", "natural language processing",
+         "computer vision", "model training", "model serving", "mlflow",
+         "weights & biases", "wandb", "feature store", "model deploy"]
     )
 
     if has_react and has_frontend:

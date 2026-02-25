@@ -30,11 +30,11 @@ import json
 
 from workers import Response, WorkerEntrypoint
 
-from .db import d1_all, d1_run, to_js_obj, to_py
-from .signals import extract_eu_signals, format_signals
-from .heuristic import keyword_eu_classify
-from .chain import classify_with_workers_ai, classify_with_deepseek
-from .models import JobClassification
+from db import d1_all, d1_run, to_js_obj, to_py
+from signals import extract_eu_signals, format_signals
+from heuristic import keyword_eu_classify
+from chain import classify_with_workers_ai, classify_with_deepseek
+from models import JobClassification
 
 
 # -------------------------------------------------------------------------

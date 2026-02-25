@@ -16,11 +16,11 @@ function mapApplication(
     resume: app.resume_url,
     questions: app.questions ? JSON.parse(app.questions) : [],
     status: app.status,
-    notes: (app as any).notes ?? null,
-    jobTitle: (app as any).job_title ?? null,
-    companyName: (app as any).company_name ?? null,
+    notes: app.notes ?? null,
+    jobTitle: app.job_title ?? null,
+    companyName: app.company_name ?? null,
     companyKey: companyKey ?? null,
-    jobDescription: (app as any).job_description ?? jobDescription ?? null,
+    jobDescription: app.job_description ?? jobDescription ?? null,
     createdAt: app.created_at,
     aiInterviewPrep: app.ai_interview_prep
       ? (() => {
@@ -55,10 +55,7 @@ export const applicationResolvers = {
   },
   Application: {
     async interviewPrep(parent: { id: number }, _args: unknown, context: GraphQLContext) {
-      const rows = await context.db
-        .select()
-        .from(applicationTracks)
-        .where(eq(applicationTracks.application_id, parent.id));
+      const rows = await context.loaders.applicationTracks.load(parent.id);
 
       return rows
         .map((row) => mockTracks.find((t) => t.slug === row.track_slug))
@@ -67,8 +64,12 @@ export const applicationResolvers = {
   },
   Query: {
     async applications(_parent: any, _args: any, context: GraphQLContext) {
+      if (!context.userEmail) {
+        throw new Error("Unauthorized");
+      }
+
       try {
-        const query = context.db
+        const userApplications = await context.db
           .select({
             app: applications,
             jobDescription: jobs.description,
@@ -78,11 +79,8 @@ export const applicationResolvers = {
           .from(applications)
           .leftJoin(jobs, eq(jobs.url, applications.job_id))
           .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
+          .where(eq(applications.user_email, context.userEmail))
           .orderBy(desc(applications.created_at));
-
-        const userApplications = context.userEmail
-          ? await query.where(eq(applications.user_email, context.userEmail))
-          : await query;
 
         return userApplications.map(({ app, jobDescription, jobCompanyKey, nameCompanyKey }) =>
           mapApplication(app, jobDescription, jobCompanyKey ?? nameCompanyKey),
@@ -94,9 +92,9 @@ export const applicationResolvers = {
     },
 
     async application(_parent: any, args: { id: number }, context: GraphQLContext) {
-      const whereClause = context.userEmail
-        ? and(eq(applications.id, args.id), eq(applications.user_email, context.userEmail))
-        : eq(applications.id, args.id);
+      if (!context.userEmail) {
+        throw new Error("Unauthorized");
+      }
 
       const [row] = await context.db
         .select({
@@ -108,7 +106,7 @@ export const applicationResolvers = {
         .from(applications)
         .leftJoin(jobs, eq(jobs.url, applications.job_id))
         .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
-        .where(whereClause);
+        .where(and(eq(applications.id, args.id), eq(applications.user_email, context.userEmail)));
 
       if (!row) return null;
       return mapApplication(row.app, row.jobDescription, row.jobCompanyKey ?? row.nameCompanyKey);
@@ -147,9 +145,7 @@ export const applicationResolvers = {
             resume_url: null,
             questions: JSON.stringify(args.input.questions),
             status: "pending",
-            // @ts-expect-error new columns added via migration 0003
             job_title: args.input.jobTitle ?? null,
-            // @ts-expect-error new columns added via migration 0003
             company_name: args.input.companyName ?? null,
           })
           .returning();
@@ -181,7 +177,7 @@ export const applicationResolvers = {
           );
         }
 
-        const updateValues: Record<string, unknown> = {
+        const updateValues: Partial<typeof applications.$inferInsert> = {
           updated_at: new Date().toISOString(),
         };
 
@@ -200,7 +196,7 @@ export const applicationResolvers = {
 
         const [updated] = await context.db
           .update(applications)
-          .set(updateValues as any)
+          .set(updateValues)
           .where(
             and(
               eq(applications.id, args.id),
@@ -308,7 +304,7 @@ export const applicationResolvers = {
       if (!reqEntry) throw new Error("Requirement not found in interview prep data");
 
       // Return immediately if already generated (unless force regeneration requested)
-      const effectiveJobDescriptionForTopic = (row.app as any).job_description ?? row.jobDescription ?? null;
+      const effectiveJobDescriptionForTopic = row.app.job_description ?? row.jobDescription ?? null;
       if (reqEntry.deepDive && !args.force) return mapApplication(row.app, effectiveJobDescriptionForTopic);
 
       const plainJobDesc = (effectiveJobDescriptionForTopic ?? "")
@@ -323,7 +319,7 @@ export const applicationResolvers = {
         messages: [
           {
             role: "user",
-            content: `You are a senior staff engineer and technical interview coach. The candidate is preparing for a technical interview at ${(row.app as any).company_name ?? "a tech company"} for the role of ${(row.app as any).job_title ?? "software engineer"}.
+            content: `You are a senior staff engineer and technical interview coach. The candidate is preparing for a technical interview at ${row.app.company_name ?? "a tech company"} for the role of ${row.app.job_title ?? "software engineer"}.
 
 Job description context:
 ${plainJobDesc}
@@ -376,7 +372,7 @@ What weak or under-prepared candidates get wrong. Be blunt and specific.
         .set({
           ai_interview_prep: JSON.stringify(prepData),
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .where(whereClause)
         .returning();
 
@@ -405,7 +401,7 @@ What weak or under-prepared candidates get wrong. Be blunt and specific.
 
       // Prefer the user-supplied job_description on the application row; fall back to the
       // denormalized description from the jobs table (populated via the leftJoin above).
-      const effectiveJobDescription = (row.app as any).job_description ?? row.jobDescription ?? null;
+      const effectiveJobDescription = row.app.job_description ?? row.jobDescription ?? null;
 
       if (!effectiveJobDescription) {
         throw new Error("No job description available for this application");
@@ -486,7 +482,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
         .set({
           ai_interview_prep: JSON.stringify(parsed),
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .where(
           context.userEmail
             ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
@@ -524,7 +520,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
       }
       if (!prepData) throw new Error("No interview prep data found. Generate interview prep first.");
 
-      const effectiveJobDescription = (row.app as any).job_description ?? row.jobDescription ?? null;
+      const effectiveJobDescription = row.app.job_description ?? row.jobDescription ?? null;
 
       const client = createDeepSeekClient();
       const response = await client.chat({
@@ -541,7 +537,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
           },
           {
             role: "user",
-            content: `Job: ${(row.app as any).job_title ?? "Software Engineer"} at ${(row.app as any).company_name ?? "a tech company"}\n\nSelected text: "${args.selectedText}"`,
+            content: `Job: ${row.app.job_title ?? "Software Engineer"} at ${row.app.company_name ?? "a tech company"}\n\nSelected text: "${args.selectedText}"`,
           },
         ],
         response_format: { type: "json_object" },
@@ -566,7 +562,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
 
       const [updated] = await context.db
         .update(applications)
-        .set({ ai_interview_prep: JSON.stringify(prepData), updated_at: new Date().toISOString() } as any)
+        .set({ ai_interview_prep: JSON.stringify(prepData), updated_at: new Date().toISOString() })
         .where(whereClause)
         .returning();
 
@@ -604,10 +600,10 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
 
       reqEntry.sourceQuote = args.sourceQuote.trim().split(/\s+/).slice(0, 20).join(" ");
 
-      const effectiveJobDescription = (row.app as any).job_description ?? row.jobDescription ?? null;
+      const effectiveJobDescription = row.app.job_description ?? row.jobDescription ?? null;
       const [updated] = await context.db
         .update(applications)
-        .set({ ai_interview_prep: JSON.stringify(prepData), updated_at: new Date().toISOString() } as any)
+        .set({ ai_interview_prep: JSON.stringify(prepData), updated_at: new Date().toISOString() })
         .where(whereClause)
         .returning();
 
@@ -648,7 +644,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
       reqEntry.studyTopicDeepDives = reqEntry.studyTopicDeepDives ?? [];
       const existing = reqEntry.studyTopicDeepDives.find((d: any) => d.topic === args.studyTopic);
       // Prefer the user-supplied job_description on the application row; fall back to the jobs table value.
-      const effectiveJobDescriptionForStudyTopic = (row.app as any).job_description ?? row.jobDescription ?? null;
+      const effectiveJobDescriptionForStudyTopic = row.app.job_description ?? row.jobDescription ?? null;
       if (existing?.deepDive && !args.force) return mapApplication(row.app, effectiveJobDescriptionForStudyTopic);
 
       const plainJobDesc = (effectiveJobDescriptionForStudyTopic ?? "")
@@ -663,7 +659,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
         messages: [
           {
             role: "user",
-            content: `You are a senior staff engineer and technical interview coach. The candidate is preparing for a technical interview at ${(row.app as any).company_name ?? "a tech company"} for the role of ${(row.app as any).job_title ?? "software engineer"}.
+            content: `You are a senior staff engineer and technical interview coach. The candidate is preparing for a technical interview at ${row.app.company_name ?? "a tech company"} for the role of ${row.app.job_title ?? "software engineer"}.
 
 Job description context:
 ${plainJobDesc}
@@ -706,7 +702,7 @@ A real production scenario (incident, design decision, or architectural choice) 
         .set({
           ai_interview_prep: JSON.stringify(prepData),
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .where(whereClause)
         .returning();
 

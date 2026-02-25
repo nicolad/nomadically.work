@@ -27,8 +27,10 @@ dead_letter_queue = "job-report-dlq"
 # wrangler secret put LANGFUSE_PUBLIC_KEY    (pk-lf-...)
 # wrangler secret put LANGFUSE_SECRET_KEY    (sk-lf-...)
 
-[triggers]
-crons = ["0 0 * * *"]
+# [triggers]
+# crons = ["0 0 * * *"]
+# Cron disabled — freed slot for nomadically-work-eu-classifier (5-cron free plan limit).
+# job-reporter-llm is triggered on-demand via queue consumer.
 
 [vars]
 # Route DeepSeek through CF AI Gateway → free caching + analytics

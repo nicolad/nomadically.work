@@ -11,7 +11,6 @@ import copy
 import fcntl
 import json
 import os
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,79 +44,6 @@ _CHILD_ENV_KEYS = {
     "LANGFUSE_BASE_URL", "AGENT_VERSION", "PRODUCT_FEATURE",
     "ACTIVE_SUBAGENT", "CC_DEBUG", "PATH", "HOME",
     "TRACE_TO_LANGFUSE", "CC_IMPROVE_THRESHOLD",
-}
-
-# ── BMAD Workflow Detection ───────────────────────────────────────────────────
-BMAD_WORKFLOWS = {
-    "bmad-bmm-create-prd": "bmad:create-prd",
-    "bmad-bmm-create-product-brief": "bmad:create-product-brief",
-    "bmad-bmm-create-architecture": "bmad:create-architecture",
-    "bmad-bmm-create-epics-and-stories": "bmad:create-epics",
-    "bmad-bmm-create-ux-design": "bmad:create-ux-design",
-    "bmad-bmm-dev-story": "bmad:dev-story",
-    "bmad-bmm-code-review": "bmad:code-review",
-    "bmad-bmm-sprint-planning": "bmad:sprint-planning",
-    "bmad-bmm-sprint-status": "bmad:sprint-status",
-    "bmad-bmm-create-story": "bmad:create-story",
-    "bmad-bmm-quick-spec": "bmad:quick-spec",
-    "bmad-bmm-quick-dev": "bmad:quick-dev",
-    "bmad-bmm-retrospective": "bmad:retrospective",
-    "bmad-bmm-correct-course": "bmad:correct-course",
-    "bmad-bmm-qa-generate-e2e-tests": "bmad:qa-e2e-tests",
-    "bmad-bmm-document-project": "bmad:document-project",
-    "bmad-bmm-generate-project-context": "bmad:generate-context",
-    "bmad-brainstorming": "bmad:brainstorming",
-    "bmad-party-mode": "bmad:party-mode",
-}
-
-# ── BMAD Scorer Prompts ──────────────────────────────────────────────────────
-BMAD_PRD_SCORE_PROMPT = """You are a product quality evaluator. Score this PRD output on four dimensions (each 0.0–1.0):
-
-OUTPUT TO EVALUATE:
-{output}
-
-Evaluate:
-1. completeness   — Does the PRD cover problem statement, goals, user stories, requirements, scope, and success metrics?
-2. clarity         — Is the language precise and unambiguous? Could a developer implement from this alone?
-3. actionability   — Are the requirements specific enough to create tasks/stories from?
-4. consistency     — Are there contradictions between sections? Do priorities align with goals?
-
-Return ONLY valid JSON, no prose:
-{{"completeness": {{"score": float, "reason": str}}, "clarity": {{"score": float, "reason": str}}, "actionability": {{"score": float, "reason": str}}, "consistency": {{"score": float, "reason": str}}}}"""
-
-BMAD_ARCH_SCORE_PROMPT = """You are a software architecture evaluator. Score this architecture output on four dimensions (each 0.0–1.0):
-
-OUTPUT TO EVALUATE:
-{output}
-
-Evaluate:
-1. prd_alignment   — Does the architecture address all PRD requirements?
-2. feasibility     — Can this be built with the stated tech stack and constraints?
-3. scalability     — Does the design handle growth in users, data, and complexity?
-4. completeness    — Are all components, interfaces, data flows, and deployment details covered?
-
-Return ONLY valid JSON, no prose:
-{{"prd_alignment": {{"score": float, "reason": str}}, "feasibility": {{"score": float, "reason": str}}, "scalability": {{"score": float, "reason": str}}, "completeness": {{"score": float, "reason": str}}}}"""
-
-BMAD_CODE_REVIEW_SCORE_PROMPT = """You are a code review quality evaluator. Score this code review output on four dimensions (each 0.0–1.0):
-
-OUTPUT TO EVALUATE:
-{output}
-
-Evaluate:
-1. thoroughness       — Does the review cover logic, edge cases, security, performance, and style?
-2. false_positive_rate — Are the flagged issues real problems (1.0 = all real, 0.0 = all false positives)?
-3. actionability      — Are suggestions specific and implementable (not vague "improve X")?
-4. spec_compliance    — Does the review check conformance to project patterns and conventions?
-
-Return ONLY valid JSON, no prose:
-{{"thoroughness": {{"score": float, "reason": str}}, "false_positive_rate": {{"score": float, "reason": str}}, "actionability": {{"score": float, "reason": str}}, "spec_compliance": {{"score": float, "reason": str}}}}"""
-
-BMAD_SCORER_MAP = {
-    "bmad:create-prd": BMAD_PRD_SCORE_PROMPT,
-    "bmad:create-product-brief": BMAD_PRD_SCORE_PROMPT,
-    "bmad:create-architecture": BMAD_ARCH_SCORE_PROMPT,
-    "bmad:code-review": BMAD_CODE_REVIEW_SCORE_PROMPT,
 }
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -228,78 +154,6 @@ def build_session_summary(msgs: List[Dict]) -> Dict:
         "model":      get_model(msgs),
         "turn_count": len(turns),
     }
-
-# ── BMAD Detection & Scoring ──────────────────────────────────────────────────
-_CMD_TAG_RE = re.compile(r"<command-name>/?([^<]+)</command-name>")
-
-
-def detect_bmad_workflows(msgs: List[Dict]) -> List[str]:
-    """Scan transcript for BMAD workflow invocations. Returns deduplicated tags."""
-    found: set = set()
-
-    for msg in msgs:
-        role = get_role(msg)
-        content = get_content(msg)
-
-        if role == "user":
-            text = extract_text(content)
-            for match in _CMD_TAG_RE.findall(text):
-                cmd = match.strip().lstrip("/")
-                if cmd in BMAD_WORKFLOWS:
-                    found.add(BMAD_WORKFLOWS[cmd])
-
-        elif role == "assistant" and isinstance(content, list):
-            for block in content:
-                if (isinstance(block, dict)
-                        and block.get("type") == "tool_use"
-                        and block.get("name") == "Skill"):
-                    skill = block.get("input", {}).get("skill", "")
-                    if skill in BMAD_WORKFLOWS:
-                        found.add(BMAD_WORKFLOWS[skill])
-
-    return sorted(found)
-
-
-def score_bmad_output(summary: Dict, workflow_tag: str) -> Optional[Dict]:
-    """Run a BMAD-specific scorer for a workflow. Returns dict of scores or None."""
-    prompt_tpl = BMAD_SCORER_MAP.get(workflow_tag)
-    if not prompt_tpl or not anthropic:
-        return None
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-
-    # Use the last assistant message as the output to evaluate
-    last_assistant = ""
-    for turn in reversed(summary["turns"]):
-        if turn.get("assistant"):
-            last_assistant = turn["assistant"]
-            break
-    if not last_assistant:
-        return None
-
-    safe = _truncate_summary_for_prompt(summary)
-    # Truncate the output for the prompt
-    output_text = last_assistant[:_MAX_TURN_CHARS * 2]
-    prompt = prompt_tpl.format(output=output_text)
-
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        resp = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=512,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = _strip_markdown_fences(resp.content[0].text.strip())
-        return json.loads(raw)
-    except json.JSONDecodeError as e:
-        log("ERROR", f"score_bmad_output JSON parse failed: {e}")
-        return None
-    except Exception as e:
-        log("ERROR", f"score_bmad_output failed: {e}")
-        return None
-
 
 # ── Scoring via Claude ────────────────────────────────────────────────────────
 SCORE_PROMPT = """You are an evaluation agent for a customer-facing AI product.
@@ -437,17 +291,13 @@ _MAX_TOOL_OBS_BYTES = 4_000   # Langfuse ingest API limit per event
 
 def emit_to_langfuse(lf: Langfuse, session_id: str,
                      summary: Dict, scores: Optional[Dict],
-                     transcript_path: Path,
-                     bmad_tags: Optional[List[str]] = None,
-                     bmad_scores: Optional[Dict[str, Dict]] = None) -> None:
+                     transcript_path: Path) -> None:
     session_text = "\n\n".join(
         f"User: {t['user']}\nAssistant: {t['assistant']}"
         for t in summary["turns"]
     )
 
     tags = ["claude-code", ACTIVE_SUBAGENT, AGENT_VERSION]
-    if bmad_tags:
-        tags.extend(bmad_tags)
 
     with propagate_attributes(
         session_id=session_id,
@@ -466,7 +316,6 @@ def emit_to_langfuse(lf: Langfuse, session_id: str,
                 "turn_count":      summary["turn_count"],
                 "tool_count":      len(summary["tool_calls"]),
                 "transcript_path": str(transcript_path),
-                "bmad_workflows":  bmad_tags or [],
             },
         ) as span:
             # LLM generation observation
@@ -497,7 +346,7 @@ def emit_to_langfuse(lf: Langfuse, session_id: str,
                 metadata={"scores": scores} if scores else {},
             )
 
-            # Scores attached to the current trace (must be inside the span context)
+            # Scores attached to the current trace
             if scores:
                 for dim, data in scores.items():
                     if isinstance(data, dict) and "score" in data:
@@ -507,22 +356,6 @@ def emit_to_langfuse(lf: Langfuse, session_id: str,
                             comment=data.get("reason", ""),
                             data_type="NUMERIC",
                         )
-
-            # BMAD-specific scores (prefixed with bmad-)
-            if bmad_scores:
-                for workflow_tag, dims in bmad_scores.items():
-                    if not isinstance(dims, dict):
-                        continue
-                    # Derive prefix from workflow tag (e.g. "bmad:create-prd" -> "bmad-prd")
-                    prefix = workflow_tag.replace("bmad:", "bmad-")
-                    for dim_name, data in dims.items():
-                        if isinstance(data, dict) and "score" in data:
-                            lf.score_current_trace(
-                                name=f"{prefix}-{dim_name}",
-                                value=data["score"],
-                                comment=data.get("reason", ""),
-                                data_type="NUMERIC",
-                            )
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main() -> int:
@@ -553,46 +386,20 @@ def main() -> int:
         if DEBUG and scores:
             log("DEBUG", f"Scores: {json.dumps(scores)}")
 
-        # BMAD workflow detection
-        bmad_tags = detect_bmad_workflows(msgs)
-        bmad_scores: Dict[str, Dict] = {}
-        if bmad_tags:
-            log("INFO", f"BMAD workflows detected: {bmad_tags}")
-            for tag in bmad_tags:
-                try:
-                    result = score_bmad_output(summary, tag)
-                    if result:
-                        bmad_scores[tag] = result
-                except Exception as e:
-                    log("ERROR", f"BMAD scoring failed for {tag}: {e}")
-
         lf = Langfuse(public_key=public_key, secret_key=secret_key, host=host)
-        emit_to_langfuse(lf, session_id, summary, scores, transcript_path,
-                         bmad_tags=bmad_tags, bmad_scores=bmad_scores)
+        emit_to_langfuse(lf, session_id, summary, scores, transcript_path)
         lf.flush()
 
-        # Collect all scores (generic + BMAD) for threshold check
+        # Check threshold for improvement queue
         all_dim_scores: List[float] = []
         if scores:
             all_dim_scores.extend(
                 v["score"] for v in scores.values()
                 if isinstance(v, dict) and "score" in v
             )
-        for dims in bmad_scores.values():
-            if isinstance(dims, dict):
-                all_dim_scores.extend(
-                    v["score"] for v in dims.values()
-                    if isinstance(v, dict) and "score" in v
-                )
 
         if all_dim_scores and min(all_dim_scores) < SCORE_THRESHOLD:
-            # Merge generic + BMAD scores for the queue entry
-            merged_scores = dict(scores) if scores else {}
-            for tag, dims in bmad_scores.items():
-                prefix = tag.replace("bmad:", "bmad-")
-                for dim_name, data in dims.items():
-                    merged_scores[f"{prefix}-{dim_name}"] = data
-            enqueue_session(session_id, transcript_path, merged_scores, summary)
+            enqueue_session(session_id, transcript_path, scores or {}, summary)
 
             if os.environ.get("CC_AUTO_IMPROVE", "").lower() == "true":
                 import subprocess

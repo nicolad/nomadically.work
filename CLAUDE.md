@@ -219,32 +219,48 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 ---
 
-## Agent Teams
+## Spec-Driven Development (SDD)
 
-Uses Claude Code Agent Teams for multi-agent coordination. No external framework — spawn prompts + task lists + checklists.
+Uses [agent-teams-lite](https://github.com/Gentleman-Programming/agent-teams-lite) for spec-driven development. An orchestrator delegates work to specialized sub-agents via the Task tool, each with fresh context.
+
+### Structure
 
 | Path | Contents |
 |---|---|
-| `.claude/team-roles/` | Spawn prompts for teammates (pm, architect, dev, qa + content team) |
-| `_bmad/checklists.md` | Quality gate checklists (code review, definition of done, etc.) |
-| `_bmad-output/planning-artifacts/` | Planning phase outputs (PRDs, architecture, UX specs) |
-| `_bmad-output/implementation-artifacts/` | Implementation outputs (tech specs, sprint status) |
-| `docs/` | Working documents (PRD, architecture, stories) |
+| `.claude/skills/sdd-*/SKILL.md` | 9 SDD sub-agent skill files (explore, propose, spec, design, tasks, apply, verify, archive, init) |
+| `openspec/` | Specs, change proposals, designs, and task breakdowns (created by `sdd-init`) |
+| `.claude/commands/` | Project-specific commands (build-and-push, gql-agent) |
 
-**Core team** (spawn prompts in `.claude/team-roles/`):
-- `pm.md` — Product Manager: requirements, user stories, PRD
-- `architect.md` — System Architect: architecture decisions, tech design
-- `dev.md` — Developer: implementation per stories, owns `src/` and `workers/`
-- `qa.md` — QA: validation, testing, checklist enforcement
+### SDD Commands
 
-**Content team**: `managing-editor.md`, `researcher.md`, `writer.md`, `editor.md`, `fact-checker.md`
-**UX team**: `ux-lead.md`, `ux-researcher.md`, `ui-designer.md`
+| Command | Action |
+|---------|--------|
+| `/sdd:init` | Bootstrap `openspec/` in current project |
+| `/sdd:explore <topic>` | Investigate an idea (no files created) |
+| `/sdd:new <change-name>` | Start a new change (creates proposal) |
+| `/sdd:continue` | Create next artifact in dependency chain |
+| `/sdd:ff <change-name>` | Fast-forward: create all planning artifacts |
+| `/sdd:apply` | Implement tasks |
+| `/sdd:verify` | Validate implementation against specs |
+| `/sdd:archive` | Sync specs + archive completed change |
 
-**Rules**:
-- Teammates must not edit the same files — break ownership by directory/module
-- Use plan approval on teammates before implementation
-- 3-4 teammates is the sweet spot; skip the ceremony for bug fixes
-- Quality gates: teammates reference `_bmad/checklists.md` before marking tasks complete
+### Orchestrator Rules
+
+1. The lead agent NEVER executes phase work inline — always delegate to sub-agents
+2. Sub-agents are launched via Task tool with the skill file path and context
+3. Between sub-agent calls, show the user what was done and ask to proceed
+4. Keep orchestrator context minimal — pass file paths, not file contents
+5. Do NOT force SDD on small tasks (single file edits, quick fixes, questions)
+
+### Dependency Graph
+
+```
+proposal → specs ──→ tasks → apply → verify → archive
+              ↕
+           design
+```
+
+Specs and design run in parallel; tasks depends on both; verify is optional but recommended before archive.
 
 ---
 

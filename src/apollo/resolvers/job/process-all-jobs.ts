@@ -83,6 +83,7 @@ export async function processAllJobs(
       method: "POST",
       headers,
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(50_000),
     });
 
     if (!response.ok) {

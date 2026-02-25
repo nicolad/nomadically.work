@@ -2,6 +2,11 @@ name = "nomadically-work-insert-jobs"
 main = "workers/insert-jobs.ts"
 compatibility_date = "2026-02-01"
 
+# Cron: auto-ingest from job_sources every 12 hours
+# Also triggered on-demand by janitor via INSERT_JOBS_URL secret
+[triggers]
+crons = ["0 */12 * * *"]
+
 # D1 Database
 [[d1_databases]]
 binding = "DB"

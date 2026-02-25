@@ -2,6 +2,7 @@ import { jobs } from "@/db/schema";
 import type { GraphQLContext } from "../../context";
 import { eq, like } from "drizzle-orm";
 import { GraphQLError } from "graphql";
+import { isAdminEmail } from "@/lib/admin";
 import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
@@ -32,6 +33,10 @@ export async function enhanceJobFromATS(
   args: { jobId: string; company: string; source: string },
   context: GraphQLContext,
 ) {
+  if (!context.userId || !isAdminEmail(context.userEmail)) {
+    throw new GraphQLError("Forbidden", { extensions: { code: "FORBIDDEN" } });
+  }
+
   try {
     const { jobId, company, source } = args;
 

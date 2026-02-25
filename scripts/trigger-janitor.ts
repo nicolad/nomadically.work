@@ -22,7 +22,7 @@ async function triggerJanitor() {
 
     // Step 2: Trigger the scheduled event directly
     // Use wrangler's --test-scheduled to trigger the cron manually
-    execSync(`npx wrangler dev workers/janitor.ts --test-scheduled --local`, {
+    execSync(`npx wrangler dev workers/janitor.ts --test-scheduled --remote`, {
       stdio: "inherit",
       cwd: process.cwd(),
     });

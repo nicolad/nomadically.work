@@ -1,12 +1,13 @@
 import { jobs } from "@/db/schema";
 import type { Job } from "@/db/schema";
-import { eq, like, sql } from "drizzle-orm";
+import { eq, and, like, ne, sql } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import { isAdminEmail } from "@/lib/admin";
 import { jobsQuery } from "./jobs-query";
 import { enhanceJobFromATS } from "./enhance-job";
 import { processAllJobs } from "./process-all-jobs";
 import { JOB_STATUS } from "@/constants/job-status";
+import { REMOTE_EU_ONLY } from "@/lib/constants";
 import type {
   JobResolvers,
   QueryResolvers,
@@ -307,11 +308,15 @@ const Query: QueryResolvers = {
    */
   async job(_parent, args, context) {
     try {
+      const baseConditions = REMOTE_EU_ONLY
+        ? [ne(jobs.status, "reported"), eq(jobs.is_remote_eu, true)]
+        : [ne(jobs.status, "reported")];
+
       // 1. Exact match on external_id (Ashby UUIDs, bare IDs)
       const exactResults = await context.db
         .select()
         .from(jobs)
-        .where(eq(jobs.external_id, args.id))
+        .where(and(...baseConditions, eq(jobs.external_id, args.id)))
         .limit(1);
 
       if (exactResults.length > 0) {
@@ -323,7 +328,7 @@ const Query: QueryResolvers = {
       const suffixResults = await context.db
         .select()
         .from(jobs)
-        .where(like(jobs.external_id, `%/${args.id}%`))
+        .where(and(...baseConditions, like(jobs.external_id, `%/${args.id}%`)))
         .limit(1);
 
       if (suffixResults.length > 0) {
@@ -336,7 +341,7 @@ const Query: QueryResolvers = {
         const idResults = await context.db
           .select()
           .from(jobs)
-          .where(eq(jobs.id, numericId))
+          .where(and(...baseConditions, eq(jobs.id, numericId)))
           .limit(1);
 
         if (idResults.length > 0) {

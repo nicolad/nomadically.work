@@ -11,9 +11,15 @@
  */
 
 import { config } from "dotenv";
-import { db } from "../src/db";
+import { drizzle } from "drizzle-orm/d1";
+import { createD1HttpClient } from "../src/db/d1-http";
 import { jobs } from "../src/db/schema";
 import { eq } from "drizzle-orm";
+
+// D1 HTTP client — requires D1_GATEWAY_URL+D1_GATEWAY_KEY or Cloudflare direct API vars
+function getDb() {
+  return drizzle(createD1HttpClient() as any);
+}
 import {
   fetchGreenhouseJobPost,
   saveGreenhouseJobData,
@@ -67,7 +73,7 @@ async function enhanceAshbyJob(job: any): Promise<{
     });
 
     console.log(`  💾 Saving to database...`);
-    await saveAshbyJobData(db, job.id, ashbyData, job.company_key);
+    await saveAshbyJobData(getDb(), job.id, ashbyData, job.company_key);
 
     console.log(`  ✅ Success`);
     return { success: true };
@@ -83,7 +89,7 @@ async function enhanceAshbyJob(job: any): Promise<{
       console.log(`  ⏭️  Skipped (job no longer exists) - marking as closed`);
 
       try {
-        await db
+        await getDb()
           .update(jobs)
           .set({ status: "closed" })
           .where(eq(jobs.id, job.id));
@@ -120,7 +126,7 @@ async function enhanceGreenhouseJob(job: any): Promise<{
     });
 
     console.log(`  💾 Saving to database...`);
-    await saveGreenhouseJobData(db, job.id, greenhouseData);
+    await saveGreenhouseJobData(getDb(), job.id, greenhouseData);
 
     console.log(`  ✅ Success`);
     return { success: true };
@@ -141,7 +147,7 @@ async function enhanceGreenhouseJob(job: any): Promise<{
 
       // Mark job as closed in database
       try {
-        await db
+        await getDb()
           .update(jobs)
           .set({ status: "closed" })
           .where(eq(jobs.id, job.id));
@@ -200,7 +206,7 @@ async function enhanceAllJobs() {
 
   // Fetch jobs from database
   console.log("📊 Fetching jobs from database...");
-  const allJobs = await db.select().from(jobs);
+  const allJobs = await getDb().select().from(jobs);
 
   console.log(`Found ${allJobs.length} jobs to process\n`);
 

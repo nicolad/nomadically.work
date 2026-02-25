@@ -67,7 +67,12 @@ async function syncNewBoards(
       `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)
        SELECT 'greenhouse', token, url, first_seen
        FROM greenhouse_boards
-       WHERE is_active = 1`,
+       WHERE is_active = 1
+         AND CAST(LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+               REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(token,
+               '0',''),'1',''),'2',''),'3',''),'4',''),
+               '5',''),'6',''),'7',''),'8',''),'9','')) AS REAL)
+             > LENGTH(token) * 0.6`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO job_sources (kind, company_key, canonical_url, first_seen_at)

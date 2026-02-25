@@ -111,6 +111,14 @@ function validateJob(job: JobInput): { valid: boolean; errors: string[] } {
   if (!job.externalId?.trim()) errors.push("externalId is required");
   if (!job.sourceKind?.trim()) errors.push("sourceKind is required");
 
+  // Reject spam company keys where >40% of characters are digits
+  if (job.companyKey) {
+    const digits = (job.companyKey.match(/\d/g) ?? []).length;
+    if (digits / job.companyKey.length > 0.4) {
+      errors.push("companyKey looks like a spam/garbage board token (too many digits)");
+    }
+  }
+
   // Reject board-only URLs as external_id (e.g. "https://jobs.ashbyhq.com/company/")
   if (job.externalId && job.externalId.includes("://")) {
     try {

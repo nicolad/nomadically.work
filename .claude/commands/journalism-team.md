@@ -1,6 +1,6 @@
 ---
 name: 'journalism-team'
-description: 'Spawn a 4-teammate AI journalism team (Managing Editor + Researcher + Writer + Editor + Fact-Checker) to research, write, edit, and fact-check a long-form technical article for vadim.blog. Use when the user says "create journalism team", "spawn journalism team", "run journalism team", "write an article", or "journalism team".'
+description: 'Spawn a 5-teammate AI journalism team (Managing Editor + Researcher + Writer + Editor + Fact-Checker) to research, write, edit, and fact-check a long-form technical article for vadim.blog. Use when the user says "create journalism team", "spawn journalism team", "run journalism team", "write an article", or "journalism team".'
 ---
 
 Create an agent team to produce a publish-ready long-form article for vadim.blog.

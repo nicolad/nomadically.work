@@ -12,7 +12,10 @@
  */
 
 import { config } from "dotenv";
-import { turso as db } from "../src/db";
+import { drizzle } from "drizzle-orm/d1";
+import { createD1HttpClient } from "../src/db/d1-http";
+import { jobs } from "../src/db/schema";
+import { isNotNull, desc, sql } from "drizzle-orm";
 
 // Load .env.local for environment variables
 config({ path: ".env.local" });
@@ -38,23 +41,26 @@ function getConfig(): Config {
 // ============================================================================
 
 async function getJobsNeedingSkillExtraction(
-  config: Config,
+  _config: Config,
   limit: number = 100,
 ): Promise<any[]> {
-  // Get jobs that have a description (needed for skill extraction)
-  const result = await db.execute({
-    sql: `
-      SELECT id, title, company_key, status, description, created_at, updated_at
-      FROM jobs
-      WHERE description IS NOT NULL
-        AND description != ''
-      ORDER BY created_at DESC
-      LIMIT ?
-    `,
-    args: [limit],
-  });
+  const db = drizzle(createD1HttpClient() as any);
+  const result = await db
+    .select({
+      id: jobs.id,
+      title: jobs.title,
+      company_key: jobs.company_key,
+      status: jobs.status,
+      description: jobs.description,
+      created_at: jobs.created_at,
+      updated_at: jobs.updated_at,
+    })
+    .from(jobs)
+    .where(isNotNull(jobs.description))
+    .orderBy(desc(jobs.created_at))
+    .limit(limit);
 
-  return result.rows;
+  return result.filter((r) => r.description && r.description !== "");
 }
 
 // ============================================================================
@@ -184,11 +190,17 @@ Examples:
   # Extract skills for limited number of jobs
   tsx scripts/ingest-jobs.ts --extract-skills --limit 50
 
-Environment Variables:
-  TURSO_DB_URL              Turso database URL (required)
-  TURSO_DB_AUTH_TOKEN       Turso auth token (required)
-  NEXT_PUBLIC_URL           Next.js base URL (default: http://localhost:3000)
-  OPENAI_API_KEY            OpenAI API key (required for embeddings)
+Environment Variables (choose one D1 access mode):
+  Gateway mode (recommended):
+    D1_GATEWAY_URL            D1 gateway worker URL
+    D1_GATEWAY_KEY            D1 gateway API key
+  Direct API mode:
+    CLOUDFLARE_ACCOUNT_ID     Cloudflare account ID
+    CLOUDFLARE_D1_DATABASE_ID D1 database ID
+    CLOUDFLARE_API_TOKEN      Cloudflare API token
+  Other:
+    NEXT_PUBLIC_URL           Next.js base URL (default: http://localhost:3000)
+    OPENAI_API_KEY            OpenAI API key (required for embeddings)
 `);
 }
 

@@ -84,7 +84,7 @@ input QuestionAnswerInput {
 }
 
 input ApplicationInput {
-  jobId: String!
+  jobId: String
   resume: Upload
   questions: [QuestionAnswerInput!]!
   jobTitle: String

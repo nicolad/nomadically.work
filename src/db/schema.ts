@@ -463,7 +463,7 @@ export type NewUserPreference = typeof userPreferences.$inferInsert;
 export const applications = sqliteTable("applications", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   user_email: text("user_email").notNull(), // User's email address
-  job_id: text("job_id").notNull(), // Job URL
+  job_id: text("job_id"), // Job URL
   resume_url: text("resume_url"), // Store uploaded resume URL
   questions: text("questions"), // JSON array of {questionId, questionText, answerText}
   status: text("status", {

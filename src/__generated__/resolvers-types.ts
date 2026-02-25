@@ -112,7 +112,7 @@ export type Application = {
 
 export type ApplicationInput = {
   companyName?: InputMaybe<Scalars['String']['input']>;
-  jobId: Scalars['String']['input'];
+  jobId?: InputMaybe<Scalars['String']['input']>;
   jobTitle?: InputMaybe<Scalars['String']['input']>;
   questions: Array<QuestionAnswerInput>;
   resume?: InputMaybe<Scalars['Upload']['input']>;

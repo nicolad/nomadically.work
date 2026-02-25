@@ -117,7 +117,7 @@ export const applicationResolvers = {
       _parent: any,
       args: {
         input: {
-          jobId: string;
+          jobId?: string | null;
           resume?: File;
           questions: Array<{
             questionId: string;
@@ -141,7 +141,7 @@ export const applicationResolvers = {
           .insert(applications)
           .values({
             user_email: context.userEmail,
-            job_id: args.input.jobId,
+            job_id: args.input.jobId ?? null,
             resume_url: null,
             questions: JSON.stringify(args.input.questions),
             status: "pending",

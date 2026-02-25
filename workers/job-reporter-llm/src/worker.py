@@ -336,9 +336,10 @@ async def on_queue(batch, env):
 async def on_scheduled(controller, env):
     """
     Runs on the daily cron trigger (see wrangler.toml [triggers]).
-    Applies any pending migrations and logs the result.
-    This guarantees schema is up to date even if the first-fetch path
-    was never hit (e.g. idle worker after a fresh deploy).
+
+    1. Apply pending migrations.
+    2. Proactively scan recently classified EU-remote jobs from suspicious board
+       tokens and auto-report them without waiting for a user report.
     """
     try:
         applied = await migrations.run(env.DB)
@@ -349,3 +350,53 @@ async def on_scheduled(controller, env):
     except Exception as exc:
         print(f"[cron:migrations] error: {exc}")
         raise
+
+    # --- Proactive spam scan -------------------------------------------
+    # Find EU-remote jobs classified in the last 48h whose company_key looks
+    # like a raw ATS board token (>40% digit characters). Report them
+    # automatically so DeepSeek can confirm or restore via the queue.
+    try:
+        result = await env.DB.prepare("""
+            SELECT id, company_key
+            FROM jobs
+            WHERE is_remote_eu = 1
+              AND status NOT IN ('reported', 'archived')
+              AND report_action IS NULL
+              AND updated_at >= datetime('now', '-48 hours')
+        """).all()
+        rows = result.results if hasattr(result, "results") else []
+        queued = 0
+        for row in rows:
+            company_key = getattr(row, "company_key", "") or ""
+            if not company_key:
+                continue
+            digit_count = sum(1 for c in company_key if c.isdigit())
+            if digit_count / len(company_key) <= 0.4:
+                continue
+            job_id = getattr(row, "id")
+            job = await db.get_job(env.DB, job_id)
+            if not job:
+                continue
+            if job.get("status") == "reported":
+                continue
+            # Mark as reported and enqueue for LLM analysis
+            await env.DB.prepare(
+                "UPDATE jobs SET status='reported', updated_at=datetime('now') WHERE id=?"
+            ).bind(job_id).run()
+            await db.log_event(env.DB, job_id, "reported",
+                               actor="system:cron:spam-scan",
+                               payload={"company_key": company_key,
+                                        "reason": "spam-board-token"})
+            snapshot = {**job, "prev_status": job.get("status", "enhanced")}
+            if snapshot.get("description"):
+                snapshot["description"] = snapshot["description"][:2000]
+            await env.JOB_REPORT_QUEUE.send(json.dumps({
+                "jobId":       job_id,
+                "reportedBy":  "system:cron:spam-scan",
+                "jobSnapshot": snapshot,
+                "enqueuedAt":  _now(),
+            }))
+            queued += 1
+        print(f"[cron:spam-scan] queued {queued} suspicious jobs for LLM review")
+    except Exception as exc:
+        print(f"[cron:spam-scan] error: {exc}")

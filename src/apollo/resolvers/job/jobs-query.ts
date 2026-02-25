@@ -24,7 +24,17 @@ export async function jobsQuery(
   context: GraphQLContext,
 ) {
   try {
-    const conditions = [ne(jobs.status, "reported")];
+    // Exclude jobs from spam/garbage board tokens: SQLite expression that checks
+    // whether stripping all digits leaves >60% of the original length (i.e. <40%
+    // of chars are digits). company_keys like "55564patriot334567..." are rejected.
+    const spamKeyFilter = sql<boolean>`(
+      CAST(LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${jobs.company_key},
+        '0',''),'1',''),'2',''),'3',''),'4',''),
+        '5',''),'6',''),'7',''),'8',''),'9',''))
+      AS REAL) > LENGTH(${jobs.company_key}) * 0.6
+    )`;
+    const conditions = [ne(jobs.status, "reported"), spamKeyFilter];
     const hasFilters = !!(args.search || args.sourceType || (args.sourceTypes && args.sourceTypes.length > 0) || args.remoteEuConfidence || (args.skills && args.skills.length > 0) || (args.excludedCompanies && args.excludedCompanies.length > 0));
 
     if (args.search) {

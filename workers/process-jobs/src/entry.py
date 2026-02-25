@@ -719,6 +719,21 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
     stats = {"enhanced": 0, "errors": 0}
 
     for job in rows:
+        company_key = job.get("company_key") or ""
+        digit_count = sum(1 for c in company_key if c.isdigit())
+        if company_key and digit_count / len(company_key) > 0.4:
+            print(f"   🚫 Skipping job {job['id']}: spam company key ({company_key!r})")
+            try:
+                await d1_run(
+                    db,
+                    "UPDATE jobs SET status = 'archived', updated_at = datetime('now') WHERE id = ?",
+                    [job["id"]],
+                )
+            except Exception as e:
+                print(f"   ⚠️  Could not archive spam job: {e}")
+            stats["errors"] += 1
+            continue
+
         print(f"🔄 Enhancing {job.get('source_kind')} job {job['id']}: {job.get('title')}")
         result = await enhance_job(db, job)
 

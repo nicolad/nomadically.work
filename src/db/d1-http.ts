@@ -81,6 +81,7 @@ export class D1HttpClient {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25_000),
       });
 
       if (!response.ok) {
@@ -111,6 +112,7 @@ export class D1HttpClient {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(25_000),
     });
 
     if (!response.ok) {
@@ -218,6 +220,7 @@ export class D1HttpClient {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(queries.map((sql) => ({ sql }))),
+      signal: AbortSignal.timeout(25_000),
     });
 
     if (!response.ok) {

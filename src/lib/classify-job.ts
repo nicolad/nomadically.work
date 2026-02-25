@@ -57,6 +57,7 @@ export const classifyJob = async (
       method: "POST",
       headers,
       body: JSON.stringify({ job_id: jobId }),
+      signal: AbortSignal.timeout(30_000),
     });
 
     const json = (await res.json()) as {

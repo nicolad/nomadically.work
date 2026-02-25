@@ -1,13 +1,13 @@
 ---
-title: "From Research to Practice: Structured Code Repair with the Code Improver Agent"
-description: "How Agyn, Team of Rivals, TraceCoder, Optimizing Agentic Workflows, and PatchIsland shaped an agent that fixes code using standardized repair workflows — not ad-hoc edits."
+title: "5 Meta-Tools, 0 Ad-Hoc Edits: Structured Code Repair with AI Agents"
+description: "Ad-hoc AI edits break code. Standardized repair workflows don't. Five meta-tools for N+1 queries, type safety, performance, dead code, and security — grounded in 5 research papers."
 date: "2026-02-25"
 author: "nomadically.work"
-tags: ["autonomous-agents", "automated-repair", "self-improvement", "software-engineering"]
-status: published
+tags: ["autonomous-agents", "automated-repair", "self-improvement", "software-engineering", "AI-code-repair"]
+status: draft
 ---
 
-# From Research to Practice: Structured Code Repair with the Code Improver Agent
+# 5 Meta-Tools, 0 Ad-Hoc Edits: Structured Code Repair with AI Agents
 
 There's a difference between an AI that can edit code and an AI that can repair code. Editing is mechanical — find a string, replace it. Repair requires understanding what's broken, why it's broken, and what the minimal fix looks like within the constraints of an existing codebase.
 
@@ -17,7 +17,13 @@ Five research papers informed its design, curated from the [VoltAgent/awesome-ai
 
 > **Note:** The implementation has since evolved from a generic code improver into a goal-driven "Skill Optimizer" focused on AI/ML skill taxonomy, extraction, and matching for the job search pipeline. The research principles described here still underpin the architecture. The meta-tools and scope constraints below reflect the original design that these papers informed.
 
-## The Research Foundation
+## The Difference Between Editing and Repairing Code
+
+Ask any AI coding agent to "fix the N+1 query in this resolver" and you'll get an edit. Maybe it's correct. Maybe it breaks the DataLoader contract. Maybe it fixes the symptom but introduces a new query pattern that's worse. The SWE-bench benchmark shows even the best agents resolve only 21% of real-world software engineering tasks — and that's with well-defined problem statements.
+
+The issue isn't capability. It's methodology. An ad-hoc edit is a guess informed by context. A structured repair is a workflow: observe the code, analyze the pattern, apply a proven fix template, verify the result. The difference is the same as between a developer who "tries stuff until it works" and one who follows a diagnostic procedure.
+
+## Five Papers, One Principle: Structured Workflows Outperform Ad-Hoc Fixing
 
 ### Agyn: Team-Based Autonomous Software Engineering
 
@@ -114,7 +120,7 @@ The Code Improver doesn't just write code and move on. After making changes:
 
 This post-implementation checklist exists because early versions of the agent would make correct edits that broke unrelated code through import changes or type propagation. The checklist catches these cascade failures before the Verification Gate even sees the changes.
 
-## Why This Matters
+## Why Zero Ad-Hoc Edits Matters
 
 The Code Improver's maximum of 10 findings per run isn't a limitation — it's a design choice. Quality over quantity. Each fix must be traceable to an audit finding, implemented with a standardized meta-tool when applicable, verified by the agent itself, and then verified again by the Verification Gate.
 

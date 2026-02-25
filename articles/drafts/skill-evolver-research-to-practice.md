@@ -1,13 +1,13 @@
 ---
-title: "From Research to Practice: A Skill Evolver That Improves Its Own Instructions"
-description: "How Meta Context Engineering, CASTER, REprompt, EvoConfig, and Autonomous Question Formation created an agent that edits its own skill files — the system improving its own instructions."
+title: "How We Built an Agent That Edits Its Own Instructions"
+description: "An AI agent that improves its own prompts based on measured evidence — not vibes. Five research papers, five anti-patterns, and one strict scope boundary that makes it safe."
 date: "2026-02-25"
 author: "nomadically.work"
-tags: ["autonomous-agents", "self-improvement", "meta-learning", "prompt-engineering"]
-status: published
+tags: ["autonomous-agents", "self-improvement", "meta-learning", "prompt-engineering", "self-improving-AI"]
+status: draft
 ---
 
-# From Research to Practice: A Skill Evolver That Improves Its Own Instructions
+# How We Built an Agent That Edits Its Own Instructions
 
 Most AI systems have a hard boundary between the instructions they follow and the work they do. Developers write prompts; the AI executes them. If the prompts are wrong, a human fixes them. We built an agent that fixes its own prompts.
 
@@ -17,7 +17,13 @@ Five research papers informed its design, curated from the [VoltAgent/awesome-ai
 
 > **Note:** The implementation has since evolved from a generic skill evolver into a goal-driven "Classifier Tuner" focused on reducing false negatives in remote EU job classification. The research principles described here still underpin the architecture. The data structures and anti-patterns below reflect the original design that these papers informed.
 
-## The Research Foundation
+## The Self-Modification Problem
+
+The idea of AI editing its own prompts sounds either brilliant or terrifying, depending on your perspective. The Awesome Self-Evolving Agents survey catalogs dozens of papers on the topic, but almost none show a working implementation with safety constraints. The gap between "agents that can self-modify" and "agents that should self-modify" is where the interesting engineering lives.
+
+The Skill Evolver's scope is deliberately narrow: it can edit Markdown skill files, commands, hooks, and memory files. It cannot touch application source code. This boundary is the single most important design decision — an agent that can modify its own instructions AND the codebase has an unbounded blast radius. An agent that can only modify Markdown files? The worst case is a bad prompt, which the Verification Gate will catch.
+
+## Five Papers That Shaped the Design
 
 ### Meta Context Engineering: A Meta-Agent Evolving Its Own Context
 
@@ -117,11 +123,13 @@ The Skill Evolver doesn't operate in isolation. Its changes are validated by the
 
 If the Verification Gate rejects a skill evolution, the Meta-Optimizer records the failure and adjusts future priorities. Over time, the system learns which types of skill changes work and which don't — CASTER's negative feedback loop applied to the improvement pipeline itself.
 
-## Why This Matters
+## The Safety Boundary
 
 The Skill Evolver represents something genuinely novel: a system that improves its own instructions based on measured evidence, with safety constraints that prevent runaway self-modification. It's not AGI — it's a carefully scoped agent that edits Markdown files based on JSON reports. But the principle it implements — evidence-based self-modification with verification gates — is the foundation for autonomous systems that get better over time without human intervention.
 
 The maximum of 5 evolutions per run, the requirement that every change links to evidence, the mandatory self-questioning, and the anti-pattern awareness all serve the same goal: making self-improvement boring and reliable rather than exciting and dangerous.
+
+That's how we built an agent that edits its own instructions — and how we made sure it doesn't edit them into nonsense.
 
 ## References
 

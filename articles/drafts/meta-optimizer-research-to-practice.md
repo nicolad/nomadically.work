@@ -1,13 +1,13 @@
 ---
-title: "From Research to Practice: The Meta-Optimizer — Strategic Brain of an Autonomous Improvement Pipeline"
-description: "Six research papers shaped the coordinator that decides what to improve, when to stop, and when to ask for help in an autonomous agent pipeline."
+title: "We Built a Strategic Brain for Our AI Pipeline. Here's What It Learned."
+description: "Six agents can mine, audit, evolve, fix, and verify code. None knows when to do any of it. We built the coordinator that decides — with phase detection, cost-aware routing, and a kill switch."
 date: "2026-02-25"
 author: "nomadically.work"
-tags: ["autonomous-agents", "meta-optimization", "self-improvement", "multi-agent-systems"]
-status: published
+tags: ["autonomous-agents", "meta-optimization", "self-improvement", "multi-agent-systems", "AI-orchestration"]
+status: draft
 ---
 
-# From Research to Practice: The Meta-Optimizer — Strategic Brain of an Autonomous Improvement Pipeline
+# We Built a Strategic Brain for Our AI Pipeline. Here's What It Learned.
 
 Five agents in our pipeline know how to mine patterns, audit code, evolve skills, fix bugs, and verify changes. None of them knows *when* to do any of those things. That is the Meta-Optimizer's job.
 
@@ -17,7 +17,13 @@ Six research papers shaped its design. Together, they address the hardest proble
 
 > **Note:** The implementation has since evolved from a generic code-improvement coordinator into a goal-driven job-search optimizer ("Strategy Brain"). The research principles described here still underpin the architecture, but the phase names, decision tables, and state schema have changed to reflect domain-specific priorities. The code snippets below reflect the original design that these papers informed.
 
-## The Research Foundation
+## Five Agents, Zero Coordination
+
+Gartner reported a 1,445% surge in multi-agent system inquiries from Q1 2024 to Q2 2025. Everyone is building multi-agent systems. Almost nobody is building the coordinator. The result: agent pipelines that run every agent on every cycle, regardless of what the system actually needs. Mining reports pile up unread. Audits repeat areas already audited. Fixes conflict with other fixes. The agents are individually capable but collectively aimless.
+
+The Meta-Optimizer exists because five specialist agents without coordination produce churn, not improvement. By February 2026, frontier models crossed 14.5 hours of autonomous work — but autonomy without strategy is just expensive compute.
+
+## Six Papers That Shaped the Strategic Brain
 
 ### ROMA: Recursive Task Decomposition
 
@@ -150,13 +156,15 @@ The Meta-Optimizer has a `human_attention_needed` field in its output. It activa
 
 This is the most important feature. An autonomous system that does not know when to stop being autonomous is not safe -- it is unmonitored. The Meta-Optimizer's final rule: "Be conservative -- a stable system is better than a constantly-changing one."
 
-## Why This Matters
+## Here's What It Learned
 
 The Meta-Optimizer addresses the recursive control problem: who controls the controllers? In our pipeline, five agents do work, and the Meta-Optimizer decides what work to do. But who decides if the Meta-Optimizer is making good decisions? The answer is the Meta-Optimizer itself -- through phase detection, score tracking, and the willingness to request human review when its own strategies fail.
 
 This is not a solved problem. The Meta-Optimizer cannot distinguish between "my action plan was wrong" and "the downstream agents executed poorly." But by tracking score trends across cycles rather than evaluating individual cycles, it detects systemic issues: if five consecutive cycles improve scores, the strategy is working. If three consecutive cycles degrade scores, something is wrong at the strategic level.
 
 The improvement pipeline is only as good as its coordinator. An aggressive Meta-Optimizer that routes every finding to immediate fixing produces churn. A passive one that defers everything produces stagnation. The right balance -- informed by Phase Transition theory, constrained by MonoScale bounds, guided by CASTER's negative feedback -- is what makes autonomous self-improvement work in practice.
+
+That's what the strategic brain learned: the hardest decision in an autonomous system isn't what to improve. It's when to stop.
 
 ## References
 

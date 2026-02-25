@@ -2,10 +2,11 @@ name = "nomadically-work-insert-jobs"
 main = "workers/insert-jobs.ts"
 compatibility_date = "2026-02-01"
 
-# Cron: auto-ingest from job_sources every 12 hours
-# Also triggered on-demand by janitor via INSERT_JOBS_URL secret
-[triggers]
-crons = ["0 */12 * * *"]
+# Cron: disabled — account is at 5-cron limit (free plan allows 5 total).
+# Ingestion is triggered by the janitor via INSERT_JOBS_URL secret (set on nomadically-janitor).
+# To add a cron later: either upgrade to Workers Paid or remove a cron from another worker.
+# [triggers]
+# crons = ["0 */12 * * *"]
 
 # D1 Database
 [[d1_databases]]

@@ -228,6 +228,7 @@ function formatScore(score?: number | null): string {
 
 type KeyFactsCardProps = {
   canonicalDomain?: string | null;
+  linkedinUrl?: string | null;
   score?: number | null;
   careerPagesCount?: number | null;
   isAdmin?: boolean;
@@ -235,6 +236,7 @@ type KeyFactsCardProps = {
 
 function KeyFactsCard({
   canonicalDomain,
+  linkedinUrl,
   score,
   careerPagesCount,
   isAdmin = false,
@@ -246,6 +248,10 @@ function KeyFactsCard({
   const domainLabel = useMemo(
     () => prettyUrl(canonicalDomain),
     [canonicalDomain]
+  );
+  const linkedinHref = useMemo(
+    () => coerceExternalUrl(linkedinUrl),
+    [linkedinUrl]
   );
 
   const rows: Array<{
@@ -289,6 +295,32 @@ function KeyFactsCard({
             {domainLabel}
           </Text>
         )
+      ) : (
+        <Text size="2">—</Text>
+      ),
+    },
+    {
+      label: "LinkedIn",
+      value: linkedinHref ? (
+        <RadixLink
+          href={linkedinHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          color="gray"
+          title={linkedinHref}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            maxWidth: "100%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          linkedin.com
+          <ExternalLinkIcon />
+        </RadixLink>
       ) : (
         <Text size="2">—</Text>
       ),
@@ -1043,6 +1075,7 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                     <Flex direction="column" gap="4">
                       <KeyFactsCard
                         canonicalDomain={company.canonical_domain}
+                        linkedinUrl={company.linkedin_url}
                         score={company.score}
                         careerPagesCount={company.ats_boards?.length ?? 0}
                         isAdmin={isAdmin}

@@ -89,6 +89,7 @@ fragment CompanyFields on Company {
 
   # Golden record fields
   canonical_domain
+  linkedin_url
   category
   tags
   services

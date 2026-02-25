@@ -746,37 +746,98 @@ async function autoIngestFromSources(
         sourceId, metadata: { kind, companyKey, jobsFetched: atsJobs.length },
       });
 
-      // Batch insert — collect new job IDs for enqueuing
-      const newJobIds: number[] = [];
-      for (const atsJob of atsJobs) {
-        if (!atsJob.externalId || !atsJob.title) continue;
-
-        const effectiveKey = atsJob.companyKey ?? companyKey;
+      // Filter valid jobs up-front (spam + missing required fields)
+      const validJobs = atsJobs.filter((j) => {
+        if (!j.externalId || !j.title) return false;
+        const effectiveKey = j.companyKey ?? companyKey;
         const keyDigits = (effectiveKey.match(/\d/g) ?? []).length;
         if (keyDigits / effectiveKey.length > 0.4) {
           log({
             worker: WORKER, action: "ingest-skip", level: "warn", traceId,
             metadata: { kind, companyKey: effectiveKey, reason: "spam-company-key" },
           });
+          return false;
+        }
+        return true;
+      });
+
+      // ---------- Batch insert to minimise D1 subrequest usage ----------
+      // Without batching: 3-4 subrequests × N jobs per source → hits CF's
+      // 1000 subrequest limit for boards with >250 open positions.
+      // With db.batch(): 1+1 (companies) + ceil(N/50) (inserts) = ~13 total
+      // for a 436-job board vs the previous ~1744.
+
+      const now = new Date().toISOString();
+
+      // Step 1: Ensure all unique companies exist (2 subrequests total)
+      const uniqueKeys = [...new Set(validJobs.map((j) => j.companyKey ?? companyKey))];
+      if (uniqueKeys.length > 0) {
+        await db.batch(
+          uniqueKeys.map((key) =>
+            db.prepare(
+              `INSERT OR IGNORE INTO companies (key, name, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+            ).bind(key, key, now, now),
+          ),
+        );
+      }
+      const companyRows = uniqueKeys.length > 0
+        ? await db.batch(
+            uniqueKeys.map((key) =>
+              db.prepare(`SELECT id FROM companies WHERE key = ? LIMIT 1`).bind(key),
+            ),
+          )
+        : [];
+      const companyIdMap = new Map<string, number>();
+      uniqueKeys.forEach((key, i) => {
+        const row = (companyRows[i]?.results as Array<{ id: number }> | undefined)?.[0];
+        if (row?.id) companyIdMap.set(key, row.id);
+      });
+
+      // Step 2: INSERT OR IGNORE jobs in batches of 50 — 1 subrequest per batch
+      // INSERT OR IGNORE: new rows return RETURNING id; conflicts return nothing.
+      const newJobIds: number[] = [];
+      const BATCH_SIZE = 50;
+      for (let bi = 0; bi < validJobs.length; bi += BATCH_SIZE) {
+        const chunk = validJobs.slice(bi, bi + BATCH_SIZE);
+        let batchResults: Awaited<ReturnType<D1Database["batch"]>>;
+        try {
+          batchResults = await db.batch(
+            chunk.map((j) => {
+              const effectiveKey = j.companyKey ?? companyKey;
+              return db.prepare(
+                `INSERT OR IGNORE INTO jobs (
+                    external_id, source_id, source_kind, company_id, company_key,
+                    title, location, url, description, posted_at,
+                    status, created_at, updated_at
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', datetime('now'), datetime('now'))
+                  RETURNING id`,
+              ).bind(
+                j.externalId,
+                sourceId,
+                kind,
+                companyIdMap.get(effectiveKey) ?? null,
+                effectiveKey,
+                j.title,
+                j.location ?? null,
+                j.url ?? "",
+                j.description ?? null,
+                j.postedAt ?? now,
+              );
+            }),
+          );
+        } catch (batchErr) {
+          log({
+            worker: WORKER, action: "batch-insert", level: "error", traceId,
+            error: batchErr instanceof Error ? batchErr.message : String(batchErr),
+            metadata: { kind, companyKey, batchIndex: bi, batchSize: chunk.length },
+          });
+          stats.errors.push(`${kind}/${companyKey} batch[${bi}]: ${batchErr instanceof Error ? batchErr.message : String(batchErr)}`);
           continue;
         }
-
-        const result = await insertJob(db, {
-          externalId: atsJob.externalId,
-          sourceId,
-          sourceKind: kind,
-          companyKey: atsJob.companyKey ?? companyKey,
-          title: atsJob.title,
-          url: atsJob.url,
-          location: atsJob.location,
-          description: atsJob.description,
-          postedAt: atsJob.postedAt,
-          status: "new",
-        }, traceId);
-
-        if (result.success && result.jobId) {
-          if (result.isNew) {
-            newJobIds.push(result.jobId);
+        for (const r of batchResults) {
+          const row = (r.results as Array<{ id: number }> | undefined)?.[0];
+          if (row?.id) {
+            newJobIds.push(row.id);
             stats.jobsInserted++;
           } else {
             stats.jobsSkipped++;

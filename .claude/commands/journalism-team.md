@@ -74,6 +74,8 @@ Run the SEO Strategist to produce keyword/structure recommendations.
 5. **Cost awareness** — research/data/seo are read-only; writer/editor produce output
 6. **Human checkpoints** — show the research brief before writing, show the draft before editing
 7. **Fail-open** — if any specialist fails, report the failure and continue with others
+8. **Upstream gate** — NEVER launch the Writer unless at least the Research brief AND SEO strategy files exist on disk. If upstream phases were skipped or failed, halt and tell the user what's missing instead of letting the Writer improvise.
+9. **Batch title diversity** — when producing multiple articles in one session, after each Writer call, pass the list of already-used titles to the next Writer call as context so it avoids repeating patterns. Include this in the prompt: "Titles already used in this batch: [list]. Choose a distinctly different title structure."
 
 ## Sub-Agent Launch Template
 
@@ -89,9 +91,21 @@ Task tool call:
     - Project root: /Users/vadimnicolai/Public/nomadically.work
     - Topic/brief: [from user request]
     - [Additional context from previous phases]
+    - Titles already used in this batch: [list any titles from earlier articles in this session, or "none" if first article]
 
     Execute the skill and produce the required output.
 ```
+
+## Pre-Writer Gate
+
+Before launching the Writer, the orchestrator MUST verify:
+1. Research brief exists at `articles/research/[slug]-research.md`
+2. SEO strategy exists at `articles/research/[slug]-seo.md`
+
+If either is missing, **do not launch the Writer**. Instead:
+- Tell the user which upstream artifacts are missing
+- Offer to run the missing phases first
+- NEVER let the Writer improvise titles, structure, or content without upstream input
 
 ## Pipeline Dependencies
 

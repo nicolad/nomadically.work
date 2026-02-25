@@ -12,7 +12,7 @@ The orchestrator provides:
 - SEO strategy from the SEO Strategist (`articles/research/[slug]-seo.md`)
 - Optional: specific angle, tone, or format instructions
 
-Read ALL provided input files before writing.
+Read ALL provided input files before writing. **If the research brief or SEO strategy file does not exist, STOP and report the missing files to the orchestrator — do not improvise titles or structure without them.**
 
 ## Process
 
@@ -111,3 +111,5 @@ Write the draft to `articles/drafts/[topic-slug].md`.
 6. Keep paragraphs under 4 sentences
 7. Target the word count from the SEO strategy (default: 1200-1800 words)
 8. Include frontmatter with title, description, date, tags, and status
+9. NEVER reuse the same title pattern across articles — if the orchestrator provides a list of already-used titles, choose a structurally different title format (e.g., if previous titles used "From X to Y:", use a question, a bold claim, a "How/Why" opener, or a data-led hook instead)
+10. NEVER start writing if the SEO strategy file is missing — report the gap to the orchestrator

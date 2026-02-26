@@ -17,6 +17,7 @@ import {
   Select,
   IconButton,
   Dialog,
+  Tabs,
 } from "@radix-ui/themes";
 import {
   ArrowLeftIcon,
@@ -140,8 +141,11 @@ export default function ApplicationDetailPage() {
   const [editingJobDescription, setEditingJobDescription] = useState(false);
   const [jobDescriptionValue, setJobDescriptionValue] = useState("");
   const [prepView, setPrepView] = useState<"list" | "graph">("list");
-  const [generatingQuestions, setGeneratingQuestions] = useState(false);
-  const [questionsError, setQuestionsError] = useState<string | null>(null);
+  const [generatingRecruiter, setGeneratingRecruiter] = useState(false);
+  const [recruiterError, setRecruiterError] = useState<string | null>(null);
+  const [generatingTechnical, setGeneratingTechnical] = useState(false);
+  const [technicalError, setTechnicalError] = useState<string | null>(null);
+  const [questionsTab, setQuestionsTab] = useState<"recruiter" | "technical">("recruiter");
 
   // Text selection state
   const jobDescriptionRef = useRef<HTMLDivElement | null>(null);
@@ -756,124 +760,213 @@ export default function ApplicationDetailPage() {
 
       {/* Interview Questions (AI-generated) */}
       <Card mb="5">
-        <Flex justify="between" align="center" mb="3">
-          <Heading size="4">Interview Questions</Heading>
-          {isAdmin && (
-            <Flex gap="2" align="center">
-              <Button
-                variant="soft"
-                size="2"
-                disabled={generatingQuestions || !app.jobDescription}
-                title={!app.jobDescription ? "No job description available" : undefined}
-                onClick={async () => {
-                  setGeneratingQuestions(true);
-                  setQuestionsError(null);
-                  try {
-                    await generateInterviewQuestions({
-                      variables: { applicationId: app.id },
-                      refetchQueries: ["GetApplication"],
-                    });
-                  } catch (e) {
-                    setQuestionsError(e instanceof Error ? e.message : "Generation failed");
-                  } finally {
-                    setGeneratingQuestions(false);
-                  }
-                }}
-              >
-                <PlusIcon />
-                {generatingQuestions
-                  ? "Generating with DeepSeek Reasoner..."
-                  : app.aiInterviewQuestions
-                    ? "Regenerate Questions"
-                    : "Generate Interview Questions"}
-              </Button>
-              {questionsError && (
-                <Text size="1" color="red">{questionsError}</Text>
-              )}
-            </Flex>
-          )}
-        </Flex>
+        <Heading size="4" mb="3">Interview Questions</Heading>
 
-        {generatingQuestions && !app.aiInterviewQuestions && (
-          <Flex direction="column" gap="3" py="6" align="center">
-            <Text size="2" color="gray">
-              Analyzing company website and job description with DeepSeek Reasoner...
-            </Text>
-            <Flex gap="2">
-              {[0, 1, 2].map((i) => (
-                <Box
-                  key={i}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    backgroundColor: "var(--accent-9)",
-                    animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-                  }}
-                />
-              ))}
-            </Flex>
-          </Flex>
+        {app.aiInterviewQuestions?.companyContext && (
+          <Box mb="4" p="3" style={{ backgroundColor: "var(--blue-2)", borderRadius: "var(--radius-2)" }}>
+            <Text size="1" color="gray" weight="medium" mb="1" as="div">COMPANY CONTEXT</Text>
+            <Text size="2" as="div">{app.aiInterviewQuestions.companyContext}</Text>
+          </Box>
         )}
 
-        {app.aiInterviewQuestions ? (
-          <Box>
-            {app.aiInterviewQuestions.companyContext && (
-              <Box mb="4" p="3" style={{ backgroundColor: "var(--blue-2)", borderRadius: "var(--radius-2)" }}>
-                <Text size="1" color="gray" weight="medium" mb="1" as="div">COMPANY CONTEXT</Text>
-                <Text size="2" as="div">{app.aiInterviewQuestions.companyContext}</Text>
-              </Box>
-            )}
-            <Flex direction="column" gap="3">
-              {app.aiInterviewQuestions.questions.map((q, i) => (
-                <Box
-                  key={i}
-                  p="3"
-                  style={{
-                    backgroundColor: "var(--gray-2)",
-                    borderRadius: "var(--radius-2)",
-                    borderLeft: `3px solid ${
-                      q.category === "Technical" ? "var(--blue-9)" :
-                      q.category === "System Design" ? "var(--violet-9)" :
-                      q.category === "Behavioral" ? "var(--green-9)" :
-                      q.category === "Company Fit" ? "var(--orange-9)" :
-                      q.category === "Leadership" ? "var(--amber-9)" :
-                      q.category === "Domain Knowledge" ? "var(--cyan-9)" :
-                      "var(--gray-9)"
-                    }`,
-                  }}
-                >
-                  <Flex justify="between" align="start" gap="2" mb="2">
-                    <Text size="2" weight="bold" as="div">
-                      {i + 1}. {q.question}
-                    </Text>
-                    <Badge size="1" variant="soft" color={
-                      q.category === "Technical" ? "blue" :
-                      q.category === "System Design" ? "violet" :
-                      q.category === "Behavioral" ? "green" :
-                      q.category === "Company Fit" ? "orange" :
-                      q.category === "Leadership" ? "amber" :
-                      q.category === "Domain Knowledge" ? "cyan" :
-                      "gray"
-                    } style={{ flexShrink: 0 }}>
-                      {q.category}
-                    </Badge>
+        <Tabs.Root value={questionsTab} onValueChange={(v) => setQuestionsTab(v as "recruiter" | "technical")}>
+          <Tabs.List>
+            <Tabs.Trigger value="recruiter">
+              Recruiter
+              {(app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0 && (
+                <Badge size="1" variant="soft" color="green" ml="2">{app.aiInterviewQuestions!.recruiterQuestions.length}</Badge>
+              )}
+            </Tabs.Trigger>
+            <Tabs.Trigger value="technical">
+              Technical
+              {(app.aiInterviewQuestions?.technicalQuestions?.length ?? 0) > 0 && (
+                <Badge size="1" variant="soft" color="blue" ml="2">{app.aiInterviewQuestions!.technicalQuestions.length}</Badge>
+              )}
+            </Tabs.Trigger>
+          </Tabs.List>
+
+          <Tabs.Content value="recruiter">
+            <Box pt="3">
+              {isAdmin && (
+                <Flex gap="2" align="center" mb="3">
+                  <Button
+                    variant="soft"
+                    size="2"
+                    color="green"
+                    disabled={generatingRecruiter || !app.jobDescription}
+                    title={!app.jobDescription ? "No job description available" : undefined}
+                    onClick={async () => {
+                      setGeneratingRecruiter(true);
+                      setRecruiterError(null);
+                      try {
+                        await generateInterviewQuestions({
+                          variables: { applicationId: app.id, type: "recruiter" },
+                          refetchQueries: ["GetApplication"],
+                        });
+                      } catch (e) {
+                        setRecruiterError(e instanceof Error ? e.message : "Generation failed");
+                      } finally {
+                        setGeneratingRecruiter(false);
+                      }
+                    }}
+                  >
+                    <PlusIcon />
+                    {generatingRecruiter
+                      ? "Generating..."
+                      : (app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0
+                        ? "Regenerate"
+                        : "Generate Recruiter Questions"}
+                  </Button>
+                  {recruiterError && <Text size="1" color="red">{recruiterError}</Text>}
+                </Flex>
+              )}
+
+              {generatingRecruiter && (
+                <Flex direction="column" gap="3" py="6" align="center">
+                  <Text size="2" color="gray">Generating recruiter screening questions with DeepSeek Reasoner...</Text>
+                  <Flex gap="2">
+                    {[0, 1, 2].map((i) => (
+                      <Box key={i} style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "var(--green-9)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                    ))}
                   </Flex>
-                  <Text size="2" color="gray" as="div">
-                    {q.reason}
-                  </Text>
+                </Flex>
+              )}
+
+              {(app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0 ? (
+                <Box>
+                  <Flex direction="column" gap="3">
+                    {app.aiInterviewQuestions!.recruiterQuestions.map((q, i) => (
+                      <Box key={i} p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", borderLeft: `3px solid ${
+                        q.category === "Motivation" ? "var(--green-9)" :
+                        q.category === "Culture Fit" ? "var(--orange-9)" :
+                        q.category === "Career Goals" ? "var(--blue-9)" :
+                        q.category === "Communication" ? "var(--violet-9)" :
+                        q.category === "Logistics" ? "var(--gray-9)" :
+                        q.category === "Self-Awareness" ? "var(--amber-9)" :
+                        q.category === "Teamwork" ? "var(--cyan-9)" :
+                        "var(--green-9)"
+                      }` }}>
+                        <Flex justify="between" align="start" gap="2" mb="2">
+                          <Text size="2" weight="bold" as="div">{i + 1}. {q.question}</Text>
+                          <Badge size="1" variant="soft" color={
+                            q.category === "Motivation" ? "green" :
+                            q.category === "Culture Fit" ? "orange" :
+                            q.category === "Career Goals" ? "blue" :
+                            q.category === "Communication" ? "violet" :
+                            q.category === "Logistics" ? "gray" :
+                            q.category === "Self-Awareness" ? "amber" :
+                            q.category === "Teamwork" ? "cyan" :
+                            "green"
+                          } style={{ flexShrink: 0 }}>{q.category}</Badge>
+                        </Flex>
+                        <Text size="2" color="gray" as="div">{q.reason}</Text>
+                      </Box>
+                    ))}
+                  </Flex>
+                  {app.aiInterviewQuestions!.recruiterGeneratedAt && (
+                    <Text size="1" color="gray" mt="3" as="div">
+                      Generated {new Date(app.aiInterviewQuestions!.recruiterGeneratedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </Text>
+                  )}
                 </Box>
-              ))}
-            </Flex>
-            <Text size="1" color="gray" mt="3" as="div">
-              Generated {new Date(app.aiInterviewQuestions.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-            </Text>
-          </Box>
-        ) : !generatingQuestions ? (
-          <Text size="2" color="gray">
-            No interview questions generated yet. Click the button above to generate questions tailored to this company and role.
-          </Text>
-        ) : null}
+              ) : !generatingRecruiter ? (
+                <Text size="2" color="gray">No recruiter questions yet. Generate questions for your HR/recruiter screening call.</Text>
+              ) : null}
+            </Box>
+          </Tabs.Content>
+
+          <Tabs.Content value="technical">
+            <Box pt="3">
+              {isAdmin && (
+                <Flex gap="2" align="center" mb="3">
+                  <Button
+                    variant="soft"
+                    size="2"
+                    color="blue"
+                    disabled={generatingTechnical || !app.jobDescription}
+                    title={!app.jobDescription ? "No job description available" : undefined}
+                    onClick={async () => {
+                      setGeneratingTechnical(true);
+                      setTechnicalError(null);
+                      try {
+                        await generateInterviewQuestions({
+                          variables: { applicationId: app.id, type: "technical" },
+                          refetchQueries: ["GetApplication"],
+                        });
+                      } catch (e) {
+                        setTechnicalError(e instanceof Error ? e.message : "Generation failed");
+                      } finally {
+                        setGeneratingTechnical(false);
+                      }
+                    }}
+                  >
+                    <PlusIcon />
+                    {generatingTechnical
+                      ? "Generating..."
+                      : (app.aiInterviewQuestions?.technicalQuestions?.length ?? 0) > 0
+                        ? "Regenerate"
+                        : "Generate Technical Questions"}
+                  </Button>
+                  {technicalError && <Text size="1" color="red">{technicalError}</Text>}
+                </Flex>
+              )}
+
+              {generatingTechnical && (
+                <Flex direction="column" gap="3" py="6" align="center">
+                  <Text size="2" color="gray">Generating technical interview questions with DeepSeek Reasoner...</Text>
+                  <Flex gap="2">
+                    {[0, 1, 2].map((i) => (
+                      <Box key={i} style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "var(--blue-9)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                    ))}
+                  </Flex>
+                </Flex>
+              )}
+
+              {(app.aiInterviewQuestions?.technicalQuestions?.length ?? 0) > 0 ? (
+                <Box>
+                  <Flex direction="column" gap="3">
+                    {app.aiInterviewQuestions!.technicalQuestions.map((q, i) => (
+                      <Box key={i} p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", borderLeft: `3px solid ${
+                        q.category === "System Design" ? "var(--violet-9)" :
+                        q.category === "Coding" ? "var(--blue-9)" :
+                        q.category === "Architecture" ? "var(--indigo-9)" :
+                        q.category === "Performance" ? "var(--orange-9)" :
+                        q.category === "Testing" ? "var(--green-9)" :
+                        q.category === "DevOps" ? "var(--amber-9)" :
+                        q.category === "Domain Knowledge" ? "var(--cyan-9)" :
+                        q.category === "Technical Leadership" ? "var(--crimson-9)" :
+                        "var(--blue-9)"
+                      }` }}>
+                        <Flex justify="between" align="start" gap="2" mb="2">
+                          <Text size="2" weight="bold" as="div">{i + 1}. {q.question}</Text>
+                          <Badge size="1" variant="soft" color={
+                            q.category === "System Design" ? "violet" :
+                            q.category === "Coding" ? "blue" :
+                            q.category === "Architecture" ? "indigo" :
+                            q.category === "Performance" ? "orange" :
+                            q.category === "Testing" ? "green" :
+                            q.category === "DevOps" ? "amber" :
+                            q.category === "Domain Knowledge" ? "cyan" :
+                            q.category === "Technical Leadership" ? "crimson" :
+                            "blue"
+                          } style={{ flexShrink: 0 }}>{q.category}</Badge>
+                        </Flex>
+                        <Text size="2" color="gray" as="div">{q.reason}</Text>
+                      </Box>
+                    ))}
+                  </Flex>
+                  {app.aiInterviewQuestions!.technicalGeneratedAt && (
+                    <Text size="1" color="gray" mt="3" as="div">
+                      Generated {new Date(app.aiInterviewQuestions!.technicalGeneratedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </Text>
+                  )}
+                </Box>
+              ) : !generatingTechnical ? (
+                <Text size="2" color="gray">No technical questions yet. Generate deep technical interview questions.</Text>
+              ) : null}
+            </Box>
+          </Tabs.Content>
+        </Tabs.Root>
       </Card>
 
       {/* Interview Prep */}

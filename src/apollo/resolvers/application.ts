@@ -719,9 +719,13 @@ A real production scenario (incident, design decision, or architectural choice) 
 
     async generateInterviewQuestions(
       _parent: any,
-      args: { applicationId: number },
+      args: { applicationId: number; type: string },
       context: GraphQLContext,
     ) {
+      if (args.type !== "recruiter" && args.type !== "technical") {
+        throw new Error('Invalid type. Must be "recruiter" or "technical".');
+      }
+
       const whereClause = context.userEmail
         ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
         : eq(applications.id, args.applicationId);
@@ -779,39 +783,84 @@ A real production scenario (incident, design decision, or architectural choice) 
         }
       }
 
+      const companySection = companyContext
+        ? `## Company Website Content\nHere is content from the company's website (${companyWebsite}):\n${companyContext}\n`
+        : `## Company\n${companyName} (no website content available)\n`;
+
+      let prompt: string;
+      if (args.type === "recruiter") {
+        prompt = `You are helping me prepare for a recruiter/HR screening interview. I'm applying for the role of "${jobTitle}" at ${companyName}.
+
+${companySection}
+
+## Job Description
+${plainJobDesc}
+
+## Task
+Generate exactly 10 interview questions a recruiter or HR person would ask in a first-round screening call. Focus on:
+- Motivation and interest in the company
+- Career trajectory and goals
+- Culture fit and values alignment
+- Salary expectations and availability
+- Communication style and teamwork
+- Understanding of the role and company
+- Relocation/remote work logistics
+
+These should NOT be technical questions. They should assess soft skills, motivation, and fit.
+
+For each question:
+1. Write the actual question the recruiter would ask
+2. Explain WHY this question matters for this specific company and role (what are they really assessing?)
+3. Categorize it (e.g., "Motivation", "Culture Fit", "Career Goals", "Communication", "Logistics", "Self-Awareness", "Teamwork")
+
+Return ONLY a JSON object:
+{
+  "companyContext": "2-3 sentence summary of what the company does and values",
+  "questions": [
+    { "question": "...", "reason": "...", "category": "..." }
+  ]
+}`;
+      } else {
+        prompt = `You are helping me prepare for a technical interview. I'm applying for the role of "${jobTitle}" at ${companyName}.
+
+${companySection}
+
+## Job Description
+${plainJobDesc}
+
+## Task
+Generate exactly 10 deep technical interview questions that a senior engineer or engineering manager would ask. Focus on:
+- System design and architecture decisions
+- Specific technologies mentioned in the job description
+- Problem-solving approach and debugging methodology
+- Code quality, testing, and engineering practices
+- Performance optimization and scalability
+- Technical leadership and decision-making
+- Domain-specific technical knowledge
+
+These should be HARD, specific technical questions — not soft behavioral ones.
+
+For each question:
+1. Write the actual technical question
+2. Explain WHY this question is likely to come up (what technical signal are they looking for?)
+3. Categorize it (e.g., "System Design", "Coding", "Architecture", "Performance", "Testing", "DevOps", "Domain Knowledge", "Technical Leadership")
+
+Return ONLY a JSON object:
+{
+  "companyContext": "2-3 sentence summary of what the company does and their tech challenges",
+  "questions": [
+    { "question": "...", "reason": "...", "category": "..." }
+  ]
+}`;
+      }
+
       const client = createDeepSeekClient();
       const response = await client.chat({
         model: DEEPSEEK_MODELS.REASONER,
         messages: [
           {
             role: "user",
-            content: `You are helping me prepare for a job interview. I'm applying for the role of "${jobTitle}" at ${companyName}.
-
-${companyContext ? `## Company Website Content\nHere is content from the company's website (${companyWebsite}):\n${companyContext}\n` : `## Company\n${companyName} (no website content available)\n`}
-
-## Job Description
-${plainJobDesc}
-
-## Task
-Based on the job description and what you can understand about the company from their website content, generate exactly 12 interview questions I should prepare for. For each question:
-
-1. Write the actual interview question they might ask me
-2. Explain WHY this question is likely to be asked (what are they trying to assess? what from the job description or company context makes this relevant?)
-3. Categorize it (e.g., "Technical", "System Design", "Behavioral", "Company Fit", "Problem Solving", "Leadership", "Domain Knowledge")
-
-Focus on questions that are SPECIFIC to this company and role — not generic interview questions. Use the company website content to understand what the company does, its tech stack, its values, and its challenges.
-
-Return ONLY a JSON object with this exact shape:
-{
-  "companyContext": "2-3 sentence summary of what the company does and what they seem to value, based on the website content",
-  "questions": [
-    {
-      "question": "The interview question",
-      "reason": "Why this question matters for this specific role and company (2-3 sentences)",
-      "category": "Category name"
-    }
-  ]
-}`,
+            content: prompt,
           },
         ],
         max_tokens: 6000,
@@ -834,12 +883,29 @@ Return ONLY a JSON object with this exact shape:
         throw new Error("AI returned an unexpected response structure");
       }
 
-      parsed.generatedAt = new Date().toISOString();
+      // Load existing data and merge based on type
+      let existingData: any = {};
+      if (row.app.ai_interview_questions) {
+        try { existingData = JSON.parse(row.app.ai_interview_questions); } catch {}
+      }
+
+      if (args.type === "recruiter") {
+        existingData.recruiterQuestions = parsed.questions;
+        existingData.recruiterGeneratedAt = new Date().toISOString();
+      } else {
+        existingData.technicalQuestions = parsed.questions;
+        existingData.technicalGeneratedAt = new Date().toISOString();
+      }
+      existingData.companyContext = parsed.companyContext;
+
+      // Ensure the other array exists
+      if (!existingData.recruiterQuestions) existingData.recruiterQuestions = [];
+      if (!existingData.technicalQuestions) existingData.technicalQuestions = [];
 
       const [updated] = await context.db
         .update(applications)
         .set({
-          ai_interview_questions: JSON.stringify(parsed),
+          ai_interview_questions: JSON.stringify(existingData),
           updated_at: new Date().toISOString(),
         })
         .where(whereClause)

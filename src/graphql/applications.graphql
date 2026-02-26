@@ -38,12 +38,18 @@ fragment ApplicationFields on Application {
   }
   aiInterviewQuestions {
     companyContext
-    questions {
+    recruiterQuestions {
       question
       reason
       category
     }
-    generatedAt
+    technicalQuestions {
+      question
+      reason
+      category
+    }
+    recruiterGeneratedAt
+    technicalGeneratedAt
   }
 }
 
@@ -201,17 +207,23 @@ mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!,
   }
 }
 
-mutation GenerateInterviewQuestions($applicationId: Int!) {
-  generateInterviewQuestions(applicationId: $applicationId) {
+mutation GenerateInterviewQuestions($applicationId: Int!, $type: String!) {
+  generateInterviewQuestions(applicationId: $applicationId, type: $type) {
     id
     aiInterviewQuestions {
       companyContext
-      questions {
+      recruiterQuestions {
         question
         reason
         category
       }
-      generatedAt
+      technicalQuestions {
+        question
+        reason
+        category
+      }
+      recruiterGeneratedAt
+      technicalGeneratedAt
     }
   }
 }

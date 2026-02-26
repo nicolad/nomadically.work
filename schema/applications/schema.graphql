@@ -13,7 +13,7 @@ extend type Mutation {
   generateStudyTopicDeepDive(applicationId: Int!, requirement: String!, studyTopic: String!, force: Boolean): Application!
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
   linkSelectionToRequirement(applicationId: Int!, requirement: String!, sourceQuote: String!): Application!
-  generateInterviewQuestions(applicationId: Int!): Application!
+  generateInterviewQuestions(applicationId: Int!, type: String!): Application!
   deleteApplication(id: Int!): DeleteApplicationResponse!
 }
 
@@ -43,9 +43,11 @@ type AIInterviewQuestion {
 }
 
 type AIInterviewQuestions {
-  questions: [AIInterviewQuestion!]!
+  recruiterQuestions: [AIInterviewQuestion!]!
+  technicalQuestions: [AIInterviewQuestion!]!
   companyContext: String!
-  generatedAt: String!
+  recruiterGeneratedAt: String
+  technicalGeneratedAt: String
 }
 
 type AIInterviewPrep {

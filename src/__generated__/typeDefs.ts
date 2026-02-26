@@ -30,8 +30,10 @@ type AIInterviewQuestion {
 
 type AIInterviewQuestions {
   companyContext: String!
-  generatedAt: String!
-  questions: [AIInterviewQuestion!]!
+  recruiterGeneratedAt: String
+  recruiterQuestions: [AIInterviewQuestion!]!
+  technicalGeneratedAt: String
+  technicalQuestions: [AIInterviewQuestion!]!
 }
 
 type AIStudyTopicDeepDive {
@@ -754,7 +756,7 @@ type Mutation {
   findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
   findContactEmail(contactId: Int!): FindContactEmailResult!
   generateInterviewPrep(applicationId: Int!): Application!
-  generateInterviewQuestions(applicationId: Int!): Application!
+  generateInterviewQuestions(applicationId: Int!, type: String!): Application!
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!

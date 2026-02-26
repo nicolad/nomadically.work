@@ -46,8 +46,10 @@ export type AiInterviewQuestion = {
 export type AiInterviewQuestions = {
   __typename: 'AIInterviewQuestions';
   companyContext: Scalars['String']['output'];
-  generatedAt: Scalars['String']['output'];
-  questions: Array<AiInterviewQuestion>;
+  recruiterGeneratedAt: Maybe<Scalars['String']['output']>;
+  recruiterQuestions: Array<AiInterviewQuestion>;
+  technicalGeneratedAt: Maybe<Scalars['String']['output']>;
+  technicalQuestions: Array<AiInterviewQuestion>;
 };
 
 export type AiStudyTopicDeepDive = {
@@ -962,6 +964,7 @@ export type MutationGenerateInterviewPrepArgs = {
 
 export type MutationGenerateInterviewQuestionsArgs = {
   applicationId: Scalars['Int']['input'];
+  type: Scalars['String']['input'];
 };
 
 

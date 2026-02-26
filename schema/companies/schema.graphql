@@ -217,6 +217,7 @@ input CreateCompanyInput {
   name: String!
   logo_url: String
   website: String
+  linkedin_url: String
   description: String
   industry: String
   size: String

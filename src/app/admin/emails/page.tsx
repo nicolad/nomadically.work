@@ -22,7 +22,9 @@ import {
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
-import { getSentEmails, getReceivedEmails } from "./actions";
+import { getSentEmails, getReceivedEmails, getEmailSubscribers } from "./actions";
+import type { EmailSubscriber } from "./actions";
+import { BatchEmailModal } from "@/components/admin/BatchEmailModal";
 
 type SentEmail = {
   id: string;
@@ -246,8 +248,20 @@ function EmailsPageContent() {
   const router = useRouter();
   const tab = searchParams?.get("tab") ?? "sent";
 
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [subscribers, setSubscribers] = useState<EmailSubscriber[]>([]);
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+
   const handleTabChange = (value: string) => {
     router.push(`/admin/emails?tab=${value}`);
+  };
+
+  const handleOpenBatchModal = async () => {
+    setLoadingSubscribers(true);
+    const list = await getEmailSubscribers();
+    setSubscribers(list);
+    setLoadingSubscribers(false);
+    setBatchModalOpen(true);
   };
 
   return (
@@ -259,16 +273,32 @@ function EmailsPageContent() {
             Sent and received emails via Resend
           </Text>
         </Box>
-        <Button asChild variant="soft" size="2">
-          <a
-            href="https://resend.com/emails"
-            target="_blank"
-            rel="noopener noreferrer"
+        <Flex gap="2" align="center">
+          <Button
+            variant="solid"
+            size="2"
+            onClick={handleOpenBatchModal}
+            disabled={loadingSubscribers}
           >
-            Resend dashboard <ExternalLinkIcon />
-          </a>
-        </Button>
+            {loadingSubscribers ? "Loading..." : "Send Batch Email"}
+          </Button>
+          <Button asChild variant="soft" size="2">
+            <a
+              href="https://resend.com/emails"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Resend dashboard <ExternalLinkIcon />
+            </a>
+          </Button>
+        </Flex>
       </Flex>
+
+      <BatchEmailModal
+        open={batchModalOpen}
+        onOpenChange={setBatchModalOpen}
+        recipients={subscribers}
+      />
 
       <Tabs.Root value={tab} onValueChange={handleTabChange}>
         <Tabs.List mb="4">

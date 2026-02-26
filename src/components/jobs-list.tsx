@@ -50,16 +50,6 @@ const getStatusLabel = (status: Job["status"]): string => {
   }
 };
 
-/** First letter of each word in company_key, max 2 chars */
-function companyInitials(key: string): string {
-  return key
-    .split(/[-_.]/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
   const router = useRouter();
@@ -227,9 +217,6 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
         {isInitialLoad
           ? Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="job-row" style={{ pointerEvents: "none" }} aria-hidden="true">
-                <div className="job-row-avatar">
-                  <Skeleton width="100%" height="100%" style={{ borderRadius: 4 }} />
-                </div>
                 <div className="job-row-content">
                   <div className="job-row-title-line">
                     <Skeleton width={`${120 + (i % 3) * 40}px`} height="14px" />
@@ -252,11 +239,6 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
               target="_blank"
               className="job-row"
             >
-              {/* company avatar */}
-              <div className="job-row-avatar">
-                {companyInitials(job.company_key || "?")}
-              </div>
-
               {/* content — stacked: title, company, meta */}
               <div className="job-row-content">
                 {/* line 1: title + status pill */}

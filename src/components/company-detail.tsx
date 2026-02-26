@@ -14,7 +14,6 @@ import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { extractJobSlug } from "@/lib/job-utils";
 import {
-  Avatar,
   Badge,
   Box,
   Button,
@@ -63,13 +62,6 @@ function prettyUrl(raw?: string | null): string {
   return raw.trim().replace(/^https?:\/\//i, "").replace(/\/+$/g, "");
 }
 
-function initialsFromName(name?: string | null): string {
-  const safe = (name ?? "").trim();
-  if (!safe) return "CO";
-  const parts = safe.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-}
 
 function SectionCard({
   title,
@@ -812,14 +804,6 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
           justify="between"
         >
           <Flex gap="4" align="start" style={{ flex: 1, minWidth: 0 }}>
-            <Avatar
-              size="8"
-              src={company.logo_url || undefined}
-              fallback={initialsFromName(company.name)}
-              radius="large"
-              aria-label={`${company.name} logo`}
-            />
-
             <Box style={{ flex: 1, minWidth: 0 }}>
               <Heading size="8" style={{ lineHeight: 1.1 }}>
                 {company.name}

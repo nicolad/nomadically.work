@@ -772,13 +772,13 @@ export default function ApplicationDetailPage() {
         <Tabs.Root value={questionsTab} onValueChange={(v) => setQuestionsTab(v as "recruiter" | "technical")}>
           <Tabs.List>
             <Tabs.Trigger value="recruiter">
-              Recruiter
+              Ask Recruiter
               {(app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0 && (
                 <Badge size="1" variant="soft" color="green" ml="2">{app.aiInterviewQuestions!.recruiterQuestions.length}</Badge>
               )}
             </Tabs.Trigger>
             <Tabs.Trigger value="technical">
-              Technical
+              Technical Prep
               {(app.aiInterviewQuestions?.technicalQuestions?.length ?? 0) > 0 && (
                 <Badge size="1" variant="soft" color="blue" ml="2">{app.aiInterviewQuestions!.technicalQuestions.length}</Badge>
               )}
@@ -815,7 +815,7 @@ export default function ApplicationDetailPage() {
                       ? "Generating..."
                       : (app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0
                         ? "Regenerate"
-                        : "Generate Recruiter Questions"}
+                        : "Generate Questions to Ask"}
                   </Button>
                   {recruiterError && <Text size="1" color="red">{recruiterError}</Text>}
                 </Flex>
@@ -823,7 +823,7 @@ export default function ApplicationDetailPage() {
 
               {generatingRecruiter && (
                 <Flex direction="column" gap="3" py="6" align="center">
-                  <Text size="2" color="gray">Generating recruiter screening questions with DeepSeek Reasoner...</Text>
+                  <Text size="2" color="gray">Generating smart questions to ask the recruiter...</Text>
                   <Flex gap="2">
                     {[0, 1, 2].map((i) => (
                       <Box key={i} style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "var(--green-9)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
@@ -837,25 +837,31 @@ export default function ApplicationDetailPage() {
                   <Flex direction="column" gap="3">
                     {app.aiInterviewQuestions!.recruiterQuestions.map((q, i) => (
                       <Box key={i} p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", borderLeft: `3px solid ${
-                        q.category === "Motivation" ? "var(--green-9)" :
-                        q.category === "Culture Fit" ? "var(--orange-9)" :
-                        q.category === "Career Goals" ? "var(--blue-9)" :
-                        q.category === "Communication" ? "var(--violet-9)" :
-                        q.category === "Logistics" ? "var(--gray-9)" :
-                        q.category === "Self-Awareness" ? "var(--amber-9)" :
-                        q.category === "Teamwork" ? "var(--cyan-9)" :
+                        q.category === "Culture" ? "var(--green-9)" :
+                        q.category === "Growth" ? "var(--blue-9)" :
+                        q.category === "Team Structure" ? "var(--violet-9)" :
+                        q.category === "Remote Work" ? "var(--cyan-9)" :
+                        q.category === "Process" ? "var(--gray-9)" :
+                        q.category === "Role Clarity" ? "var(--orange-9)" :
+                        q.category === "Compensation" ? "var(--amber-9)" :
+                        q.category === "Red Flags" ? "var(--crimson-9)" :
+                        q.category === "Leadership" ? "var(--indigo-9)" :
+                        q.category === "Challenges" ? "var(--plum-9)" :
                         "var(--green-9)"
                       }` }}>
                         <Flex justify="between" align="start" gap="2" mb="2">
                           <Text size="2" weight="bold" as="div">{i + 1}. {q.question}</Text>
                           <Badge size="1" variant="soft" color={
-                            q.category === "Motivation" ? "green" :
-                            q.category === "Culture Fit" ? "orange" :
-                            q.category === "Career Goals" ? "blue" :
-                            q.category === "Communication" ? "violet" :
-                            q.category === "Logistics" ? "gray" :
-                            q.category === "Self-Awareness" ? "amber" :
-                            q.category === "Teamwork" ? "cyan" :
+                            q.category === "Culture" ? "green" :
+                            q.category === "Growth" ? "blue" :
+                            q.category === "Team Structure" ? "violet" :
+                            q.category === "Remote Work" ? "cyan" :
+                            q.category === "Process" ? "gray" :
+                            q.category === "Role Clarity" ? "orange" :
+                            q.category === "Compensation" ? "amber" :
+                            q.category === "Red Flags" ? "crimson" :
+                            q.category === "Leadership" ? "indigo" :
+                            q.category === "Challenges" ? "plum" :
                             "green"
                           } style={{ flexShrink: 0 }}>{q.category}</Badge>
                         </Flex>
@@ -870,7 +876,7 @@ export default function ApplicationDetailPage() {
                   )}
                 </Box>
               ) : !generatingRecruiter ? (
-                <Text size="2" color="gray">No recruiter questions yet. Generate questions for your HR/recruiter screening call.</Text>
+                <Text size="2" color="gray">No questions yet. Generate smart questions to ask the recruiter about this company and role.</Text>
               ) : null}
             </Box>
           </Tabs.Content>

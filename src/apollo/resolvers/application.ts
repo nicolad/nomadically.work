@@ -796,7 +796,7 @@ A real production scenario (incident, design decision, or architectural choice) 
 
       let prompt: string;
       if (args.type === "recruiter") {
-        prompt = `You are helping me prepare for a recruiter/HR screening interview. I'm applying for the role of "${jobTitle}" at ${companyName}.
+        prompt = `I'm a software developer preparing for a recruiter/HR screening call. I'm applying for the role of "${jobTitle}" at ${companyName}. I need smart questions to ask THE RECRUITER — questions that help me evaluate whether this company and role are right for me, while also showing I've done my research.
 
 ${companySection}
 
@@ -804,21 +804,24 @@ ${companySection}
 ${plainJobDesc}
 
 ## Task
-Generate exactly 10 interview questions a recruiter or HR person would ask in a first-round screening call. Focus on:
-- Motivation and interest in the company
-- Career trajectory and goals
-- Culture fit and values alignment
-- Salary expectations and availability
-- Communication style and teamwork
-- Understanding of the role and company
-- Relocation/remote work logistics
+Generate exactly 10 insightful questions I (the candidate) should ask the recruiter during the screening call. Focus on:
+- Company culture, values, and how the team actually works day-to-day
+- Growth trajectory, funding stage, and business model viability
+- Engineering team structure, size, and how decisions are made
+- Remote work policies, time zones, and async communication
+- Interview process — what to expect in next rounds
+- Role expectations — what does success look like in 3/6/12 months
+- Compensation philosophy, equity, and benefits
+- Red flags to probe — things the job description is vague about
+- Manager and team dynamics — who I'd report to, team composition
+- Company challenges — what the hardest problems are right now
 
-These should NOT be technical questions. They should assess soft skills, motivation, and fit.
+These should be questions that a SMART, EXPERIENCED developer would ask to evaluate the opportunity. Not generic — use the company website content and job description to make them specific.
 
 For each question:
-1. Write the actual question the recruiter would ask
-2. Explain WHY this question matters for this specific company and role (what are they really assessing?)
-3. Categorize it (e.g., "Motivation", "Culture Fit", "Career Goals", "Communication", "Logistics", "Self-Awareness", "Teamwork")
+1. Write the exact question I should ask the recruiter
+2. Explain WHY I should ask this (what am I really trying to learn? what red/green flags should I listen for in their answer?)
+3. Categorize it (e.g., "Culture", "Growth", "Team Structure", "Remote Work", "Process", "Role Clarity", "Compensation", "Red Flags", "Leadership", "Challenges")
 
 Return ONLY a JSON object:
 {

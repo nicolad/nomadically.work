@@ -59,7 +59,10 @@ export function BatchEmailModal({
 }: BatchEmailModalProps) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  function defaultScheduledAt() {
+    return new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 16);
+  }
+  const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [state, setState] = useState<ModalState>("compose");
   const [result, setResult] = useState<BatchSendResponse | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -71,7 +74,7 @@ export function BatchEmailModal({
   function resetForm() {
     setSubject("");
     setBody("");
-    setScheduledAt("");
+    setScheduledAt(defaultScheduledAt());
     setState("compose");
     setResult(null);
     setSendError(null);
@@ -307,15 +310,10 @@ export function BatchEmailModal({
                   mb="1"
                   style={{ display: "block" }}
                 >
-                  Schedule (optional)
+                  Scheduled send time
                 </Text>
-                <Text
-                  size="1"
-                  color="gray"
-                  mb="1"
-                  style={{ display: "block" }}
-                >
-                  Leave blank to send immediately. Max 30 days ahead.
+                <Text size="1" color="gray" mb="1" style={{ display: "block" }}>
+                  Emails are always scheduled. Default: 10 minutes from now.
                 </Text>
                 <input
                   type="datetime-local"
@@ -342,8 +340,7 @@ export function BatchEmailModal({
                 </Dialog.Close>
                 <Button disabled={!canSend} onClick={handleSend} variant="solid">
                   <PaperPlaneIcon />
-                  Send to {recipients.length} recipient
-                  {recipients.length === 1 ? "" : "s"}
+                  Schedule for {recipients.length} recipient{recipients.length === 1 ? "" : "s"}
                 </Button>
               </Flex>
             </Flex>

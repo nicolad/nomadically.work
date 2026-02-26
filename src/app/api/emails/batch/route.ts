@@ -169,9 +169,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchEmai
     );
   }
 
-  // Validate scheduled date if provided
+  // Default to 10 minutes from now when no scheduledAt is provided.
+  // Only validate when the caller explicitly passed a value — the default is always valid.
+  const effectiveScheduledAt: string =
+    scheduledAt ?? new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
   if (scheduledAt !== undefined) {
-    const scheduleError = validateScheduledAt(scheduledAt);
+    const scheduleError = validateScheduledAt(effectiveScheduledAt);
     if (scheduleError) {
       return NextResponse.json(
         { success: false, message: scheduleError, sent: [], failed: [] },
@@ -199,9 +203,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchEmai
   const sent: SendResult[] = [];
   const failed: FailedResult[] = [];
 
-  // Single recipient: use send()
-  if (recipients.length === 1) {
-    const recipient = recipients[0];
+  // Always schedule — sequential send() so scheduledAt is supported for every recipient.
+  for (const recipient of recipients) {
     const personalized = personalizeBody(emailBody, recipient.name);
     const html = textToHtml(personalized) + SIGNATURE_HTML;
 
@@ -209,88 +212,25 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchEmai
       to: recipient.email,
       subject: subject.trim(),
       html,
-      ...(scheduledAt !== undefined && { scheduledAt }),
+      scheduledAt: effectiveScheduledAt,
     });
 
     if (result.error) {
-      failed.push({ email: recipient.email, error: result.error });
+      failed.push({ email: recipient.email, error: String(result.error) });
     } else {
       sent.push({ email: recipient.email, status: "sent" });
-    }
-  } else {
-    // Multiple recipients: use sendBatch()
-    // Note: Resend batch does not support scheduledAt — fall back to sequential send if scheduledAt is set
-    if (scheduledAt !== undefined) {
-      // Sequential sends to support scheduling
-      for (const recipient of recipients) {
-        const personalized = personalizeBody(emailBody, recipient.name);
-        const html = textToHtml(personalized) + SIGNATURE_HTML;
-
-        const result = await resend.instance.send({
-          to: recipient.email,
-          subject: subject.trim(),
-          html,
-          scheduledAt,
-        });
-
-        if (result.error) {
-          failed.push({ email: recipient.email, error: result.error });
-        } else {
-          sent.push({ email: recipient.email, status: "sent" });
-        }
-      }
-    } else {
-      // True batch send
-      const batchPayload = recipients.map((recipient) => {
-        const personalized = personalizeBody(emailBody, recipient.name);
-        const html = textToHtml(personalized) + SIGNATURE_HTML;
-        return {
-          to: recipient.email,
-          subject: subject.trim(),
-          html,
-        };
-      });
-
-      const batchResult = await resend.instance.sendBatch(batchPayload);
-
-      if (batchResult.error || !batchResult.data) {
-        // All failed
-        for (const recipient of recipients) {
-          failed.push({
-            email: recipient.email,
-            error: batchResult.error ?? "Batch send returned no data",
-          });
-        }
-      } else {
-        // Map results back to recipients by index
-        batchResult.data.forEach((result, index) => {
-          const recipient = recipients[index];
-          if (!recipient) return;
-
-          if (result.id) {
-            sent.push({ email: recipient.email, status: "sent" });
-          } else {
-            failed.push({ email: recipient.email, error: "No email ID returned" });
-          }
-        });
-
-        // Any recipients beyond what Resend returned mark as failed
-        if (batchResult.data.length < recipients.length) {
-          for (let i = batchResult.data.length; i < recipients.length; i++) {
-            const recipient = recipients[i];
-            if (recipient) {
-              failed.push({ email: recipient.email, error: "No result returned from batch" });
-            }
-          }
-        }
-      }
     }
   }
 
   const allSucceeded = failed.length === 0;
+  const scheduledTime = new Date(effectiveScheduledAt).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
   const message = allSucceeded
-    ? `Successfully sent ${sent.length} email${sent.length === 1 ? "" : "s"}`
-    : `Sent ${sent.length}, failed ${failed.length}`;
+    ? `Scheduled ${sent.length} email${sent.length === 1 ? "" : "s"} for ${scheduledTime} UTC`
+    : `Scheduled ${sent.length}, failed ${failed.length}`;
 
   return NextResponse.json(
     { success: allSucceeded, message, sent, failed },

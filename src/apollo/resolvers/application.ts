@@ -28,6 +28,12 @@ function mapApplication(
           catch { return null; }
         })()
       : null,
+    aiInterviewQuestions: app.ai_interview_questions
+      ? (() => {
+          try { return JSON.parse(app.ai_interview_questions); }
+          catch { return null; }
+        })()
+      : null,
   };
 }
 
@@ -709,6 +715,139 @@ A real production scenario (incident, design decision, or architectural choice) 
       if (!updated) throw new Error("Failed to save study topic deep dive");
 
       return mapApplication(updated, effectiveJobDescriptionForStudyTopic);
+    },
+
+    async generateInterviewQuestions(
+      _parent: any,
+      args: { applicationId: number },
+      context: GraphQLContext,
+    ) {
+      const whereClause = context.userEmail
+        ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
+        : eq(applications.id, args.applicationId);
+
+      // Fetch application + job description + company website
+      const [row] = await context.db
+        .select({
+          app: applications,
+          jobDescription: jobs.description,
+          companyWebsite: companies.website,
+        })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
+        .where(whereClause);
+
+      if (!row) throw new Error("Application not found or access denied");
+
+      const effectiveJobDescription = row.app.job_description ?? row.jobDescription ?? null;
+      if (!effectiveJobDescription) {
+        throw new Error("No job description available for this application");
+      }
+
+      const plainJobDesc = effectiveJobDescription
+        .replace(/(<([^>]+)>)/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 8000);
+
+      const companyWebsite = row.companyWebsite ?? null;
+      const companyName = row.app.company_name ?? "the company";
+      const jobTitle = row.app.job_title ?? "software engineer";
+
+      // Fetch company website content if available
+      let companyContext = "";
+      if (companyWebsite) {
+        try {
+          const res = await fetch(companyWebsite, {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; InterviewPrepBot/1.0)" },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (res.ok) {
+            const html = await res.text();
+            // Strip HTML to plain text, take first 6000 chars
+            companyContext = html
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 6000);
+          }
+        } catch {
+          // Ignore fetch errors — we'll proceed without company context
+        }
+      }
+
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.REASONER,
+        messages: [
+          {
+            role: "user",
+            content: `You are helping me prepare for a job interview. I'm applying for the role of "${jobTitle}" at ${companyName}.
+
+${companyContext ? `## Company Website Content\nHere is content from the company's website (${companyWebsite}):\n${companyContext}\n` : `## Company\n${companyName} (no website content available)\n`}
+
+## Job Description
+${plainJobDesc}
+
+## Task
+Based on the job description and what you can understand about the company from their website content, generate exactly 12 interview questions I should prepare for. For each question:
+
+1. Write the actual interview question they might ask me
+2. Explain WHY this question is likely to be asked (what are they trying to assess? what from the job description or company context makes this relevant?)
+3. Categorize it (e.g., "Technical", "System Design", "Behavioral", "Company Fit", "Problem Solving", "Leadership", "Domain Knowledge")
+
+Focus on questions that are SPECIFIC to this company and role — not generic interview questions. Use the company website content to understand what the company does, its tech stack, its values, and its challenges.
+
+Return ONLY a JSON object with this exact shape:
+{
+  "companyContext": "2-3 sentence summary of what the company does and what they seem to value, based on the website content",
+  "questions": [
+    {
+      "question": "The interview question",
+      "reason": "Why this question matters for this specific role and company (2-3 sentences)",
+      "category": "Category name"
+    }
+  ]
+}`,
+          },
+        ],
+        max_tokens: 6000,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) throw new Error("Empty response from AI");
+
+      // DeepSeek Reasoner might wrap response in markdown code fences
+      const jsonStr = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        throw new Error("Failed to parse AI response as JSON");
+      }
+
+      if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+        throw new Error("AI returned an unexpected response structure");
+      }
+
+      parsed.generatedAt = new Date().toISOString();
+
+      const [updated] = await context.db
+        .update(applications)
+        .set({
+          ai_interview_questions: JSON.stringify(parsed),
+          updated_at: new Date().toISOString(),
+        })
+        .where(whereClause)
+        .returning();
+
+      if (!updated) throw new Error("Failed to save interview questions");
+
+      return mapApplication(updated, effectiveJobDescription);
     },
 
     async deleteApplication(_parent: any, args: { id: number }, context: GraphQLContext) {

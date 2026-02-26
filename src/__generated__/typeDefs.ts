@@ -22,6 +22,18 @@ type AIInterviewPrepRequirement {
   studyTopics: [String!]!
 }
 
+type AIInterviewQuestion {
+  category: String!
+  question: String!
+  reason: String!
+}
+
+type AIInterviewQuestions {
+  companyContext: String!
+  generatedAt: String!
+  questions: [AIInterviewQuestion!]!
+}
+
 type AIStudyTopicDeepDive {
   deepDive: String!
   topic: String!
@@ -77,6 +89,7 @@ enum ATSVendor {
 
 type Application {
   aiInterviewPrep: AIInterviewPrep
+  aiInterviewQuestions: AIInterviewQuestions
   companyKey: String
   companyName: String
   createdAt: String!
@@ -741,6 +754,7 @@ type Mutation {
   findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
   findContactEmail(contactId: Int!): FindContactEmailResult!
   generateInterviewPrep(applicationId: Int!): Application!
+  generateInterviewQuestions(applicationId: Int!): Application!
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!

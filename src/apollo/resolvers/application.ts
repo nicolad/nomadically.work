@@ -30,7 +30,14 @@ function mapApplication(
       : null,
     aiInterviewQuestions: app.ai_interview_questions
       ? (() => {
-          try { return JSON.parse(app.ai_interview_questions); }
+          try {
+            const parsed = JSON.parse(app.ai_interview_questions);
+            return {
+              ...parsed,
+              recruiterQuestions: parsed.recruiterQuestions ?? [],
+              technicalQuestions: parsed.technicalQuestions ?? [],
+            };
+          }
           catch { return null; }
         })()
       : null,

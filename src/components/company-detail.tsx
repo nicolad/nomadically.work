@@ -227,7 +227,6 @@ function formatScore(score?: number | null): string {
 }
 
 type KeyFactsCardProps = {
-  canonicalDomain?: string | null;
   linkedinUrl?: string | null;
   score?: number | null;
   careerPagesCount?: number | null;
@@ -235,20 +234,11 @@ type KeyFactsCardProps = {
 };
 
 function KeyFactsCard({
-  canonicalDomain,
   linkedinUrl,
   score,
   careerPagesCount,
   isAdmin = false,
 }: KeyFactsCardProps) {
-  const domainHref = useMemo(
-    () => coerceExternalUrl(canonicalDomain),
-    [canonicalDomain]
-  );
-  const domainLabel = useMemo(
-    () => prettyUrl(canonicalDomain),
-    [canonicalDomain]
-  );
   const linkedinHref = useMemo(
     () => coerceExternalUrl(linkedinUrl),
     [linkedinUrl]
@@ -258,47 +248,6 @@ function KeyFactsCard({
     label: string;
     value: React.ReactNode;
   }> = [
-    {
-      label: "Domain",
-      value: canonicalDomain ? (
-        domainHref ? (
-          <RadixLink
-            href={domainHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            color="gray"
-            title={domainHref}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {domainLabel}
-            <ExternalLinkIcon />
-          </RadixLink>
-        ) : (
-          <Text
-            size="2"
-            style={{
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={domainLabel}
-          >
-            {domainLabel}
-          </Text>
-        )
-      ) : (
-        <Text size="2">—</Text>
-      ),
-    },
     {
       label: "LinkedIn",
       value: linkedinHref ? (
@@ -429,7 +378,6 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
     logo_url: company?.logo_url ?? "",
     size: company?.size ?? "",
     industry: company?.industry ?? "",
-    canonical_domain: company?.canonical_domain ?? "",
     linkedin_url: company?.linkedin_url ?? "",
     job_board_url: company?.job_board_url ?? "",
     category: (company?.category as CompanyCategory | null | undefined) ?? null,
@@ -456,7 +404,6 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
       logo_url: company?.logo_url ?? "",
       size: company?.size ?? "",
       industry: company?.industry ?? "",
-      canonical_domain: company?.canonical_domain ?? "",
       linkedin_url: company?.linkedin_url ?? "",
       job_board_url: company?.job_board_url ?? "",
       category: (company?.category as CompanyCategory | null | undefined) ?? null,
@@ -488,7 +435,6 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
           logo_url: form.logo_url || undefined,
           size: form.size || undefined,
           industry: form.industry || undefined,
-          canonical_domain: form.canonical_domain || undefined,
           linkedin_url: form.linkedin_url || undefined,
           job_board_url: form.job_board_url || undefined,
           category: form.category ?? undefined,
@@ -539,15 +485,6 @@ function CompanyEditDialog({ company, onSaved }: EditDialogProps) {
               value={form.website}
               onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
               placeholder="https://example.com"
-            />
-          </Flex>
-
-          <Flex direction="column" gap="1">
-            <Text size="2" weight="medium">Canonical domain</Text>
-            <TextField.Root
-              value={form.canonical_domain}
-              onChange={(e) => setForm((f) => ({ ...f, canonical_domain: e.target.value }))}
-              placeholder="example.com"
             />
           </Flex>
 
@@ -1074,7 +1011,6 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Flex direction="column" gap="4">
                       <KeyFactsCard
-                        canonicalDomain={company.canonical_domain}
                         linkedinUrl={company.linkedin_url}
                         score={company.score}
                         careerPagesCount={company.ats_boards?.length ?? 0}

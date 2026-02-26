@@ -184,7 +184,6 @@ type Company {
   updated_at: String!
 
   # Golden record fields
-  canonical_domain: String
   category: CompanyCategory!
   tags: [String!]!
   services: [String!]!
@@ -222,7 +221,6 @@ input CreateCompanyInput {
   industry: String
   size: String
   location: String
-  canonical_domain: String
   category: CompanyCategory
   tags: [String!]
   services: [String!]
@@ -241,7 +239,6 @@ input UpdateCompanyInput {
   location: String
   linkedin_url: String
   job_board_url: String
-  canonical_domain: String
   category: CompanyCategory
   tags: [String!]
   services: [String!]
@@ -297,7 +294,6 @@ input CompanyFilterInput {
   min_score: Float
   has_ats_boards: Boolean
   service_taxonomy_any: [String!]
-  canonical_domain_in: [String!]
 }
 
 type DeleteCompanyResponse {

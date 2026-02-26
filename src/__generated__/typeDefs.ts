@@ -193,7 +193,6 @@ type CompaniesResponse {
 type Company {
   ashby_enrichment: AshbyEnrichment
   ats_boards: [ATSBoard!]!
-  canonical_domain: String
   category: CompanyCategory!
   contacts: [Contact!]!
   created_at: String!
@@ -256,7 +255,6 @@ input CompanyFactInput {
 }
 
 input CompanyFilterInput {
-  canonical_domain_in: [String!]
   category_in: [CompanyCategory!]
   has_ats_boards: Boolean
   min_score: Float
@@ -335,7 +333,6 @@ type ContactsResult {
 }
 
 input CreateCompanyInput {
-  canonical_domain: String
   category: CompanyCategory
   description: String
   industries: [String!]
@@ -1040,7 +1037,6 @@ input UpdateApplicationInput {
 }
 
 input UpdateCompanyInput {
-  canonical_domain: String
   category: CompanyCategory
   description: String
   industries: [String!]

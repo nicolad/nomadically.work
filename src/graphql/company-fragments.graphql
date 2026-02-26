@@ -88,7 +88,6 @@ fragment CompanyFields on Company {
   updated_at
 
   # Golden record fields
-  canonical_domain
   linkedin_url
   category
   tags

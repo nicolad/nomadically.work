@@ -23,51 +23,43 @@ interface GenerateBatchEmailResponse {
 }
 
 function buildBatchPrompt(input: GenerateBatchEmailRequest): string {
-  const parts: string[] = [
-    "You are helping Vadim Nicolai craft a batch outreach email TEMPLATE.",
-    "",
-    "This template will be sent to multiple recipients. Use {{name}} as the placeholder for each recipient's first name.",
-    "",
-  ];
+  const parts: string[] = [];
+
+  // Instructions come FIRST — they are the primary driver of the email
+  if (input.instructions) {
+    parts.push(
+      "PRIMARY GOAL (most important — the entire email must serve this):",
+      input.instructions,
+      "",
+      "INTERPRETATION GUIDE:",
+      "- If the goal mentions 'applied', 'application', 'no response', 'follow up', 'follow-up' → write a FOLLOW-UP email referencing a prior application, NOT a cold outreach.",
+      "- If the goal is cold outreach → write an introduction email.",
+      "- If the goal mentions a specific ask → make that the clear CTA.",
+      "",
+    );
+  }
 
   if (input.companyName) {
     parts.push(`TARGET COMPANY: ${input.companyName}`, "");
   }
 
-  if (input.recipientCount !== undefined && input.recipientCount > 0) {
-    parts.push(`BATCH SIZE: ${input.recipientCount} recipients`, "");
-  }
-
   parts.push(
-    "VADIM'S BACKGROUND:",
-    "- Senior Frontend/Rust Engineer with 10+ years experience",
-    "- Contributing to Nautech Systems high-performance trading engine (open source)",
-    "- Built exchange adapters for dYdX v4 and Hyperliquid in Rust",
-    "- Expertise: React, TypeScript, Rust, trading systems, distributed systems",
-    "- Looking for: fully remote EU engineering roles",
+    "SENDER BACKGROUND (use selectively — only what's relevant to the primary goal):",
+    "- Vadim Nicolai, Senior Frontend/Rust Engineer, 10+ years experience",
+    "- Nautech Systems open-source trading engine contributor",
+    "- Built dYdX v4 + Hyperliquid exchange adapters in Rust",
+    "- Expertise: React, TypeScript, Rust, trading systems",
+    "- Seeking: fully remote EU engineering roles",
     "",
-  );
-
-  if (input.instructions) {
-    parts.push(
-      "SPECIAL INSTRUCTIONS (follow these precisely):",
-      input.instructions,
-      "",
-    );
-  }
-
-  parts.push(
-    "REQUIREMENTS:",
-    '1. Start the greeting with "Hey {{name}},"',
-    "2. Keep the body concise: 150-250 words",
-    "3. Be professional but direct — no fluff",
-    "4. Include a clear call-to-action (e.g. ask for a 20-minute call)",
-    '5. End with "Thanks,\\nVadim"',
-    "6. Do NOT make up specific facts about the recipient",
-    "7. Use {{name}} exactly — no other placeholder format",
+    "EMAIL TEMPLATE RULES:",
+    '1. Use {{name}} as the placeholder for the recipient\'s first name (start with "Hey {{name}},")',
+    "2. 100-180 words MAX — be sharp and direct, cut all filler",
+    "3. One clear CTA only",
+    '4. End with "Thanks,\\nVadim"',
+    "5. Do NOT fabricate recipient details",
+    "6. The tone and framing must match the PRIMARY GOAL above",
     "",
-    "Respond ONLY with a JSON object:",
-    '{ "subject": "...", "body": "..." }',
+    "Respond ONLY with valid JSON: { \"subject\": \"...\", \"body\": \"...\" }",
   );
 
   return parts.join("\n");
@@ -180,7 +172,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         {
           role: "system",
           content:
-            'You are an expert email writer. Respond ONLY with a JSON object with keys \'subject\' and \'body\'. The body must use {{name}} as the placeholder for the recipient\'s first name.',
+            "You are an expert email writer. Your top priority is the PRIMARY GOAL in the user prompt — every sentence must serve it. Respond ONLY with a JSON object: {\"subject\": \"...\", \"body\": \"...\"}. The body must use {{name}} as the placeholder for the recipient's first name. Never add fluff. Keep it under 180 words.",
         },
         {
           role: "user",

@@ -417,7 +417,10 @@ export function CompanyContactsClient({
       });
       const res = result?.findCompanyEmails;
       if (res?.success) {
-        setEmailDiscoveryStatus({ type: "success", message: res.message });
+        const errSuffix = res.errors?.length
+          ? ` (${res.errors.length} errors: ${res.errors.slice(0, 3).join("; ")}${res.errors.length > 3 ? "…" : ""})`
+          : "";
+        setEmailDiscoveryStatus({ type: "success", message: res.message + errSuffix });
         await refetch();
       } else {
         setEmailDiscoveryStatus({

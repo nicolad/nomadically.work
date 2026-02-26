@@ -342,6 +342,7 @@ export class NeverBounceClient {
       (a, b) => priorityOrder(a) - priorityOrder(b)
     );
 
+    let lastError: unknown;
     for (const email of sortedCandidates) {
       try {
         const outcome = await this.verifyEmail(email);
@@ -350,7 +351,11 @@ export class NeverBounceClient {
         }
       } catch (error) {
         console.error(`[NeverBounce] Error verifying ${email}:`, error);
+        lastError = error;
       }
+    }
+    if (lastError) {
+      throw lastError;
     }
     return null;
   }

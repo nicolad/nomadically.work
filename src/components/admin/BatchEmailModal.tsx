@@ -59,14 +59,6 @@ export function BatchEmailModal({
 }: BatchEmailModalProps) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  function toLocalDatetimeInput(d: Date): string {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-  function defaultScheduledAt() {
-    return toLocalDatetimeInput(new Date(Date.now() + 10 * 60 * 1000));
-  }
-  const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [state, setState] = useState<ModalState>("compose");
   const [result, setResult] = useState<BatchSendResponse | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -78,7 +70,6 @@ export function BatchEmailModal({
   function resetForm() {
     setSubject("");
     setBody("");
-    setScheduledAt(defaultScheduledAt());
     setState("compose");
     setResult(null);
     setSendError(null);
@@ -132,12 +123,7 @@ export function BatchEmailModal({
         recipients: Recipient[];
         subject: string;
         body: string;
-        scheduledAt?: string;
       } = { recipients, subject: subject.trim(), body: body.trim() };
-
-      if (scheduledAt) {
-        payload.scheduledAt = new Date(scheduledAt).toISOString();
-      }
 
       const response = await fetch("/api/emails/batch", {
         method: "POST",
@@ -159,8 +145,6 @@ export function BatchEmailModal({
     subject.trim().length > 0 &&
     body.trim().length > 0 &&
     recipients.length > 0;
-
-  const minScheduledAt = toLocalDatetimeInput(new Date(Date.now() + 5 * 60 * 1000));
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -304,35 +288,9 @@ export function BatchEmailModal({
                 />
               </Box>
 
-              <Box>
-                <Text
-                  as="label"
-                  size="2"
-                  weight="medium"
-                  mb="1"
-                  style={{ display: "block" }}
-                >
-                  Scheduled send time
-                </Text>
-                <Text size="1" color="gray" mb="1" style={{ display: "block" }}>
-                  Emails are always scheduled. Default: 10 minutes from now.
-                </Text>
-                <input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  min={minScheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 10px",
-                    borderRadius: "var(--radius-2)",
-                    border: "1px solid var(--gray-6)",
-                    background: "var(--color-surface)",
-                    color: "var(--gray-12)",
-                    fontSize: "var(--font-size-2)",
-                  }}
-                />
-              </Box>
+              <Text size="1" color="gray">
+                Emails will be scheduled 10 minutes from now.
+              </Text>
 
               <Flex justify="end" gap="3" mt="2">
                 <Dialog.Close>

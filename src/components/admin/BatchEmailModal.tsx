@@ -8,12 +8,15 @@ import {
   Dialog,
   Flex,
   Heading,
+  Separator,
+  Spinner,
   Text,
   TextArea,
   TextField,
 } from "@radix-ui/themes";
 import {
   Cross2Icon,
+  MagicWandIcon,
   PaperPlaneIcon,
   CheckCircledIcon,
   CrossCircledIcon,
@@ -60,6 +63,10 @@ export function BatchEmailModal({
   const [state, setState] = useState<ModalState>("compose");
   const [result, setResult] = useState<BatchSendResponse | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState("");
+  const [companyName, setCompanyName] = useState("");
 
   function resetForm() {
     setSubject("");
@@ -68,11 +75,42 @@ export function BatchEmailModal({
     setState("compose");
     setResult(null);
     setSendError(null);
+    setGenerating(false);
+    setGenError(null);
+    setInstructions("");
+    setCompanyName("");
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) resetForm();
     onOpenChange(nextOpen);
+  }
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await fetch("/api/emails/generate-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: companyName.trim() || undefined,
+          instructions: instructions.trim() || undefined,
+          recipientCount: recipients.length,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { subject: string; body: string };
+      setSubject(data.subject);
+      setBody(data.body);
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : "Generation failed");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function handleSend() {
@@ -158,6 +196,60 @@ export function BatchEmailModal({
                   </Text>
                 </Box>
               )}
+
+              <Box>
+                <Text size="2" weight="medium" mb="2" style={{ display: "block" }}>
+                  AI Generation
+                </Text>
+                <Flex direction="column" gap="2">
+                  <TextField.Root
+                    placeholder="Company name (optional)"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    size="2"
+                  />
+                  <TextArea
+                    placeholder="Instructions — e.g. pitch Rust/trading background, ask for a call"
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                    rows={3}
+                    size="2"
+                  />
+                  <Button
+                    variant="soft"
+                    color="violet"
+                    disabled={generating || state !== "compose"}
+                    onClick={() => void handleGenerate()}
+                  >
+                    {generating ? (
+                      <>
+                        <Spinner size="1" />
+                        Generating with DeepSeek Reasoner...
+                      </>
+                    ) : (
+                      <>
+                        <MagicWandIcon />
+                        Generate subject &amp; body
+                      </>
+                    )}
+                  </Button>
+                  {genError !== null && (
+                    <Box
+                      style={{
+                        background: "var(--red-3)",
+                        borderRadius: "var(--radius-2)",
+                        padding: "var(--space-3)",
+                      }}
+                    >
+                      <Text size="2" color="red">
+                        {genError}
+                      </Text>
+                    </Box>
+                  )}
+                </Flex>
+              </Box>
+
+              <Separator size="4" />
 
               <Box>
                 <Text

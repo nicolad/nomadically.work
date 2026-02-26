@@ -220,7 +220,6 @@ export type Company = {
   __typename?: 'Company';
   ashby_enrichment: Maybe<AshbyEnrichment>;
   ats_boards: Array<AtsBoard>;
-  canonical_domain: Maybe<Scalars['String']['output']>;
   category: CompanyCategory;
   contacts: Array<Contact>;
   created_at: Scalars['String']['output'];
@@ -296,7 +295,6 @@ export type CompanyFactInput = {
 };
 
 export type CompanyFilterInput = {
-  canonical_domain_in?: InputMaybe<Array<Scalars['String']['input']>>;
   category_in?: InputMaybe<Array<CompanyCategory>>;
   has_ats_boards?: InputMaybe<Scalars['Boolean']['input']>;
   min_score?: InputMaybe<Scalars['Float']['input']>;
@@ -377,7 +375,6 @@ export type ContactsResult = {
 };
 
 export type CreateCompanyInput = {
-  canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
   description?: InputMaybe<Scalars['String']['input']>;
   industries?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -1534,7 +1531,6 @@ export type UpdateApplicationInput = {
 };
 
 export type UpdateCompanyInput = {
-  canonical_domain?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<CompanyCategory>;
   description?: InputMaybe<Scalars['String']['input']>;
   industries?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -2030,7 +2026,6 @@ export type CompaniesResponseResolvers<ContextType = GraphQLContext, ParentType 
 export type CompanyResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Company'] = ResolversParentTypes['Company']> = {
   ashby_enrichment?: Resolver<Maybe<ResolversTypes['AshbyEnrichment']>, ParentType, ContextType>;
   ats_boards?: Resolver<Array<ResolversTypes['ATSBoard']>, ParentType, ContextType>;
-  canonical_domain?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['CompanyCategory'], ParentType, ContextType>;
   contacts?: Resolver<Array<ResolversTypes['Contact']>, ParentType, ContextType>;
   created_at?: Resolver<ResolversTypes['String'], ParentType, ContextType>;

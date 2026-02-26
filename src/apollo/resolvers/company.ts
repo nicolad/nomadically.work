@@ -201,7 +201,6 @@ export const companyResolvers = {
           min_score?: number;
           has_ats_boards?: boolean;
           service_taxonomy_any?: string[];
-          canonical_domain_in?: string[];
         };
         order_by?: string;
         limit?: number;
@@ -234,17 +233,7 @@ export const companyResolvers = {
             conditions.push(gte(companies.score, args.filter.min_score));
           }
 
-          if (
-            args.filter.canonical_domain_in &&
-            args.filter.canonical_domain_in.length > 0
-          ) {
-            conditions.push(
-              inArray(
-                companies.canonical_domain,
-                args.filter.canonical_domain_in as any,
-              ),
-            );
-          }
+
         }
         let query = context.db.select().from(companies);
 
@@ -421,7 +410,6 @@ export const companyResolvers = {
           industry?: string;
           size?: string;
           location?: string;
-          canonical_domain?: string;
           category?: string;
           tags?: string[];
           services?: string[];
@@ -492,7 +480,6 @@ export const companyResolvers = {
           location?: string;
           linkedin_url?: string;
           job_board_url?: string;
-          canonical_domain?: string;
           category?: string;
           tags?: string[];
           services?: string[];

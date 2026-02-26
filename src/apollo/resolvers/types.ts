@@ -40,7 +40,6 @@ export interface CompanyUpdateData {
   industry?: string;
   size?: string;
   location?: string;
-  canonical_domain?: string;
   category?: string;
   tags?: string;
   services?: string;

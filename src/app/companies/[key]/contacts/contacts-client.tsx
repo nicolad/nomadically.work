@@ -44,8 +44,10 @@ import {
   LinkedInLogoIcon,
   MagnifyingGlassIcon,
   MagicWandIcon,
+  PaperPlaneIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
+import { BatchEmailModal } from "@/components/admin/BatchEmailModal";
 
 type Contact = NonNullable<
   GetContactsQuery["contacts"]["contacts"]
@@ -322,6 +324,7 @@ export function CompanyContactsClient({
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
+  const [batchEmailOpen, setBatchEmailOpen] = useState(false);
   const [linkedinHtml, setLinkedinHtml] = useState("");
   const [importStatus, setImportStatus] = useState<{
     type: "success" | "error";
@@ -486,6 +489,12 @@ export function CompanyContactsClient({
 
   const contactsList = data?.contacts?.contacts ?? [];
   const totalCount = data?.contacts?.totalCount ?? 0;
+  const batchEmailRecipients = contactsList
+    .filter((c) => c.email && !c.doNotContact)
+    .map((c) => ({
+      email: c.email as string,
+      name: `${c.firstName} ${c.lastName}`.trim(),
+    }));
 
   return (
     <Container size="3" p={{ initial: "4", md: "6" }}>
@@ -547,6 +556,18 @@ export function CompanyContactsClient({
             >
               {applyingPattern ? <Spinner size="1" /> : <UpdateIcon />}
               Apply pattern
+            </Button>
+
+            <Button
+              size="2"
+              variant="solid"
+              color="indigo"
+              onClick={() => setBatchEmailOpen(true)}
+              disabled={batchEmailRecipients.length === 0}
+            >
+              <PaperPlaneIcon />
+              Send Batch Email
+              {batchEmailRecipients.length > 0 && ` (${batchEmailRecipients.length})`}
             </Button>
 
             {/* LinkedIn import */}
@@ -748,6 +769,11 @@ export function CompanyContactsClient({
           </Flex>
         )}
       </Flex>
+      <BatchEmailModal
+        open={batchEmailOpen}
+        onOpenChange={setBatchEmailOpen}
+        recipients={batchEmailRecipients}
+      />
     </Container>
   );
 }

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const BATCH_LIMIT = 100;
-const SIGNATURE_HTML = "<br><br>--<br>Nomadically Team";
+
 const VERIFIED_FROM = "Vadim Nicolai <contact@vadim.blog>";
 
 interface Recipient {
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchEmai
   // Always schedule — sequential send() so scheduledAt is supported for every recipient.
   for (const recipient of recipients) {
     const personalized = personalizeBody(emailBody, recipient.name);
-    const html = textToHtml(personalized) + SIGNATURE_HTML;
+    const html = textToHtml(personalized);
 
     const result = await resend.instance.send({
       from: VERIFIED_FROM,

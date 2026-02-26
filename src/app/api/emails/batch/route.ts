@@ -9,6 +9,7 @@ export const maxDuration = 60;
 
 const BATCH_LIMIT = 100;
 const SIGNATURE_HTML = "<br><br>--<br>Nomadically Team";
+const VERIFIED_FROM = "Vadim Nicolai <contact@vadim.blog>";
 
 interface Recipient {
   email: string;
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchEmai
     const html = textToHtml(personalized) + SIGNATURE_HTML;
 
     const result = await resend.instance.send({
+      from: VERIFIED_FROM,
       to: recipient.email,
       subject: subject.trim(),
       html,

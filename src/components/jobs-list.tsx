@@ -2,6 +2,18 @@
 
 import { useRef, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  jobListCard,
+  jobRow,
+  jobRowContent,
+  jobRowTitleLine,
+  jobRowTitle,
+  jobRowCompany,
+  jobRowMetaLine,
+  jobRowMetaItem,
+  jobRowMetaBadge,
+  jobRowActions,
+} from "./jobs-list.css";
 import { useRouter } from "next/navigation";
 import {
   useGetJobsQuery,
@@ -213,18 +225,18 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
       </Flex>
 
       {/* card container */}
-      <div className="job-list-card">
+      <div className={jobListCard}>
         {isInitialLoad
           ? Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="job-row" style={{ pointerEvents: "none" }} aria-hidden="true">
-                <div className="job-row-content">
-                  <div className="job-row-title-line">
+              <div key={i} className={jobRow} style={{ pointerEvents: "none" }} aria-hidden="true">
+                <div className={jobRowContent}>
+                  <div className={jobRowTitleLine}>
                     <Skeleton width={`${120 + (i % 3) * 40}px`} height="14px" />
                   </div>
                   <Skeleton width="80px" height="12px" style={{ marginTop: 4 }} />
                   <Skeleton width="140px" height="11px" style={{ marginTop: 4 }} />
                 </div>
-                <div className="job-row-actions">
+                <div className={jobRowActions}>
                   <Skeleton width="60px" height="24px" />
                 </div>
               </div>
@@ -237,13 +249,13 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
               key={job.id}
               href={`/jobs/${jobId}?company=${job.company_key}&source=${job.source_kind}`}
               target="_blank"
-              className="job-row"
+              className={jobRow}
             >
               {/* content — stacked: title, company, meta */}
-              <div className="job-row-content">
+              <div className={jobRowContent}>
                 {/* line 1: title + status pill */}
-                <div className="job-row-title-line">
-                  <span className="job-row-title">{job.title}</span>
+                <div className={jobRowTitleLine}>
+                  <span className={jobRowTitle}>{job.title}</span>
                   {job.status && (
                     <Badge
                       size="1"
@@ -257,7 +269,6 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                               ? "orange"
                               : "gray"
                       }
-                      style={{ fontSize: 10, textTransform: "lowercase" }}
                     >
                       {getStatusLabel(job.status)}
                     </Badge>
@@ -267,7 +278,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                 {/* line 2: company name */}
                 {job.company_key && (
                   <span
-                    className="job-row-company"
+                    className={jobRowCompany}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -279,9 +290,9 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                 )}
 
                 {/* line 3: structured metadata */}
-                <div className="job-row-meta-line">
+                <div className={jobRowMetaLine}>
                   {job.location && (
-                    <span className="job-row-meta-item">
+                    <span className={jobRowMetaItem}>
                       <svg
                         width="10"
                         height="10"
@@ -298,12 +309,12 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                     </span>
                   )}
                   {job.source_kind && (
-                    <span className="job-row-meta-badge">
+                    <span className={jobRowMetaBadge}>
                       {job.source_kind}
                     </span>
                   )}
                   {job.publishedAt && (
-                    <span className="job-row-meta-item">
+                    <span className={jobRowMetaItem}>
                       {new Date(job.publishedAt).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
@@ -311,7 +322,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                     </span>
                   )}
                   {job.skills && job.skills.length > 0 && (
-                    <span className="job-row-meta-item">
+                    <span className={jobRowMetaItem}>
                       {sortBy(job.skills, [(s) => s.level !== "required"])
                         .slice(0, 3)
                         .map((s) => getSkillLabel(s.tag))
@@ -323,7 +334,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
               </div>
 
               {/* right actions */}
-              <div className="job-row-actions">
+              <div className={jobRowActions}>
                 {job.url && (
                   <span
                     className="yc-cta-ghost"

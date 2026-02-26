@@ -7,6 +7,7 @@ import { SearchQueryBar } from "./SearchQueryBar";
 import { UserPreferences } from "./user-preferences";
 import { JobsList } from "./jobs-list";
 import { SourceFilter } from "./SourceFilter";
+import { pageHeading, pageSubheading } from "./unified-jobs-provider.css";
 
 export function UnifiedJobsProvider() {
   const router = useRouter();
@@ -45,10 +46,10 @@ export function UnifiedJobsProvider() {
   return (
     <Container size="4" py="4">
       <Box mb="5">
-        <Text as="h1" size="5" weight="bold" mb="1" style={{ color: "var(--gray-12)", letterSpacing: "-0.02em" }}>
+        <Text as="h1" size="5" weight="bold" mb="1" className={pageHeading}>
           remote EU jobs
         </Text>
-        <Text as="p" size="2" style={{ color: "var(--gray-11)" }} mb="4">
+        <Text as="p" size="2" className={pageSubheading} mb="4">
           engineering and tech roles open to candidates in the EU
         </Text>
       </Box>

@@ -2,6 +2,7 @@
 
 import { Badge, Button, DropdownMenu, Flex, Text } from "@radix-ui/themes";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
+import { sourceFilterDesktop, sourceFilterMobile } from "./source-filter.css";
 
 const SOURCE_OPTIONS = [
   { value: "greenhouse", label: "Greenhouse", color: "blue" },
@@ -134,14 +135,10 @@ function SourceFilterDropdown({ selected, onChange }: SourceFilterProps) {
 export function SourceFilter({ selected, onChange }: SourceFilterProps) {
   return (
     <>
-      <style>{`
-        @media (max-width: 767px) { .source-filter-desktop { display: none; } }
-        @media (min-width: 768px) { .source-filter-mobile { display: none; } }
-      `}</style>
-      <div className="source-filter-desktop">
+      <div className={sourceFilterDesktop}>
         <SourceFilterChips selected={selected} onChange={onChange} />
       </div>
-      <div className="source-filter-mobile">
+      <div className={sourceFilterMobile}>
         <SourceFilterDropdown selected={selected} onChange={onChange} />
       </div>
     </>

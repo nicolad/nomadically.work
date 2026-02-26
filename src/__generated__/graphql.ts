@@ -396,6 +396,7 @@ export type CreateCompanyInput = {
   industries?: InputMaybe<Array<Scalars['String']['input']>>;
   industry?: InputMaybe<Scalars['String']['input']>;
   key: Scalars['String']['input'];
+  linkedin_url?: InputMaybe<Scalars['String']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   logo_url?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];

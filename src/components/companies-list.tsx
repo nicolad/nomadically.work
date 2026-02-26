@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   useGetCompaniesQuery,
   useDeleteCompanyMutation,
+  useCreateCompanyMutation,
 } from "@/__generated__/hooks";
 import type { GetCompaniesQuery, CompanyOrderBy } from "@/__generated__/graphql";
 import { useAuth } from "@/lib/auth-hooks";
@@ -15,8 +16,11 @@ import {
   Flex,
   Spinner,
   IconButton,
+  Dialog,
+  Button,
+  TextField,
 } from "@radix-ui/themes";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon, PlusIcon } from "@radix-ui/react-icons";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 type Company = GetCompaniesQuery["companies"]["companies"][number];
@@ -26,9 +30,47 @@ export function CompaniesList() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteCompanyMutation] = useDeleteCompanyMutation();
+  const [createCompanyMutation, { loading: creating }] = useCreateCompanyMutation();
+
+  // Add company dialog state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addWebsite, setAddWebsite] = useState("");
+  const [addLinkedin, setAddLinkedin] = useState("");
+  const [addError, setAddError] = useState("");
 
   // Check if current user is admin
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  const handleAddCompany = async () => {
+    setAddError("");
+    const name = addName.trim();
+    if (!name) {
+      setAddError("Name is required");
+      return;
+    }
+    const key = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    try {
+      await createCompanyMutation({
+        variables: {
+          input: {
+            key,
+            name,
+            website: addWebsite.trim() || undefined,
+            linkedin_url: addLinkedin.trim() || undefined,
+          },
+        },
+        refetchQueries: ["GetCompanies"],
+        awaitRefetchQueries: true,
+      });
+      setAddOpen(false);
+      setAddName("");
+      setAddWebsite("");
+      setAddLinkedin("");
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to create company");
+    }
+  };
 
   // Handle delete company
   const handleDeleteCompany = async (
@@ -133,9 +175,61 @@ export function CompaniesList() {
         <span className="yc-row-title" style={{ fontSize: 14 }}>
           companies
         </span>
-        <span className="yc-row-meta">
-          {companies.length}/{totalCount}
-        </span>
+        <Flex align="center" gap="3">
+          <span className="yc-row-meta">
+            {companies.length}/{totalCount}
+          </span>
+          {isAdmin && (
+            <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
+              <Dialog.Trigger>
+                <IconButton size="1" variant="ghost" style={{ cursor: "pointer" }}>
+                  <PlusIcon width={14} height={14} />
+                </IconButton>
+              </Dialog.Trigger>
+              <Dialog.Content maxWidth="400px">
+                <Dialog.Title>Add company</Dialog.Title>
+                <Flex direction="column" gap="3" mt="2">
+                  <Box>
+                    <Text size="1" color="gray" mb="1" as="div">name *</Text>
+                    <TextField.Root
+                      placeholder="Acme Corp"
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddCompany()}
+                    />
+                  </Box>
+                  <Box>
+                    <Text size="1" color="gray" mb="1" as="div">website</Text>
+                    <TextField.Root
+                      placeholder="https://acme.com"
+                      value={addWebsite}
+                      onChange={(e) => setAddWebsite(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddCompany()}
+                    />
+                  </Box>
+                  <Box>
+                    <Text size="1" color="gray" mb="1" as="div">linkedin url</Text>
+                    <TextField.Root
+                      placeholder="https://linkedin.com/company/acme"
+                      value={addLinkedin}
+                      onChange={(e) => setAddLinkedin(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddCompany()}
+                    />
+                  </Box>
+                  {addError && <Text size="1" color="red">{addError}</Text>}
+                  <Flex gap="2" justify="end" mt="1">
+                    <Dialog.Close>
+                      <Button variant="soft" color="gray" size="2">cancel</Button>
+                    </Dialog.Close>
+                    <Button size="2" onClick={handleAddCompany} disabled={creating}>
+                      {creating ? "adding…" : "add company"}
+                    </Button>
+                  </Flex>
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
+          )}
+        </Flex>
       </Flex>
 
       {/* search */}
@@ -185,25 +279,10 @@ export function CompaniesList() {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="yc-row-title">{company.name}</span>
-                {company.industry && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: "var(--gray-9)",
-                      padding: "0 4px",
-                      border: "1px solid var(--gray-6)",
-                      lineHeight: "16px",
-                      textTransform: "lowercase",
-                    }}
-                  >
-                    {company.industry}
-                  </span>
-                )}
               </div>
               <span className="yc-row-meta">
                 {company.key && <span>{company.key}</span>}
                 {company.location && <span> · {company.location}</span>}
-                {company.size && <span> · {company.size}</span>}
                 {company.ats_boards && company.ats_boards.length > 0 && (
                   <span>
                     {" · "}

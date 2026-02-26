@@ -353,6 +353,7 @@ input CreateCompanyInput {
   industries: [String!]
   industry: String
   key: String!
+  linkedin_url: String
   location: String
   logo_url: String
   name: String!

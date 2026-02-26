@@ -59,8 +59,12 @@ export function BatchEmailModal({
 }: BatchEmailModalProps) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  function toLocalDatetimeInput(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   function defaultScheduledAt() {
-    return new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 16);
+    return toLocalDatetimeInput(new Date(Date.now() + 10 * 60 * 1000));
   }
   const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [state, setState] = useState<ModalState>("compose");
@@ -156,9 +160,7 @@ export function BatchEmailModal({
     body.trim().length > 0 &&
     recipients.length > 0;
 
-  const minScheduledAt = new Date(Date.now() + 5 * 60 * 1000)
-    .toISOString()
-    .slice(0, 16);
+  const minScheduledAt = toLocalDatetimeInput(new Date(Date.now() + 5 * 60 * 1000));
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>

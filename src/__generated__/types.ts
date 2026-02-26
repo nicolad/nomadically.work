@@ -36,6 +36,20 @@ export type AiInterviewPrepRequirement = {
   studyTopics: Array<Scalars['String']['output']>;
 };
 
+export type AiInterviewQuestion = {
+  __typename: 'AIInterviewQuestion';
+  category: Scalars['String']['output'];
+  question: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+};
+
+export type AiInterviewQuestions = {
+  __typename: 'AIInterviewQuestions';
+  companyContext: Scalars['String']['output'];
+  generatedAt: Scalars['String']['output'];
+  questions: Array<AiInterviewQuestion>;
+};
+
 export type AiStudyTopicDeepDive = {
   __typename: 'AIStudyTopicDeepDive';
   deepDive: Scalars['String']['output'];
@@ -92,6 +106,7 @@ export type AtsVendor =
 export type Application = {
   __typename: 'Application';
   aiInterviewPrep: Maybe<AiInterviewPrep>;
+  aiInterviewQuestions: Maybe<AiInterviewQuestions>;
   companyKey: Maybe<Scalars['String']['output']>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
@@ -796,6 +811,7 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
+  generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -940,6 +956,11 @@ export type MutationFindContactEmailArgs = {
 
 
 export type MutationGenerateInterviewPrepArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
+export type MutationGenerateInterviewQuestionsArgs = {
   applicationId: Scalars['Int']['input'];
 };
 

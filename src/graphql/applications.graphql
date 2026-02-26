@@ -36,6 +36,15 @@ fragment ApplicationFields on Application {
     }
     generatedAt
   }
+  aiInterviewQuestions {
+    companyContext
+    questions {
+      question
+      reason
+      category
+    }
+    generatedAt
+  }
 }
 
 query GetApplications {
@@ -186,6 +195,21 @@ mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!,
         studyTopicDeepDives { topic deepDive }
         sourceQuote
         deepDive
+      }
+      generatedAt
+    }
+  }
+}
+
+mutation GenerateInterviewQuestions($applicationId: Int!) {
+  generateInterviewQuestions(applicationId: $applicationId) {
+    id
+    aiInterviewQuestions {
+      companyContext
+      questions {
+        question
+        reason
+        category
       }
       generatedAt
     }

@@ -44,6 +44,7 @@ import {
   useGenerateRequirementFromSelectionMutation,
   useLinkSelectionToRequirementMutation,
   useDeleteApplicationMutation,
+  useGenerateInterviewQuestionsMutation,
 } from "@/__generated__/hooks";
 import type { ApplicationStatus, AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import { useTextSelection } from "@/hooks/useTextSelection";
@@ -109,6 +110,7 @@ export default function ApplicationDetailPage() {
   const [generateStudyTopicDeepDive] = useGenerateStudyTopicDeepDiveMutation();
   const [generateRequirementFromSelection] = useGenerateRequirementFromSelectionMutation();
   const [linkSelectionToRequirement] = useLinkSelectionToRequirementMutation();
+  const [generateInterviewQuestions] = useGenerateInterviewQuestionsMutation();
   const { data: tracksData } = useGetTracksQuery();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -138,6 +140,8 @@ export default function ApplicationDetailPage() {
   const [editingJobDescription, setEditingJobDescription] = useState(false);
   const [jobDescriptionValue, setJobDescriptionValue] = useState("");
   const [prepView, setPrepView] = useState<"list" | "graph">("list");
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [questionsError, setQuestionsError] = useState<string | null>(null);
 
   // Text selection state
   const jobDescriptionRef = useRef<HTMLDivElement | null>(null);
@@ -748,6 +752,128 @@ export default function ApplicationDetailPage() {
         ) : (
           <Text size="2" color="gray">No job description yet.</Text>
         )}
+      </Card>
+
+      {/* Interview Questions (AI-generated) */}
+      <Card mb="5">
+        <Flex justify="between" align="center" mb="3">
+          <Heading size="4">Interview Questions</Heading>
+          {isAdmin && (
+            <Flex gap="2" align="center">
+              <Button
+                variant="soft"
+                size="2"
+                disabled={generatingQuestions || !app.jobDescription}
+                title={!app.jobDescription ? "No job description available" : undefined}
+                onClick={async () => {
+                  setGeneratingQuestions(true);
+                  setQuestionsError(null);
+                  try {
+                    await generateInterviewQuestions({
+                      variables: { applicationId: app.id },
+                      refetchQueries: ["GetApplication"],
+                    });
+                  } catch (e) {
+                    setQuestionsError(e instanceof Error ? e.message : "Generation failed");
+                  } finally {
+                    setGeneratingQuestions(false);
+                  }
+                }}
+              >
+                <PlusIcon />
+                {generatingQuestions
+                  ? "Generating with DeepSeek Reasoner..."
+                  : app.aiInterviewQuestions
+                    ? "Regenerate Questions"
+                    : "Generate Interview Questions"}
+              </Button>
+              {questionsError && (
+                <Text size="1" color="red">{questionsError}</Text>
+              )}
+            </Flex>
+          )}
+        </Flex>
+
+        {generatingQuestions && !app.aiInterviewQuestions && (
+          <Flex direction="column" gap="3" py="6" align="center">
+            <Text size="2" color="gray">
+              Analyzing company website and job description with DeepSeek Reasoner...
+            </Text>
+            <Flex gap="2">
+              {[0, 1, 2].map((i) => (
+                <Box
+                  key={i}
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "var(--accent-9)",
+                    animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                  }}
+                />
+              ))}
+            </Flex>
+          </Flex>
+        )}
+
+        {app.aiInterviewQuestions ? (
+          <Box>
+            {app.aiInterviewQuestions.companyContext && (
+              <Box mb="4" p="3" style={{ backgroundColor: "var(--blue-2)", borderRadius: "var(--radius-2)" }}>
+                <Text size="1" color="gray" weight="medium" mb="1" as="div">COMPANY CONTEXT</Text>
+                <Text size="2" as="div">{app.aiInterviewQuestions.companyContext}</Text>
+              </Box>
+            )}
+            <Flex direction="column" gap="3">
+              {app.aiInterviewQuestions.questions.map((q, i) => (
+                <Box
+                  key={i}
+                  p="3"
+                  style={{
+                    backgroundColor: "var(--gray-2)",
+                    borderRadius: "var(--radius-2)",
+                    borderLeft: `3px solid ${
+                      q.category === "Technical" ? "var(--blue-9)" :
+                      q.category === "System Design" ? "var(--violet-9)" :
+                      q.category === "Behavioral" ? "var(--green-9)" :
+                      q.category === "Company Fit" ? "var(--orange-9)" :
+                      q.category === "Leadership" ? "var(--amber-9)" :
+                      q.category === "Domain Knowledge" ? "var(--cyan-9)" :
+                      "var(--gray-9)"
+                    }`,
+                  }}
+                >
+                  <Flex justify="between" align="start" gap="2" mb="2">
+                    <Text size="2" weight="bold" as="div">
+                      {i + 1}. {q.question}
+                    </Text>
+                    <Badge size="1" variant="soft" color={
+                      q.category === "Technical" ? "blue" :
+                      q.category === "System Design" ? "violet" :
+                      q.category === "Behavioral" ? "green" :
+                      q.category === "Company Fit" ? "orange" :
+                      q.category === "Leadership" ? "amber" :
+                      q.category === "Domain Knowledge" ? "cyan" :
+                      "gray"
+                    } style={{ flexShrink: 0 }}>
+                      {q.category}
+                    </Badge>
+                  </Flex>
+                  <Text size="2" color="gray" as="div">
+                    {q.reason}
+                  </Text>
+                </Box>
+              ))}
+            </Flex>
+            <Text size="1" color="gray" mt="3" as="div">
+              Generated {new Date(app.aiInterviewQuestions.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </Text>
+          </Box>
+        ) : !generatingQuestions ? (
+          <Text size="2" color="gray">
+            No interview questions generated yet. Click the button above to generate questions tailored to this company and role.
+          </Text>
+        ) : null}
       </Card>
 
       {/* Interview Prep */}

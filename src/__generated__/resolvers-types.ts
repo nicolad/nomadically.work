@@ -39,6 +39,20 @@ export type AiInterviewPrepRequirement = {
   studyTopics: Array<Scalars['String']['output']>;
 };
 
+export type AiInterviewQuestion = {
+  __typename?: 'AIInterviewQuestion';
+  category: Scalars['String']['output'];
+  question: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+};
+
+export type AiInterviewQuestions = {
+  __typename?: 'AIInterviewQuestions';
+  companyContext: Scalars['String']['output'];
+  generatedAt: Scalars['String']['output'];
+  questions: Array<AiInterviewQuestion>;
+};
+
 export type AiStudyTopicDeepDive = {
   __typename?: 'AIStudyTopicDeepDive';
   deepDive: Scalars['String']['output'];
@@ -95,6 +109,7 @@ export type AtsVendor =
 export type Application = {
   __typename?: 'Application';
   aiInterviewPrep: Maybe<AiInterviewPrep>;
+  aiInterviewQuestions: Maybe<AiInterviewQuestions>;
   companyKey: Maybe<Scalars['String']['output']>;
   companyName: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
@@ -799,6 +814,7 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
+  generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyTopicDeepDive: Application;
@@ -943,6 +959,11 @@ export type MutationFindContactEmailArgs = {
 
 
 export type MutationGenerateInterviewPrepArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
+export type MutationGenerateInterviewQuestionsArgs = {
   applicationId: Scalars['Int']['input'];
 };
 
@@ -1688,6 +1709,8 @@ export type DirectiveResolverFn<TResult = Record<PropertyKey, never>, TParent = 
 export type ResolversTypes = {
   AIInterviewPrep: ResolverTypeWrapper<Partial<AiInterviewPrep>>;
   AIInterviewPrepRequirement: ResolverTypeWrapper<Partial<AiInterviewPrepRequirement>>;
+  AIInterviewQuestion: ResolverTypeWrapper<Partial<AiInterviewQuestion>>;
+  AIInterviewQuestions: ResolverTypeWrapper<Partial<AiInterviewQuestions>>;
   AIStudyTopicDeepDive: ResolverTypeWrapper<Partial<AiStudyTopicDeepDive>>;
   ATSBoard: ResolverTypeWrapper<Partial<AtsBoard>>;
   ATSBoardType: ResolverTypeWrapper<Partial<AtsBoardType>>;
@@ -1804,6 +1827,8 @@ export type ResolversTypes = {
 export type ResolversParentTypes = {
   AIInterviewPrep: Partial<AiInterviewPrep>;
   AIInterviewPrepRequirement: Partial<AiInterviewPrepRequirement>;
+  AIInterviewQuestion: Partial<AiInterviewQuestion>;
+  AIInterviewQuestions: Partial<AiInterviewQuestions>;
   AIStudyTopicDeepDive: Partial<AiStudyTopicDeepDive>;
   ATSBoard: Partial<AtsBoard>;
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
@@ -1920,6 +1945,18 @@ export type AiInterviewPrepRequirementResolvers<ContextType = GraphQLContext, Pa
   studyTopics?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
+export type AiInterviewQuestionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewQuestion'] = ResolversParentTypes['AIInterviewQuestion']> = {
+  category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  question?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reason?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AiInterviewQuestionsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewQuestions'] = ResolversParentTypes['AIInterviewQuestions']> = {
+  companyContext?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  generatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  questions?: Resolver<Array<ResolversTypes['AIInterviewQuestion']>, ParentType, ContextType>;
+};
+
 export type AiStudyTopicDeepDiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIStudyTopicDeepDive'] = ResolversParentTypes['AIStudyTopicDeepDive']> = {
   deepDive?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   topic?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1942,6 +1979,7 @@ export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends R
 
 export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Application'] = ResolversParentTypes['Application']> = {
   aiInterviewPrep?: Resolver<Maybe<ResolversTypes['AIInterviewPrep']>, ParentType, ContextType>;
+  aiInterviewQuestions?: Resolver<Maybe<ResolversTypes['AIInterviewQuestions']>, ParentType, ContextType>;
   companyKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   companyName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2402,6 +2440,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   findCompanyEmails?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType, RequireFields<MutationFindCompanyEmailsArgs, 'companyId'>>;
   findContactEmail?: Resolver<ResolversTypes['FindContactEmailResult'], ParentType, ContextType, RequireFields<MutationFindContactEmailArgs, 'contactId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
+  generateInterviewQuestions?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewQuestionsArgs, 'applicationId'>>;
   generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
@@ -2670,6 +2709,8 @@ export type WarcPointerResolvers<ContextType = GraphQLContext, ParentType extend
 export type Resolvers<ContextType = GraphQLContext> = {
   AIInterviewPrep?: AiInterviewPrepResolvers<ContextType>;
   AIInterviewPrepRequirement?: AiInterviewPrepRequirementResolvers<ContextType>;
+  AIInterviewQuestion?: AiInterviewQuestionResolvers<ContextType>;
+  AIInterviewQuestions?: AiInterviewQuestionsResolvers<ContextType>;
   AIStudyTopicDeepDive?: AiStudyTopicDeepDiveResolvers<ContextType>;
   ATSBoard?: AtsBoardResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;

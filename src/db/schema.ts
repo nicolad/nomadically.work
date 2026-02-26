@@ -476,6 +476,7 @@ export const applications = sqliteTable("applications", {
   company_name: text("company_name"), // Denormalized company name for display
   job_description: text("job_description"), // User-supplied job description override
   ai_interview_prep: text("ai_interview_prep"), // JSON: AIInterviewPrep shape
+  ai_interview_questions: text("ai_interview_questions"), // JSON: AIInterviewQuestions shape
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

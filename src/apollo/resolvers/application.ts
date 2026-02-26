@@ -796,68 +796,70 @@ A real production scenario (incident, design decision, or architectural choice) 
 
       let prompt: string;
       if (args.type === "recruiter") {
-        prompt = `I'm a software developer preparing for a recruiter/HR screening call. I'm applying for the role of "${jobTitle}" at ${companyName}. I need smart questions to ask THE RECRUITER — questions that help me evaluate whether this company and role are right for me, while also showing I've done my research.
+        prompt = `I'm a software developer preparing for a recruiter/HR screening call for the role of "${jobTitle}" at ${companyName}.
 
 ${companySection}
 
 ## Job Description
 ${plainJobDesc}
 
-## Task
-Generate exactly 10 insightful questions I (the candidate) should ask the recruiter during the screening call. Focus on:
-- Company culture, values, and how the team actually works day-to-day
-- Growth trajectory, funding stage, and business model viability
-- Engineering team structure, size, and how decisions are made
-- Remote work policies, time zones, and async communication
-- Interview process — what to expect in next rounds
-- Role expectations — what does success look like in 3/6/12 months
-- Compensation philosophy, equity, and benefits
-- Red flags to probe — things the job description is vague about
-- Manager and team dynamics — who I'd report to, team composition
-- Company challenges — what the hardest problems are right now
+## CRITICAL INSTRUCTIONS
+Every single question MUST directly reference something specific from either the company website content or the job description above. Do NOT generate generic questions like "What's the team size?" or "What's the culture like?" — instead reference SPECIFIC things:
+- If the JD mentions a technology (e.g., "Kubernetes", "RAG", "HIPAA"), ask about THAT technology's role at the company
+- If the company website mentions a product, mission, or value, reference IT by name
+- If the JD is vague about something specific (e.g., says "competitive salary" but no range, or "remote" without details), probe THAT gap
+- If the company describes itself a certain way on their website, ask how that manifests in daily work
 
-These should be questions that a SMART, EXPERIENCED developer would ask to evaluate the opportunity. Not generic — use the company website content and job description to make them specific.
+## Task
+Generate exactly 10 questions I should ask the recruiter. Each question must contain a SPECIFIC reference to something from the company website or job description — quote or paraphrase the exact detail you're referencing.
+
+Topics to cover (but always grounded in specific details from above):
+- How specific technologies/tools mentioned in the JD are actually used day-to-day
+- What specific products/features mentioned on the website the team works on
+- Gaps or vague claims in the JD that need clarification
+- How the specific responsibilities listed translate to actual weekly work
+- The team building the specific systems described in the JD
+- How the company's stated mission/values (from website) show up in engineering decisions
 
 For each question:
-1. Write the exact question I should ask the recruiter
-2. Explain WHY I should ask this (what am I really trying to learn? what red/green flags should I listen for in their answer?)
+1. Write the exact question — it MUST name a specific technology, product, responsibility, or claim from the JD or website
+2. Explain what specific part of the JD or website triggered this question, and what red/green flags to listen for
 3. Categorize it (e.g., "Culture", "Growth", "Team Structure", "Remote Work", "Process", "Role Clarity", "Compensation", "Red Flags", "Leadership", "Challenges")
 
 Return ONLY a JSON object:
 {
-  "companyContext": "2-3 sentence summary of what the company does and values",
+  "companyContext": "2-3 sentence summary of what the company does, referencing specific products/services from their website",
   "questions": [
     { "question": "...", "reason": "...", "category": "..." }
   ]
 }`;
       } else {
-        prompt = `You are helping me prepare for a technical interview. I'm applying for the role of "${jobTitle}" at ${companyName}.
+        prompt = `I'm preparing for a technical interview for the role of "${jobTitle}" at ${companyName}.
 
 ${companySection}
 
 ## Job Description
 ${plainJobDesc}
 
-## Task
-Generate exactly 10 deep technical interview questions that a senior engineer or engineering manager would ask. Focus on:
-- System design and architecture decisions
-- Specific technologies mentioned in the job description
-- Problem-solving approach and debugging methodology
-- Code quality, testing, and engineering practices
-- Performance optimization and scalability
-- Technical leadership and decision-making
-- Domain-specific technical knowledge
+## CRITICAL INSTRUCTIONS
+Every single question MUST be directly derived from something specific in the job description or company website above. Do NOT generate generic system design or coding questions. Instead:
+- If the JD mentions "RAG" — ask a question specifically about RAG architecture decisions at THIS company
+- If the JD mentions "Kubernetes/EKS" — ask about THEIR container orchestration challenges
+- If the company website describes their product — ask how the candidate would design/improve THAT specific system
+- If the JD lists specific responsibilities — turn THOSE into technical deep-dive questions
+- If the company operates in a specific domain (healthcare, fintech, etc.) — ask domain-specific technical questions
 
-These should be HARD, specific technical questions — not soft behavioral ones.
+## Task
+Generate exactly 10 deep technical interview questions. Each question must contain a SPECIFIC reference to a technology, system, responsibility, or domain detail from the JD or company website.
 
 For each question:
-1. Write the actual technical question
-2. Explain WHY this question is likely to come up (what technical signal are they looking for?)
+1. Write the technical question — it MUST reference specific technologies, systems, or domain concepts mentioned in the JD or website (e.g., "How would you design the model gateway for multi-provider routing that Optura needs for their AI orchestration platform?")
+2. Quote or reference the specific JD/website detail that makes this question relevant, and explain what technical signal the interviewer is looking for
 3. Categorize it (e.g., "System Design", "Coding", "Architecture", "Performance", "Testing", "DevOps", "Domain Knowledge", "Technical Leadership")
 
 Return ONLY a JSON object:
 {
-  "companyContext": "2-3 sentence summary of what the company does and their tech challenges",
+  "companyContext": "2-3 sentence summary of the company's technical challenges, referencing specific systems from their website/JD",
   "questions": [
     { "question": "...", "reason": "...", "category": "..." }
   ]

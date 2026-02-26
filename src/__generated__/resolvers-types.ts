@@ -49,8 +49,10 @@ export type AiInterviewQuestion = {
 export type AiInterviewQuestions = {
   __typename?: 'AIInterviewQuestions';
   companyContext: Scalars['String']['output'];
-  generatedAt: Scalars['String']['output'];
-  questions: Array<AiInterviewQuestion>;
+  recruiterGeneratedAt: Maybe<Scalars['String']['output']>;
+  recruiterQuestions: Array<AiInterviewQuestion>;
+  technicalGeneratedAt: Maybe<Scalars['String']['output']>;
+  technicalQuestions: Array<AiInterviewQuestion>;
 };
 
 export type AiStudyTopicDeepDive = {
@@ -965,6 +967,7 @@ export type MutationGenerateInterviewPrepArgs = {
 
 export type MutationGenerateInterviewQuestionsArgs = {
   applicationId: Scalars['Int']['input'];
+  type: Scalars['String']['input'];
 };
 
 
@@ -1953,8 +1956,10 @@ export type AiInterviewQuestionResolvers<ContextType = GraphQLContext, ParentTyp
 
 export type AiInterviewQuestionsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewQuestions'] = ResolversParentTypes['AIInterviewQuestions']> = {
   companyContext?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  generatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  questions?: Resolver<Array<ResolversTypes['AIInterviewQuestion']>, ParentType, ContextType>;
+  recruiterGeneratedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  recruiterQuestions?: Resolver<Array<ResolversTypes['AIInterviewQuestion']>, ParentType, ContextType>;
+  technicalGeneratedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  technicalQuestions?: Resolver<Array<ResolversTypes['AIInterviewQuestion']>, ParentType, ContextType>;
 };
 
 export type AiStudyTopicDeepDiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIStudyTopicDeepDive'] = ResolversParentTypes['AIStudyTopicDeepDive']> = {
@@ -2440,7 +2445,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   findCompanyEmails?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType, RequireFields<MutationFindCompanyEmailsArgs, 'companyId'>>;
   findContactEmail?: Resolver<ResolversTypes['FindContactEmailResult'], ParentType, ContextType, RequireFields<MutationFindContactEmailArgs, 'contactId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
-  generateInterviewQuestions?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewQuestionsArgs, 'applicationId'>>;
+  generateInterviewQuestions?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewQuestionsArgs, 'applicationId' | 'type'>>;
   generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;

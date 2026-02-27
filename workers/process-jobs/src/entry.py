@@ -1678,20 +1678,23 @@ class Default(WorkerEntrypoint):
         """Cron trigger — runs all four phases (enhance → tag → classify → extract).
 
         Configured via [triggers].crons in wrangler.jsonc.
-        Runs every 6 hours. Phase 1/2 are fast (ATS fetch + keyword heuristic),
+        Runs every hour. Phase 1/2 are fast (ATS fetch + keyword heuristic),
         Phase 3/4 involve LLM calls so use smaller batches.
         """
         print("🔄 Cron: Starting four-phase pipeline...")
         try:
             db = self.env.DB
 
-            enhance_stats  = await enhance_unenhanced_jobs(db, 10000)
+            # Batch sizes tuned for Python Worker CPU limits (cron gets ~15 min wall clock).
+            # Enhancement: 100ms delay × 500 jobs ≈ 50s + API latency — increased to drain backlog faster.
+            # Tagging/classify: LLM calls, keep small.
+            enhance_stats  = await enhance_unenhanced_jobs(db, 500)
             tag_stats      = await tag_roles_for_enhanced_jobs(
                 db, getattr(self.env, "AI", None),
                 deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
                 deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
                 deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
-                limit             = 10000,
+                limit             = 100,
             )
             # Phase 2b: Backfill role tags for eu-remote jobs that bypassed role tagging
             await backfill_role_tags_for_eu_remote_jobs(
@@ -1699,10 +1702,10 @@ class Default(WorkerEntrypoint):
                 deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
                 deepseek_base_url = getattr(self.env, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/beta"),
                 deepseek_model    = getattr(self.env, "DEEPSEEK_MODEL", "deepseek-chat"),
-                limit             = 200,
+                limit             = 50,
             )
-            classify_stats = await classify_unclassified_jobs(db, self.env, 10000)
-            skill_stats    = await extract_skills_for_classified_jobs(db, self.env, 10000)
+            classify_stats = await classify_unclassified_jobs(db, self.env, 100)
+            skill_stats    = await extract_skills_for_classified_jobs(db, self.env, 100)
 
             stats = self._merge_stats(enhance_stats, tag_stats, classify_stats, skill_stats)
             print(f"✅ Cron complete — {self._stats_summary(stats)}")

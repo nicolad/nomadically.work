@@ -25,9 +25,26 @@ import { GraphTooltip, type TooltipData } from "@/components/prep/GraphTooltip";
 
 // Map known study topics to their prep pages: key is lowercase label, value is the path
 const TOPIC_PREP_URLS: Record<string, string> = {
+  // DB concepts
   acid: "/study/db/acid",
   "foreign key": "/study/db/foreign-key",
   "foreign keys": "/study/db/foreign-key",
+  // React hooks
+  usestate: "/study/react/use-state",
+  useeffect: "/study/react/use-effect",
+  usecontext: "/study/react/use-context",
+  usereducer: "/study/react/use-reducer",
+  usecallback: "/study/react/use-callback",
+  usememo: "/study/react/use-memo",
+  useref: "/study/react/use-ref",
+  uselayouteffect: "/study/react/use-layout-effect",
+  useimperativehandle: "/study/react/use-imperative-handle",
+  usetransition: "/study/react/use-transition",
+  usedeferredvalue: "/study/react/use-deferred-value",
+  useid: "/study/react/use-id",
+  usesyncexternalstore: "/study/react/use-sync-external-store",
+  usedebugvalue: "/study/react/use-debug-value",
+  useinsertioneffect: "/study/react/use-insertion-effect",
 };
 
 // --- Status helpers ---

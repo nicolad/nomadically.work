@@ -984,10 +984,9 @@ Return ONLY a JSON object:
           model: DEEPSEEK_MODELS.REASONER,
           messages: [
             {
-              role: "system",
-              content: "You are a senior AI engineering coach. Return ONLY valid JSON — no markdown fences, no commentary.",
+              role: "user",
+              content: `You are a senior AI engineering coach. Return ONLY valid JSON — no markdown fences, no extra commentary.\n\n${userPrompt}`,
             },
-            { role: "user", content: userPrompt },
           ],
           max_tokens: maxTokens,
         }).then((r) => {

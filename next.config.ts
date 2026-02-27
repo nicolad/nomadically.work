@@ -7,7 +7,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/resume/:slug.pdf",
+        destination: "/api/resume-pdf/:slug",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

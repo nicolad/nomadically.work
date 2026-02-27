@@ -6,7 +6,7 @@
     "email": "nicolai.vadim@gmail.com",
     "phone": "+40774005428",
     "url": "https://github.com/nicolad",
-    "summary": "Senior Full Stack Engineer with 12+ years of experience building scalable web applications using React, TypeScript, Go, and Rust. Expert in modern frontend architectures, microservices, GraphQL APIs, and performance-critical systems. Active open-source contributor to Nautilus Trader algorithmic trading platform with 100+ merged PRs in Rust and Python. Domain expertise in E-commerce, FinTech, AI/ML, and enterprise SaaS.",
+    "summary": "Senior Full Stack Engineer with 12+ years of experience building scalable web applications using React, TypeScript, Go, and Rust. Expert in modern frontend architectures, microservices, GraphQL APIs, and performance-critical systems. Shipping AI-powered personal projects (Nomadically.work, ResearchThera.com) with multi-model LLM orchestration, agentic pipelines, RAG search, and production observability. Domain expertise in E-commerce, FinTech, AI/ML, and enterprise SaaS.",
     "keySkills": "React • TypeScript • JavaScript • Next.js • Node.js • Go • Rust • GraphQL • Apollo • REST API • Microservices • gRPC • AWS • Cloudflare • MongoDB • DynamoDB • Docker • CI/CD • Jest • Git • AI/LLM Orchestration",
     "location": {
       "address": "",

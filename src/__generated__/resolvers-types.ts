@@ -108,8 +108,34 @@ export type AtsVendor =
   | 'TEAMTAILOR'
   | 'WORKABLE';
 
+export type AgenticCoding = {
+  __typename?: 'AgenticCoding';
+  exercises: Array<AgenticCodingExercise>;
+  generatedAt: Scalars['String']['output'];
+  overview: Scalars['String']['output'];
+  resources: Array<AgenticCodingResource>;
+};
+
+export type AgenticCodingExercise = {
+  __typename?: 'AgenticCodingExercise';
+  agentPrompt: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  difficulty: Scalars['String']['output'];
+  hints: Array<Scalars['String']['output']>;
+  skills: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
+export type AgenticCodingResource = {
+  __typename?: 'AgenticCodingResource';
+  description: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
 export type Application = {
   __typename?: 'Application';
+  agenticCoding: Maybe<AgenticCoding>;
   aiInterviewPrep: Maybe<AiInterviewPrep>;
   aiInterviewQuestions: Maybe<AiInterviewQuestions>;
   companyKey: Maybe<Scalars['String']['output']>;
@@ -839,6 +865,7 @@ export type Mutation = {
   enhanceJobFromATS: EnhanceJobResponse;
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
+  generateAgenticCoding: Application;
   generateInterviewPrep: Application;
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
@@ -988,6 +1015,11 @@ export type MutationFindCompanyEmailsArgs = {
 
 export type MutationFindContactEmailArgs = {
   contactId: Scalars['Int']['input'];
+};
+
+
+export type MutationGenerateAgenticCodingArgs = {
+  applicationId: Scalars['Int']['input'];
 };
 
 
@@ -1875,6 +1907,9 @@ export type ResolversTypes = {
   ATSBoardType: ResolverTypeWrapper<Partial<AtsBoardType>>;
   ATSBoardUpsertInput: ResolverTypeWrapper<Partial<AtsBoardUpsertInput>>;
   ATSVendor: ResolverTypeWrapper<Partial<AtsVendor>>;
+  AgenticCoding: ResolverTypeWrapper<Partial<AgenticCoding>>;
+  AgenticCodingExercise: ResolverTypeWrapper<Partial<AgenticCodingExercise>>;
+  AgenticCodingResource: ResolverTypeWrapper<Partial<AgenticCodingResource>>;
   Application: ResolverTypeWrapper<Partial<Application>>;
   ApplicationInput: ResolverTypeWrapper<Partial<ApplicationInput>>;
   ApplicationStatus: ResolverTypeWrapper<Partial<ApplicationStatus>>;
@@ -1997,6 +2032,9 @@ export type ResolversParentTypes = {
   AIStudyTopicDeepDive: Partial<AiStudyTopicDeepDive>;
   ATSBoard: Partial<AtsBoard>;
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
+  AgenticCoding: Partial<AgenticCoding>;
+  AgenticCodingExercise: Partial<AgenticCodingExercise>;
+  AgenticCodingResource: Partial<AgenticCodingResource>;
   Application: Partial<Application>;
   ApplicationInput: Partial<ApplicationInput>;
   ApplyEmailPatternResult: Partial<ApplyEmailPatternResult>;
@@ -2150,7 +2188,30 @@ export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends R
   vendor?: Resolver<ResolversTypes['ATSVendor'], ParentType, ContextType>;
 };
 
+export type AgenticCodingResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCoding'] = ResolversParentTypes['AgenticCoding']> = {
+  exercises?: Resolver<Array<ResolversTypes['AgenticCodingExercise']>, ParentType, ContextType>;
+  generatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  overview?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  resources?: Resolver<Array<ResolversTypes['AgenticCodingResource']>, ParentType, ContextType>;
+};
+
+export type AgenticCodingExerciseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCodingExercise'] = ResolversParentTypes['AgenticCodingExercise']> = {
+  agentPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  difficulty?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  hints?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  skills?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AgenticCodingResourceResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCodingResource'] = ResolversParentTypes['AgenticCodingResource']> = {
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Application'] = ResolversParentTypes['Application']> = {
+  agenticCoding?: Resolver<Maybe<ResolversTypes['AgenticCoding']>, ParentType, ContextType>;
   aiInterviewPrep?: Resolver<Maybe<ResolversTypes['AIInterviewPrep']>, ParentType, ContextType>;
   aiInterviewQuestions?: Resolver<Maybe<ResolversTypes['AIInterviewQuestions']>, ParentType, ContextType>;
   companyKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -2619,6 +2680,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   enhanceJobFromATS?: Resolver<ResolversTypes['EnhanceJobResponse'], ParentType, ContextType, RequireFields<MutationEnhanceJobFromAtsArgs, 'company' | 'jobId' | 'source'>>;
   findCompanyEmails?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType, RequireFields<MutationFindCompanyEmailsArgs, 'companyId'>>;
   findContactEmail?: Resolver<ResolversTypes['FindContactEmailResult'], ParentType, ContextType, RequireFields<MutationFindContactEmailArgs, 'contactId'>>;
+  generateAgenticCoding?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateAgenticCodingArgs, 'applicationId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateInterviewQuestions?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewQuestionsArgs, 'applicationId' | 'type'>>;
   generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
@@ -2956,6 +3018,9 @@ export type Resolvers<ContextType = GraphQLContext> = {
   AIInterviewQuestions?: AiInterviewQuestionsResolvers<ContextType>;
   AIStudyTopicDeepDive?: AiStudyTopicDeepDiveResolvers<ContextType>;
   ATSBoard?: AtsBoardResolvers<ContextType>;
+  AgenticCoding?: AgenticCodingResolvers<ContextType>;
+  AgenticCodingExercise?: AgenticCodingExerciseResolvers<ContextType>;
+  AgenticCodingResource?: AgenticCodingResourceResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;
   ApplyEmailPatternResult?: ApplyEmailPatternResultResolvers<ContextType>;
   AshbyAddress?: AshbyAddressResolvers<ContextType>;

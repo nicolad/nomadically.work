@@ -105,8 +105,34 @@ export type AtsVendor =
   | 'TEAMTAILOR'
   | 'WORKABLE';
 
+export type AgenticCoding = {
+  __typename: 'AgenticCoding';
+  exercises: Array<AgenticCodingExercise>;
+  generatedAt: Scalars['String']['output'];
+  overview: Scalars['String']['output'];
+  resources: Array<AgenticCodingResource>;
+};
+
+export type AgenticCodingExercise = {
+  __typename: 'AgenticCodingExercise';
+  agentPrompt: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  difficulty: Scalars['String']['output'];
+  hints: Array<Scalars['String']['output']>;
+  skills: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
+export type AgenticCodingResource = {
+  __typename: 'AgenticCodingResource';
+  description: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
 export type Application = {
   __typename: 'Application';
+  agenticCoding: Maybe<AgenticCoding>;
   aiInterviewPrep: Maybe<AiInterviewPrep>;
   aiInterviewQuestions: Maybe<AiInterviewQuestions>;
   companyKey: Maybe<Scalars['String']['output']>;
@@ -836,6 +862,7 @@ export type Mutation = {
   enhanceJobFromATS: EnhanceJobResponse;
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
+  generateAgenticCoding: Application;
   generateInterviewPrep: Application;
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
@@ -985,6 +1012,11 @@ export type MutationFindCompanyEmailsArgs = {
 
 export type MutationFindContactEmailArgs = {
   contactId: Scalars['Int']['input'];
+};
+
+
+export type MutationGenerateAgenticCodingArgs = {
+  applicationId: Scalars['Int']['input'];
 };
 
 

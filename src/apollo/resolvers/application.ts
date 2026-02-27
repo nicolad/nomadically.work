@@ -41,6 +41,12 @@ function mapApplication(
           catch { return null; }
         })()
       : null,
+    agenticCoding: app.ai_agentic_coding
+      ? (() => {
+          try { return JSON.parse(app.ai_agentic_coding); }
+          catch { return null; }
+        })()
+      : null,
   };
 }
 
@@ -924,6 +930,138 @@ Return ONLY a JSON object:
         .returning();
 
       if (!updated) throw new Error("Failed to save interview questions");
+
+      return mapApplication(updated, effectiveJobDescription);
+    },
+
+    async generateAgenticCoding(
+      _parent: any,
+      args: { applicationId: number },
+      context: GraphQLContext,
+    ) {
+      if (!context.userId || !context.userEmail) {
+        throw new Error("Unauthorized");
+      }
+
+      const whereClause = and(
+        eq(applications.id, args.applicationId),
+        eq(applications.user_email, context.userEmail),
+      );
+
+      const [row] = await context.db
+        .select({
+          app: applications,
+          jobDescription: jobs.description,
+          companyWebsite: companies.website,
+        })
+        .from(applications)
+        .leftJoin(jobs, eq(jobs.url, applications.job_id))
+        .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
+        .where(whereClause);
+
+      if (!row) throw new Error("Application not found or access denied");
+
+      const effectiveJobDescription = row.app.job_description ?? row.jobDescription ?? null;
+      if (!effectiveJobDescription) {
+        throw new Error("No job description available for this application");
+      }
+
+      const plainJobDesc = effectiveJobDescription
+        .replace(/(<([^>]+)>)/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 8000);
+
+      const jobTitle = row.app.job_title ?? "software engineer";
+      const companyName = row.app.company_name ?? "the company";
+
+      const prompt = `You are a senior AI engineering coach helping a candidate prepare for the role of "${jobTitle}" at ${companyName}.
+
+## Job Description
+${plainJobDesc}
+
+## Your Task
+Analyze this job description and produce a deep, specific guide on how AGENTIC CODING applies to this exact role.
+
+Agentic coding means using AI coding agents (Claude Code, Cursor, GitHub Copilot Workspace, Devin, etc.) autonomously or semi-autonomously to write, refactor, test, and ship code — often in multi-step pipelines where the AI agent plans and executes multiple steps without constant human prompting.
+
+### Section 1: How agentic coding applies to THIS role
+- Look at the specific technologies, systems, and responsibilities in the job description
+- Explain precisely WHERE and HOW an agentic coding workflow would change day-to-day work for this role
+- Be specific: name the tasks from the JD, then explain how an agent would handle them
+- Include REAL tool names (Claude Code, Cursor, Copilot Workspace, Aider, Continue.dev, Sweep.dev, Devin, etc.)
+
+### Section 2: 4 concrete agentic coding exercises
+For each exercise:
+- Directly derived from the job description (reference specific technologies/responsibilities)
+- Title and description: what the exercise involves
+- Difficulty: easy / medium / hard
+- Skills tested (from the JD's required skills)
+- 2-3 hints for approaching it with an AI agent
+- agentPrompt: a complete, ready-to-paste prompt for Claude Code or Cursor to execute this exercise autonomously (multi-step, not just "write a function" — think: analyze codebase → plan → implement → test → explain)
+
+### Section 3: Resources
+Include 3-5 real URLs to documentation, tools, or guides relevant to agentic coding for this specific role's tech stack. Use only well-known, stable URLs (official docs, GitHub repos, arxiv papers).
+
+Return ONLY a JSON object with this structure:
+{
+  "overview": "3-4 paragraph deep explanation of how agentic coding applies to this specific role, referencing JD details. Include what changes, what stays the same, and what skills become MORE important in an agentic workflow.",
+  "exercises": [
+    {
+      "title": "...",
+      "description": "...",
+      "difficulty": "easy|medium|hard",
+      "skills": ["skill1", "skill2"],
+      "hints": ["hint1", "hint2"],
+      "agentPrompt": "Full multi-step prompt ready to paste into Claude Code or Cursor..."
+    }
+  ],
+  "resources": [
+    { "title": "...", "url": "...", "description": "..." }
+  ],
+  "generatedAt": "${new Date().toISOString()}"
+}`;
+
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.REASONER,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 8000,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) throw new Error("Empty response from AI");
+
+      const jsonStr = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        throw new Error("Failed to parse AI response as JSON");
+      }
+
+      if (!parsed.overview || !Array.isArray(parsed.exercises)) {
+        throw new Error("AI returned an unexpected response structure");
+      }
+
+      const agenticData = {
+        overview: parsed.overview,
+        exercises: parsed.exercises ?? [],
+        resources: parsed.resources ?? [],
+        generatedAt: new Date().toISOString(),
+      };
+
+      const [updated] = await context.db
+        .update(applications)
+        .set({
+          ai_agentic_coding: JSON.stringify(agenticData),
+          updated_at: new Date().toISOString(),
+        })
+        .where(whereClause)
+        .returning();
+
+      if (!updated) throw new Error("Failed to save agentic coding data");
 
       return mapApplication(updated, effectiveJobDescription);
     },

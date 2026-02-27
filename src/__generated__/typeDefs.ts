@@ -89,7 +89,30 @@ enum ATSVendor {
   WORKABLE
 }
 
+type AgenticCoding {
+  exercises: [AgenticCodingExercise!]!
+  generatedAt: String!
+  overview: String!
+  resources: [AgenticCodingResource!]!
+}
+
+type AgenticCodingExercise {
+  agentPrompt: String!
+  description: String!
+  difficulty: String!
+  hints: [String!]!
+  skills: [String!]!
+  title: String!
+}
+
+type AgenticCodingResource {
+  description: String!
+  title: String!
+  url: String!
+}
+
 type Application {
+  agenticCoding: AgenticCoding
   aiInterviewPrep: AIInterviewPrep
   aiInterviewQuestions: AIInterviewQuestions
   companyKey: String
@@ -779,6 +802,7 @@ type Mutation {
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
   findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
   findContactEmail(contactId: Int!): FindContactEmailResult!
+  generateAgenticCoding(applicationId: Int!): Application!
   generateInterviewPrep(applicationId: Int!): Application!
   generateInterviewQuestions(applicationId: Int!, type: String!): Application!
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!

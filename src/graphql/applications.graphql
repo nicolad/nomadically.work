@@ -51,6 +51,23 @@ fragment ApplicationFields on Application {
     recruiterGeneratedAt
     technicalGeneratedAt
   }
+  agenticCoding {
+    overview
+    exercises {
+      title
+      description
+      difficulty
+      skills
+      hints
+      agentPrompt
+    }
+    resources {
+      title
+      url
+      description
+    }
+    generatedAt
+  }
 }
 
 query GetApplications {
@@ -201,6 +218,29 @@ mutation LinkSelectionToRequirement($applicationId: Int!, $requirement: String!,
         studyTopicDeepDives { topic deepDive }
         sourceQuote
         deepDive
+      }
+      generatedAt
+    }
+  }
+}
+
+mutation GenerateAgenticCoding($applicationId: Int!) {
+  generateAgenticCoding(applicationId: $applicationId) {
+    id
+    agenticCoding {
+      overview
+      exercises {
+        title
+        description
+        difficulty
+        skills
+        hints
+        agentPrompt
+      }
+      resources {
+        title
+        url
+        description
       }
       generatedAt
     }

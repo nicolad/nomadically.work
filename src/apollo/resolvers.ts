@@ -11,6 +11,7 @@ import { trackResolvers } from "./resolvers/track";
 import { deepPlannerResolvers } from "./resolvers/deep-planner";
 import { contactResolvers } from "./resolvers/contacts";
 import { studyTopicResolvers } from "./resolvers/study-topics";
+import { opportunityResolvers } from "./resolvers/opportunities";
 import { merge } from "lodash";
 
 export const resolvers = merge(
@@ -28,4 +29,5 @@ export const resolvers = merge(
   deepPlannerResolvers,
   contactResolvers,
   studyTopicResolvers,
+  opportunityResolvers,
 );

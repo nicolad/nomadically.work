@@ -226,6 +226,7 @@ type Company {
   location: String
   logo_url: String
   name: String!
+  opportunities: [Opportunity!]!
   score: Float!
   score_reasons: [String!]!
   service_taxonomy: [String!]!
@@ -328,6 +329,21 @@ type Contact {
   userId: String
 }
 
+type ContactEmail {
+  contactId: Int!
+  createdAt: String!
+  fromEmail: String!
+  id: Int!
+  recipientName: String
+  resendId: String!
+  sentAt: String
+  status: String!
+  subject: String!
+  textContent: String
+  toEmails: [String!]!
+  updatedAt: String!
+}
+
 input ContactInput {
   company: String
   companyId: Int
@@ -382,6 +398,22 @@ input CreateLangSmithPromptInput {
   isPublic: Boolean
   readme: String
   tags: [String!]
+}
+
+input CreateOpportunityInput {
+  applicationNotes: String
+  companyId: Int
+  contactId: Int
+  deadline: String
+  endDate: String
+  rewardText: String
+  rewardUsd: Float
+  source: String
+  startDate: String
+  status: String
+  tags: [String!]
+  title: String!
+  url: String
 }
 
 input CreatePromptInput {
@@ -445,6 +477,11 @@ type DeleteContactResult {
 }
 
 type DeleteJobResponse {
+  message: String
+  success: Boolean!
+}
+
+type DeleteOpportunityResult {
   message: String
   success: Boolean!
 }
@@ -707,6 +744,7 @@ type Mutation {
   createContact(input: CreateContactInput!): Contact!
   createDeepPlannerTask(context: String, problemDescription: String!, workflowType: String!): DeepPlannerTask!
   createLangSmithPrompt(input: CreateLangSmithPromptInput, promptIdentifier: String!): LangSmithPrompt!
+  createOpportunity(input: CreateOpportunityInput!): Opportunity!
   createPrompt(input: CreatePromptInput!): Prompt!
   createTrack(input: CreateTrackInput!): Track!
   deleteAllJobs: DeleteJobResponse!
@@ -715,6 +753,7 @@ type Mutation {
   deleteContact(id: Int!): DeleteContactResult!
   deleteJob(id: Int!): DeleteJobResponse!
   deleteLangSmithPrompt(promptIdentifier: String!): Boolean!
+  deleteOpportunity(id: String!): DeleteOpportunityResult!
   enhanceAllContacts: EnhanceAllContactsResult!
   enhanceCompany(id: Int, key: String): EnhanceCompanyResponse!
   """
@@ -772,10 +811,44 @@ type Mutation {
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
   updateContact(id: Int!, input: UpdateContactInput!): Contact!
   updateLangSmithPrompt(input: UpdateLangSmithPromptInput!, promptIdentifier: String!): LangSmithPrompt!
+  updateOpportunity(id: String!, input: UpdateOpportunityInput!): Opportunity!
   updatePromptLabel(label: String!, name: String!, version: Int!): Prompt!
   updateUserSettings(settings: UserSettingsInput!, userId: String!): UserSettings!
   uploadResume(email: String!, filename: String!, resumePdf: String!): ResumeUploadResult
   upsert_company_ats_boards(boards: [ATSBoardUpsertInput!]!, company_id: Int!): [ATSBoard!]!
+}
+
+type OpportunitiesResult {
+  opportunities: [Opportunity!]!
+  totalCount: Int!
+}
+
+type Opportunity {
+  applicationNotes: String
+  applicationStatus: String
+  applied: Boolean!
+  appliedAt: String
+  company: Company
+  companyId: Int
+  contactId: Int
+  createdAt: String!
+  deadline: String
+  endDate: String
+  firstSeen: String
+  id: String!
+  lastSeen: String
+  metadata: JSON
+  rawContext: String
+  rewardText: String
+  rewardUsd: Float
+  score: Int
+  source: String
+  startDate: String
+  status: String!
+  tags: [String!]!
+  title: String!
+  updatedAt: String!
+  url: String
 }
 
 type PrepCategory {
@@ -881,6 +954,7 @@ type Query {
   company_snapshots(company_id: Int!, limit: Int, offset: Int): [CompanySnapshot!]!
   contact(id: Int!): Contact
   contactByEmail(email: String!): Contact
+  contactEmails(contactId: Int!): [ContactEmail!]!
   contacts(companyId: Int, limit: Int, offset: Int, search: String): ContactsResult!
   deepPlannerTask(id: ID!): DeepPlannerTask
   deepPlannerTasks: [DeepPlannerTask!]!
@@ -891,6 +965,8 @@ type Query {
   langsmithPromptCommit(includeModel: Boolean, promptIdentifier: String!): LangSmithPromptCommit
   langsmithPrompts(isArchived: Boolean, isPublic: Boolean, query: String): [LangSmithPrompt!]!
   myPromptUsage(limit: Int): [PromptUsage!]!
+  opportunities(companyId: Int, limit: Int, offset: Int, status: String): OpportunitiesResult!
+  opportunity(id: String!): Opportunity
   prepResources: PrepContent!
   prepResourcesByCategory(category: String!): [PrepResource!]!
   prompt(label: String, name: String!, version: Int): Prompt
@@ -1087,6 +1163,26 @@ input UpdateLangSmithPromptInput {
   isPublic: Boolean
   readme: String
   tags: [String!]
+}
+
+input UpdateOpportunityInput {
+  applicationNotes: String
+  applicationStatus: String
+  applied: Boolean
+  appliedAt: String
+  companyId: Int
+  contactId: Int
+  deadline: String
+  endDate: String
+  rewardText: String
+  rewardUsd: Float
+  score: Int
+  source: String
+  startDate: String
+  status: String
+  tags: [String!]
+  title: String
+  url: String
 }
 
 scalar Upload

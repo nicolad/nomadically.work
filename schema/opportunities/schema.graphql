@@ -1,0 +1,84 @@
+extend type Query {
+  opportunities(companyId: Int, status: String, limit: Int, offset: Int): OpportunitiesResult!
+  opportunity(id: String!): Opportunity
+}
+
+extend type Mutation {
+  createOpportunity(input: CreateOpportunityInput!): Opportunity!
+  updateOpportunity(id: String!, input: UpdateOpportunityInput!): Opportunity!
+  deleteOpportunity(id: String!): DeleteOpportunityResult!
+}
+
+type OpportunitiesResult {
+  opportunities: [Opportunity!]!
+  totalCount: Int!
+}
+
+type DeleteOpportunityResult {
+  success: Boolean!
+  message: String
+}
+
+input CreateOpportunityInput {
+  title: String!
+  url: String
+  source: String
+  status: String
+  rewardUsd: Float
+  rewardText: String
+  startDate: String
+  endDate: String
+  deadline: String
+  tags: [String!]
+  companyId: Int
+  contactId: Int
+  applicationNotes: String
+}
+
+input UpdateOpportunityInput {
+  title: String
+  url: String
+  source: String
+  status: String
+  rewardUsd: Float
+  rewardText: String
+  startDate: String
+  endDate: String
+  deadline: String
+  tags: [String!]
+  companyId: Int
+  contactId: Int
+  applied: Boolean
+  appliedAt: String
+  applicationStatus: String
+  applicationNotes: String
+  score: Int
+}
+
+type Opportunity {
+  id: String!
+  title: String!
+  url: String
+  source: String
+  status: String!
+  rewardUsd: Float
+  rewardText: String
+  startDate: String
+  endDate: String
+  deadline: String
+  firstSeen: String
+  lastSeen: String
+  score: Int
+  rawContext: String
+  metadata: JSON
+  applied: Boolean!
+  appliedAt: String
+  applicationStatus: String
+  applicationNotes: String
+  tags: [String!]!
+  companyId: Int
+  contactId: Int
+  company: Company
+  createdAt: String!
+  updatedAt: String!
+}

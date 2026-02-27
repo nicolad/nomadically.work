@@ -252,6 +252,7 @@ export type Company = {
   location: Maybe<Scalars['String']['output']>;
   logo_url: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
+  opportunities: Array<Opportunity>;
   score: Scalars['Float']['output'];
   score_reasons: Array<Scalars['String']['output']>;
   service_taxonomy: Array<Scalars['String']['output']>;
@@ -368,6 +369,22 @@ export type Contact = {
   userId: Maybe<Scalars['String']['output']>;
 };
 
+export type ContactEmail = {
+  __typename: 'ContactEmail';
+  contactId: Scalars['Int']['output'];
+  createdAt: Scalars['String']['output'];
+  fromEmail: Scalars['String']['output'];
+  id: Scalars['Int']['output'];
+  recipientName: Maybe<Scalars['String']['output']>;
+  resendId: Scalars['String']['output'];
+  sentAt: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  subject: Scalars['String']['output'];
+  textContent: Maybe<Scalars['String']['output']>;
+  toEmails: Array<Scalars['String']['output']>;
+  updatedAt: Scalars['String']['output'];
+};
+
 export type ContactInput = {
   company?: InputMaybe<Scalars['String']['input']>;
   companyId?: InputMaybe<Scalars['Int']['input']>;
@@ -423,6 +440,22 @@ export type CreateLangSmithPromptInput = {
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   readme?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type CreateOpportunityInput = {
+  applicationNotes?: InputMaybe<Scalars['String']['input']>;
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  contactId?: InputMaybe<Scalars['Int']['input']>;
+  deadline?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  rewardText?: InputMaybe<Scalars['String']['input']>;
+  rewardUsd?: InputMaybe<Scalars['Float']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  title: Scalars['String']['input'];
+  url?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreatePromptInput = {
@@ -488,6 +521,12 @@ export type DeleteContactResult = {
 
 export type DeleteJobResponse = {
   __typename: 'DeleteJobResponse';
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteOpportunityResult = {
+  __typename: 'DeleteOpportunityResult';
   message: Maybe<Scalars['String']['output']>;
   success: Scalars['Boolean']['output'];
 };
@@ -762,6 +801,7 @@ export type Mutation = {
   createContact: Contact;
   createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
+  createOpportunity: Opportunity;
   createPrompt: Prompt;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
@@ -770,6 +810,7 @@ export type Mutation = {
   deleteContact: DeleteContactResult;
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
+  deleteOpportunity: DeleteOpportunityResult;
   enhanceAllContacts: EnhanceAllContactsResult;
   enhanceCompany: EnhanceCompanyResponse;
   /**
@@ -827,6 +868,7 @@ export type Mutation = {
   updateCompany: Company;
   updateContact: Contact;
   updateLangSmithPrompt: LangSmithPrompt;
+  updateOpportunity: Opportunity;
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   uploadResume: Maybe<ResumeUploadResult>;
@@ -878,6 +920,11 @@ export type MutationCreateLangSmithPromptArgs = {
 };
 
 
+export type MutationCreateOpportunityArgs = {
+  input: CreateOpportunityInput;
+};
+
+
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
 };
@@ -910,6 +957,11 @@ export type MutationDeleteJobArgs = {
 
 export type MutationDeleteLangSmithPromptArgs = {
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteOpportunityArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -1078,6 +1130,12 @@ export type MutationUpdateLangSmithPromptArgs = {
 };
 
 
+export type MutationUpdateOpportunityArgs = {
+  id: Scalars['String']['input'];
+  input: UpdateOpportunityInput;
+};
+
+
 export type MutationUpdatePromptLabelArgs = {
   label: Scalars['String']['input'];
   name: Scalars['String']['input'];
@@ -1101,6 +1159,41 @@ export type MutationUploadResumeArgs = {
 export type MutationUpsert_Company_Ats_BoardsArgs = {
   boards: Array<AtsBoardUpsertInput>;
   company_id: Scalars['Int']['input'];
+};
+
+export type OpportunitiesResult = {
+  __typename: 'OpportunitiesResult';
+  opportunities: Array<Opportunity>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type Opportunity = {
+  __typename: 'Opportunity';
+  applicationNotes: Maybe<Scalars['String']['output']>;
+  applicationStatus: Maybe<Scalars['String']['output']>;
+  applied: Scalars['Boolean']['output'];
+  appliedAt: Maybe<Scalars['String']['output']>;
+  company: Maybe<Company>;
+  companyId: Maybe<Scalars['Int']['output']>;
+  contactId: Maybe<Scalars['Int']['output']>;
+  createdAt: Scalars['String']['output'];
+  deadline: Maybe<Scalars['String']['output']>;
+  endDate: Maybe<Scalars['String']['output']>;
+  firstSeen: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  lastSeen: Maybe<Scalars['String']['output']>;
+  metadata: Maybe<Scalars['JSON']['output']>;
+  rawContext: Maybe<Scalars['String']['output']>;
+  rewardText: Maybe<Scalars['String']['output']>;
+  rewardUsd: Maybe<Scalars['Float']['output']>;
+  score: Maybe<Scalars['Int']['output']>;
+  source: Maybe<Scalars['String']['output']>;
+  startDate: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+  url: Maybe<Scalars['String']['output']>;
 };
 
 export type PrepCategory = {
@@ -1213,6 +1306,7 @@ export type Query = {
   company_snapshots: Array<CompanySnapshot>;
   contact: Maybe<Contact>;
   contactByEmail: Maybe<Contact>;
+  contactEmails: Array<ContactEmail>;
   contacts: ContactsResult;
   deepPlannerTask: Maybe<DeepPlannerTask>;
   deepPlannerTasks: Array<DeepPlannerTask>;
@@ -1223,6 +1317,8 @@ export type Query = {
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
   myPromptUsage: Array<PromptUsage>;
+  opportunities: OpportunitiesResult;
+  opportunity: Maybe<Opportunity>;
   prepResources: PrepContent;
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
@@ -1292,6 +1388,11 @@ export type QueryContactByEmailArgs = {
 };
 
 
+export type QueryContactEmailsArgs = {
+  contactId: Scalars['Int']['input'];
+};
+
+
 export type QueryContactsArgs = {
   companyId?: InputMaybe<Scalars['Int']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -1347,6 +1448,19 @@ export type QueryLangsmithPromptsArgs = {
 
 export type QueryMyPromptUsageArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryOpportunitiesArgs = {
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryOpportunityArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -1591,6 +1705,26 @@ export type UpdateLangSmithPromptInput = {
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   readme?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type UpdateOpportunityInput = {
+  applicationNotes?: InputMaybe<Scalars['String']['input']>;
+  applicationStatus?: InputMaybe<Scalars['String']['input']>;
+  applied?: InputMaybe<Scalars['Boolean']['input']>;
+  appliedAt?: InputMaybe<Scalars['String']['input']>;
+  companyId?: InputMaybe<Scalars['Int']['input']>;
+  contactId?: InputMaybe<Scalars['Int']['input']>;
+  deadline?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  rewardText?: InputMaybe<Scalars['String']['input']>;
+  rewardUsd?: InputMaybe<Scalars['Float']['input']>;
+  score?: InputMaybe<Scalars['Int']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  url?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UserSettings = {

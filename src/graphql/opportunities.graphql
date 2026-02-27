@@ -1,0 +1,94 @@
+query GetOpportunities($companyId: Int, $status: String, $limit: Int, $offset: Int) {
+  opportunities(companyId: $companyId, status: $status, limit: $limit, offset: $offset) {
+    opportunities {
+      id
+      title
+      url
+      source
+      status
+      rewardUsd
+      rewardText
+      deadline
+      tags
+      score
+      applied
+      appliedAt
+      applicationStatus
+      companyId
+      company {
+        id
+        name
+        website
+      }
+      createdAt
+      updatedAt
+    }
+    totalCount
+  }
+}
+
+query GetOpportunity($id: String!) {
+  opportunity(id: $id) {
+    id
+    title
+    url
+    source
+    status
+    rewardUsd
+    rewardText
+    startDate
+    endDate
+    deadline
+    firstSeen
+    lastSeen
+    score
+    rawContext
+    metadata
+    applied
+    appliedAt
+    applicationStatus
+    applicationNotes
+    tags
+    companyId
+    contactId
+    company {
+      id
+      name
+      website
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateOpportunity($input: CreateOpportunityInput!) {
+  createOpportunity(input: $input) {
+    id
+    title
+    url
+    source
+    status
+    companyId
+    createdAt
+  }
+}
+
+mutation UpdateOpportunity($id: String!, $input: UpdateOpportunityInput!) {
+  updateOpportunity(id: $id, input: $input) {
+    id
+    title
+    status
+    applied
+    appliedAt
+    applicationStatus
+    applicationNotes
+    updatedAt
+  }
+}
+
+mutation DeleteOpportunity($id: String!) {
+  deleteOpportunity(id: $id) {
+    success
+    message
+  }
+}

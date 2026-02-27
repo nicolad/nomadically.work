@@ -27,6 +27,7 @@ const SIDEBAR_COLLAPSED_WIDTH = 56;
 const NAV_ITEMS = [
   { href: "/", label: "jobs", icon: <BackpackIcon width={15} height={15} /> },
   { href: "/applications", label: "applications", icon: <FileTextIcon width={15} height={15} /> },
+  { href: "/opportunities", label: "opportunities", icon: <BackpackIcon width={15} height={15} /> },
   { href: "/companies", label: "companies", icon: <CubeIcon width={15} height={15} /> },
   { href: "/contacts", label: "contacts", icon: <PersonIcon width={15} height={15} /> },
   { href: "/prep", label: "prep", icon: <LightningBoltIcon width={15} height={15} /> },

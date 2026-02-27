@@ -228,6 +228,18 @@ function GenerateEmailDialog({
               </Box>
             )}
 
+            <Flex align="center" gap="2">
+              <input
+                type="checkbox"
+                id="includeResumeGenerate"
+                checked={includeResume}
+                onChange={(e) => setIncludeResume(e.target.checked)}
+              />
+              <Text size="2" as="label" htmlFor="includeResumeGenerate">
+                Include resume
+              </Text>
+            </Flex>
+
             <Flex justify="between" mt="2">
               <Dialog.Close>
                 <Button variant="soft" color="gray">Close</Button>

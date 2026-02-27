@@ -163,7 +163,7 @@ export const contactResolvers = {
       if (!context.userId || !isAdminEmail(context.userEmail)) {
         throw new Error("Forbidden");
       }
-      const { firstName, lastName, emails, tags, ...rest } = args.input;
+      const { firstName, lastName, emails, tags, companyId, linkedinUrl, githubHandle, telegramHandle, position, email } = args.input;
       const rows = await context.db
         .insert(contacts)
         .values({
@@ -171,7 +171,12 @@ export const contactResolvers = {
           last_name: lastName ?? "",
           emails: emails ? JSON.stringify(emails) : "[]",
           tags: tags ? JSON.stringify(tags) : "[]",
-          ...rest,
+          ...(companyId !== undefined && { company_id: companyId }),
+          ...(linkedinUrl !== undefined && { linkedin_url: linkedinUrl }),
+          ...(githubHandle !== undefined && { github_handle: githubHandle }),
+          ...(telegramHandle !== undefined && { telegram_handle: telegramHandle }),
+          ...(position !== undefined && { position }),
+          ...(email !== undefined && { email }),
         })
         .returning();
       return rows[0];

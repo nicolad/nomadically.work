@@ -616,6 +616,77 @@ export const contacts = sqliteTable(
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 
+// Contact Emails (outbound emails sent to a contact)
+export const contactEmails = sqliteTable(
+  "contact_emails",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    contact_id: integer("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    resend_id: text("resend_id").notNull(),
+    from_email: text("from_email").notNull(),
+    to_emails: text("to_emails").notNull(), // JSON array
+    subject: text("subject").notNull(),
+    text_content: text("text_content"),
+    status: text("status").notNull().default("sent"),
+    sent_at: text("sent_at"),
+    recipient_name: text("recipient_name"),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    contactIdIdx: index("idx_contact_emails_contact_id").on(table.contact_id),
+    resendIdIdx: index("idx_contact_emails_resend_id").on(table.resend_id),
+  }),
+);
+
+export type ContactEmail = typeof contactEmails.$inferSelect;
+export type NewContactEmail = typeof contactEmails.$inferInsert;
+
+// Opportunities — personal job pipeline tracker (sourced from CRM)
+export const opportunities = sqliteTable(
+  "opportunities",
+  {
+    id: text("id").primaryKey(), // opp_<timestamp>_<random>
+    title: text("title").notNull(),
+    url: text("url"),
+    source: text("source"),
+    status: text("status").notNull().default("open"), // open | applied | rejected | offer | closed
+    reward_usd: real("reward_usd"),
+    reward_text: text("reward_text"),
+    start_date: text("start_date"),
+    end_date: text("end_date"),
+    deadline: text("deadline"),
+    first_seen: text("first_seen"),
+    last_seen: text("last_seen"),
+    score: integer("score"),
+    raw_context: text("raw_context"),
+    metadata: text("metadata"), // JSON
+    applied: integer("applied", { mode: "boolean" }).notNull().default(false),
+    applied_at: text("applied_at"),
+    application_status: text("application_status"),
+    application_notes: text("application_notes"),
+    tags: text("tags"), // JSON array
+    company_id: integer("company_id").references(() => companies.id),
+    contact_id: integer("contact_id").references(() => contacts.id),
+    created_at: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updated_at: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (t) => ({
+    idxOppStatus: index("idx_opportunities_status").on(t.status),
+    idxOppCompany: index("idx_opportunities_company_id").on(t.company_id),
+    idxOppContact: index("idx_opportunities_contact_id").on(t.contact_id),
+  }),
+);
+
+export type Opportunity = typeof opportunities.$inferSelect;
+export type NewOpportunity = typeof opportunities.$inferInsert;
+
 // Study Topics (curated technical study content)
 export const studyTopics = sqliteTable("study_topics", {
   id: integer("id").primaryKey({ autoIncrement: true }),

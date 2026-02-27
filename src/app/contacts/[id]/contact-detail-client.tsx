@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   useGetContactQuery,
+  useGetContactEmailsQuery,
   useFindContactEmailMutation,
   useUpdateContactMutation,
   useDeleteContactMutation,
@@ -53,14 +54,17 @@ type EmailStep = "generate" | "edit";
 
 function GenerateEmailDialog({
   contact,
+  onSent,
 }: {
   contact: {
+    id: number;
     firstName: string;
     lastName: string;
     company?: string | null;
     position?: string | null;
     email?: string | null;
   };
+  onSent?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<EmailStep>("generate");
@@ -125,6 +129,7 @@ function GenerateEmailDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          contactId: contact.id,
           to: contact.email,
           name: recipientName,
           subject: editSubject,
@@ -135,6 +140,7 @@ function GenerateEmailDialog({
       const json = (await res.json()) as { success: boolean; error?: string };
       if (json.success) {
         setSendResult({ type: "success", message: `Sent to ${contact.email}` });
+        onSent?.();
       } else {
         setSendResult({ type: "error", message: json.error ?? "Send failed" });
       }
@@ -613,6 +619,15 @@ export function ContactDetailClient({ contactId }: { contactId: number }) {
 
   const contact = data?.contact;
 
+  const {
+    data: emailsData,
+    loading: emailsLoading,
+    refetch: refetchEmails,
+  } = useGetContactEmailsQuery({
+    variables: { contactId },
+    skip: !contactId || isNaN(contactId) || !isAdmin,
+  });
+
   const [findEmail, { loading: finding }] = useFindContactEmailMutation();
   const [findResult, setFindResult] = useState<{
     type: "success" | "error";
@@ -983,8 +998,62 @@ export function ContactDetailClient({ contactId }: { contactId: number }) {
               Find email
             </Button>
           )}
-          <GenerateEmailDialog contact={contact} />
+          <GenerateEmailDialog contact={contact} onSent={() => refetchEmails()} />
         </Flex>
+
+        {/* Email History */}
+        <Box>
+          <Flex align="center" justify="between" mb="3">
+            <Heading size="4">Email history</Heading>
+            {emailsData?.contactEmails && emailsData.contactEmails.length > 0 && (
+              <Badge color="blue" variant="soft">
+                {emailsData.contactEmails.length}
+              </Badge>
+            )}
+          </Flex>
+
+          {emailsLoading ? (
+            <Flex justify="center" py="4">
+              <Spinner size="2" />
+            </Flex>
+          ) : !emailsData?.contactEmails || emailsData.contactEmails.length === 0 ? (
+            <Text size="2" color="gray">No emails sent yet.</Text>
+          ) : (
+            <Flex direction="column" gap="2">
+              {emailsData.contactEmails.map((email) => (
+                <Card key={email.id}>
+                  <Box p="3">
+                    <Flex justify="between" align="start" gap="2" wrap="wrap">
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Text size="2" weight="medium" as="p" style={{ wordBreak: "break-word" }}>
+                          {email.subject}
+                        </Text>
+                        <Text size="1" color="gray" as="p" mt="1">
+                          {email.sentAt
+                            ? new Date(email.sentAt).toLocaleString()
+                            : new Date(email.createdAt).toLocaleString()}
+                        </Text>
+                      </Box>
+                      <Badge
+                        color={
+                          email.status === "delivered"
+                            ? "green"
+                            : email.status === "bounced"
+                              ? "red"
+                              : "blue"
+                        }
+                        variant="soft"
+                        size="1"
+                      >
+                        {email.status}
+                      </Badge>
+                    </Flex>
+                  </Box>
+                </Card>
+              ))}
+            </Flex>
+          )}
+        </Box>
       </Flex>
     </Container>
   );

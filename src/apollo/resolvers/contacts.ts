@@ -1,4 +1,4 @@
-import { contacts, companies } from "@/db/schema";
+import { contacts, companies, contactEmails } from "@/db/schema";
 import { eq, and, like, or, count } from "drizzle-orm";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
@@ -151,6 +151,18 @@ export const contactResolvers = {
         .where(eq(contacts.email, args.email))
         .limit(1);
       return rows[0] ?? null;
+    },
+
+    async contactEmails(
+      _parent: unknown,
+      args: { contactId: number },
+      context: GraphQLContext,
+    ) {
+      return context.db
+        .select()
+        .from(contactEmails)
+        .where(eq(contactEmails.contact_id, args.contactId))
+        .orderBy(contactEmails.created_at);
     },
   },
 
@@ -736,5 +748,17 @@ export const contactResolvers = {
     async contacts(parent: any, _args: any, context: GraphQLContext) {
       return context.loaders.contactsByCompany.load(parent.id);
     },
+  },
+
+  ContactEmail: {
+    contactId: (parent: any) => parent.contact_id,
+    resendId: (parent: any) => parent.resend_id,
+    fromEmail: (parent: any) => parent.from_email,
+    toEmails: (parent: any) => parseJsonArray(parent.to_emails),
+    textContent: (parent: any) => parent.text_content ?? null,
+    sentAt: (parent: any) => parent.sent_at ?? null,
+    recipientName: (parent: any) => parent.recipient_name ?? null,
+    createdAt: (parent: any) => parent.created_at,
+    updatedAt: (parent: any) => parent.updated_at,
   },
 };

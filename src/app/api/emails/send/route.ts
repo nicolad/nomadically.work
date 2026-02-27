@@ -4,6 +4,9 @@ import { join } from "path";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { isAdminEmail } from "@/lib/admin";
 import { resend } from "@/lib/resend";
+import { drizzle } from "drizzle-orm/d1";
+import { createD1HttpClient } from "@/db/d1-http";
+import { contactEmails } from "@/db/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +16,7 @@ const FROM = "Vadim Nicolai <contact@vadim.blog>";
 const RESUME_PATH = join(process.cwd(), "src/data/CV_Vadim_Nicolai.pdf");
 
 interface SendEmailRequest {
+  contactId: number;
   to: string;
   name: string;
   subject: string;
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 });
   }
 
-  const { to, name, subject, body, includeResume } = input;
+  const { contactId, to, name, subject, body, includeResume } = input;
 
   if (!to || !subject || !body) {
     return NextResponse.json({ success: false, error: "to, subject, and body are required" }, { status: 400 });
@@ -70,10 +74,7 @@ export async function POST(request: NextRequest) {
   if (includeResume) {
     try {
       const content = await readFile(RESUME_PATH);
-      attachments.push({
-        filename: "Vadim_Nicolai_CV.pdf",
-        content,
-      });
+      attachments.push({ filename: "Vadim_Nicolai_CV.pdf", content });
     } catch {
       return NextResponse.json({ success: false, error: "Resume file not found" }, { status: 500 });
     }
@@ -90,6 +91,27 @@ export async function POST(request: NextRequest) {
 
   if (result.error) {
     return NextResponse.json({ success: false, error: result.error }, { status: 500 });
+  }
+
+  // Persist to DB if contactId provided
+  if (contactId) {
+    try {
+      const db = drizzle(createD1HttpClient() as any);
+      await db.insert(contactEmails).values({
+        contact_id: contactId,
+        resend_id: result.id,
+        from_email: FROM,
+        to_emails: JSON.stringify([to]),
+        subject: subject.trim(),
+        text_content: personalized,
+        status: "sent",
+        sent_at: new Date().toISOString(),
+        recipient_name: name || null,
+      });
+    } catch (err) {
+      // Non-fatal — email was sent, just log the persistence failure
+      console.error("[send] Failed to persist contact email:", err);
+    }
   }
 
   return NextResponse.json({ success: true, id: result.id });

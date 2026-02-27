@@ -49,6 +49,22 @@ mutation DeleteContact($id: Int!) {
   }
 }
 
+query GetContactEmails($contactId: Int!) {
+  contactEmails(contactId: $contactId) {
+    id
+    resendId
+    fromEmail
+    toEmails
+    subject
+    textContent
+    status
+    sentAt
+    recipientName
+    createdAt
+    updatedAt
+  }
+}
+
 query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
   contacts(companyId: $companyId, search: $search, limit: $limit, offset: $offset) {
     contacts {

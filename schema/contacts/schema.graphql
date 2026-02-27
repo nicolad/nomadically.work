@@ -2,6 +2,7 @@ extend type Query {
   contacts(companyId: Int, search: String, limit: Int, offset: Int): ContactsResult!
   contact(id: Int!): Contact
   contactByEmail(email: String!): Contact
+  contactEmails(contactId: Int!): [ContactEmail!]!
 }
 
 extend type Mutation {
@@ -123,4 +124,19 @@ type ApplyEmailPatternResult {
   contactsUpdated: Int!
   pattern: String
   contacts: [Contact!]!
+}
+
+type ContactEmail {
+  id: Int!
+  contactId: Int!
+  resendId: String!
+  fromEmail: String!
+  toEmails: [String!]!
+  subject: String!
+  textContent: String
+  status: String!
+  sentAt: String
+  recipientName: String
+  createdAt: String!
+  updatedAt: String!
 }

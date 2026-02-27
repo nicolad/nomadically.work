@@ -1323,6 +1323,7 @@ export type Query = {
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
+  resendEmail: Maybe<ResendEmailDetail>;
   resumeStatus: Maybe<ResumeStatus>;
   studyTopic: Maybe<StudyTopic>;
   studyTopics: Array<StudyTopic>;
@@ -1476,6 +1477,11 @@ export type QueryPromptArgs = {
 };
 
 
+export type QueryResendEmailArgs = {
+  resendId: Scalars['String']['input'];
+};
+
+
 export type QueryResumeStatusArgs = {
   email: Scalars['String']['input'];
 };
@@ -1545,6 +1551,21 @@ export type ResearchItem = {
   summary: Scalars['String']['output'];
   title: Scalars['String']['output'];
   url: Scalars['URL']['output'];
+};
+
+export type ResendEmailDetail = {
+  __typename: 'ResendEmailDetail';
+  bcc: Maybe<Array<Scalars['String']['output']>>;
+  cc: Maybe<Array<Scalars['String']['output']>>;
+  createdAt: Scalars['String']['output'];
+  from: Scalars['String']['output'];
+  html: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  lastEvent: Maybe<Scalars['String']['output']>;
+  scheduledAt: Maybe<Scalars['String']['output']>;
+  subject: Maybe<Scalars['String']['output']>;
+  text: Maybe<Scalars['String']['output']>;
+  to: Array<Scalars['String']['output']>;
 };
 
 export type ResumeAnswer = {

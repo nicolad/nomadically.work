@@ -971,6 +971,7 @@ type Query {
   prepResourcesByCategory(category: String!): [PrepResource!]!
   prompt(label: String, name: String!, version: Int): Prompt
   prompts: [RegisteredPrompt!]!
+  resendEmail(resendId: String!): ResendEmailDetail
   resumeStatus(email: String!): ResumeStatus
   studyTopic(category: String!, topic: String!): StudyTopic
   studyTopics(category: String!): [StudyTopic!]!
@@ -1011,6 +1012,20 @@ type ResearchItem {
   summary: String!
   title: String!
   url: URL!
+}
+
+type ResendEmailDetail {
+  bcc: [String!]
+  cc: [String!]
+  createdAt: String!
+  from: String!
+  html: String
+  id: String!
+  lastEvent: String
+  scheduledAt: String
+  subject: String
+  text: String
+  to: [String!]!
 }
 
 type ResumeAnswer {

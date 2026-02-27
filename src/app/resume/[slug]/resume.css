@@ -1,0 +1,328 @@
+.resume {
+  --resume-primary: #111;
+  --resume-secondary: #555;
+  --resume-accent: #2563eb;
+  --resume-border: #e5e7eb;
+  --resume-bg: #fff;
+
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 32px;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  color: var(--resume-primary);
+  background: var(--resume-bg);
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+
+.resume-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--resume-primary);
+}
+
+.resume-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  letter-spacing: -0.5px;
+}
+
+.resume-header .label {
+  font-size: 16px;
+  color: var(--resume-secondary);
+  margin: 0 0 8px;
+  font-weight: 400;
+}
+
+.resume-header .contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--resume-secondary);
+}
+
+.resume-header .contact a {
+  color: var(--resume-accent);
+  text-decoration: none;
+}
+
+.resume-header .contact a:hover {
+  text-decoration: underline;
+}
+
+/* ── Key Skills banner ──────────────────────────────────────── */
+
+.resume-key-skills {
+  font-size: 12px;
+  color: var(--resume-secondary);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--resume-border);
+}
+
+/* ── Two-column layout ──────────────────────────────────────── */
+
+.resume-body {
+  display: flex;
+  gap: 28px;
+}
+
+.resume-main {
+  flex: 3;
+  min-width: 0;
+}
+
+.resume-sidebar {
+  flex: 2;
+  min-width: 0;
+}
+
+/* ── Sections ───────────────────────────────────────────────── */
+
+.resume-section {
+  margin-bottom: 16px;
+}
+
+.resume-section h2 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--resume-primary);
+  border-bottom: 1px solid var(--resume-border);
+  padding-bottom: 4px;
+  margin: 0 0 10px;
+}
+
+/* ── Work experience ────────────────────────────────────────── */
+
+.resume-entry {
+  margin-bottom: 12px;
+  page-break-inside: avoid;
+}
+
+.resume-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.resume-entry-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.resume-entry-header .dates {
+  font-size: 11px;
+  color: var(--resume-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.resume-entry .company {
+  font-size: 12px;
+  color: var(--resume-secondary);
+  margin-bottom: 4px;
+}
+
+.resume-entry .summary {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.resume-entry .summary ul {
+  margin: 2px 0;
+  padding-left: 16px;
+}
+
+.resume-entry .summary li {
+  margin-bottom: 2px;
+}
+
+.resume-entry .summary strong {
+  font-weight: 600;
+}
+
+/* ── Skills ─────────────────────────────────────────────────── */
+
+.resume-skill-group {
+  margin-bottom: 10px;
+}
+
+.resume-skill-group h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--resume-primary);
+}
+
+.resume-skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.resume-skill-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  color: var(--resume-primary);
+}
+
+/* ── Education ──────────────────────────────────────────────── */
+
+.resume-edu {
+  margin-bottom: 8px;
+}
+
+.resume-edu h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.resume-edu .institution {
+  font-size: 12px;
+  color: var(--resume-secondary);
+}
+
+.resume-edu .dates {
+  font-size: 11px;
+  color: var(--resume-secondary);
+}
+
+/* ── AI Projects ────────────────────────────────────────────── */
+
+.resume-project {
+  margin-bottom: 12px;
+  page-break-inside: avoid;
+}
+
+.resume-project h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+.resume-project h3 a {
+  color: var(--resume-accent);
+  text-decoration: none;
+}
+
+.resume-project .description {
+  font-size: 12px;
+  color: var(--resume-secondary);
+  margin-bottom: 4px;
+}
+
+.resume-project ul {
+  font-size: 11px;
+  margin: 2px 0;
+  padding-left: 16px;
+  line-height: 1.5;
+}
+
+.resume-project li {
+  margin-bottom: 2px;
+}
+
+/* ── Volunteer / Open Source ─────────────────────────────────── */
+
+.resume-volunteer {
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+}
+
+.resume-volunteer h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.resume-volunteer h3 a {
+  color: var(--resume-accent);
+  text-decoration: none;
+}
+
+.resume-volunteer .role {
+  font-size: 12px;
+  color: var(--resume-secondary);
+  margin-bottom: 4px;
+}
+
+.resume-volunteer .summary {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.resume-volunteer .summary ul {
+  margin: 2px 0;
+  padding-left: 16px;
+}
+
+.resume-volunteer .summary li {
+  margin-bottom: 2px;
+}
+
+/* ── Print ──────────────────────────────────────────────────── */
+
+@media print {
+  /* Hide app chrome */
+  nav,
+  header,
+  [data-sidebar],
+  .Sidebar,
+  .sidebar,
+  [class*="sidebar"],
+  [class*="Sidebar"],
+  [class*="admin-bar"],
+  [class*="AdminBar"] {
+    display: none !important;
+  }
+
+  /* Reset main content area */
+  main,
+  [class*="MainContent"],
+  [class*="main-content"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .resume {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .resume-skill-tag {
+    background: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .resume-entry,
+  .resume-project,
+  .resume-volunteer {
+    page-break-inside: avoid;
+  }
+
+  .resume-section h2 {
+    page-break-after: avoid;
+  }
+}

@@ -1326,6 +1326,7 @@ export type Query = {
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
+  resendEmail: Maybe<ResendEmailDetail>;
   resumeStatus: Maybe<ResumeStatus>;
   studyTopic: Maybe<StudyTopic>;
   studyTopics: Array<StudyTopic>;
@@ -1479,6 +1480,11 @@ export type QueryPromptArgs = {
 };
 
 
+export type QueryResendEmailArgs = {
+  resendId: Scalars['String']['input'];
+};
+
+
 export type QueryResumeStatusArgs = {
   email: Scalars['String']['input'];
 };
@@ -1548,6 +1554,21 @@ export type ResearchItem = {
   summary: Scalars['String']['output'];
   title: Scalars['String']['output'];
   url: Scalars['URL']['output'];
+};
+
+export type ResendEmailDetail = {
+  __typename?: 'ResendEmailDetail';
+  bcc: Maybe<Array<Scalars['String']['output']>>;
+  cc: Maybe<Array<Scalars['String']['output']>>;
+  createdAt: Scalars['String']['output'];
+  from: Scalars['String']['output'];
+  html: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  lastEvent: Maybe<Scalars['String']['output']>;
+  scheduledAt: Maybe<Scalars['String']['output']>;
+  subject: Maybe<Scalars['String']['output']>;
+  text: Maybe<Scalars['String']['output']>;
+  to: Array<Scalars['String']['output']>;
 };
 
 export type ResumeAnswer = {
@@ -1940,6 +1961,7 @@ export type ResolversTypes = {
   QuestionAnswerInput: ResolverTypeWrapper<Partial<QuestionAnswerInput>>;
   RegisteredPrompt: ResolverTypeWrapper<Partial<RegisteredPrompt>>;
   ResearchItem: ResolverTypeWrapper<Partial<ResearchItem>>;
+  ResendEmailDetail: ResolverTypeWrapper<Partial<ResendEmailDetail>>;
   ResumeAnswer: ResolverTypeWrapper<Partial<ResumeAnswer>>;
   ResumeIngestResult: ResolverTypeWrapper<Partial<ResumeIngestResult>>;
   ResumeStatus: ResolverTypeWrapper<Partial<ResumeStatus>>;
@@ -2053,6 +2075,7 @@ export type ResolversParentTypes = {
   QuestionAnswerInput: Partial<QuestionAnswerInput>;
   RegisteredPrompt: Partial<RegisteredPrompt>;
   ResearchItem: Partial<ResearchItem>;
+  ResendEmailDetail: Partial<ResendEmailDetail>;
   ResumeAnswer: Partial<ResumeAnswer>;
   ResumeIngestResult: Partial<ResumeIngestResult>;
   ResumeStatus: Partial<ResumeStatus>;
@@ -2750,6 +2773,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   prepResourcesByCategory?: Resolver<Array<ResolversTypes['PrepResource']>, ParentType, ContextType, RequireFields<QueryPrepResourcesByCategoryArgs, 'category'>>;
   prompt?: Resolver<Maybe<ResolversTypes['Prompt']>, ParentType, ContextType, RequireFields<QueryPromptArgs, 'name'>>;
   prompts?: Resolver<Array<ResolversTypes['RegisteredPrompt']>, ParentType, ContextType>;
+  resendEmail?: Resolver<Maybe<ResolversTypes['ResendEmailDetail']>, ParentType, ContextType, RequireFields<QueryResendEmailArgs, 'resendId'>>;
   resumeStatus?: Resolver<Maybe<ResolversTypes['ResumeStatus']>, ParentType, ContextType, RequireFields<QueryResumeStatusArgs, 'email'>>;
   studyTopic?: Resolver<Maybe<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<QueryStudyTopicArgs, 'category' | 'topic'>>;
   studyTopics?: Resolver<Array<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<QueryStudyTopicsArgs, 'category'>>;
@@ -2784,6 +2808,20 @@ export type ResearchItemResolvers<ContextType = GraphQLContext, ParentType exten
   summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   url?: Resolver<ResolversTypes['URL'], ParentType, ContextType>;
+};
+
+export type ResendEmailDetailResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResendEmailDetail'] = ResolversParentTypes['ResendEmailDetail']> = {
+  bcc?: Resolver<Maybe<Array<ResolversTypes['String']>>, ParentType, ContextType>;
+  cc?: Resolver<Maybe<Array<ResolversTypes['String']>>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  from?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  html?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  lastEvent?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  scheduledAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  subject?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  text?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  to?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type ResumeAnswerResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeAnswer'] = ResolversParentTypes['ResumeAnswer']> = {
@@ -2977,6 +3015,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   QuestionAnswer?: QuestionAnswerResolvers<ContextType>;
   RegisteredPrompt?: RegisteredPromptResolvers<ContextType>;
   ResearchItem?: ResearchItemResolvers<ContextType>;
+  ResendEmailDetail?: ResendEmailDetailResolvers<ContextType>;
   ResumeAnswer?: ResumeAnswerResolvers<ContextType>;
   ResumeIngestResult?: ResumeIngestResultResolvers<ContextType>;
   ResumeStatus?: ResumeStatusResolvers<ContextType>;

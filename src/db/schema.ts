@@ -737,3 +737,20 @@ export const studyConceptExplanations = sqliteTable(
 
 export type StudyConceptExplanation = typeof studyConceptExplanations.$inferSelect;
 export type NewStudyConceptExplanation = typeof studyConceptExplanations.$inferInsert;
+
+// Resumes (skill profile uploads, stored as raw text for D1 fallback)
+export const resumes = sqliteTable("resumes", {
+  id: text("id").primaryKey(), // UUID
+  user_id: text("user_id").notNull(),
+  filename: text("filename"),
+  raw_text: text("raw_text"),
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+export type Resume = typeof resumes.$inferSelect;
+export type NewResume = typeof resumes.$inferInsert;

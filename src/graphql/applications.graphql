@@ -53,6 +53,7 @@ fragment ApplicationFields on Application {
   }
   agenticCoding {
     overview
+    workflowPattern
     exercises {
       title
       description
@@ -60,6 +61,25 @@ fragment ApplicationFields on Application {
       skills
       hints
       agentPrompt
+    }
+    promptTemplates {
+      title
+      purpose
+      stackContext
+      prompt
+    }
+    qaApproach
+    failureModes {
+      scenario
+      why
+      alternative
+    }
+    teamPractices
+    measurableOutcomes {
+      task
+      beforeTime
+      afterTime
+      improvement
     }
     resources {
       title
@@ -229,6 +249,7 @@ mutation GenerateAgenticCoding($applicationId: Int!) {
     id
     agenticCoding {
       overview
+      workflowPattern
       exercises {
         title
         description
@@ -236,6 +257,25 @@ mutation GenerateAgenticCoding($applicationId: Int!) {
         skills
         hints
         agentPrompt
+      }
+      promptTemplates {
+        title
+        purpose
+        stackContext
+        prompt
+      }
+      qaApproach
+      failureModes {
+        scenario
+        why
+        alternative
+      }
+      teamPractices
+      measurableOutcomes {
+        task
+        beforeTime
+        afterTime
+        improvement
       }
       resources {
         title

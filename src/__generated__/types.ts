@@ -108,9 +108,15 @@ export type AtsVendor =
 export type AgenticCoding = {
   __typename: 'AgenticCoding';
   exercises: Array<AgenticCodingExercise>;
+  failureModes: Maybe<Array<AgenticCodingFailureMode>>;
   generatedAt: Scalars['String']['output'];
+  measurableOutcomes: Maybe<Array<AgenticCodingOutcome>>;
   overview: Scalars['String']['output'];
+  promptTemplates: Maybe<Array<AgenticCodingPromptTemplate>>;
+  qaApproach: Maybe<Scalars['String']['output']>;
   resources: Array<AgenticCodingResource>;
+  teamPractices: Maybe<Scalars['String']['output']>;
+  workflowPattern: Maybe<Scalars['String']['output']>;
 };
 
 export type AgenticCodingExercise = {
@@ -120,6 +126,29 @@ export type AgenticCodingExercise = {
   difficulty: Scalars['String']['output'];
   hints: Array<Scalars['String']['output']>;
   skills: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
+export type AgenticCodingFailureMode = {
+  __typename: 'AgenticCodingFailureMode';
+  alternative: Scalars['String']['output'];
+  scenario: Scalars['String']['output'];
+  why: Scalars['String']['output'];
+};
+
+export type AgenticCodingOutcome = {
+  __typename: 'AgenticCodingOutcome';
+  afterTime: Scalars['String']['output'];
+  beforeTime: Scalars['String']['output'];
+  improvement: Scalars['String']['output'];
+  task: Scalars['String']['output'];
+};
+
+export type AgenticCodingPromptTemplate = {
+  __typename: 'AgenticCodingPromptTemplate';
+  prompt: Scalars['String']['output'];
+  purpose: Scalars['String']['output'];
+  stackContext: Scalars['String']['output'];
   title: Scalars['String']['output'];
 };
 

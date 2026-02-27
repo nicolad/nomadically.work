@@ -66,9 +66,35 @@ type AgenticCodingResource {
   description: String!
 }
 
+type AgenticCodingPromptTemplate {
+  title: String!
+  purpose: String!
+  stackContext: String!
+  prompt: String!
+}
+
+type AgenticCodingFailureMode {
+  scenario: String!
+  why: String!
+  alternative: String!
+}
+
+type AgenticCodingOutcome {
+  task: String!
+  beforeTime: String!
+  afterTime: String!
+  improvement: String!
+}
+
 type AgenticCoding {
   overview: String!
+  workflowPattern: String
   exercises: [AgenticCodingExercise!]!
+  promptTemplates: [AgenticCodingPromptTemplate!]
+  qaApproach: String
+  failureModes: [AgenticCodingFailureMode!]
+  teamPractices: String
+  measurableOutcomes: [AgenticCodingOutcome!]
   resources: [AgenticCodingResource!]!
   generatedAt: String!
 }

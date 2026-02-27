@@ -975,80 +975,95 @@ Return ONLY a JSON object:
       const jobTitle = row.app.job_title ?? "software engineer";
       const companyName = row.app.company_name ?? "the company";
 
-      const prompt = `You are a senior AI engineering coach helping a candidate prepare for the role of "${jobTitle}" at ${companyName}.
-
-## Job Description
-${plainJobDesc}
-
-## Your Task
-Analyze this job description and produce a deep, specific guide on how AGENTIC CODING applies to this exact role.
-
-Agentic coding means using AI coding agents (Claude Code, Cursor, GitHub Copilot Workspace, Devin, etc.) autonomously or semi-autonomously to write, refactor, test, and ship code — often in multi-step pipelines where the AI agent plans and executes multiple steps without constant human prompting.
-
-### Section 1: How agentic coding applies to THIS role
-- Look at the specific technologies, systems, and responsibilities in the job description
-- Explain precisely WHERE and HOW an agentic coding workflow would change day-to-day work for this role
-- Be specific: name the tasks from the JD, then explain how an agent would handle them
-- Include REAL tool names (Claude Code, Cursor, Copilot Workspace, Aider, Continue.dev, Sweep.dev, Devin, etc.)
-
-### Section 2: 4 concrete agentic coding exercises
-For each exercise:
-- Directly derived from the job description (reference specific technologies/responsibilities)
-- Title and description: what the exercise involves
-- Difficulty: easy / medium / hard
-- Skills tested (from the JD's required skills)
-- 2-3 hints for approaching it with an AI agent
-- agentPrompt: a complete, ready-to-paste prompt for Claude Code or Cursor to execute this exercise autonomously (multi-step, not just "write a function" — think: analyze codebase → plan → implement → test → explain)
-
-### Section 3: Resources
-Include 3-5 real URLs to documentation, tools, or guides relevant to agentic coding for this specific role's tech stack. Use only well-known, stable URLs (official docs, GitHub repos, arxiv papers).
-
-Return ONLY a JSON object with this structure:
-{
-  "overview": "3-4 paragraph deep explanation of how agentic coding applies to this specific role, referencing JD details. Include what changes, what stays the same, and what skills become MORE important in an agentic workflow.",
-  "exercises": [
-    {
-      "title": "...",
-      "description": "...",
-      "difficulty": "easy|medium|hard",
-      "skills": ["skill1", "skill2"],
-      "hints": ["hint1", "hint2"],
-      "agentPrompt": "Full multi-step prompt ready to paste into Claude Code or Cursor..."
-    }
-  ],
-  "resources": [
-    { "title": "...", "url": "...", "description": "..." }
-  ],
-  "generatedAt": "${new Date().toISOString()}"
-}`;
+      const ctx = `Role: ${jobTitle} at ${companyName}\n\nJob Description:\n${plainJobDesc}`;
 
       const client = createDeepSeekClient();
-      const response = await client.chat({
-        model: DEEPSEEK_MODELS.REASONER,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 8000,
-      });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error("Empty response from AI");
-
-      const jsonStr = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-      let parsed: any;
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch {
-        throw new Error("Failed to parse AI response as JSON");
+      function dsCall(userPrompt: string, maxTokens = 2000): Promise<string> {
+        return client.chat({
+          model: DEEPSEEK_MODELS.REASONER,
+          messages: [
+            {
+              role: "system",
+              content: "You are a senior AI engineering coach. Return ONLY valid JSON — no markdown fences, no commentary.",
+            },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: maxTokens,
+        }).then((r) => {
+          const text = r.choices[0]?.message?.content ?? "";
+          return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        });
       }
 
-      if (!parsed.overview || !Array.isArray(parsed.exercises)) {
-        throw new Error("AI returned an unexpected response structure");
+      function tryParse<T>(raw: string, fallback: T): T {
+        try { return JSON.parse(raw) as T; }
+        catch { return fallback; }
       }
+
+      const [
+        overviewResult,
+        workflowResult,
+        exercisesResult,
+        promptTemplatesResult,
+        qaResult,
+        failureModesResult,
+        teamResult,
+        outcomesResult,
+        resourcesResult,
+      ] = await Promise.allSettled([
+
+        // 1. Overview
+        dsCall(`${ctx}\n\nWrite 4–5 paragraphs explaining HOW and WHERE agentic coding (Claude Code, Cursor, Copilot Workspace, Devin, etc.) changes the day-to-day work for this specific role. Reference the technologies and responsibilities from the JD directly. Explain which skills become MORE important in an agentic workflow (architecture thinking, prompt engineering, verification, code review). Be specific — not generic.\n\nReturn JSON: {"overview": "..."}`, 1500),
+
+        // 2. Workflow pattern
+        dsCall(`${ctx}\n\nDescribe a concrete, realistic 30-minute development session using AI agents for a task directly relevant to this role (pick a task from the JD, e.g. "scaffold a new API endpoint" or "add a feature to an existing service"). Walk through it step by step: what tool to open, what prompt to write, what to review, how to iterate, how to verify. Then write a short before/after comparison paragraph. Use markdown headers and bullet points for clarity.\n\nReturn JSON: {"workflowPattern": "..."}`, 1500),
+
+        // 3. Exercises
+        dsCall(`${ctx}\n\nCreate 4 agentic coding exercises directly derived from the technologies and responsibilities in this job description. For each exercise the agentPrompt must be a complete, multi-step prompt (150+ words) ready to paste into Claude Code or Cursor that covers: analyse the codebase → plan → implement → write tests → explain trade-offs.\n\nReturn JSON: {"exercises": [{"title":"...","description":"...","difficulty":"easy|medium|hard","skills":["..."],"hints":["...","..."],"agentPrompt":"..."}]}`, 3000),
+
+        // 4. Prompt templates
+        dsCall(`${ctx}\n\nCreate 4 prompt templates a developer in this exact role would use daily. Each template must be immediately usable — not generic. Tailor them to the specific stack and responsibilities in the JD (e.g. refactoring a component, generating a schema from a spec, debugging a framework-specific issue, writing integration tests). Each prompt field should be 80–150 words.\n\nReturn JSON: {"promptTemplates": [{"title":"...","purpose":"one sentence","stackContext":"which layer/situation","prompt":"..."}]}`, 2500),
+
+        // 5. QA approach
+        dsCall(`${ctx}\n\nDescribe how a senior engineer in this role would rigorously validate AI-generated code. Be specific to the JD's tech stack. Cover: static analysis tools and configs (exact ESLint plugins, TypeScript strict flags, etc.), test coverage thresholds and strategies, security scanning for hallucinated or outdated dependencies, and a code review checklist specifically for AI output (hallucinated APIs, stale patterns, subtle logic bugs, performance gotchas). Write 3 substantial paragraphs.\n\nReturn JSON: {"qaApproach": "..."}`, 1500),
+
+        // 6. Failure modes
+        dsCall(`${ctx}\n\nIdentify 4 concrete scenarios from this specific role's domain where using AI coding agents is the wrong approach. For each: name the scenario clearly, explain precisely why agents fail or are inappropriate, and give a concrete alternative. This demonstrates mature, senior-level judgment about AI tooling.\n\nReturn JSON: {"failureModes": [{"scenario":"...","why":"...","alternative":"..."}]}`, 1500),
+
+        // 7. Team practices
+        dsCall(`${ctx}\n\nWrite 3 paragraphs on how to roll out agentic coding practices across a team for this type of role — especially when mentoring junior developers. Cover: writing a .cursorrules or CLAUDE.md file with project-specific conventions (give concrete examples of rules for this stack), building a shared prompt library (what to include, how to version it), establishing code review processes for AI-generated code, and ensuring juniors learn fundamentals rather than becoming dependent on generated code.\n\nReturn JSON: {"teamPractices": "..."}`, 1500),
+
+        // 8. Measurable outcomes
+        dsCall(`${ctx}\n\nCreate 4 believable, anecdotal before/after impact examples for a developer in this specific role using AI coding agents. Each example should feel realistic and be directly tied to tasks mentioned in or implied by the JD. The improvement field should capture qualitative value beyond just time savings.\n\nReturn JSON: {"measurableOutcomes": [{"task":"...","beforeTime":"...","afterTime":"...","improvement":"..."}]}`, 1000),
+
+        // 9. Resources
+        dsCall(`${ctx}\n\nList 5 real, stable, well-known URLs for learning agentic coding practices relevant to this specific tech stack and role. Only include official documentation, major GitHub repos, or widely-cited guides — nothing obscure or likely to 404. For each give a clear title and one-sentence description of why it is useful for this role.\n\nReturn JSON: {"resources": [{"title":"...","url":"...","description":"..."}]}`, 800),
+      ]);
+
+      const overview = overviewResult.status === "fulfilled"
+        ? (tryParse<any>(overviewResult.value, {}).overview ?? "")
+        : "";
+      if (!overview) throw new Error("Failed to generate overview — cannot proceed");
 
       const agenticData = {
-        overview: parsed.overview,
-        exercises: parsed.exercises ?? [],
-        resources: parsed.resources ?? [],
+        overview,
+        workflowPattern: workflowResult.status === "fulfilled"
+          ? (tryParse<any>(workflowResult.value, {}).workflowPattern ?? "") : "",
+        exercises: exercisesResult.status === "fulfilled"
+          ? (tryParse<any>(exercisesResult.value, { exercises: [] }).exercises ?? []) : [],
+        promptTemplates: promptTemplatesResult.status === "fulfilled"
+          ? (tryParse<any>(promptTemplatesResult.value, { promptTemplates: [] }).promptTemplates ?? []) : [],
+        qaApproach: qaResult.status === "fulfilled"
+          ? (tryParse<any>(qaResult.value, {}).qaApproach ?? "") : "",
+        failureModes: failureModesResult.status === "fulfilled"
+          ? (tryParse<any>(failureModesResult.value, { failureModes: [] }).failureModes ?? []) : [],
+        teamPractices: teamResult.status === "fulfilled"
+          ? (tryParse<any>(teamResult.value, {}).teamPractices ?? "") : "",
+        measurableOutcomes: outcomesResult.status === "fulfilled"
+          ? (tryParse<any>(outcomesResult.value, { measurableOutcomes: [] }).measurableOutcomes ?? []) : [],
+        resources: resourcesResult.status === "fulfilled"
+          ? (tryParse<any>(resourcesResult.value, { resources: [] }).resources ?? []) : [],
         generatedAt: new Date().toISOString(),
       };
 

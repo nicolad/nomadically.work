@@ -91,9 +91,15 @@ enum ATSVendor {
 
 type AgenticCoding {
   exercises: [AgenticCodingExercise!]!
+  failureModes: [AgenticCodingFailureMode!]
   generatedAt: String!
+  measurableOutcomes: [AgenticCodingOutcome!]
   overview: String!
+  promptTemplates: [AgenticCodingPromptTemplate!]
+  qaApproach: String
   resources: [AgenticCodingResource!]!
+  teamPractices: String
+  workflowPattern: String
 }
 
 type AgenticCodingExercise {
@@ -102,6 +108,26 @@ type AgenticCodingExercise {
   difficulty: String!
   hints: [String!]!
   skills: [String!]!
+  title: String!
+}
+
+type AgenticCodingFailureMode {
+  alternative: String!
+  scenario: String!
+  why: String!
+}
+
+type AgenticCodingOutcome {
+  afterTime: String!
+  beforeTime: String!
+  improvement: String!
+  task: String!
+}
+
+type AgenticCodingPromptTemplate {
+  prompt: String!
+  purpose: String!
+  stackContext: String!
   title: String!
 }
 

@@ -111,9 +111,15 @@ export type AtsVendor =
 export type AgenticCoding = {
   __typename?: 'AgenticCoding';
   exercises: Array<AgenticCodingExercise>;
+  failureModes: Maybe<Array<AgenticCodingFailureMode>>;
   generatedAt: Scalars['String']['output'];
+  measurableOutcomes: Maybe<Array<AgenticCodingOutcome>>;
   overview: Scalars['String']['output'];
+  promptTemplates: Maybe<Array<AgenticCodingPromptTemplate>>;
+  qaApproach: Maybe<Scalars['String']['output']>;
   resources: Array<AgenticCodingResource>;
+  teamPractices: Maybe<Scalars['String']['output']>;
+  workflowPattern: Maybe<Scalars['String']['output']>;
 };
 
 export type AgenticCodingExercise = {
@@ -123,6 +129,29 @@ export type AgenticCodingExercise = {
   difficulty: Scalars['String']['output'];
   hints: Array<Scalars['String']['output']>;
   skills: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+};
+
+export type AgenticCodingFailureMode = {
+  __typename?: 'AgenticCodingFailureMode';
+  alternative: Scalars['String']['output'];
+  scenario: Scalars['String']['output'];
+  why: Scalars['String']['output'];
+};
+
+export type AgenticCodingOutcome = {
+  __typename?: 'AgenticCodingOutcome';
+  afterTime: Scalars['String']['output'];
+  beforeTime: Scalars['String']['output'];
+  improvement: Scalars['String']['output'];
+  task: Scalars['String']['output'];
+};
+
+export type AgenticCodingPromptTemplate = {
+  __typename?: 'AgenticCodingPromptTemplate';
+  prompt: Scalars['String']['output'];
+  purpose: Scalars['String']['output'];
+  stackContext: Scalars['String']['output'];
   title: Scalars['String']['output'];
 };
 
@@ -1909,6 +1938,9 @@ export type ResolversTypes = {
   ATSVendor: ResolverTypeWrapper<Partial<AtsVendor>>;
   AgenticCoding: ResolverTypeWrapper<Partial<AgenticCoding>>;
   AgenticCodingExercise: ResolverTypeWrapper<Partial<AgenticCodingExercise>>;
+  AgenticCodingFailureMode: ResolverTypeWrapper<Partial<AgenticCodingFailureMode>>;
+  AgenticCodingOutcome: ResolverTypeWrapper<Partial<AgenticCodingOutcome>>;
+  AgenticCodingPromptTemplate: ResolverTypeWrapper<Partial<AgenticCodingPromptTemplate>>;
   AgenticCodingResource: ResolverTypeWrapper<Partial<AgenticCodingResource>>;
   Application: ResolverTypeWrapper<Partial<Application>>;
   ApplicationInput: ResolverTypeWrapper<Partial<ApplicationInput>>;
@@ -2034,6 +2066,9 @@ export type ResolversParentTypes = {
   ATSBoardUpsertInput: Partial<AtsBoardUpsertInput>;
   AgenticCoding: Partial<AgenticCoding>;
   AgenticCodingExercise: Partial<AgenticCodingExercise>;
+  AgenticCodingFailureMode: Partial<AgenticCodingFailureMode>;
+  AgenticCodingOutcome: Partial<AgenticCodingOutcome>;
+  AgenticCodingPromptTemplate: Partial<AgenticCodingPromptTemplate>;
   AgenticCodingResource: Partial<AgenticCodingResource>;
   Application: Partial<Application>;
   ApplicationInput: Partial<ApplicationInput>;
@@ -2190,9 +2225,15 @@ export type AtsBoardResolvers<ContextType = GraphQLContext, ParentType extends R
 
 export type AgenticCodingResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCoding'] = ResolversParentTypes['AgenticCoding']> = {
   exercises?: Resolver<Array<ResolversTypes['AgenticCodingExercise']>, ParentType, ContextType>;
+  failureModes?: Resolver<Maybe<Array<ResolversTypes['AgenticCodingFailureMode']>>, ParentType, ContextType>;
   generatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  measurableOutcomes?: Resolver<Maybe<Array<ResolversTypes['AgenticCodingOutcome']>>, ParentType, ContextType>;
   overview?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  promptTemplates?: Resolver<Maybe<Array<ResolversTypes['AgenticCodingPromptTemplate']>>, ParentType, ContextType>;
+  qaApproach?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   resources?: Resolver<Array<ResolversTypes['AgenticCodingResource']>, ParentType, ContextType>;
+  teamPractices?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  workflowPattern?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type AgenticCodingExerciseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCodingExercise'] = ResolversParentTypes['AgenticCodingExercise']> = {
@@ -2201,6 +2242,26 @@ export type AgenticCodingExerciseResolvers<ContextType = GraphQLContext, ParentT
   difficulty?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   hints?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   skills?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AgenticCodingFailureModeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCodingFailureMode'] = ResolversParentTypes['AgenticCodingFailureMode']> = {
+  alternative?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  scenario?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  why?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AgenticCodingOutcomeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCodingOutcome'] = ResolversParentTypes['AgenticCodingOutcome']> = {
+  afterTime?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  beforeTime?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  improvement?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  task?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type AgenticCodingPromptTemplateResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AgenticCodingPromptTemplate'] = ResolversParentTypes['AgenticCodingPromptTemplate']> = {
+  prompt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  purpose?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  stackContext?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
@@ -3020,6 +3081,9 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ATSBoard?: AtsBoardResolvers<ContextType>;
   AgenticCoding?: AgenticCodingResolvers<ContextType>;
   AgenticCodingExercise?: AgenticCodingExerciseResolvers<ContextType>;
+  AgenticCodingFailureMode?: AgenticCodingFailureModeResolvers<ContextType>;
+  AgenticCodingOutcome?: AgenticCodingOutcomeResolvers<ContextType>;
+  AgenticCodingPromptTemplate?: AgenticCodingPromptTemplateResolvers<ContextType>;
   AgenticCodingResource?: AgenticCodingResourceResolvers<ContextType>;
   Application?: ApplicationResolvers<ContextType>;
   ApplyEmailPatternResult?: ApplyEmailPatternResultResolvers<ContextType>;

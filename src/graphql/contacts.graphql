@@ -15,9 +15,37 @@ query GetContact($id: Int!) {
     githubHandle
     telegramHandle
     tags
+    nbStatus
     nbResult
+    nbFlags
+    nbSuggestedCorrection
     createdAt
     updatedAt
+  }
+}
+
+mutation UpdateContact($id: Int!, $input: UpdateContactInput!) {
+  updateContact(id: $id, input: $input) {
+    id
+    firstName
+    lastName
+    email
+    emails
+    linkedinUrl
+    position
+    githubHandle
+    telegramHandle
+    doNotContact
+    tags
+    emailVerified
+    updatedAt
+  }
+}
+
+mutation DeleteContact($id: Int!) {
+  deleteContact(id: $id) {
+    success
+    message
   }
 }
 

@@ -75,7 +75,7 @@ export default function WorkersPage() {
 
   return (
     <Container size="4" p="8" style={{ maxWidth: "1100px" }}>
-      <Flex justify="between" align="center" mb="6">
+      <Flex justify="between" align="center" mb="4">
         <Box>
           <Heading size="7">Worker Status</Heading>
           <Text color="gray" size="2">
@@ -92,6 +92,15 @@ export default function WorkersPage() {
           </a>
         </Button>
       </Flex>
+
+      <Text size="2" color="gray" mb="6" as="p">
+        The pipeline runs across three runtimes:{" "}
+        <Text weight="medium" color="gray">TypeScript</Text> workers handle ATS ingestion, D1 gateway, queues, and cron scheduling;{" "}
+        <Text weight="medium" color="gray">Python/LangGraph</Text> workers run DeepSeek-powered job classification, EU filtering, resume RAG (Vectorize + Workers AI), and job-to-resume matching;{" "}
+        <Text weight="medium" color="gray">Rust/WASM</Text> powers the Ashby board crawler via Common Crawl.
+        Background tasks (enhancement, skill extraction) run on <Text weight="medium" color="gray">Trigger.dev</Text>.
+        All workers write to <Text weight="medium" color="gray">Cloudflare D1</Text> through the D1 gateway binding.
+      </Text>
 
       {/* Feature Adoption */}
       <Heading size="4" mb="3">Feature Adoption</Heading>

@@ -42,11 +42,14 @@ import {
   LinkedInLogoIcon,
   MagnifyingGlassIcon,
   MagicWandIcon,
+  PaperPlaneIcon,
   Pencil1Icon,
   TrashIcon,
 } from "@radix-ui/react-icons";
 
 // ─── Generate Email Dialog ────────────────────────────────────────────────────
+
+type EmailStep = "generate" | "edit";
 
 function GenerateEmailDialog({
   contact,
@@ -60,18 +63,31 @@ function GenerateEmailDialog({
   };
 }) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<EmailStep>("generate");
   const [instructions, setInstructions] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [includeResume, setIncludeResume] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
   const { content, partialContent, isStreaming, error, generate, stop, reset } =
     useStreamingEmail();
 
   const recipientName = `${contact.firstName} ${contact.lastName}`.trim();
+  const hasEmail = !!contact.email;
 
   const handleOpen = (val: boolean) => {
     setOpen(val);
     if (!val) {
       reset();
       setInstructions("");
+      setStep("generate");
+      setEditSubject("");
+      setEditBody("");
+      setIncludeResume(false);
+      setSendResult(null);
       setCopied(false);
     }
   };
@@ -85,11 +101,48 @@ function GenerateEmailDialog({
     });
   };
 
-  const handleCopy = () => {
+  // When generation completes, seed edit fields and advance to edit step
+  const handleProceedToEdit = () => {
     if (!content) return;
-    navigator.clipboard.writeText(`Subject: ${content.subject}\n\n${content.body}`);
+    setEditSubject(content.subject);
+    setEditBody(content.body);
+    setSendResult(null);
+    setStep("edit");
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`Subject: ${editSubject}\n\n${editBody}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSend = async () => {
+    if (!contact.email) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await fetch("/api/emails/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: contact.email,
+          name: recipientName,
+          subject: editSubject,
+          body: editBody,
+          includeResume,
+        }),
+      });
+      const json = (await res.json()) as { success: boolean; error?: string };
+      if (json.success) {
+        setSendResult({ type: "success", message: `Sent to ${contact.email}` });
+      } else {
+        setSendResult({ type: "error", message: json.error ?? "Send failed" });
+      }
+    } catch (err: unknown) {
+      setSendResult({ type: "error", message: err instanceof Error ? err.message : "Send failed" });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -102,107 +155,153 @@ function GenerateEmailDialog({
       </Dialog.Trigger>
 
       <Dialog.Content maxWidth="540px">
-        <Dialog.Title>Draft email to {recipientName}</Dialog.Title>
+        <Dialog.Title>
+          {step === "generate" ? "Draft email" : "Edit & send"} — {recipientName}
+        </Dialog.Title>
         {(contact.position || contact.company) && (
           <Dialog.Description size="2" color="gray" mb="4">
-            {contact.position ? `${contact.position}` : ""}
+            {contact.position ?? ""}
             {contact.position && contact.company ? " · " : ""}
             {contact.company ?? ""}
           </Dialog.Description>
         )}
 
-        <Flex direction="column" gap="3">
-          <TextArea
-            placeholder="Special instructions (optional) — e.g. mention their recent open source work…"
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            rows={3}
-            disabled={isStreaming}
-          />
+        {/* ── Generate step ── */}
+        {step === "generate" && (
+          <Flex direction="column" gap="3">
+            <TextArea
+              placeholder="Special instructions (optional) — e.g. mention their recent open source work…"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              rows={3}
+              disabled={isStreaming}
+            />
 
-          <Flex gap="2">
-            <Button onClick={handleGenerate} loading={isStreaming} disabled={isStreaming}>
-              <MagicWandIcon />
-              {isStreaming ? "Generating…" : "Generate"}
-            </Button>
-            {isStreaming && (
-              <Button variant="soft" color="red" onClick={stop}>
-                Stop
+            <Flex gap="2">
+              <Button onClick={handleGenerate} loading={isStreaming} disabled={isStreaming}>
+                <MagicWandIcon />
+                {isStreaming ? "Generating…" : "Generate"}
               </Button>
+              {isStreaming && (
+                <Button variant="soft" color="red" onClick={stop}>
+                  Stop
+                </Button>
+              )}
+              {content && !isStreaming && (
+                <Button variant="soft" color="gray" onClick={() => { reset(); setInstructions(""); }}>
+                  Regenerate
+                </Button>
+              )}
+            </Flex>
+
+            {error && (
+              <Callout.Root color="red" size="1">
+                <Callout.Icon><ExclamationTriangleIcon /></Callout.Icon>
+                <Callout.Text>{error}</Callout.Text>
+              </Callout.Root>
             )}
+
+            {isStreaming && partialContent && (
+              <Box>
+                <Text size="1" color="gray" mb="1" as="p">Streaming…</Text>
+                <Code size="1" style={{ display: "block", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto" }}>
+                  {partialContent}
+                </Code>
+              </Box>
+            )}
+
             {content && !isStreaming && (
-              <Button variant="soft" color="gray" onClick={reset}>
-                Regenerate
-              </Button>
+              <Box style={{ background: "var(--green-2)", borderRadius: "var(--radius-3)", padding: "var(--space-3)" }}>
+                <Flex justify="between" align="center" mb="2">
+                  <Badge color="green" size="1"><CheckIcon /> Generated</Badge>
+                </Flex>
+                <Text size="1" color="gray" weight="bold" as="p" mb="1">SUBJECT</Text>
+                <Text size="2" weight="medium" as="p" mb="3">{content.subject}</Text>
+                <Text size="1" color="gray" weight="bold" as="p" mb="1">BODY</Text>
+                <Text size="2" as="p" style={{ whiteSpace: "pre-wrap", lineHeight: "1.6" }}>{content.body}</Text>
+              </Box>
             )}
+
+            <Flex justify="between" mt="2">
+              <Dialog.Close>
+                <Button variant="soft" color="gray">Close</Button>
+              </Dialog.Close>
+              {content && !isStreaming && (
+                <Button onClick={handleProceedToEdit}>
+                  Edit & Send →
+                </Button>
+              )}
+            </Flex>
           </Flex>
+        )}
 
-          {error && (
-            <Callout.Root color="red" size="1">
-              <Callout.Icon>
-                <ExclamationTriangleIcon />
-              </Callout.Icon>
-              <Callout.Text>{error}</Callout.Text>
-            </Callout.Root>
-          )}
-
-          {isStreaming && partialContent && (
+        {/* ── Edit & Send step ── */}
+        {step === "edit" && (
+          <Flex direction="column" gap="3">
             <Box>
-              <Text size="1" color="gray" mb="1" as="p">
-                Streaming…
-              </Text>
-              <Code
-                size="1"
-                style={{ display: "block", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto" }}
-              >
-                {partialContent}
-              </Code>
+              <Text size="1" color="gray" weight="medium" mb="1" as="p">Subject</Text>
+              <TextField.Root
+                value={editSubject}
+                onChange={(e) => setEditSubject(e.target.value)}
+              />
             </Box>
-          )}
 
-          {content && !isStreaming && (
-            <Box
-              style={{
-                background: "var(--green-2)",
-                borderRadius: "var(--radius-3)",
-                padding: "var(--space-3)",
-              }}
-            >
-              <Flex justify="between" align="center" mb="2">
-                <Badge color="green" size="1">
-                  <CheckIcon />
-                  Generated
-                </Badge>
-                <Button size="1" variant="ghost" onClick={handleCopy}>
+            <Box>
+              <Text size="1" color="gray" weight="medium" mb="1" as="p">Body</Text>
+              <TextArea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={12}
+              />
+            </Box>
+
+            <Flex align="center" gap="2">
+              <input
+                type="checkbox"
+                id="includeResume"
+                checked={includeResume}
+                onChange={(e) => setIncludeResume(e.target.checked)}
+              />
+              <Text size="2" as="label" htmlFor="includeResume">
+                Include resume
+              </Text>
+            </Flex>
+
+            {sendResult && (
+              <Callout.Root color={sendResult.type === "success" ? "green" : "red"} size="1">
+                <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+                <Callout.Text>{sendResult.message}</Callout.Text>
+              </Callout.Root>
+            )}
+
+            <Flex justify="between" gap="2" wrap="wrap">
+              <Button variant="soft" color="gray" onClick={() => setStep("generate")}>
+                ← Back
+              </Button>
+              <Flex gap="2">
+                <Button variant="soft" color="gray" onClick={handleCopy}>
                   <CopyIcon />
                   {copied ? "Copied!" : "Copy"}
                 </Button>
+                {hasEmail ? (
+                  <Button
+                    color="green"
+                    onClick={handleSend}
+                    disabled={sending || !editSubject || !editBody}
+                    loading={sending}
+                  >
+                    <PaperPlaneIcon />
+                    Send
+                  </Button>
+                ) : (
+                  <Button disabled color="gray" variant="soft">
+                    No email address
+                  </Button>
+                )}
               </Flex>
-
-              <Text size="1" color="gray" weight="bold" as="p" mb="1">
-                SUBJECT
-              </Text>
-              <Text size="2" weight="medium" as="p" mb="3">
-                {content.subject}
-              </Text>
-
-              <Text size="1" color="gray" weight="bold" as="p" mb="1">
-                BODY
-              </Text>
-              <Text size="2" as="p" style={{ whiteSpace: "pre-wrap", lineHeight: "1.6" }}>
-                {content.body}
-              </Text>
-            </Box>
-          )}
-        </Flex>
-
-        <Flex justify="end" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray">
-              Close
-            </Button>
-          </Dialog.Close>
-        </Flex>
+            </Flex>
+          </Flex>
+        )}
       </Dialog.Content>
     </Dialog.Root>
   );

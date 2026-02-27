@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   useGetCompaniesQuery,
   useDeleteCompanyMutation,
@@ -26,7 +27,20 @@ import { ADMIN_EMAIL } from "@/lib/constants";
 type Company = GetCompaniesQuery["companies"]["companies"][number];
 
 export function CompaniesList() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (searchTerm) {
+      params.set("q", searchTerm);
+    } else {
+      params.delete("q");
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteCompanyMutation] = useDeleteCompanyMutation();

@@ -95,7 +95,7 @@ function TopicDialog({
     <>
       <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
         <Dialog.Content
-          maxWidth="1100px"
+          maxWidth="780px"
           style={{ maxHeight: "88vh", display: "flex", flexDirection: "column" }}
         >
           {loading || !t ? (
@@ -131,89 +131,76 @@ function TopicDialog({
               </Flex>
 
               <style>{`@keyframes loadingDot { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }`}</style>
-              <Box style={{ flex: 1, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-                {/* Left: topic content */}
-                <ScrollArea scrollbars="vertical" style={{ borderRight: "1px solid var(--gray-4)", paddingRight: 0 }}>
-                  <Box px="1" pb="4">
-                    <Text size="1" weight="medium" style={{ color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.08em" }} as="div" mb="3">
-                      Overview
-                    </Text>
-                    {t.bodyMd ? (
-                      <div ref={contentRef}>
-                        <Box style={{ lineHeight: 1.7 }}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{t.bodyMd}</ReactMarkdown>
-                        </Box>
-                      </div>
-                    ) : (
-                      <Text color="gray" size="2">No content yet.</Text>
-                    )}
-                  </Box>
-                </ScrollArea>
+              <ScrollArea style={{ flex: 1 }} scrollbars="vertical">
+                {t.bodyMd && (
+                  <div ref={contentRef}>
+                    <Box style={{ lineHeight: 1.7, paddingRight: 8 }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{t.bodyMd}</ReactMarkdown>
+                    </Box>
+                  </div>
+                )}
 
-                {/* Right: deep dive */}
-                <ScrollArea scrollbars="vertical">
-                  <Box px="4" pb="4">
-                    <Flex justify="between" align="center" mb="3">
-                      <Flex align="center" gap="2">
-                        <Box style={{ width: 3, height: 14, backgroundColor: "var(--violet-9)" }} />
-                        <Text size="1" weight="medium" style={{ color: "var(--violet-9)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                          Deep Dive
-                        </Text>
-                      </Flex>
-                      {deepDiveContent && !deepDiveLoading && (
-                        <Button variant="ghost" size="1" color="gray" onClick={() => handleGenerateDeepDive(true)}>
-                          <ReloadIcon /> Regenerate
-                        </Button>
-                      )}
+                {/* Deep Dive section */}
+                <Box mt="5" pt="4" style={{ borderTop: "1px solid var(--gray-4)", paddingRight: 8 }}>
+                  <Flex justify="between" align="center" mb="3">
+                    <Flex align="center" gap="2">
+                      <Box style={{ width: 3, height: 14, backgroundColor: "var(--violet-9)" }} />
+                      <Text size="1" weight="medium" style={{ color: "var(--violet-9)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        Deep Dive
+                      </Text>
                     </Flex>
-
-                    {deepDiveLoading ? (
-                      <Flex direction="column" gap="2">
-                        <Flex align="center" gap="3" mb="2">
-                          <Box style={{ display: "flex", gap: 4 }}>
-                            {[0, 1, 2].map((i) => (
-                              <Box key={i} style={{ width: 6, height: 6, backgroundColor: "var(--violet-9)", animation: "loadingDot 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
-                            ))}
-                          </Box>
-                          <Text size="2" color="gray">Generating…</Text>
-                        </Flex>
-                        <Skeleton height="12px" width="55%" />
-                        <Skeleton height="12px" width="90%" />
-                        <Skeleton height="12px" width="80%" />
-                        <Skeleton height="12px" width="70%" />
-                      </Flex>
-                    ) : deepDiveError ? (
-                      <Box p="3" style={{ backgroundColor: "var(--gray-3)", borderLeft: "2px solid var(--amber-9)" }}>
-                        <Flex align="center" gap="2" mb="1">
-                          <ExclamationTriangleIcon style={{ color: "var(--amber-9)" }} />
-                          <Text size="2" weight="medium" style={{ color: "var(--amber-9)" }}>Generation failed</Text>
-                        </Flex>
-                        <Text size="2" color="gray" as="div" mb="3">{deepDiveError.message}</Text>
-                        <Button size="2" variant="soft" color="gray" onClick={() => handleGenerateDeepDive(true)}>
-                          <ReloadIcon /> Try again
-                        </Button>
-                      </Box>
-                    ) : deepDiveContent ? (
-                      <Box className="deep-dive-content" style={{ lineHeight: 1.7 }}>
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{deepDiveContent}</ReactMarkdown>
-                      </Box>
-                    ) : (
-                      <Box p="4" style={{ backgroundColor: "var(--gray-2)", border: "1px dashed var(--gray-5)", textAlign: "center" }}>
-                        <Box mb="2" style={{ color: "var(--gray-6)" }}>
-                          <BookmarkIcon width={24} height={24} />
-                        </Box>
-                        <Text size="2" weight="medium" color="gray" as="div" mb="1">No deep dive yet</Text>
-                        <Text size="1" color="gray" as="div" mb="3">
-                          Generate a technically rigorous breakdown for interview prep.
-                        </Text>
-                        <Button size="2" variant="soft" color="violet" onClick={() => handleGenerateDeepDive()}>
-                          <BookmarkIcon /> Generate deep dive
-                        </Button>
-                      </Box>
+                    {deepDiveContent && !deepDiveLoading && (
+                      <Button variant="ghost" size="1" color="gray" onClick={() => handleGenerateDeepDive(true)}>
+                        <ReloadIcon /> Regenerate
+                      </Button>
                     )}
-                  </Box>
-                </ScrollArea>
-              </Box>
+                  </Flex>
+
+                  {deepDiveLoading ? (
+                    <Flex direction="column" gap="2">
+                      <Flex align="center" gap="3" mb="2">
+                        <Box style={{ display: "flex", gap: 4 }}>
+                          {[0, 1, 2].map((i) => (
+                            <Box key={i} style={{ width: 6, height: 6, backgroundColor: "var(--violet-9)", animation: "loadingDot 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
+                          ))}
+                        </Box>
+                        <Text size="2" color="gray">Generating…</Text>
+                      </Flex>
+                      <Skeleton height="12px" width="55%" />
+                      <Skeleton height="12px" width="90%" />
+                      <Skeleton height="12px" width="80%" />
+                    </Flex>
+                  ) : deepDiveError ? (
+                    <Box p="3" style={{ backgroundColor: "var(--gray-3)", borderLeft: "2px solid var(--amber-9)" }}>
+                      <Flex align="center" gap="2" mb="1">
+                        <ExclamationTriangleIcon style={{ color: "var(--amber-9)" }} />
+                        <Text size="2" weight="medium" style={{ color: "var(--amber-9)" }}>Generation failed</Text>
+                      </Flex>
+                      <Text size="2" color="gray" as="div" mb="3">{deepDiveError.message}</Text>
+                      <Button size="2" variant="soft" color="gray" onClick={() => handleGenerateDeepDive(true)}>
+                        <ReloadIcon /> Try again
+                      </Button>
+                    </Box>
+                  ) : deepDiveContent ? (
+                    <Box className="deep-dive-content" style={{ lineHeight: 1.7 }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{deepDiveContent}</ReactMarkdown>
+                    </Box>
+                  ) : (
+                    <Box p="4" style={{ backgroundColor: "var(--gray-2)", border: "1px dashed var(--gray-5)", textAlign: "center" }}>
+                      <Box mb="2" style={{ color: "var(--gray-6)" }}>
+                        <BookmarkIcon width={24} height={24} />
+                      </Box>
+                      <Text size="2" weight="medium" color="gray" as="div" mb="1">No deep dive yet</Text>
+                      <Text size="1" color="gray" as="div" mb="3">
+                        Generate a technically rigorous breakdown for interview prep.
+                      </Text>
+                      <Button size="2" variant="soft" color="violet" onClick={() => handleGenerateDeepDive()}>
+                        <BookmarkIcon /> Generate deep dive
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              </ScrollArea>
             </>
           )}
         </Dialog.Content>

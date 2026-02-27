@@ -221,38 +221,41 @@ Key endpoints: `/crawl` (paginated CC crawl), `/boards` (list/search), `/search`
 
 ## Spec-Driven Development (SDD)
 
-Uses [agent-teams-lite](https://github.com/Gentleman-Programming/agent-teams-lite) for spec-driven development. An orchestrator delegates work to specialized sub-agents via the Task tool, each with fresh context.
+Uses [agent-teams-lite](https://github.com/Gentleman-Programming/agent-teams-lite) for spec-driven development. The orchestrator (`.claude/commands/sdd.md`) delegates work to specialized sub-agents via the Task tool, using native agent teams (TeamCreate, shared task lists, messaging) for parallel phases.
 
 ### Structure
 
 | Path | Contents |
 |---|---|
+| `.claude/commands/sdd.md` | SDD orchestrator — routing, DAG detection, team/subagent dispatch |
 | `.claude/skills/sdd-*/SKILL.md` | 9 SDD sub-agent skill files (explore, propose, spec, design, tasks, apply, verify, archive, init) |
 | `.claude/skills/improve-*/SKILL.md` | 6 job search self-improvement skills (mine, audit, evolve, apply, verify, meta) |
 | `.claude/skills/codefix-*/SKILL.md` | 6 codebase self-improvement skills (mine, audit, evolve, apply, verify, meta) |
 | `openspec/` | Specs, change proposals, designs, and task breakdowns (created by `sdd-init`) |
-| `.claude/commands/` | Project-specific commands (build-and-push, gql-agent, improve, codefix) |
+| `.claude/commands/` | Project-specific commands (build-and-push, gql-agent, improve, codefix, sdd) |
 
 ### SDD Commands
 
-| Command | Action |
-|---------|--------|
-| `/sdd:init` | Bootstrap `openspec/` in current project |
-| `/sdd:explore <topic>` | Investigate an idea (no files created) |
-| `/sdd:new <change-name>` | Start a new change (creates proposal) |
-| `/sdd:continue` | Create next artifact in dependency chain |
-| `/sdd:ff <change-name>` | Fast-forward: create all planning artifacts |
-| `/sdd:apply` | Implement tasks |
-| `/sdd:verify` | Validate implementation against specs |
-| `/sdd:archive` | Sync specs + archive completed change |
+| Command | Action | Mode |
+|---------|--------|------|
+| `/sdd:init` | Bootstrap `openspec/` in current project | single subagent |
+| `/sdd:explore <topic>` | Investigate an idea (no files created) | single subagent |
+| `/sdd:new <change-name>` | Start a new change (creates proposal) | single subagent |
+| `/sdd:continue` | Create next artifact in dependency chain | auto-detect |
+| `/sdd:ff <change-name>` | Fast-forward: create all planning artifacts | **agent team** (specs+design parallel) |
+| `/sdd:apply` | Implement tasks | **agent team** if multi-phase |
+| `/sdd:verify` | Validate implementation against specs | single subagent |
+| `/sdd:archive` | Sync specs + archive completed change | single subagent |
 
 ### Orchestrator Rules
 
 1. The lead agent NEVER executes phase work inline — always delegate to sub-agents
-2. Sub-agents are launched via Task tool with the skill file path and context
-3. Between sub-agent calls, show the user what was done and ask to proceed
-4. Keep orchestrator context minimal — pass file paths, not file contents
-5. Do NOT force SDD on small tasks (single file edits, quick fixes, questions)
+2. Use subagents for single sequential phases (explore, propose, verify, archive)
+3. Use native agent teams when specs+design or multi-phase apply can parallelize
+4. Between phases, show the user what was done and ask to proceed
+5. Keep orchestrator context minimal — pass file paths, not file contents
+6. Require plan approval for apply teammates (they write code)
+7. Do NOT force SDD on small tasks (single file edits, quick fixes, questions)
 
 ### Dependency Graph
 
@@ -262,7 +265,7 @@ proposal → specs ──→ tasks → apply → verify → archive
            design
 ```
 
-Specs and design run in parallel; tasks depends on both; verify is optional but recommended before archive.
+Specs and design run in parallel (agent team in `/sdd:ff`); tasks depends on both; verify is optional but recommended before archive.
 
 ---
 

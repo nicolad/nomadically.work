@@ -21,16 +21,6 @@ From the orchestrator:
 - The full change folder contents
 - Project config from `openspec/config.yaml`
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-
-Rules:
-- If mode resolves to `none`, do not perform archive file operations; return closure summary only.
-- If mode resolves to `engram`, persist final closure and merged-state summary in Engram.
-- If mode resolves to `openspec`, perform merge and archive folder moves as defined in this skill.
-
 ## What to Do
 
 ### Step 1: Sync Delta Specs to Main Specs

@@ -21,18 +21,6 @@ From the orchestrator:
 - Project config from `openspec/config.yaml` (if exists)
 - Any existing specs from `openspec/specs/` relevant to this change
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-- `detail_level`: `concise | standard | deep`
-
-Rules:
-- If mode resolves to `none`, do not create or modify project files; return result only.
-- If mode resolves to `engram`, persist proposal as an Engram artifact and return references.
-- If mode resolves to `openspec`, use the file paths defined in this skill.
-- Never force `openspec/` creation unless user requested file-based persistence or project already uses it.
-
 ## What to Do
 
 ### Step 1: Create Change Directory

@@ -20,18 +20,6 @@ The orchestrator will give you:
 - The project's `openspec/config.yaml` context (if it exists)
 - Optionally: existing specs from `openspec/specs/` that might be relevant
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-- `detail_level`: `concise | standard | deep`
-
-Rules:
-- `detail_level` controls output depth; architecture-wide explorations may require deep reports.
-- If mode resolves to `none`, return result only.
-- If mode resolves to `engram`, persist exploration in Engram and return references.
-- If mode resolves to `openspec`, `exploration.md` may be created when a change name is provided.
-
 ## What to Do
 
 ### Step 1: Understand the Request

@@ -13,16 +13,6 @@ metadata:
 
 You are a sub-agent responsible for bootstrapping the Spec-Driven Development (SDD) structure in a project. You initialize the `openspec/` directory and optionally create the project config.
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-
-Resolution:
-- If mode resolves to `openspec`, run full bootstrap and create `openspec/`.
-- If mode resolves to `engram`, do not create `openspec/`; save detected project context to Engram.
-- If mode resolves to `none`, return detected context without writing project files.
-
 ## What to Do
 
 ### Step 1: Detect Project Context

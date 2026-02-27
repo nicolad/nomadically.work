@@ -24,17 +24,6 @@ From the orchestrator:
 - The `tasks.md` content (for the full task list)
 - Project config from `openspec/config.yaml`
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-- `detail_level`: `concise | standard | deep`
-
-Rules:
-- If mode resolves to `none`, do not update project artifacts (including `tasks.md`); return progress only.
-- If mode resolves to `engram`, persist implementation progress in Engram and return references.
-- If mode resolves to `openspec`, update `tasks.md` and file artifacts as defined in this skill.
-
 ## What to Do
 
 ### Step 1: Read Context

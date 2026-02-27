@@ -22,17 +22,6 @@ From the orchestrator:
 - The `design.md` content
 - Project config from `openspec/config.yaml`
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-- `detail_level`: `concise | standard | deep`
-
-Rules:
-- If mode resolves to `none`, do not create or modify project files; return result only.
-- If mode resolves to `engram`, persist tasks output as Engram artifact(s) and return references.
-- If mode resolves to `openspec`, use the file paths defined in this skill.
-
 ## What to Do
 
 ### Step 1: Analyze the Design

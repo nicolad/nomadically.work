@@ -23,17 +23,6 @@ From the orchestrator:
 - The `tasks.md` content (with completion status)
 - Project config from `openspec/config.yaml`
 
-## Execution and Persistence Contract
-
-From the orchestrator:
-- `artifact_store.mode`: `auto | engram | openspec | none`
-- `detail_level`: `concise | standard | deep`
-
-Rules:
-- If mode resolves to `none`, do not create report files; return verification result only.
-- If mode resolves to `engram`, persist verification report in Engram and return references.
-- If mode resolves to `openspec`, save `verify-report.md` as defined in this skill.
-
 ## What to Do
 
 ### Step 1: Check Completeness

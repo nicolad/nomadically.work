@@ -8,11 +8,15 @@
         font-size: 112px;
         font-weight: 700;
         letter-spacing: -0.02em;
-        fill: #ffffff;
+        fill: #111111;
       }
       .dotwork {
         font-weight: 500;
-        fill: #888888;
+        fill: #666666;
+      }
+      @media (prefers-color-scheme: dark) {
+        .wordmark { fill: #f1f1f1; }
+        .dotwork { fill: #888888; }
       }
     </style>
   </defs>

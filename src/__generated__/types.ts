@@ -817,6 +817,7 @@ export type Mutation = {
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
+  generateStudyConceptExplanation: StudyConceptExplanation;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
@@ -977,6 +978,13 @@ export type MutationGenerateRequirementFromSelectionArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyConceptExplanationArgs = {
+  context?: InputMaybe<Scalars['String']['input']>;
+  selectedText: Scalars['String']['input'];
+  studyTopicId: Scalars['ID']['input'];
 };
 
 
@@ -1524,6 +1532,14 @@ export type SourceType =
   | 'LIVE_FETCH'
   | 'MANUAL'
   | 'PARTNER';
+
+export type StudyConceptExplanation = {
+  __typename: 'StudyConceptExplanation';
+  createdAt: Scalars['DateTime']['output'];
+  explanation: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  selectedText: Scalars['String']['output'];
+};
 
 export type StudyTopic = {
   __typename: 'StudyTopic';

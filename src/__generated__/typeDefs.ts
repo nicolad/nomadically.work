@@ -760,6 +760,7 @@ type Mutation {
   generateInterviewQuestions(applicationId: Int!, type: String!): Application!
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
+  generateStudyConceptExplanation(context: String, selectedText: String!, studyTopicId: ID!): StudyConceptExplanation!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!
   generateTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!): Application!
   importContacts(contacts: [ContactInput!]!): ImportContactsResult!
@@ -1014,6 +1015,13 @@ enum SourceType {
   LIVE_FETCH
   MANUAL
   PARTNER
+}
+
+type StudyConceptExplanation {
+  createdAt: DateTime!
+  explanation: String!
+  id: ID!
+  selectedText: String!
 }
 
 type StudyTopic {

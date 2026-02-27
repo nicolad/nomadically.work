@@ -820,6 +820,7 @@ export type Mutation = {
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
+  generateStudyConceptExplanation: StudyConceptExplanation;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
@@ -980,6 +981,13 @@ export type MutationGenerateRequirementFromSelectionArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyConceptExplanationArgs = {
+  context?: InputMaybe<Scalars['String']['input']>;
+  selectedText: Scalars['String']['input'];
+  studyTopicId: Scalars['ID']['input'];
 };
 
 
@@ -1528,6 +1536,14 @@ export type SourceType =
   | 'MANUAL'
   | 'PARTNER';
 
+export type StudyConceptExplanation = {
+  __typename?: 'StudyConceptExplanation';
+  createdAt: Scalars['DateTime']['output'];
+  explanation: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  selectedText: Scalars['String']['output'];
+};
+
 export type StudyTopic = {
   __typename?: 'StudyTopic';
   bodyMd: Maybe<Scalars['String']['output']>;
@@ -1838,6 +1854,7 @@ export type ResolversTypes = {
   SkillProfile: ResolverTypeWrapper<Partial<SkillProfile>>;
   SourceType: ResolverTypeWrapper<Partial<SourceType>>;
   String: ResolverTypeWrapper<Partial<Scalars['String']['output']>>;
+  StudyConceptExplanation: ResolverTypeWrapper<Partial<StudyConceptExplanation>>;
   StudyTopic: ResolverTypeWrapper<Partial<StudyTopic>>;
   TextToSqlResult: ResolverTypeWrapper<Partial<TextToSqlResult>>;
   Track: ResolverTypeWrapper<Partial<Track>>;
@@ -1946,6 +1963,7 @@ export type ResolversParentTypes = {
   SkillMatchDetail: Partial<SkillMatchDetail>;
   SkillProfile: Partial<SkillProfile>;
   String: Partial<Scalars['String']['output']>;
+  StudyConceptExplanation: Partial<StudyConceptExplanation>;
   StudyTopic: Partial<StudyTopic>;
   TextToSqlResult: Partial<TextToSqlResult>;
   Track: Partial<Track>;
@@ -2477,6 +2495,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   generateInterviewQuestions?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewQuestionsArgs, 'applicationId' | 'type'>>;
   generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
+  generateStudyConceptExplanation?: Resolver<ResolversTypes['StudyConceptExplanation'], ParentType, ContextType, RequireFields<MutationGenerateStudyConceptExplanationArgs, 'selectedText' | 'studyTopicId'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
   generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
   importContacts?: Resolver<ResolversTypes['ImportContactsResult'], ParentType, ContextType, RequireFields<MutationImportContactsArgs, 'contacts'>>;
@@ -2682,6 +2701,13 @@ export type SkillProfileResolvers<ContextType = GraphQLContext, ParentType exten
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type StudyConceptExplanationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['StudyConceptExplanation'] = ResolversParentTypes['StudyConceptExplanation']> = {
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  explanation?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  selectedText?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type StudyTopicResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['StudyTopic'] = ResolversParentTypes['StudyTopic']> = {
   bodyMd?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2825,6 +2851,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   SkillMatch?: SkillMatchResolvers<ContextType>;
   SkillMatchDetail?: SkillMatchDetailResolvers<ContextType>;
   SkillProfile?: SkillProfileResolvers<ContextType>;
+  StudyConceptExplanation?: StudyConceptExplanationResolvers<ContextType>;
   StudyTopic?: StudyTopicResolvers<ContextType>;
   TextToSqlResult?: TextToSqlResultResolvers<ContextType>;
   Track?: TrackResolvers<ContextType>;

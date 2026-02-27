@@ -22,3 +22,20 @@ query StudyTopics($category: String!) {
     tags
   }
 }
+
+mutation GenerateStudyConceptExplanation(
+  $studyTopicId: ID!
+  $selectedText: String!
+  $context: String
+) {
+  generateStudyConceptExplanation(
+    studyTopicId: $studyTopicId
+    selectedText: $selectedText
+    context: $context
+  ) {
+    id
+    selectedText
+    explanation
+    createdAt
+  }
+}

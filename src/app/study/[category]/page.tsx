@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -17,7 +17,10 @@ import {
   Text,
 } from "@radix-ui/themes";
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { useStudyTopicsQuery, useStudyTopicQuery } from "@/__generated__/hooks";
+import { useStudyTopicsQuery, useStudyTopicQuery, useGenerateStudyConceptExplanationMutation } from "@/__generated__/hooks";
+import { useTextSelection } from "@/hooks/useTextSelection";
+import { StudyConceptToolbar } from "@/components/study/StudyConceptToolbar";
+import { ConceptExplanationDialog } from "@/components/study/ConceptExplanationDialog";
 
 function difficultyColor(d: string) {
   if (d === "beginner") return "green" as const;
@@ -37,55 +40,102 @@ function TopicDialog({
   const { data, loading } = useStudyTopicQuery({ variables: { category, topic } });
   const t = data?.studyTopic;
 
-  return (
-    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <Dialog.Content
-        maxWidth="780px"
-        style={{ maxHeight: "85vh", display: "flex", flexDirection: "column" }}
-      >
-        {loading || !t ? (
-          <Flex direction="column" gap="3" p="2">
-            <Skeleton height="32px" width="60%" />
-            <Skeleton height="20px" width="30%" />
-            <Skeleton height="300px" />
-          </Flex>
-        ) : (
-          <>
-            <Flex justify="between" align="start" mb="3" gap="4">
-              <Flex direction="column" gap="2" style={{ flex: 1, minWidth: 0 }}>
-                <Dialog.Title size="6" mb="0">{t.title}</Dialog.Title>
-                <Flex gap="2" wrap="wrap">
-                  <Badge color={difficultyColor(t.difficulty)} size="1">
-                    {t.difficulty}
-                  </Badge>
-                  {t.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" size="1">
-                      {tag}
-                    </Badge>
-                  ))}
-                </Flex>
-              </Flex>
-              <Dialog.Close>
-                <Box
-                  style={{ cursor: "pointer", color: "var(--gray-9)", flexShrink: 0, marginTop: 2 }}
-                  onClick={onClose}
-                >
-                  <Cross2Icon width={16} height={16} />
-                </Box>
-              </Dialog.Close>
-            </Flex>
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { selectedText, selectionRect, clearSelection } = useTextSelection(contentRef);
 
-            <ScrollArea style={{ flex: 1 }} scrollbars="vertical">
-              {t.bodyMd && (
-                <Box style={{ lineHeight: 1.7, paddingRight: 8 }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{t.bodyMd}</ReactMarkdown>
-                </Box>
-              )}
-            </ScrollArea>
-          </>
-        )}
-      </Dialog.Content>
-    </Dialog.Root>
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentExplanation, setCurrentExplanation] = useState<string | null>(null);
+
+  const [generateExplanation, { loading: explanationLoading, error: explanationError }] =
+    useGenerateStudyConceptExplanationMutation();
+
+  const handleExplain = async (text: string) => {
+    if (!t) return;
+    try {
+      const result = await generateExplanation({
+        variables: { studyTopicId: t.id, selectedText: text },
+      });
+      if (result.data?.generateStudyConceptExplanation.explanation) {
+        setCurrentExplanation(result.data.generateStudyConceptExplanation.explanation);
+        setDialogOpen(true);
+      }
+    } catch {
+      setDialogOpen(true);
+    }
+  };
+
+  return (
+    <>
+      <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+        <Dialog.Content
+          maxWidth="780px"
+          style={{ maxHeight: "85vh", display: "flex", flexDirection: "column" }}
+        >
+          {loading || !t ? (
+            <Flex direction="column" gap="3" p="2">
+              <Skeleton height="32px" width="60%" />
+              <Skeleton height="20px" width="30%" />
+              <Skeleton height="300px" />
+            </Flex>
+          ) : (
+            <>
+              <Flex justify="between" align="start" mb="3" gap="4">
+                <Flex direction="column" gap="2" style={{ flex: 1, minWidth: 0 }}>
+                  <Dialog.Title size="6" mb="0">{t.title}</Dialog.Title>
+                  <Flex gap="2" wrap="wrap">
+                    <Badge color={difficultyColor(t.difficulty)} size="1">
+                      {t.difficulty}
+                    </Badge>
+                    {t.tags.map((tag) => (
+                      <Badge key={tag} variant="outline" size="1">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </Flex>
+                </Flex>
+                <Dialog.Close>
+                  <Box
+                    style={{ cursor: "pointer", color: "var(--gray-9)", flexShrink: 0, marginTop: 2 }}
+                    onClick={onClose}
+                  >
+                    <Cross2Icon width={16} height={16} />
+                  </Box>
+                </Dialog.Close>
+              </Flex>
+
+              <ScrollArea style={{ flex: 1 }} scrollbars="vertical">
+                {t.bodyMd && (
+                  <div ref={contentRef}>
+                    <Box style={{ lineHeight: 1.7, paddingRight: 8 }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{t.bodyMd}</ReactMarkdown>
+                    </Box>
+                  </div>
+                )}
+              </ScrollArea>
+            </>
+          )}
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <StudyConceptToolbar
+        selectedText={selectedText}
+        selectionRect={selectionRect}
+        isLoading={explanationLoading}
+        onExplain={handleExplain}
+      />
+
+      <ConceptExplanationDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) clearSelection();
+        }}
+        selectedText={selectedText}
+        explanation={currentExplanation}
+        loading={explanationLoading}
+        error={explanationError?.message ?? null}
+      />
+    </>
   );
 }
 

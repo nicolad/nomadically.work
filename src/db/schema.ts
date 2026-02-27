@@ -571,23 +571,6 @@ export const deepPlannerTasks = sqliteTable("deep_planner_tasks", {
 export type DeepPlannerTask = typeof deepPlannerTasks.$inferSelect;
 export type NewDeepPlannerTask = typeof deepPlannerTasks.$inferInsert;
 
-// Skill Profiles (D1-backed resume storage for skill matching)
-export const resumes = sqliteTable("resumes", {
-  id: text("id").primaryKey(),
-  user_id: text("user_id").notNull().unique(), // one per user
-  filename: text("filename"),
-  raw_text: text("raw_text").notNull(),
-  extracted_skills: text("extracted_skills").notNull().default("[]"), // JSON array
-  taxonomy_version: text("taxonomy_version").notNull().default("v1"),
-  created_at: integer("created_at", { mode: "timestamp" }).notNull(),
-  updated_at: integer("updated_at", { mode: "timestamp" }).notNull(),
-}, (table) => ({
-  resumeUserIdx: index("idx_resumes_user_id").on(table.user_id),
-}));
-
-export type SkillResume = typeof resumes.$inferSelect;
-export type NewSkillResume = typeof resumes.$inferInsert;
-
 // Contacts (from CRM — recruiters and company contacts)
 export const contacts = sqliteTable(
   "contacts",
@@ -658,3 +641,27 @@ export const studyTopics = sqliteTable("study_topics", {
 
 export type StudyTopic = typeof studyTopics.$inferSelect;
 export type NewStudyTopic = typeof studyTopics.$inferInsert;
+
+// Study Concept Explanations (LLM-generated, cached by SHA-256 of selected text)
+export const studyConceptExplanations = sqliteTable(
+  "study_concept_explanations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    study_topic_id: integer("study_topic_id")
+      .notNull()
+      .references(() => studyTopics.id, { onDelete: "cascade" }),
+    text_hash: text("text_hash").notNull(), // SHA-256 hex of selected_text
+    selected_text: text("selected_text").notNull(),
+    explanation_md: text("explanation_md").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    topicHashIdx: uniqueIndex("idx_study_concept_explanations_topic_hash")
+      .on(table.study_topic_id, table.text_hash),
+  }),
+);
+
+export type StudyConceptExplanation = typeof studyConceptExplanations.$inferSelect;
+export type NewStudyConceptExplanation = typeof studyConceptExplanations.$inferInsert;

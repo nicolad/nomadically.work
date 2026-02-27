@@ -820,6 +820,7 @@ export type Mutation = {
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
+  generateStudyConceptExplanation: StudyConceptExplanation;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
@@ -980,6 +981,13 @@ export type MutationGenerateRequirementFromSelectionArgs = {
 
 export type MutationGenerateResearchArgs = {
   goalDescription: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyConceptExplanationArgs = {
+  context?: InputMaybe<Scalars['String']['input']>;
+  selectedText: Scalars['String']['input'];
+  studyTopicId: Scalars['ID']['input'];
 };
 
 
@@ -1527,6 +1535,14 @@ export type SourceType =
   | 'LIVE_FETCH'
   | 'MANUAL'
   | 'PARTNER';
+
+export type StudyConceptExplanation = {
+  __typename?: 'StudyConceptExplanation';
+  createdAt: Scalars['DateTime']['output'];
+  explanation: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  selectedText: Scalars['String']['output'];
+};
 
 export type StudyTopic = {
   __typename?: 'StudyTopic';
@@ -2226,6 +2242,15 @@ export type StudyTopicsQueryVariables = Exact<{
 
 
 export type StudyTopicsQuery = { __typename?: 'Query', studyTopics: Array<{ __typename?: 'StudyTopic', id: string, topic: string, title: string, summary: string | null, difficulty: string, tags: Array<string> }> };
+
+export type GenerateStudyConceptExplanationMutationVariables = Exact<{
+  studyTopicId: Scalars['ID']['input'];
+  selectedText: Scalars['String']['input'];
+  context?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GenerateStudyConceptExplanationMutation = { __typename?: 'Mutation', generateStudyConceptExplanation: { __typename?: 'StudyConceptExplanation', id: string, selectedText: string, explanation: string, createdAt: string } };
 
 export type GenerateResearchMutationVariables = Exact<{
   goalDescription: Scalars['String']['input'];
@@ -5937,6 +5962,48 @@ export type StudyTopicsQueryHookResult = ReturnType<typeof useStudyTopicsQuery>;
 export type StudyTopicsLazyQueryHookResult = ReturnType<typeof useStudyTopicsLazyQuery>;
 export type StudyTopicsSuspenseQueryHookResult = ReturnType<typeof useStudyTopicsSuspenseQuery>;
 export type StudyTopicsQueryResult = Apollo.QueryResult<StudyTopicsQuery, StudyTopicsQueryVariables>;
+export const GenerateStudyConceptExplanationDocument = gql`
+    mutation GenerateStudyConceptExplanation($studyTopicId: ID!, $selectedText: String!, $context: String) {
+  generateStudyConceptExplanation(
+    studyTopicId: $studyTopicId
+    selectedText: $selectedText
+    context: $context
+  ) {
+    id
+    selectedText
+    explanation
+    createdAt
+  }
+}
+    `;
+export type GenerateStudyConceptExplanationMutationFn = Apollo.MutationFunction<GenerateStudyConceptExplanationMutation, GenerateStudyConceptExplanationMutationVariables>;
+
+/**
+ * __useGenerateStudyConceptExplanationMutation__
+ *
+ * To run a mutation, you first call `useGenerateStudyConceptExplanationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateStudyConceptExplanationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateStudyConceptExplanationMutation, { data, loading, error }] = useGenerateStudyConceptExplanationMutation({
+ *   variables: {
+ *      studyTopicId: // value for 'studyTopicId'
+ *      selectedText: // value for 'selectedText'
+ *      context: // value for 'context'
+ *   },
+ * });
+ */
+export function useGenerateStudyConceptExplanationMutation(baseOptions?: Apollo.MutationHookOptions<GenerateStudyConceptExplanationMutation, GenerateStudyConceptExplanationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateStudyConceptExplanationMutation, GenerateStudyConceptExplanationMutationVariables>(GenerateStudyConceptExplanationDocument, options);
+      }
+export type GenerateStudyConceptExplanationMutationHookResult = ReturnType<typeof useGenerateStudyConceptExplanationMutation>;
+export type GenerateStudyConceptExplanationMutationResult = Apollo.MutationResult<GenerateStudyConceptExplanationMutation>;
+export type GenerateStudyConceptExplanationMutationOptions = Apollo.BaseMutationOptions<GenerateStudyConceptExplanationMutation, GenerateStudyConceptExplanationMutationVariables>;
 export const GenerateResearchDocument = gql`
     mutation GenerateResearch($goalDescription: String!) {
   generateResearch(goalDescription: $goalDescription) {

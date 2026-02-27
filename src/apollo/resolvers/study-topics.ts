@@ -1,6 +1,25 @@
 import type { GraphQLContext } from "../context";
 import { eq, and } from "drizzle-orm";
-import { studyTopics } from "@/db/schema";
+import { studyTopics, studyConceptExplanations } from "@/db/schema";
+import { generateText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+
+async function sha256Hex(input: string): Promise<string> {
+  const encoded = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function mapExplanation(row: typeof studyConceptExplanations.$inferSelect) {
+  return {
+    id: String(row.id),
+    selectedText: row.selected_text,
+    explanation: row.explanation_md,
+    createdAt: row.created_at,
+  };
+}
 
 export const studyTopicResolvers = {
   Query: {
@@ -31,6 +50,87 @@ export const studyTopicResolvers = {
         .select()
         .from(studyTopics)
         .where(eq(studyTopics.category, args.category));
+    },
+  },
+
+  Mutation: {
+    generateStudyConceptExplanation: async (
+      _: unknown,
+      args: { studyTopicId: string; selectedText: string; context?: string },
+      context: GraphQLContext,
+    ) => {
+      // 1. Auth guard
+      if (!context.userId) throw new Error("Forbidden");
+
+      // 2. Validate input
+      const text = args.selectedText.trim();
+      if (!text || text.length > 2000) {
+        throw new Error("Selected text must be 1-2000 characters");
+      }
+
+      // 3. Compute hash
+      const hash = await sha256Hex(text);
+
+      // 4. Check cache
+      const topicId = parseInt(args.studyTopicId, 10);
+      const [cached] = await context.db
+        .select()
+        .from(studyConceptExplanations)
+        .where(
+          and(
+            eq(studyConceptExplanations.study_topic_id, topicId),
+            eq(studyConceptExplanations.text_hash, hash),
+          ),
+        )
+        .limit(1);
+      if (cached) return mapExplanation(cached);
+
+      // 5. Fetch topic for LLM context
+      const [topic] = await context.db
+        .select()
+        .from(studyTopics)
+        .where(eq(studyTopics.id, topicId))
+        .limit(1);
+      if (!topic) throw new Error("Study topic not found");
+
+      // 6. Generate explanation
+      const { text: explanation } = await generateText({
+        model: anthropic("claude-haiku-4-5-20251001"),
+        system: `You are a technical instructor explaining a concept to a software engineer studying for interviews.
+
+Topic context:
+- Title: ${topic.title}
+- Category: ${topic.category}
+- Difficulty: ${topic.difficulty}
+
+Explain the selected excerpt clearly and concisely in the context of this topic. Use markdown formatting. Keep the explanation focused — 3-8 paragraphs max. Include a short code example if relevant. Do not repeat the selected text back verbatim.`,
+        prompt: `Explain the following excerpt:\n\n"${text}"${args.context ? `\n\nSurrounding context:\n${args.context}` : ""}`,
+      });
+
+      // 7. Cache result (INSERT OR IGNORE for race safety)
+      await context.db
+        .insert(studyConceptExplanations)
+        .values({
+          study_topic_id: topicId,
+          text_hash: hash,
+          selected_text: text,
+          explanation_md: explanation,
+        })
+        .onConflictDoNothing();
+
+      // 8. Read back (handles concurrent insert race condition)
+      const [row] = await context.db
+        .select()
+        .from(studyConceptExplanations)
+        .where(
+          and(
+            eq(studyConceptExplanations.study_topic_id, topicId),
+            eq(studyConceptExplanations.text_hash, hash),
+          ),
+        )
+        .limit(1);
+
+      return mapExplanation(row!);
     },
   },
 

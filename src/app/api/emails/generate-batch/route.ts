@@ -46,9 +46,7 @@ function buildBatchPrompt(input: GenerateBatchEmailRequest): string {
   parts.push(
     "SENDER BACKGROUND (use selectively — only what's relevant to the primary goal):",
     "- Vadim Nicolai, Senior Frontend/Rust Engineer, 10+ years experience",
-    "- Nautech Systems open-source trading engine contributor",
-    "- Built dYdX v4 + Hyperliquid exchange adapters in Rust",
-    "- Expertise: React, TypeScript, Rust, trading systems",
+    "- Expertise: React, TypeScript, Rust",
     "- Seeking: fully remote EU engineering roles",
     "",
     "EMAIL TEMPLATE RULES:",

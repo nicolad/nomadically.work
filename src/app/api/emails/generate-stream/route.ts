@@ -30,9 +30,7 @@ ${input.recipientContext ? `- Context: ${input.recipientContext}` : ""}
 
 VADIM'S BACKGROUND:
 - Senior Frontend Engineer with 10+ years experience
-- Contributing to Nautech Systems trading engine (open source)
-- Built exchange adapters for dYdX v4 and Hyperliquid in Rust
-- Expertise: React, TypeScript, Rust, trading systems
+- Expertise: React, TypeScript, Rust
 - Looking for: remote EU opportunities
 
 ${input.instructions ? `SPECIAL INSTRUCTIONS (CRITICAL):\n${input.instructions}\n` : ""}

@@ -1,0 +1,16 @@
+type StudyTopic {
+  id: ID!
+  category: String!
+  topic: String!
+  title: String!
+  summary: String
+  bodyMd: String
+  difficulty: String!
+  tags: [String!]!
+  createdAt: DateTime!
+}
+
+extend type Query {
+  studyTopic(category: String!, topic: String!): StudyTopic
+  studyTopics(category: String!): [StudyTopic!]!
+}

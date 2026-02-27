@@ -1249,6 +1249,8 @@ export type Query = {
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
+  studyTopic: Maybe<StudyTopic>;
+  studyTopics: Array<StudyTopic>;
   textToSql: TextToSqlResult;
   track: Maybe<Track>;
   tracks: Array<Track>;
@@ -1392,6 +1394,17 @@ export type QueryResumeStatusArgs = {
 };
 
 
+export type QueryStudyTopicArgs = {
+  category: Scalars['String']['input'];
+  topic: Scalars['String']['input'];
+};
+
+
+export type QueryStudyTopicsArgs = {
+  category: Scalars['String']['input'];
+};
+
+
 export type QueryTextToSqlArgs = {
   question: Scalars['String']['input'];
 };
@@ -1514,6 +1527,19 @@ export type SourceType =
   | 'LIVE_FETCH'
   | 'MANUAL'
   | 'PARTNER';
+
+export type StudyTopic = {
+  __typename?: 'StudyTopic';
+  bodyMd: Maybe<Scalars['String']['output']>;
+  category: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  difficulty: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  summary: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  topic: Scalars['String']['output'];
+};
 
 export type TextToSqlResult = {
   __typename?: 'TextToSqlResult';
@@ -2185,6 +2211,21 @@ export type MatchedJobsQueryVariables = Exact<{
 
 
 export type MatchedJobsQuery = { __typename?: 'Query', matchedJobs: { __typename?: 'MatchedJobsResult', totalCount: number, hasMore: boolean, jobs: Array<{ __typename?: 'MatchedJob', matchedSkills: Array<string>, missingSkills: Array<string>, matchScore: number, totalRequired: number, totalMatched: number, job: { __typename?: 'Job', id: number, title: string, url: string, location: string | null, publishedAt: string, company: { __typename?: 'Company', id: number, name: string, logo_url: string | null } | null } }> } };
+
+export type StudyTopicQueryVariables = Exact<{
+  category: Scalars['String']['input'];
+  topic: Scalars['String']['input'];
+}>;
+
+
+export type StudyTopicQuery = { __typename?: 'Query', studyTopic: { __typename?: 'StudyTopic', id: string, category: string, topic: string, title: string, summary: string | null, bodyMd: string | null, difficulty: string, tags: Array<string>, createdAt: string } | null };
+
+export type StudyTopicsQueryVariables = Exact<{
+  category: Scalars['String']['input'];
+}>;
+
+
+export type StudyTopicsQuery = { __typename?: 'Query', studyTopics: Array<{ __typename?: 'StudyTopic', id: string, topic: string, title: string, summary: string | null, difficulty: string, tags: Array<string> }> };
 
 export type GenerateResearchMutationVariables = Exact<{
   goalDescription: Scalars['String']['input'];
@@ -5796,6 +5837,106 @@ export type MatchedJobsQueryHookResult = ReturnType<typeof useMatchedJobsQuery>;
 export type MatchedJobsLazyQueryHookResult = ReturnType<typeof useMatchedJobsLazyQuery>;
 export type MatchedJobsSuspenseQueryHookResult = ReturnType<typeof useMatchedJobsSuspenseQuery>;
 export type MatchedJobsQueryResult = Apollo.QueryResult<MatchedJobsQuery, MatchedJobsQueryVariables>;
+export const StudyTopicDocument = gql`
+    query StudyTopic($category: String!, $topic: String!) {
+  studyTopic(category: $category, topic: $topic) {
+    id
+    category
+    topic
+    title
+    summary
+    bodyMd
+    difficulty
+    tags
+    createdAt
+  }
+}
+    `;
+
+/**
+ * __useStudyTopicQuery__
+ *
+ * To run a query within a React component, call `useStudyTopicQuery` and pass it any options that fit your needs.
+ * When your component renders, `useStudyTopicQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useStudyTopicQuery({
+ *   variables: {
+ *      category: // value for 'category'
+ *      topic: // value for 'topic'
+ *   },
+ * });
+ */
+export function useStudyTopicQuery(baseOptions: Apollo.QueryHookOptions<StudyTopicQuery, StudyTopicQueryVariables> & ({ variables: StudyTopicQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<StudyTopicQuery, StudyTopicQueryVariables>(StudyTopicDocument, options);
+      }
+export function useStudyTopicLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<StudyTopicQuery, StudyTopicQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<StudyTopicQuery, StudyTopicQueryVariables>(StudyTopicDocument, options);
+        }
+// @ts-ignore
+export function useStudyTopicSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<StudyTopicQuery, StudyTopicQueryVariables>): Apollo.UseSuspenseQueryResult<StudyTopicQuery, StudyTopicQueryVariables>;
+export function useStudyTopicSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StudyTopicQuery, StudyTopicQueryVariables>): Apollo.UseSuspenseQueryResult<StudyTopicQuery | undefined, StudyTopicQueryVariables>;
+export function useStudyTopicSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StudyTopicQuery, StudyTopicQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<StudyTopicQuery, StudyTopicQueryVariables>(StudyTopicDocument, options);
+        }
+export type StudyTopicQueryHookResult = ReturnType<typeof useStudyTopicQuery>;
+export type StudyTopicLazyQueryHookResult = ReturnType<typeof useStudyTopicLazyQuery>;
+export type StudyTopicSuspenseQueryHookResult = ReturnType<typeof useStudyTopicSuspenseQuery>;
+export type StudyTopicQueryResult = Apollo.QueryResult<StudyTopicQuery, StudyTopicQueryVariables>;
+export const StudyTopicsDocument = gql`
+    query StudyTopics($category: String!) {
+  studyTopics(category: $category) {
+    id
+    topic
+    title
+    summary
+    difficulty
+    tags
+  }
+}
+    `;
+
+/**
+ * __useStudyTopicsQuery__
+ *
+ * To run a query within a React component, call `useStudyTopicsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useStudyTopicsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useStudyTopicsQuery({
+ *   variables: {
+ *      category: // value for 'category'
+ *   },
+ * });
+ */
+export function useStudyTopicsQuery(baseOptions: Apollo.QueryHookOptions<StudyTopicsQuery, StudyTopicsQueryVariables> & ({ variables: StudyTopicsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<StudyTopicsQuery, StudyTopicsQueryVariables>(StudyTopicsDocument, options);
+      }
+export function useStudyTopicsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<StudyTopicsQuery, StudyTopicsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<StudyTopicsQuery, StudyTopicsQueryVariables>(StudyTopicsDocument, options);
+        }
+// @ts-ignore
+export function useStudyTopicsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<StudyTopicsQuery, StudyTopicsQueryVariables>): Apollo.UseSuspenseQueryResult<StudyTopicsQuery, StudyTopicsQueryVariables>;
+export function useStudyTopicsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StudyTopicsQuery, StudyTopicsQueryVariables>): Apollo.UseSuspenseQueryResult<StudyTopicsQuery | undefined, StudyTopicsQueryVariables>;
+export function useStudyTopicsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StudyTopicsQuery, StudyTopicsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<StudyTopicsQuery, StudyTopicsQueryVariables>(StudyTopicsDocument, options);
+        }
+export type StudyTopicsQueryHookResult = ReturnType<typeof useStudyTopicsQuery>;
+export type StudyTopicsLazyQueryHookResult = ReturnType<typeof useStudyTopicsLazyQuery>;
+export type StudyTopicsSuspenseQueryHookResult = ReturnType<typeof useStudyTopicsSuspenseQuery>;
+export type StudyTopicsQueryResult = Apollo.QueryResult<StudyTopicsQuery, StudyTopicsQueryVariables>;
 export const GenerateResearchDocument = gql`
     mutation GenerateResearch($goalDescription: String!) {
   generateResearch(goalDescription: $goalDescription) {

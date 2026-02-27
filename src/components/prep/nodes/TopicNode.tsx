@@ -4,6 +4,7 @@ import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 export type TopicNodeData = {
   label: string;
   hasDeepDive: boolean;
+  href?: string;
 };
 
 export function TopicNode({ data }: NodeProps<Node<TopicNodeData>>) {
@@ -89,7 +90,32 @@ export function TopicNode({ data }: NodeProps<Node<TopicNodeData>>) {
         </span>
       </div>
 
-      {isHovered && !data.hasDeepDive && (
+      {data.href && (
+        <a
+          href={data.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 3,
+            paddingLeft: 18,
+            fontSize: 9,
+            color: "var(--blue-10)",
+            textDecoration: "none",
+            lineHeight: 1.2,
+            letterSpacing: "0.01em",
+          }}
+        >
+          <svg width={9} height={9} viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M7 1h4v4M11 1L5 7M2 3H1v8h8v-1" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          open prep
+        </a>
+      )}
+
+      {isHovered && !data.hasDeepDive && !data.href && (
         <div
           style={{
             fontSize: 9,

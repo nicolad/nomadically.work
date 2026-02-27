@@ -632,3 +632,29 @@ export const contacts = sqliteTable(
 
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
+
+// Study Topics (curated technical study content)
+export const studyTopics = sqliteTable("study_topics", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category").notNull(),
+  topic: text("topic").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  body_md: text("body_md"),
+  difficulty: text("difficulty", {
+    enum: ["beginner", "intermediate", "advanced"],
+  }).notNull().default("intermediate"),
+  tags: text("tags"), // JSON array of strings
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+}, (table) => ({
+  categoryTopicIdx: uniqueIndex("idx_study_topics_category_topic")
+    .on(table.category, table.topic),
+}));
+
+export type StudyTopic = typeof studyTopics.$inferSelect;
+export type NewStudyTopic = typeof studyTopics.$inferInsert;

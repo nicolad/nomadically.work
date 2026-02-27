@@ -913,6 +913,8 @@ type Query {
   prompt(label: String, name: String!, version: Int): Prompt
   prompts: [RegisteredPrompt!]!
   resumeStatus(email: String!): ResumeStatus
+  studyTopic(category: String!, topic: String!): StudyTopic
+  studyTopics(category: String!): [StudyTopic!]!
   textToSql(question: String!): TextToSqlResult!
   track(slug: String!): Track
   tracks(limit: Int = 50): [Track!]!
@@ -1012,6 +1014,18 @@ enum SourceType {
   LIVE_FETCH
   MANUAL
   PARTNER
+}
+
+type StudyTopic {
+  bodyMd: String
+  category: String!
+  createdAt: DateTime!
+  difficulty: String!
+  id: ID!
+  summary: String
+  tags: [String!]!
+  title: String!
+  topic: String!
 }
 
 type TextToSqlResult {

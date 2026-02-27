@@ -23,6 +23,11 @@ import { TopicNode, type TopicNodeData } from "@/components/prep/nodes/TopicNode
 import { ProgressPanel } from "@/components/prep/nodes/ProgressPanel";
 import { GraphTooltip, type TooltipData } from "@/components/prep/GraphTooltip";
 
+// Map known study topics to their prep pages: key is lowercase label, value is the path
+const TOPIC_PREP_URLS: Record<string, string> = {
+  acid: "/study/db/acid",
+};
+
 // --- Status helpers ---
 
 function deriveRequirementStatus(req: AiInterviewPrepRequirement): RequirementStatus {
@@ -136,7 +141,11 @@ function buildGraph(
         (d) => d.topic === topic && d.deepDive,
       );
 
-      const topicData: TopicNodeData = { label: topic, hasDeepDive: !!hasTopicDeepDive };
+      const topicData: TopicNodeData = {
+        label: topic,
+        hasDeepDive: !!hasTopicDeepDive,
+        href: TOPIC_PREP_URLS[topic.toLowerCase().trim()],
+      };
       nodes.push({
         id: topicId,
         type: "topic",

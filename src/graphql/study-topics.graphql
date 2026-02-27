@@ -1,0 +1,24 @@
+query StudyTopic($category: String!, $topic: String!) {
+  studyTopic(category: $category, topic: $topic) {
+    id
+    category
+    topic
+    title
+    summary
+    bodyMd
+    difficulty
+    tags
+    createdAt
+  }
+}
+
+query StudyTopics($category: String!) {
+  studyTopics(category: $category) {
+    id
+    topic
+    title
+    summary
+    difficulty
+    tags
+  }
+}

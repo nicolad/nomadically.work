@@ -1246,6 +1246,8 @@ export type Query = {
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
+  studyTopic: Maybe<StudyTopic>;
+  studyTopics: Array<StudyTopic>;
   textToSql: TextToSqlResult;
   track: Maybe<Track>;
   tracks: Array<Track>;
@@ -1389,6 +1391,17 @@ export type QueryResumeStatusArgs = {
 };
 
 
+export type QueryStudyTopicArgs = {
+  category: Scalars['String']['input'];
+  topic: Scalars['String']['input'];
+};
+
+
+export type QueryStudyTopicsArgs = {
+  category: Scalars['String']['input'];
+};
+
+
 export type QueryTextToSqlArgs = {
   question: Scalars['String']['input'];
 };
@@ -1511,6 +1524,19 @@ export type SourceType =
   | 'LIVE_FETCH'
   | 'MANUAL'
   | 'PARTNER';
+
+export type StudyTopic = {
+  __typename: 'StudyTopic';
+  bodyMd: Maybe<Scalars['String']['output']>;
+  category: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  difficulty: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  summary: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  topic: Scalars['String']['output'];
+};
 
 export type TextToSqlResult = {
   __typename: 'TextToSqlResult';

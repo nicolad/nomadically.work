@@ -1249,6 +1249,8 @@ export type Query = {
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
   resumeStatus: Maybe<ResumeStatus>;
+  studyTopic: Maybe<StudyTopic>;
+  studyTopics: Array<StudyTopic>;
   textToSql: TextToSqlResult;
   track: Maybe<Track>;
   tracks: Array<Track>;
@@ -1392,6 +1394,17 @@ export type QueryResumeStatusArgs = {
 };
 
 
+export type QueryStudyTopicArgs = {
+  category: Scalars['String']['input'];
+  topic: Scalars['String']['input'];
+};
+
+
+export type QueryStudyTopicsArgs = {
+  category: Scalars['String']['input'];
+};
+
+
 export type QueryTextToSqlArgs = {
   question: Scalars['String']['input'];
 };
@@ -1514,6 +1527,19 @@ export type SourceType =
   | 'LIVE_FETCH'
   | 'MANUAL'
   | 'PARTNER';
+
+export type StudyTopic = {
+  __typename?: 'StudyTopic';
+  bodyMd: Maybe<Scalars['String']['output']>;
+  category: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  difficulty: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  summary: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  topic: Scalars['String']['output'];
+};
 
 export type TextToSqlResult = {
   __typename?: 'TextToSqlResult';
@@ -1812,6 +1838,7 @@ export type ResolversTypes = {
   SkillProfile: ResolverTypeWrapper<Partial<SkillProfile>>;
   SourceType: ResolverTypeWrapper<Partial<SourceType>>;
   String: ResolverTypeWrapper<Partial<Scalars['String']['output']>>;
+  StudyTopic: ResolverTypeWrapper<Partial<StudyTopic>>;
   TextToSqlResult: ResolverTypeWrapper<Partial<TextToSqlResult>>;
   Track: ResolverTypeWrapper<Partial<Track>>;
   TrackItem: ResolverTypeWrapper<Partial<TrackItem>>;
@@ -1919,6 +1946,7 @@ export type ResolversParentTypes = {
   SkillMatchDetail: Partial<SkillMatchDetail>;
   SkillProfile: Partial<SkillProfile>;
   String: Partial<Scalars['String']['output']>;
+  StudyTopic: Partial<StudyTopic>;
   TextToSqlResult: Partial<TextToSqlResult>;
   Track: Partial<Track>;
   TrackItem: Partial<TrackItem>;
@@ -2564,6 +2592,8 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   prompt?: Resolver<Maybe<ResolversTypes['Prompt']>, ParentType, ContextType, RequireFields<QueryPromptArgs, 'name'>>;
   prompts?: Resolver<Array<ResolversTypes['RegisteredPrompt']>, ParentType, ContextType>;
   resumeStatus?: Resolver<Maybe<ResolversTypes['ResumeStatus']>, ParentType, ContextType, RequireFields<QueryResumeStatusArgs, 'email'>>;
+  studyTopic?: Resolver<Maybe<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<QueryStudyTopicArgs, 'category' | 'topic'>>;
+  studyTopics?: Resolver<Array<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<QueryStudyTopicsArgs, 'category'>>;
   textToSql?: Resolver<ResolversTypes['TextToSqlResult'], ParentType, ContextType, RequireFields<QueryTextToSqlArgs, 'question'>>;
   track?: Resolver<Maybe<ResolversTypes['Track']>, ParentType, ContextType, RequireFields<QueryTrackArgs, 'slug'>>;
   tracks?: Resolver<Array<ResolversTypes['Track']>, ParentType, ContextType, RequireFields<QueryTracksArgs, 'limit'>>;
@@ -2650,6 +2680,18 @@ export type SkillProfileResolvers<ContextType = GraphQLContext, ParentType exten
   taxonomyVersion?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type StudyTopicResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['StudyTopic'] = ResolversParentTypes['StudyTopic']> = {
+  bodyMd?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  difficulty?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  summary?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  topic?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type TextToSqlResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TextToSqlResult'] = ResolversParentTypes['TextToSqlResult']> = {
@@ -2783,6 +2825,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   SkillMatch?: SkillMatchResolvers<ContextType>;
   SkillMatchDetail?: SkillMatchDetailResolvers<ContextType>;
   SkillProfile?: SkillProfileResolvers<ContextType>;
+  StudyTopic?: StudyTopicResolvers<ContextType>;
   TextToSqlResult?: TextToSqlResultResolvers<ContextType>;
   Track?: TrackResolvers<ContextType>;
   TrackItem?: TrackItemResolvers<ContextType>;

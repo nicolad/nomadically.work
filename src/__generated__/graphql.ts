@@ -754,23 +754,6 @@ export type LangSmithPromptCommit = {
   promptName: Scalars['String']['output'];
 };
 
-export type MatchedJob = {
-  __typename: 'MatchedJob';
-  job: Job;
-  matchScore: Scalars['Float']['output'];
-  matchedSkills: Array<Scalars['String']['output']>;
-  missingSkills: Array<Scalars['String']['output']>;
-  totalMatched: Scalars['Int']['output'];
-  totalRequired: Scalars['Int']['output'];
-};
-
-export type MatchedJobsResult = {
-  __typename: 'MatchedJobsResult';
-  hasMore: Scalars['Boolean']['output'];
-  jobs: Array<MatchedJob>;
-  totalCount: Scalars['Int']['output'];
-};
-
 export type Mutation = {
   __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
@@ -812,7 +795,6 @@ export type Mutation = {
    * 3. Return the updated job with full ATS data
    */
   enhanceJobFromATS: EnhanceJobResponse;
-  extractSkillProfile: SkillProfile;
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateInterviewPrep: Application;
@@ -849,7 +831,6 @@ export type Mutation = {
   updatePromptLabel: Prompt;
   updateUserSettings: UserSettings;
   uploadResume: Maybe<ResumeUploadResult>;
-  uploadSkillProfile: SkillProfile;
   upsert_company_ats_boards: Array<AtsBoard>;
 };
 
@@ -943,11 +924,6 @@ export type MutationEnhanceJobFromAtsArgs = {
   company: Scalars['String']['input'];
   jobId: Scalars['String']['input'];
   source: Scalars['String']['input'];
-};
-
-
-export type MutationExtractSkillProfileArgs = {
-  profileId: Scalars['ID']['input'];
 };
 
 
@@ -1117,13 +1093,6 @@ export type MutationUploadResumeArgs = {
 };
 
 
-export type MutationUploadSkillProfileArgs = {
-  fileType: Scalars['String']['input'];
-  filename: Scalars['String']['input'];
-  resumeBase64: Scalars['String']['input'];
-};
-
-
 export type MutationUpsert_Company_Ats_BoardsArgs = {
   boards: Array<AtsBoardUpsertInput>;
   company_id: Scalars['Int']['input'];
@@ -1248,9 +1217,7 @@ export type Query = {
   langsmithPrompt: Maybe<LangSmithPrompt>;
   langsmithPromptCommit: Maybe<LangSmithPromptCommit>;
   langsmithPrompts: Array<LangSmithPrompt>;
-  matchedJobs: MatchedJobsResult;
   myPromptUsage: Array<PromptUsage>;
-  mySkillProfile: Maybe<SkillProfile>;
   prepResources: PrepContent;
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
@@ -1370,12 +1337,6 @@ export type QueryLangsmithPromptsArgs = {
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   query?: InputMaybe<Scalars['String']['input']>;
-};
-
-
-export type QueryMatchedJobsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1516,17 +1477,6 @@ export type SkillMatchDetail = {
   level: Scalars['String']['output'];
   matched: Scalars['Boolean']['output'];
   tag: Scalars['String']['output'];
-};
-
-export type SkillProfile = {
-  __typename: 'SkillProfile';
-  createdAt: Scalars['DateTime']['output'];
-  extractedSkills: Array<Scalars['String']['output']>;
-  filename: Maybe<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  taxonomyVersion: Scalars['String']['output'];
-  updatedAt: Scalars['DateTime']['output'];
-  userId: Scalars['String']['output'];
 };
 
 export type SourceType =
@@ -2267,35 +2217,6 @@ export type AskAboutResumeQueryVariables = Exact<{
 
 export type AskAboutResumeQuery = { __typename: 'Query', askAboutResume: { __typename: 'ResumeAnswer', answer: string, context_count: number } | null };
 
-export type UploadSkillProfileMutationVariables = Exact<{
-  resumeBase64: Scalars['String']['input'];
-  filename: Scalars['String']['input'];
-  fileType: Scalars['String']['input'];
-}>;
-
-
-export type UploadSkillProfileMutation = { __typename: 'Mutation', uploadSkillProfile: { __typename: 'SkillProfile', id: string, userId: string, filename: string | null, extractedSkills: Array<string>, taxonomyVersion: string, createdAt: string, updatedAt: string } };
-
-export type ExtractSkillProfileMutationVariables = Exact<{
-  profileId: Scalars['ID']['input'];
-}>;
-
-
-export type ExtractSkillProfileMutation = { __typename: 'Mutation', extractSkillProfile: { __typename: 'SkillProfile', id: string, userId: string, filename: string | null, extractedSkills: Array<string>, taxonomyVersion: string, createdAt: string, updatedAt: string } };
-
-export type MySkillProfileQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type MySkillProfileQuery = { __typename: 'Query', mySkillProfile: { __typename: 'SkillProfile', id: string, userId: string, filename: string | null, extractedSkills: Array<string>, taxonomyVersion: string, createdAt: string, updatedAt: string } | null };
-
-export type MatchedJobsQueryVariables = Exact<{
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-}>;
-
-
-export type MatchedJobsQuery = { __typename: 'Query', matchedJobs: { __typename: 'MatchedJobsResult', totalCount: number, hasMore: boolean, jobs: Array<{ __typename: 'MatchedJob', matchedSkills: Array<string>, missingSkills: Array<string>, matchScore: number, totalRequired: number, totalMatched: number, job: { __typename: 'Job', id: number, title: string, url: string, location: string | null, publishedAt: string, company: { __typename: 'Company', id: number, name: string, logo_url: string | null } | null } }> } };
-
 export type StudyTopicQueryVariables = Exact<{
   category: Scalars['String']['input'];
   topic: Scalars['String']['input'];
@@ -2426,10 +2347,6 @@ export const ResumeStatusDocument = {"kind":"Document","definitions":[{"kind":"O
 export const UploadResumeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UploadResume"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"resumePdf"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filename"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uploadResume"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}},{"kind":"Argument","name":{"kind":"Name","value":"resumePdf"},"value":{"kind":"Variable","name":{"kind":"Name","value":"resumePdf"}}},{"kind":"Argument","name":{"kind":"Name","value":"filename"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filename"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"job_id"}},{"kind":"Field","name":{"kind":"Name","value":"tier"}},{"kind":"Field","name":{"kind":"Name","value":"status"}}]}}]}}]} as unknown as DocumentNode<UploadResumeMutation, UploadResumeMutationVariables>;
 export const IngestResumeParseDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"IngestResumeParse"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"job_id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filename"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"ingestResumeParse"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}},{"kind":"Argument","name":{"kind":"Name","value":"job_id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"job_id"}}},{"kind":"Argument","name":{"kind":"Name","value":"filename"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filename"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"job_id"}},{"kind":"Field","name":{"kind":"Name","value":"resume_id"}},{"kind":"Field","name":{"kind":"Name","value":"chunks_stored"}},{"kind":"Field","name":{"kind":"Name","value":"error"}}]}}]}}]} as unknown as DocumentNode<IngestResumeParseMutation, IngestResumeParseMutationVariables>;
 export const AskAboutResumeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AskAboutResume"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"question"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"askAboutResume"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}},{"kind":"Argument","name":{"kind":"Name","value":"question"},"value":{"kind":"Variable","name":{"kind":"Name","value":"question"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"answer"}},{"kind":"Field","name":{"kind":"Name","value":"context_count"}}]}}]}}]} as unknown as DocumentNode<AskAboutResumeQuery, AskAboutResumeQueryVariables>;
-export const UploadSkillProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UploadSkillProfile"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"resumeBase64"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filename"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"fileType"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uploadSkillProfile"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"resumeBase64"},"value":{"kind":"Variable","name":{"kind":"Name","value":"resumeBase64"}}},{"kind":"Argument","name":{"kind":"Name","value":"filename"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filename"}}},{"kind":"Argument","name":{"kind":"Name","value":"fileType"},"value":{"kind":"Variable","name":{"kind":"Name","value":"fileType"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"filename"}},{"kind":"Field","name":{"kind":"Name","value":"extractedSkills"}},{"kind":"Field","name":{"kind":"Name","value":"taxonomyVersion"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<UploadSkillProfileMutation, UploadSkillProfileMutationVariables>;
-export const ExtractSkillProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ExtractSkillProfile"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"profileId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"extractSkillProfile"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"profileId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"profileId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"filename"}},{"kind":"Field","name":{"kind":"Name","value":"extractedSkills"}},{"kind":"Field","name":{"kind":"Name","value":"taxonomyVersion"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<ExtractSkillProfileMutation, ExtractSkillProfileMutationVariables>;
-export const MySkillProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySkillProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mySkillProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"filename"}},{"kind":"Field","name":{"kind":"Name","value":"extractedSkills"}},{"kind":"Field","name":{"kind":"Name","value":"taxonomyVersion"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<MySkillProfileQuery, MySkillProfileQueryVariables>;
-export const MatchedJobsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MatchedJobs"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"offset"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"matchedJobs"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}},{"kind":"Argument","name":{"kind":"Name","value":"offset"},"value":{"kind":"Variable","name":{"kind":"Name","value":"offset"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"jobs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"job"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"company"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"logo_url"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchedSkills"}},{"kind":"Field","name":{"kind":"Name","value":"missingSkills"}},{"kind":"Field","name":{"kind":"Name","value":"matchScore"}},{"kind":"Field","name":{"kind":"Name","value":"totalRequired"}},{"kind":"Field","name":{"kind":"Name","value":"totalMatched"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}},{"kind":"Field","name":{"kind":"Name","value":"hasMore"}}]}}]}}]} as unknown as DocumentNode<MatchedJobsQuery, MatchedJobsQueryVariables>;
 export const StudyTopicDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"StudyTopic"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"category"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"topic"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"studyTopic"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"category"},"value":{"kind":"Variable","name":{"kind":"Name","value":"category"}}},{"kind":"Argument","name":{"kind":"Name","value":"topic"},"value":{"kind":"Variable","name":{"kind":"Name","value":"topic"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"topic"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"bodyMd"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode<StudyTopicQuery, StudyTopicQueryVariables>;
 export const StudyTopicsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"StudyTopics"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"category"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"studyTopics"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"category"},"value":{"kind":"Variable","name":{"kind":"Name","value":"category"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"topic"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}}]}}]}}]} as unknown as DocumentNode<StudyTopicsQuery, StudyTopicsQueryVariables>;
 export const GenerateStudyConceptExplanationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"GenerateStudyConceptExplanation"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"studyTopicId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"selectedText"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"context"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"generateStudyConceptExplanation"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"studyTopicId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"studyTopicId"}}},{"kind":"Argument","name":{"kind":"Name","value":"selectedText"},"value":{"kind":"Variable","name":{"kind":"Name","value":"selectedText"}}},{"kind":"Argument","name":{"kind":"Name","value":"context"},"value":{"kind":"Variable","name":{"kind":"Name","value":"context"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"selectedText"}},{"kind":"Field","name":{"kind":"Name","value":"explanation"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode<GenerateStudyConceptExplanationMutation, GenerateStudyConceptExplanationMutationVariables>;

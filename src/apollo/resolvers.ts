@@ -9,7 +9,6 @@ import { langsmithResolvers } from "./resolvers/langsmith";
 import { resumeResolvers } from "./resolvers/resume";
 import { trackResolvers } from "./resolvers/track";
 import { deepPlannerResolvers } from "./resolvers/deep-planner";
-import { skillMatchingResolvers } from "./resolvers/skill-matching";
 import { contactResolvers } from "./resolvers/contacts";
 import { studyTopicResolvers } from "./resolvers/study-topics";
 import { merge } from "lodash";
@@ -27,7 +26,6 @@ export const resolvers = merge(
   resumeResolvers,
   trackResolvers,
   deepPlannerResolvers,
-  skillMatchingResolvers,
   contactResolvers,
   studyTopicResolvers,
 );

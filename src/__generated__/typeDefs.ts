@@ -698,21 +698,6 @@ type LangSmithPromptCommit {
   promptName: String!
 }
 
-type MatchedJob {
-  job: Job!
-  matchScore: Float!
-  matchedSkills: [String!]!
-  missingSkills: [String!]!
-  totalMatched: Int!
-  totalRequired: Int!
-}
-
-type MatchedJobsResult {
-  hasMore: Boolean!
-  jobs: [MatchedJob!]!
-  totalCount: Int!
-}
-
 type Mutation {
   add_company_facts(company_id: Int!, facts: [CompanyFactInput!]!): [CompanyFact!]!
   applyEmailPattern(companyId: Int!): ApplyEmailPatternResult!
@@ -753,7 +738,6 @@ type Mutation {
   3. Return the updated job with full ATS data
   """
   enhanceJobFromATS(company: String!, jobId: String!, source: String!): EnhanceJobResponse!
-  extractSkillProfile(profileId: ID!): SkillProfile!
   findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
   findContactEmail(contactId: Int!): FindContactEmailResult!
   generateInterviewPrep(applicationId: Int!): Application!
@@ -790,7 +774,6 @@ type Mutation {
   updatePromptLabel(label: String!, name: String!, version: Int!): Prompt!
   updateUserSettings(settings: UserSettingsInput!, userId: String!): UserSettings!
   uploadResume(email: String!, filename: String!, resumePdf: String!): ResumeUploadResult
-  uploadSkillProfile(fileType: String!, filename: String!, resumeBase64: String!): SkillProfile!
   upsert_company_ats_boards(boards: [ATSBoardUpsertInput!]!, company_id: Int!): [ATSBoard!]!
 }
 
@@ -906,9 +889,7 @@ type Query {
   langsmithPrompt(promptIdentifier: String!): LangSmithPrompt
   langsmithPromptCommit(includeModel: Boolean, promptIdentifier: String!): LangSmithPromptCommit
   langsmithPrompts(isArchived: Boolean, isPublic: Boolean, query: String): [LangSmithPrompt!]!
-  matchedJobs(limit: Int, offset: Int): MatchedJobsResult!
   myPromptUsage(limit: Int): [PromptUsage!]!
-  mySkillProfile: SkillProfile
   prepResources: PrepContent!
   prepResourcesByCategory(category: String!): [PrepResource!]!
   prompt(label: String, name: String!, version: Int): Prompt
@@ -998,16 +979,6 @@ type SkillMatchDetail {
   level: String!
   matched: Boolean!
   tag: String!
-}
-
-type SkillProfile {
-  createdAt: DateTime!
-  extractedSkills: [String!]!
-  filename: String
-  id: ID!
-  taxonomyVersion: String!
-  updatedAt: DateTime!
-  userId: String!
 }
 
 enum SourceType {

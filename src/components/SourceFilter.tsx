@@ -38,7 +38,7 @@ function SourceFilterChips({ selected, onChange }: SourceFilterProps) {
       role="group"
       aria-label="Filter by job source"
     >
-      <Text size="1" style={{ color: "var(--gray-9)" }}>
+      <Text size="1" color="gray">
         sources
       </Text>
       {SOURCE_OPTIONS.map(({ value, label, color }) => {
@@ -46,9 +46,10 @@ function SourceFilterChips({ selected, onChange }: SourceFilterProps) {
         return (
           <Badge
             key={value}
+            size="2"
             variant={isSelected ? "solid" : "outline"}
             color={color as SourceColor}
-            style={{ cursor: "pointer", userSelect: "none", padding: "4px 10px", minHeight: 28 }}
+            style={{ cursor: "pointer", userSelect: "none" }}
             onClick={() => onChange(toggle(selected, value))}
             role="checkbox"
             aria-checked={isSelected}
@@ -67,6 +68,7 @@ function SourceFilterChips({ selected, onChange }: SourceFilterProps) {
       })}
       {selected.length > 1 && (
         <Badge
+          size="2"
           variant="ghost"
           color="gray"
           style={{ cursor: "pointer", userSelect: "none" }}

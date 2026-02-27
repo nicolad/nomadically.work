@@ -5,7 +5,6 @@ export const jobListCard = style({
   border: "1px solid var(--gray-6)",
   borderRadius: 8,
   overflow: "hidden",
-  margin: "0 4px",
 });
 
 export const jobRow = style({
@@ -13,7 +12,7 @@ export const jobRow = style({
   alignItems: "flex-start",
   gap: 14,
   padding: "16px 20px",
-  borderBottom: "1px solid var(--gray-5)",
+  borderBottom: "1px solid var(--gray-6)",
   background: "transparent",
   transition: "background 0.12s",
   textDecoration: "none",
@@ -92,16 +91,6 @@ export const jobRowMetaItem = style({
   display: "inline-flex",
   alignItems: "center",
   gap: 3,
-});
-
-export const jobRowMetaBadge = style({
-  fontSize: 12,
-  padding: "1px 6px",
-  border: "1px solid var(--gray-6)",
-  color: "var(--gray-11)",
-  borderRadius: 3,
-  textTransform: "lowercase",
-  background: "var(--gray-3)",
 });
 
 export const jobRowActions = style({

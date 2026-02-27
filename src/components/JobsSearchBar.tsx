@@ -92,7 +92,7 @@ export function JobsSearchBar({
     <TextField.Root
       ref={inputRef}
       size="3"
-      radius="none"
+      radius="medium"
       variant="surface"
       value={value}
       placeholder={placeholder}
@@ -102,7 +102,7 @@ export function JobsSearchBar({
       autoCorrect="off"
       autoCapitalize="off"
       spellCheck={false}
-      style={{ boxShadow: "0 0 0 1px var(--gray-a5) inset" }}
+      style={{ boxShadow: "0 0 0 1px var(--gray-6) inset" }}
     >
       <TextField.Slot side="left">
         <MagnifyingGlassIcon />

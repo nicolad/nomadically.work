@@ -803,6 +803,7 @@ export type Mutation = {
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyConceptExplanation: StudyConceptExplanation;
+  generateStudyDeepDive: StudyTopic;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
@@ -963,6 +964,12 @@ export type MutationGenerateResearchArgs = {
 export type MutationGenerateStudyConceptExplanationArgs = {
   context?: InputMaybe<Scalars['String']['input']>;
   selectedText: Scalars['String']['input'];
+  studyTopicId: Scalars['ID']['input'];
+};
+
+
+export type MutationGenerateStudyDeepDiveArgs = {
+  force?: InputMaybe<Scalars['Boolean']['input']>;
   studyTopicId: Scalars['ID']['input'];
 };
 
@@ -1499,6 +1506,7 @@ export type StudyTopic = {
   bodyMd: Maybe<Scalars['String']['output']>;
   category: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
+  deepDive: Maybe<Scalars['String']['output']>;
   difficulty: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   summary: Maybe<Scalars['String']['output']>;
@@ -2424,6 +2432,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
   generateResearch?: Resolver<Array<ResolversTypes['ResearchItem']>, ParentType, ContextType, RequireFields<MutationGenerateResearchArgs, 'goalDescription'>>;
   generateStudyConceptExplanation?: Resolver<ResolversTypes['StudyConceptExplanation'], ParentType, ContextType, RequireFields<MutationGenerateStudyConceptExplanationArgs, 'selectedText' | 'studyTopicId'>>;
+  generateStudyDeepDive?: Resolver<ResolversTypes['StudyTopic'], ParentType, ContextType, RequireFields<MutationGenerateStudyDeepDiveArgs, 'studyTopicId'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
   generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
   importContacts?: Resolver<ResolversTypes['ImportContactsResult'], ParentType, ContextType, RequireFields<MutationImportContactsArgs, 'contacts'>>;
@@ -2627,6 +2636,7 @@ export type StudyTopicResolvers<ContextType = GraphQLContext, ParentType extends
   bodyMd?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  deepDive?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   difficulty?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   summary?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;

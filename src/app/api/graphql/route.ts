@@ -24,15 +24,12 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
         const db = getDb(d1Client as any); // Cast to D1Database type
         const loaders = createLoaders(db);
 
-        // Dev-only: Playwright testing bypass — set x-playwright-email header to skip Clerk auth
-        if (process.env.NODE_ENV === "development") {
-          const playwrightEmail = req.headers.get("x-playwright-email");
-          if (playwrightEmail) {
-            return { userId: "playwright-dev", userEmail: playwrightEmail, db, loaders };
-          }
-        }
-
+        // Dev bypass: use ADMIN_EMAIL when Clerk has no session
         const { userId } = await auth();
+
+        if (!userId && process.env.NODE_ENV === "development" && process.env.ADMIN_EMAIL) {
+          return { userId: "dev-local", userEmail: process.env.ADMIN_EMAIL, db, loaders };
+        }
 
         if (!userId) {
           return { userId: null, userEmail: null, db, loaders };

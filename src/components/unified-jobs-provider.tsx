@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Container, Box, Flex, Text } from "@radix-ui/themes";
+import { Box, Flex, Text, Separator } from "@radix-ui/themes";
 import { SearchQueryBar } from "./SearchQueryBar";
 import { UserPreferences } from "./user-preferences";
 import { JobsList } from "./jobs-list";
@@ -44,7 +44,7 @@ export function UnifiedJobsProvider() {
   );
 
   return (
-    <Container size="4" py="4">
+    <>
       <Box mb="5">
         <Text as="h1" size="5" weight="bold" mb="1" className={pageHeading}>
           remote EU jobs
@@ -53,7 +53,8 @@ export function UnifiedJobsProvider() {
           engineering and tech roles open to candidates in the EU
         </Text>
       </Box>
-      <Box mb="4">
+      <Separator size="4" mb="4" />
+      <Box>
         <UserPreferences />
         <SearchQueryBar
           onSearchSubmit={handleSearch}
@@ -66,6 +67,6 @@ export function UnifiedJobsProvider() {
       <Box mt="4">
         <JobsList searchFilter={searchFilter} sourceTypes={sourcesFilter} />
       </Box>
-    </Container>
+    </>
   );
 }

@@ -6,6 +6,7 @@ query StudyTopic($category: String!, $topic: String!) {
     title
     summary
     bodyMd
+    deepDive
     difficulty
     tags
     createdAt
@@ -37,5 +38,12 @@ mutation GenerateStudyConceptExplanation(
     selectedText
     explanation
     createdAt
+  }
+}
+
+mutation GenerateStudyDeepDive($studyTopicId: ID!, $force: Boolean) {
+  generateStudyDeepDive(studyTopicId: $studyTopicId, force: $force) {
+    id
+    deepDive
   }
 }

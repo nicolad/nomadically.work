@@ -11,7 +11,6 @@ import {
   jobRowCompany,
   jobRowMetaLine,
   jobRowMetaItem,
-  jobRowMetaBadge,
   jobRowActions,
 } from "./jobs-list.css";
 import { useRouter } from "next/navigation";
@@ -28,6 +27,7 @@ import { extractJobSlug } from "@/lib/job-utils";
 import { useAuth } from "@/lib/auth-hooks";
 import {
   Box,
+  Button,
   Container,
   Text,
   Flex,
@@ -190,13 +190,9 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
     return (
       <Container size="4" p="8">
         <Text color="red">Error loading jobs: {error.message}</Text>
-        <button
-          className="yc-cta"
-          onClick={() => refetch()}
-          style={{ marginTop: 12 }}
-        >
+        <Button mt="3" onClick={() => refetch()}>
           retry
-        </button>
+        </Button>
       </Container>
     );
   }
@@ -207,12 +203,12 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
     <Box>
       {/* header */}
       <Flex justify="between" align="center" py="2" px="3">
-        <Text size="2" weight="medium" style={{ color: "var(--gray-11)" }}>
+        <Text size="2" weight="medium" color="gray">
           jobs
         </Text>
         <Text
           size="1"
-          style={{ color: "var(--gray-9)" }}
+          color="gray"
           aria-live="polite"
           aria-busy={isInitialLoad}
         >
@@ -233,8 +229,8 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                   <div className={jobRowTitleLine}>
                     <Skeleton width={`${120 + (i % 3) * 40}px`} height="14px" />
                   </div>
-                  <Skeleton width="80px" height="12px" style={{ marginTop: 4 }} />
-                  <Skeleton width="140px" height="11px" style={{ marginTop: 4 }} />
+                  <Skeleton width="80px" height="12px" mt="1" />
+                  <Skeleton width="140px" height="11px" mt="1" />
                 </div>
                 <div className={jobRowActions}>
                   <Skeleton width="60px" height="24px" />
@@ -309,9 +305,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                     </span>
                   )}
                   {job.source_kind && (
-                    <span className={jobRowMetaBadge}>
-                      {job.source_kind}
-                    </span>
+                    <Badge size="1" variant="outline" color="gray">{job.source_kind}</Badge>
                   )}
                   {job.publishedAt && (
                     <span className={jobRowMetaItem}>
@@ -336,12 +330,9 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
               {/* right actions */}
               <div className={jobRowActions}>
                 {job.url && (
-                  <span
-                    className="yc-cta-ghost"
-                    style={{ fontSize: 12, padding: "4px 12px" }}
-                  >
+                  <Badge variant="outline" color="gray" size="1">
                     apply
-                  </span>
+                  </Badge>
                 )}
 
                 {user && job.company_key && (
@@ -362,7 +353,6 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                     variant="soft"
                     onClick={(e) => handleReportJob(job.id, e)}
                     disabled={job.status === "reported"}
-                    style={{ cursor: job.status === "reported" ? "default" : "pointer" }}
                     title={job.status === "reported" ? "Already reported" : "Report job"}
                   >
                     <ExclamationTriangleIcon width={16} height={16} />
@@ -374,7 +364,6 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
                     color="red"
                     variant="soft"
                     onClick={(e) => handleDeleteJob(job.id, e)}
-                    style={{ cursor: "pointer" }}
                   >
                     <TrashIcon width={16} height={16} />
                   </IconButton>
@@ -387,7 +376,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
         {/* empty border-bottom guard */}
         {!isInitialLoad && jobs.length === 0 && !loading && (
           <Flex justify="center" py="6">
-            <Text size="2" style={{ color: "var(--gray-9)" }}>
+            <Text size="2" color="gray">
               no jobs found
             </Text>
           </Flex>
@@ -403,12 +392,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
             </Flex>
           ) : (
             <Flex justify="center">
-              <Text
-                size="1"
-                style={{
-                  color: "var(--gray-9)",
-                }}
-              >
+              <Text size="1" color="gray">
                 scroll for more…
               </Text>
             </Flex>
@@ -419,12 +403,7 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
       {!hasMore && jobs.length > 0 && (
         <Box py="4">
           <Flex justify="center">
-            <Text
-              size="1"
-              style={{
-                color: "var(--gray-9)",
-              }}
-            >
+            <Text size="1" color="gray">
               {jobs.length}/{totalCount} loaded
             </Text>
           </Flex>

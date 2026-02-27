@@ -745,6 +745,7 @@ type Mutation {
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!
   generateResearch(goalDescription: String!): [ResearchItem!]!
   generateStudyConceptExplanation(context: String, selectedText: String!, studyTopicId: ID!): StudyConceptExplanation!
+  generateStudyDeepDive(force: Boolean, studyTopicId: ID!): StudyTopic!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!
   generateTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!): Application!
   importContacts(contacts: [ContactInput!]!): ImportContactsResult!
@@ -999,6 +1000,7 @@ type StudyTopic {
   bodyMd: String
   category: String!
   createdAt: DateTime!
+  deepDive: String
   difficulty: String!
   id: ID!
   summary: String

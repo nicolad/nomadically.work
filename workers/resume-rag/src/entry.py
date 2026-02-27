@@ -114,6 +114,12 @@ def get_attr(obj, attr: str, default=None):
         return default
 
 
+def _from_js(js_obj) -> Any:
+    """Convert a JS proxy object to a Python dict/list via JSON round-trip."""
+    from js import JSON as JsJSON
+    return json.loads(JsJSON.stringify(js_obj))
+
+
 _SECTION_HEADERS = re.compile(
     r"^(?:#{1,3}\s+)?(?:"
     r"experience|work experience|employment|professional experience|"
@@ -174,25 +180,28 @@ async def generate_embedding(ai_binding, text: str) -> List[float]:
     """Generate embeddings using Workers AI."""
     if not text or not text.strip():
         raise ValueError("Cannot generate embedding for empty text")
-    
+
     from js import JSON as JsJSON
     from pyodide.ffi import to_js
-    
-    result = await ai_binding.run(
-        EMBED_MODEL,
-        to_js({"text": text}, dict_converter=lambda d: JsJSON.stringify(d))
-    )
-    
+
+    # Use JSON.parse round-trip to create a proper JS object — avoids
+    # issues with to_js dict_converter not handling nested arrays correctly.
+    js_input = JsJSON.parse(json.dumps({"text": [text]}))
+
+    result = await ai_binding.run(EMBED_MODEL, js_input)
+
     result_json_str = JsJSON.stringify(result)
     result_dict = json.loads(result_json_str)
-    
+
     if "data" not in result_dict or not result_dict["data"]:
         raise RuntimeError(f"Invalid embedding result: {result_dict}")
-    
+
     embedding = result_dict["data"][0]
     if not isinstance(embedding, list) or len(embedding) != EMBED_DIM:
         raise RuntimeError(f"Expected {EMBED_DIM}-dim embedding, got {len(embedding)} dims")
-    
+
+    return embedding
+
     return embedding
 
 
@@ -218,6 +227,15 @@ def format_resume_text(resume: Dict[str, Any]) -> str:
 def resume_namespace(user_id: str, resume_id: str = "latest") -> str:
     """Generate namespace for user resumes."""
     return f"resumes:{user_id}:{resume_id}"
+
+
+def _to_js(obj):
+    """Convert a Python object to a JS-compatible value.
+    Uses Pyodide's to_js with Object.fromEntries for dicts so that both
+    arrays and nested objects are handled correctly by Workers bindings."""
+    from js import Object as JSObject
+    from pyodide.ffi import to_js
+    return to_js(obj, dict_converter=JSObject.fromEntries)
 
 
 def _extract_path(url: str) -> str:
@@ -381,7 +399,6 @@ class Default(WorkerEntrypoint):
     async def _generate_text(self, prompt: str, context: str) -> str:
         """Call Workers AI text generation directly (no langchain)."""
         from js import JSON as JsJSON
-        from pyodide.ffi import to_js
 
         messages = [
             {
@@ -399,9 +416,10 @@ class Default(WorkerEntrypoint):
             {"role": "user", "content": prompt},
         ]
 
+        js_input = JsJSON.parse(json.dumps({"messages": messages}))
         result = await self.env.AI.run(
             "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-            to_js({"messages": messages}, dict_converter=lambda d: JsJSON.stringify(d)),
+            js_input,
         )
         result_dict = json.loads(JsJSON.stringify(result))
         return result_dict.get("response", "")
@@ -431,16 +449,16 @@ class Default(WorkerEntrypoint):
         """Remove all existing vectors in a namespace before re-upload."""
         try:
             manifest_id = f"{namespace}:manifest"
-            results = await self.env.VECTORIZE.getByIds([manifest_id])
-            vectors = get_attr(results, "vectors", []) or []
+            js_results = await self.env.VECTORIZE.getByIds(_to_js([manifest_id]))
+            results = _from_js(js_results)
+            vectors = results if isinstance(results, list) else []
             old_count = 0
             for v in vectors:
-                meta = get_attr(v, "metadata", {})
-                if isinstance(meta, dict):
-                    old_count = meta.get("chunk_count", 0)
+                meta = v.get("metadata", {}) if isinstance(v, dict) else {}
+                old_count = meta.get("chunk_count", 0)
             ids_to_delete = [f"{namespace}:chunk_{i:04d}" for i in range(old_count)]
             ids_to_delete.append(manifest_id)
-            await self.env.VECTORIZE.deleteByIds(ids_to_delete)
+            await self.env.VECTORIZE.deleteByIds(_to_js(ids_to_delete))
         except Exception:
             pass  # non-fatal: worst case we upsert over old data
 
@@ -470,8 +488,10 @@ class Default(WorkerEntrypoint):
 
             namespace = resume_namespace(user_id, resume_id)
             manifest_id = f"{namespace}:manifest"
-            results = await self.env.VECTORIZE.getByIds([manifest_id])
-            vectors = get_attr(results, "vectors", []) or []
+            js_results = await self.env.VECTORIZE.getByIds(_to_js([manifest_id]))
+            vectors = _from_js(js_results)
+            if not isinstance(vectors, list):
+                vectors = []
 
             if not vectors:
                 return Response.json({
@@ -479,9 +499,7 @@ class Default(WorkerEntrypoint):
                     "exists": False,
                 }, headers=self._cors_headers)
 
-            meta = get_attr(vectors[0], "metadata", {}) or {}
-            if not isinstance(meta, dict):
-                meta = {}
+            meta = vectors[0].get("metadata", {}) if isinstance(vectors[0], dict) else {}
 
             return Response.json({
                 "success": True,
@@ -530,11 +548,11 @@ class Default(WorkerEntrypoint):
             })
 
         if vectors_to_insert:
-            await self.env.VECTORIZE.upsert(vectors_to_insert)
+            await self.env.VECTORIZE.upsert(_to_js(vectors_to_insert))
 
         manifest_text = f"{resume['name']} — {resume['summary'][:500]}"
         manifest_embedding = await generate_embedding(self.env.AI, manifest_text)
-        await self.env.VECTORIZE.upsert([{
+        await self.env.VECTORIZE.upsert(_to_js([{
             "id": f"{namespace}:manifest",
             "values": manifest_embedding,
             "namespace": namespace,
@@ -546,7 +564,7 @@ class Default(WorkerEntrypoint):
                 "chunk_count": len(chunks),
                 "ingested_at": datetime.now(timezone.utc).isoformat(),
             },
-        }])
+        }]))
 
         return Response.json({
             "success": True,
@@ -655,11 +673,11 @@ class Default(WorkerEntrypoint):
                 })
 
             if vectors_to_insert:
-                await self.env.VECTORIZE.upsert(vectors_to_insert)
+                await self.env.VECTORIZE.upsert(_to_js(vectors_to_insert))
 
             manifest_text = f"{user_id} — {resume_text[:500]}"
             manifest_embedding = await generate_embedding(self.env.AI, manifest_text)
-            await self.env.VECTORIZE.upsert([{
+            await self.env.VECTORIZE.upsert(_to_js([{
                 "id": f"{namespace}:manifest",
                 "values": manifest_embedding,
                 "namespace": namespace,
@@ -673,7 +691,7 @@ class Default(WorkerEntrypoint):
                     "ingested_at": datetime.now(timezone.utc).isoformat(),
                     **parse_metadata,
                 },
-            }])
+            }]))
 
             return Response.json({
                 "success": True,
@@ -698,22 +716,25 @@ class Default(WorkerEntrypoint):
 
         query_embedding = await generate_embedding(self.env.AI, search_req["query"])
 
-        results = await self.env.VECTORIZE.query(
-            vector=query_embedding,
-            topK=search_req["limit"],
-            namespace=resume_namespace(search_req["user_id"], search_req["resume_id"]),
-            returnMetadata=True,
+        js_results = await self.env.VECTORIZE.query(
+            _to_js(query_embedding),
+            _to_js({
+                "topK": search_req["limit"],
+                "namespace": resume_namespace(search_req["user_id"], search_req["resume_id"]),
+                "returnMetadata": "all",
+            }),
         )
+        results = _from_js(js_results)
 
         formatted_results = []
-        for match in get_attr(results, "matches", []) or []:
-            metadata = get_attr(match, "metadata", {}) or {}
+        for match in (results.get("matches", []) if isinstance(results, dict) else []):
+            metadata = match.get("metadata", {}) if isinstance(match, dict) else {}
             formatted_results.append({
                 "text": metadata.get("text", ""),
                 "name": metadata.get("name"),
                 "user_id": metadata.get("user_id"),
                 "chunk_index": metadata.get("chunk_index"),
-                "score": get_attr(match, "score", None),
+                "score": match.get("score") if isinstance(match, dict) else None,
                 "metadata": {k: v for k, v in metadata.items() if k != "text"},
             })
 
@@ -731,16 +752,19 @@ class Default(WorkerEntrypoint):
 
         query_embedding = await generate_embedding(self.env.AI, chat_req["message"])
 
-        results = await self.env.VECTORIZE.query(
-            vector=query_embedding,
-            topK=5,
-            namespace=resume_namespace(chat_req["user_id"], chat_req["resume_id"]),
-            returnMetadata=True,
+        js_results = await self.env.VECTORIZE.query(
+            _to_js(query_embedding),
+            _to_js({
+                "topK": 5,
+                "namespace": resume_namespace(chat_req["user_id"], chat_req["resume_id"]),
+                "returnMetadata": "all",
+            }),
         )
+        results = _from_js(js_results)
 
         context_parts = []
-        for match in get_attr(results, "matches", []) or []:
-            metadata = get_attr(match, "metadata", {}) or {}
+        for match in (results.get("matches", []) if isinstance(results, dict) else []):
+            metadata = match.get("metadata", {}) if isinstance(match, dict) else {}
             text = metadata.get("text", "")
             if text:
                 context_parts.append(text)

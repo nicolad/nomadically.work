@@ -138,7 +138,7 @@ export function UserPreferences() {
           )}
 
           {!settingsLoading && !hasPreferences && (
-            <Text size="1" style={{ color: "var(--gray-9)" }}>
+            <Text size="1" color="gray">
               no preferences set — add locations or skills to filter jobs
             </Text>
           )}

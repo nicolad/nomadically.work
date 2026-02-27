@@ -800,6 +800,7 @@ export type Mutation = {
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyConceptExplanation: StudyConceptExplanation;
+  generateStudyDeepDive: StudyTopic;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
@@ -960,6 +961,12 @@ export type MutationGenerateResearchArgs = {
 export type MutationGenerateStudyConceptExplanationArgs = {
   context?: InputMaybe<Scalars['String']['input']>;
   selectedText: Scalars['String']['input'];
+  studyTopicId: Scalars['ID']['input'];
+};
+
+
+export type MutationGenerateStudyDeepDiveArgs = {
+  force?: InputMaybe<Scalars['Boolean']['input']>;
   studyTopicId: Scalars['ID']['input'];
 };
 
@@ -1496,6 +1503,7 @@ export type StudyTopic = {
   bodyMd: Maybe<Scalars['String']['output']>;
   category: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
+  deepDive: Maybe<Scalars['String']['output']>;
   difficulty: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   summary: Maybe<Scalars['String']['output']>;

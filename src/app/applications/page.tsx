@@ -19,9 +19,10 @@ import {
   PlusIcon,
   DotsHorizontalIcon,
   ArrowRightIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
 } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   useCreateApplicationMutation,
   useGetApplicationsQuery,
@@ -47,15 +48,6 @@ const NEXT_STATUS: Partial<Record<ApplicationStatus, ApplicationStatus>> = {
   reviewed:  "accepted",
 };
 
-function companyInitials(name: string): string {
-  return name
-    .split(/[\s\-_.]/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -65,123 +57,197 @@ function formatDate(iso: string) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Applications List
+// Pipeline Funnel Bar
 // ──────────────────────────────────────────────────────────────────────────────
-function ApplicationsList({
-  apps,
+function PipelineFunnel({ apps }: { apps: Application[] }) {
+  const counts = Object.fromEntries(COLUMNS.map((c) => [c.status, 0])) as Record<ApplicationStatus, number>;
+  for (const app of apps) {
+    if (counts[app.status] !== undefined) counts[app.status]++;
+  }
+
+  return (
+    <Flex gap="2" mb="5" wrap="wrap">
+      {COLUMNS.map((col, i) => (
+        <Flex key={col.status} align="center" gap="2">
+          <Flex
+            align="center"
+            gap="2"
+            px="3"
+            py="2"
+            style={{
+              borderRadius: 8,
+              backgroundColor: counts[col.status] > 0 ? `var(--${col.color}-3)` : "var(--gray-2)",
+              border: `1px solid var(--${col.color}-6)`,
+              opacity: counts[col.status] > 0 ? 1 : 0.5,
+            }}
+          >
+            <Text size="2" weight="medium" color={counts[col.status] > 0 ? col.color : "gray"}>
+              {col.label}
+            </Text>
+            <Badge color={counts[col.status] > 0 ? col.color : "gray"} variant="solid" size="1" radius="full">
+              {counts[col.status]}
+            </Badge>
+          </Flex>
+          {i < COLUMNS.length - 1 && (
+            <Text size="1" color="gray" style={{ opacity: 0.4 }}>›</Text>
+          )}
+        </Flex>
+      ))}
+    </Flex>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Application Row
+// ──────────────────────────────────────────────────────────────────────────────
+function ApplicationRow({
+  app,
+  index,
   onMove,
   onReject,
 }: {
-  apps: Application[];
+  app: Application;
+  index: number;
   onMove: (id: number, status: ApplicationStatus) => void;
   onReject: (id: number) => void;
 }) {
-  const router = useRouter();
+  const displayTitle = app.jobTitle ?? "Job application";
+  const nextStatus = NEXT_STATUS[app.status];
+  const nextLabel = COLUMNS.find((c) => c.status === nextStatus)?.label;
+
   return (
-    <Flex direction="column" style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
-      {apps.map((app, i) => {
-        const displayName = app.companyName ?? app.jobId;
-        const displayTitle = app.jobTitle ?? "Job application";
-        const initials = companyInitials(displayName);
-        const nextStatus = NEXT_STATUS[app.status];
-        const nextLabel = COLUMNS.find((c) => c.status === nextStatus)?.label;
-        const statusCol = COLUMNS.find((c) => c.status === app.status);
+    <Link
+      href={`/applications/${app.id}`}
+      style={{ textDecoration: "none", color: "inherit" }}
+    >
+      <Flex
+        align="center"
+        gap="3"
+        px="4"
+        py="3"
+        style={{
+          borderTop: index > 0 ? "1px solid var(--gray-5)" : undefined,
+          backgroundColor: "var(--color-surface)",
+          cursor: "pointer",
+          transition: "background-color 0.1s",
+        }}
+        className="app-row"
+      >
+        {/* Title + company */}
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
+            {displayTitle}
+          </Text>
+          <Text size="1" color="gray">
+            {app.companyName ?? "—"}{" "}· {formatDate(app.createdAt)}
+          </Text>
+        </Box>
 
-        return (
-          <Link
-            key={app.id}
-            href={`/applications/${app.id}`}
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
-          <Flex
-            align="center"
-            gap="3"
-            px="4"
-            py="3"
-            style={{
-              borderTop: i > 0 ? "1px solid var(--gray-6)" : undefined,
-              backgroundColor: "var(--color-surface)",
-              cursor: "pointer",
-            }}
-          >
-            {/* Avatar */}
-            <Box
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 6,
-                backgroundColor: "var(--accent-3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                fontWeight: 700,
-                fontSize: 11,
-                color: "var(--accent-11)",
-              }}
-            >
-              {initials}
-            </Box>
+        {/* Actions */}
+        <Box onClick={(e) => e.preventDefault()}>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              <IconButton size="1" variant="ghost" color="gray">
+                <DotsHorizontalIcon />
+              </IconButton>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content size="1">
+              {nextStatus && nextLabel && (
+                <DropdownMenu.Item onClick={() => onMove(app.id, nextStatus)}>
+                  <ArrowRightIcon />
+                  Move to {nextLabel}
+                </DropdownMenu.Item>
+              )}
+              {app.status !== "rejected" && (
+                <DropdownMenu.Item color="red" onClick={() => onReject(app.id)}>
+                  Mark Rejected
+                </DropdownMenu.Item>
+              )}
+              {app.status === "rejected" && (
+                <DropdownMenu.Item onClick={() => onMove(app.id, "pending")}>
+                  Restore to Saved
+                </DropdownMenu.Item>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        </Box>
+      </Flex>
+    </Link>
+  );
+}
 
-            {/* Company + role */}
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {displayTitle}
-              </Text>
-              <Text size="1" color="gray">
-                {app.companyKey ? (
-                  <Box
-                    display="inline"
-                    onClick={(e) => { e.preventDefault(); router.push(`/companies/${app.companyKey!}`); }}
-                    style={{ textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer" }}
-                  >
-                    {app.companyName ?? "—"}
-                  </Box>
-                ) : (
-                  app.companyName ?? "—"
-                )}{" "}
-                · {formatDate(app.createdAt)}
-              </Text>
-            </Box>
+// ──────────────────────────────────────────────────────────────────────────────
+// Status Section (collapsible group)
+// ──────────────────────────────────────────────────────────────────────────────
+function StatusSection({
+  column,
+  apps,
+  onMove,
+  onReject,
+  defaultOpen = true,
+}: {
+  column: (typeof COLUMNS)[number];
+  apps: Application[];
+  onMove: (id: number, status: ApplicationStatus) => void;
+  onReject: (id: number) => void;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
 
-            {/* Status badge */}
-            <Badge color={statusCol?.color ?? "gray"} variant="soft" size="1" style={{ flexShrink: 0 }}>
-              {statusCol?.label ?? app.status}
-            </Badge>
+  return (
+    <Box mb="3">
+      {/* Section header */}
+      <Flex
+        align="center"
+        gap="2"
+        px="3"
+        py="2"
+        onClick={() => setOpen((v) => !v)}
+        style={{ cursor: "pointer", userSelect: "none" }}
+      >
+        <Box style={{ color: "var(--gray-9)", flexShrink: 0 }}>
+          {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
+        </Box>
+        <Badge color={column.color} variant="soft" size="2">
+          {column.label}
+        </Badge>
+        <Text size="1" color="gray">
+          {apps.length} {apps.length === 1 ? "application" : "applications"}
+        </Text>
+      </Flex>
 
-            {/* Actions */}
-            <Box onClick={(e) => e.preventDefault()}>
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger>
-                <IconButton size="1" variant="ghost" color="gray">
-                  <DotsHorizontalIcon />
-                </IconButton>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content size="1">
-                {nextStatus && nextLabel && (
-                  <DropdownMenu.Item onClick={() => onMove(app.id, nextStatus)}>
-                    <ArrowRightIcon />
-                    Move to {nextLabel}
-                  </DropdownMenu.Item>
-                )}
-                {app.status !== "rejected" && (
-                  <DropdownMenu.Item color="red" onClick={() => onReject(app.id)}>
-                    Mark Rejected
-                  </DropdownMenu.Item>
-                )}
-                {app.status === "rejected" && (
-                  <DropdownMenu.Item onClick={() => onMove(app.id, "pending")}>
-                    Restore to Saved
-                  </DropdownMenu.Item>
-                )}
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
-            </Box>
-          </Flex>
-          </Link>
-        );
-      })}
-    </Flex>
+      {/* Rows */}
+      {open && apps.length > 0 && (
+        <Box style={{ border: "1px solid var(--gray-5)", borderRadius: 8, overflow: "hidden", ml: 6 }}>
+          {apps.map((app, i) => (
+            <ApplicationRow
+              key={app.id}
+              app={app}
+              index={i}
+              onMove={onMove}
+              onReject={onReject}
+            />
+          ))}
+        </Box>
+      )}
+
+      {open && apps.length === 0 && (
+        <Flex
+          align="center"
+          justify="center"
+          py="4"
+          style={{
+            border: "1px dashed var(--gray-5)",
+            borderRadius: 8,
+            backgroundColor: "var(--gray-1)",
+          }}
+        >
+          <Text size="1" color="gray">
+            Nothing here yet
+          </Text>
+        </Flex>
+      )}
+    </Box>
   );
 }
 
@@ -328,10 +394,14 @@ export default function ApplicationsPage() {
   const total = apps.length;
   const activeCount = apps.filter((a) => a.status !== "rejected").length;
 
+  const byStatus = Object.fromEntries(
+    COLUMNS.map((c) => [c.status, apps.filter((a) => a.status === c.status)])
+  ) as Record<ApplicationStatus, Application[]>;
+
   return (
     <Container size="4" p={{ initial: "4", md: "8" }}>
       {/* Header */}
-      <Flex justify="between" align="center" mb="6" wrap="wrap" gap="3">
+      <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
         <Box>
           <Heading size="8" mb="1">
             Application Pipeline
@@ -342,13 +412,11 @@ export default function ApplicationsPage() {
             </Text>
           )}
         </Box>
-        <Flex gap="2" align="center">
-          <Button size="2" variant="soft" color="gray" asChild>
-            <Link href="/">Browse Jobs</Link>
-          </Button>
-          <AddApplicationDialog onCreated={() => refetch()} />
-        </Flex>
+        <AddApplicationDialog onCreated={() => refetch()} />
       </Flex>
+
+      {/* Pipeline funnel */}
+      {!loading && total > 0 && <PipelineFunnel apps={apps} />}
 
       {/* Loading */}
       {loading && (
@@ -377,13 +445,20 @@ export default function ApplicationsPage() {
         </Card>
       )}
 
-      {/* Applications list */}
+      {/* Grouped sections */}
       {!loading && total > 0 && (
-        <ApplicationsList
-          apps={apps}
-          onMove={handleMove}
-          onReject={handleReject}
-        />
+        <Box>
+          {COLUMNS.map((col) => (
+            <StatusSection
+              key={col.status}
+              column={col}
+              apps={byStatus[col.status] ?? []}
+              onMove={handleMove}
+              onReject={handleReject}
+              defaultOpen={col.status !== "rejected"}
+            />
+          ))}
+        </Box>
       )}
     </Container>
   );

@@ -803,6 +803,7 @@ export type Mutation = {
   generateRequirementFromSelection: Application;
   generateResearch: Array<ResearchItem>;
   generateStudyConceptExplanation: StudyConceptExplanation;
+  generateStudyDeepDive: StudyTopic;
   generateStudyTopicDeepDive: Application;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
@@ -963,6 +964,12 @@ export type MutationGenerateResearchArgs = {
 export type MutationGenerateStudyConceptExplanationArgs = {
   context?: InputMaybe<Scalars['String']['input']>;
   selectedText: Scalars['String']['input'];
+  studyTopicId: Scalars['ID']['input'];
+};
+
+
+export type MutationGenerateStudyDeepDiveArgs = {
+  force?: InputMaybe<Scalars['Boolean']['input']>;
   studyTopicId: Scalars['ID']['input'];
 };
 
@@ -1499,6 +1506,7 @@ export type StudyTopic = {
   bodyMd: Maybe<Scalars['String']['output']>;
   category: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
+  deepDive: Maybe<Scalars['String']['output']>;
   difficulty: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   summary: Maybe<Scalars['String']['output']>;
@@ -2155,7 +2163,7 @@ export type StudyTopicQueryVariables = Exact<{
 }>;
 
 
-export type StudyTopicQuery = { __typename?: 'Query', studyTopic: { __typename?: 'StudyTopic', id: string, category: string, topic: string, title: string, summary: string | null, bodyMd: string | null, difficulty: string, tags: Array<string>, createdAt: string } | null };
+export type StudyTopicQuery = { __typename?: 'Query', studyTopic: { __typename?: 'StudyTopic', id: string, category: string, topic: string, title: string, summary: string | null, bodyMd: string | null, deepDive: string | null, difficulty: string, tags: Array<string>, createdAt: string } | null };
 
 export type StudyTopicsQueryVariables = Exact<{
   category: Scalars['String']['input'];
@@ -2172,6 +2180,14 @@ export type GenerateStudyConceptExplanationMutationVariables = Exact<{
 
 
 export type GenerateStudyConceptExplanationMutation = { __typename?: 'Mutation', generateStudyConceptExplanation: { __typename?: 'StudyConceptExplanation', id: string, selectedText: string, explanation: string, createdAt: string } };
+
+export type GenerateStudyDeepDiveMutationVariables = Exact<{
+  studyTopicId: Scalars['ID']['input'];
+  force?: InputMaybe<Scalars['Boolean']['input']>;
+}>;
+
+
+export type GenerateStudyDeepDiveMutation = { __typename?: 'Mutation', generateStudyDeepDive: { __typename?: 'StudyTopic', id: string, deepDive: string | null } };
 
 export type GenerateResearchMutationVariables = Exact<{
   goalDescription: Scalars['String']['input'];
@@ -5596,6 +5612,7 @@ export const StudyTopicDocument = gql`
     title
     summary
     bodyMd
+    deepDive
     difficulty
     tags
     createdAt
@@ -5729,6 +5746,41 @@ export function useGenerateStudyConceptExplanationMutation(baseOptions?: Apollo.
 export type GenerateStudyConceptExplanationMutationHookResult = ReturnType<typeof useGenerateStudyConceptExplanationMutation>;
 export type GenerateStudyConceptExplanationMutationResult = Apollo.MutationResult<GenerateStudyConceptExplanationMutation>;
 export type GenerateStudyConceptExplanationMutationOptions = Apollo.BaseMutationOptions<GenerateStudyConceptExplanationMutation, GenerateStudyConceptExplanationMutationVariables>;
+export const GenerateStudyDeepDiveDocument = gql`
+    mutation GenerateStudyDeepDive($studyTopicId: ID!, $force: Boolean) {
+  generateStudyDeepDive(studyTopicId: $studyTopicId, force: $force) {
+    id
+    deepDive
+  }
+}
+    `;
+export type GenerateStudyDeepDiveMutationFn = Apollo.MutationFunction<GenerateStudyDeepDiveMutation, GenerateStudyDeepDiveMutationVariables>;
+
+/**
+ * __useGenerateStudyDeepDiveMutation__
+ *
+ * To run a mutation, you first call `useGenerateStudyDeepDiveMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateStudyDeepDiveMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateStudyDeepDiveMutation, { data, loading, error }] = useGenerateStudyDeepDiveMutation({
+ *   variables: {
+ *      studyTopicId: // value for 'studyTopicId'
+ *      force: // value for 'force'
+ *   },
+ * });
+ */
+export function useGenerateStudyDeepDiveMutation(baseOptions?: Apollo.MutationHookOptions<GenerateStudyDeepDiveMutation, GenerateStudyDeepDiveMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateStudyDeepDiveMutation, GenerateStudyDeepDiveMutationVariables>(GenerateStudyDeepDiveDocument, options);
+      }
+export type GenerateStudyDeepDiveMutationHookResult = ReturnType<typeof useGenerateStudyDeepDiveMutation>;
+export type GenerateStudyDeepDiveMutationResult = Apollo.MutationResult<GenerateStudyDeepDiveMutation>;
+export type GenerateStudyDeepDiveMutationOptions = Apollo.BaseMutationOptions<GenerateStudyDeepDiveMutation, GenerateStudyDeepDiveMutationVariables>;
 export const GenerateResearchDocument = gql`
     mutation GenerateResearch($goalDescription: String!) {
   generateResearch(goalDescription: $goalDescription) {

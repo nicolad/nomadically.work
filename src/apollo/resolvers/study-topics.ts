@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { studyTopics, studyConceptExplanations } from "@/db/schema";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { createDeepSeekClient, DEEPSEEK_MODELS } from "@/deepseek";
 
 async function sha256Hex(input: string): Promise<string> {
   const encoded = new TextEncoder().encode(input);
@@ -132,6 +133,67 @@ Explain the selected excerpt clearly and concisely in the context of this topic.
 
       return mapExplanation(row!);
     },
+
+    generateStudyDeepDive: async (
+      _: unknown,
+      args: { studyTopicId: string; force?: boolean },
+      context: GraphQLContext,
+    ) => {
+      if (!context.userId) throw new Error("Forbidden");
+
+      const topicId = parseInt(args.studyTopicId, 10);
+      const [topic] = await context.db
+        .select()
+        .from(studyTopics)
+        .where(eq(studyTopics.id, topicId))
+        .limit(1);
+      if (!topic) throw new Error("Study topic not found");
+
+      if (topic.deep_dive_md && !args.force) return topic;
+
+      const client = createDeepSeekClient();
+      const response = await client.chat({
+        model: DEEPSEEK_MODELS.REASONER,
+        messages: [
+          {
+            role: "user",
+            content: `You are a senior staff engineer and technical interview coach. Generate a focused, technically rigorous deep dive on a study topic for a software engineer preparing for interviews.
+
+Topic: "${topic.title}" (${topic.category}, ${topic.difficulty})
+
+${topic.body_md ? `Existing content summary:\n${topic.body_md.slice(0, 1000)}\n\n` : ""}Write a technically rigorous deep dive in markdown. Go beyond definitions into mechanisms, trade-offs, and concrete examples. Structure it with these sections:
+
+## What It Actually Is
+The precise technical definition and mechanism. No hand-waving. Include how it works internally where relevant.
+
+## When It Matters (and When It Doesn't)
+Concrete scenarios where this concept is load-bearing. Name real systems and explain how they handle this.
+
+## How to Talk About It in an Interview
+The exact reasoning pattern a senior engineer uses: state your constraints, name the trade-offs, give a concrete recommendation with justification.
+
+## The Trap Answers
+What mid-level engineers say that reveals shallow understanding. Be blunt.
+
+## One Concrete Example
+A real production scenario where this concept was the crux. What happened, why, and what to learn from it.`,
+          },
+        ],
+        max_tokens: 2500,
+      });
+
+      const deepDive = response.choices[0]?.message?.content;
+
+      if (!deepDive) throw new Error("Empty response from AI");
+
+      const [updated] = await context.db
+        .update(studyTopics)
+        .set({ deep_dive_md: deepDive, updated_at: new Date().toISOString() })
+        .where(eq(studyTopics.id, topicId))
+        .returning();
+
+      return updated!;
+    },
   },
 
   StudyTopic: {
@@ -145,6 +207,9 @@ Explain the selected excerpt clearly and concisely in the context of this topic.
     },
     bodyMd(parent: { body_md: string | null }) {
       return parent.body_md ?? null;
+    },
+    deepDive(parent: { deep_dive_md: string | null }) {
+      return parent.deep_dive_md ?? null;
     },
     createdAt(parent: { created_at: string }) {
       return parent.created_at;

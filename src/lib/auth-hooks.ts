@@ -33,13 +33,24 @@ export interface AuthContext {
 export function useAuth(): AuthContext {
   const { isLoaded, isSignedIn, user } = useUser();
 
-  // Dev-only: allow bypassing Clerk with NEXT_PUBLIC_PLAYWRIGHT_EMAIL
+  // Dev bypass: if ADMIN_EMAIL is set in dev, use it immediately (don't wait for Clerk)
   const devEmail =
     process.env.NODE_ENV === "development"
-      ? process.env.NEXT_PUBLIC_PLAYWRIGHT_EMAIL
+      ? process.env.NEXT_PUBLIC_ADMIN_EMAIL
       : undefined;
 
-  if (!isLoaded && !devEmail) {
+  if (!isLoaded) {
+    // In dev with ADMIN_EMAIL, skip the loading state entirely
+    if (devEmail) {
+      const devUser = { id: "dev-local", email: devEmail, name: "Dev", emailVerified: true };
+      return {
+        user: devUser,
+        session: { user: devUser },
+        isAuthenticated: true,
+        loading: false,
+        error: null,
+      };
+    }
     return {
       user: null,
       session: null,
@@ -49,25 +60,22 @@ export function useAuth(): AuthContext {
     };
   }
 
-  const usingDevBypass = !!(devEmail && !isSignedIn);
-
-  const mappedUser =
-    devEmail && !isSignedIn
-      ? { id: "dev", email: devEmail, name: "Dev User", emailVerified: true }
-      : user
-        ? {
-            id: user.id,
-            email: user.primaryEmailAddress?.emailAddress?.toLowerCase(),
-            name: user.fullName || user.username,
-            emailVerified:
-              user.primaryEmailAddress?.verification.status === "verified",
-          }
-        : null;
+  const mappedUser = user
+    ? {
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress?.toLowerCase(),
+        name: user.fullName || user.username,
+        emailVerified:
+          user.primaryEmailAddress?.verification.status === "verified",
+      }
+    : devEmail
+      ? { id: "dev-local", email: devEmail, name: "Dev", emailVerified: true }
+      : null;
 
   return {
     user: mappedUser,
     session: mappedUser ? { user: mappedUser } : null,
-    isAuthenticated: isSignedIn || usingDevBypass,
+    isAuthenticated: !!isSignedIn || !!mappedUser,
     loading: false,
     error: null,
   };

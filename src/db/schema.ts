@@ -628,6 +628,7 @@ export const studyTopics = sqliteTable("study_topics", {
     enum: ["beginner", "intermediate", "advanced"],
   }).notNull().default("intermediate"),
   tags: text("tags"), // JSON array of strings
+  deep_dive_md: text("deep_dive_md"),
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

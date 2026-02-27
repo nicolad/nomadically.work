@@ -31,21 +31,20 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: C.primary,
     backgroundColor: C.white,
-    paddingTop: 28,
-    paddingBottom: 28,
-    paddingHorizontal: 32,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingHorizontal: 28,
     lineHeight: 1.45,
   },
 
   /* Header */
-  header: { marginBottom: 12, paddingBottom: 8, borderBottom: `2pt solid ${C.primary}` },
-  name: { fontSize: 22, fontFamily: "Helvetica-Bold", letterSpacing: -0.3 },
-  label: { fontSize: 12, color: C.secondary, marginTop: 1, marginBottom: 5 },
-  contact: { flexDirection: "row", flexWrap: "wrap", gap: 8, fontSize: 9, color: C.secondary },
-  contactLink: { color: C.accent, textDecoration: "none" },
-
-  /* Key skills banner */
-  keySkills: { fontSize: 9, color: C.secondary, marginBottom: 8, paddingBottom: 6, borderBottom: `0.5pt solid ${C.border}` },
+  header: { marginBottom: 6, paddingBottom: 6, borderBottom: `2pt solid ${C.primary}`, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  headerLeft: {},
+  headerRight: { alignItems: "flex-end", justifyContent: "center", gap: 2 },
+  name: { fontSize: 22, fontFamily: "Helvetica-Bold", letterSpacing: -0.3, lineHeight: 1.2, marginBottom: 2 },
+  label: { fontSize: 12, color: C.secondary, lineHeight: 1.2 },
+  contactItem: { fontSize: 8.5, color: C.secondary, textAlign: "right" as const },
+  contactLink: { fontSize: 8.5, color: C.accent, textDecoration: "none", textAlign: "right" as const },
 
   /* Summary */
   summary: { fontSize: 9, lineHeight: 1.5, marginBottom: 6 },
@@ -58,8 +57,8 @@ const s = StyleSheet.create({
     letterSpacing: 0.8,
     borderBottom: `0.5pt solid ${C.border}`,
     paddingBottom: 3,
-    marginBottom: 6,
-    marginTop: 8,
+    marginBottom: 5,
+    marginTop: 6,
   },
 
   /* Skills — inline rows */
@@ -149,11 +148,13 @@ function ResumeDocument({ data }: { data: typeof resumeData }) {
       <Page size="A4" style={s.page}>
         {/* Header */}
         <View style={s.header}>
-          <Text style={s.name}>{basics.name}</Text>
-          <Text style={s.label}>{basics.label}</Text>
-          <View style={s.contact}>
-            <Text>{basics.email}</Text>
-            <Text>{basics.phone}</Text>
+          <View style={s.headerLeft}>
+            <Text style={s.name}>{basics.name}</Text>
+            <Text style={s.label}>{basics.label}</Text>
+          </View>
+          <View style={s.headerRight}>
+            <Text style={s.contactItem}>{basics.email}</Text>
+            <Text style={s.contactItem}>{basics.phone}</Text>
             {basics.profiles.map((p) => (
               <Link key={p.network} src={p.url} style={s.contactLink}>
                 {p.network === "github" ? "GitHub" : "LinkedIn"}: {p.username}
@@ -166,9 +167,6 @@ function ResumeDocument({ data }: { data: typeof resumeData }) {
             )}
           </View>
         </View>
-
-        {/* Key Skills */}
-        {basics.keySkills && <Text style={s.keySkills}>{basics.keySkills}</Text>}
 
         {/* Summary */}
         <Text style={s.sectionTitle}>Summary</Text>

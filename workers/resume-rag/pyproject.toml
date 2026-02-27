@@ -5,10 +5,10 @@ description = "Cloudflare Python Worker for Resume RAG with Vectorize + LlamaPar
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "webtypy>=0.1.7",
-    # NOTE: Do NOT include pydantic or langchain — they pull in pydantic_core
-    # (a 4 MB WASM binary that pushes the worker over the 3 MiB size limit).
-    # Use Pyodide's built-in modules and direct Workers AI binding calls instead.
+    # NOTE: No runtime deps needed — the worker uses only built-in Pyodide
+    # modules (js, pyodide.ffi) and the Cloudflare Workers runtime (workers).
+    # webtypy is dev-only (IDE type hints). Do NOT add pydantic or langchain —
+    # they pull in pydantic_core (4 MB WASM) and blow past the 3 MiB limit.
 ]
 
 [dependency-groups]

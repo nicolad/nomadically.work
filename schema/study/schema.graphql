@@ -5,6 +5,7 @@ type StudyTopic {
   title: String!
   summary: String
   bodyMd: String
+  deepDive: String
   difficulty: String!
   tags: [String!]!
   createdAt: DateTime!
@@ -28,4 +29,8 @@ extend type Mutation {
     selectedText: String!
     context: String
   ): StudyConceptExplanation!
+  generateStudyDeepDive(
+    studyTopicId: ID!
+    force: Boolean
+  ): StudyTopic!
 }

@@ -5,7 +5,7 @@
   "compatibility_flags": ["python_workers"],
   // Cron trigger — runs every 6 hours (same schedule as old classify-jobs worker)
   "triggers": {
-    "crons": ["0 */6 * * *"]
+    "crons": ["0 * * * *"]
   },
   "ai": {
     "binding": "AI",

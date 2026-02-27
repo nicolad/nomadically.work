@@ -83,6 +83,12 @@ export const jobs = sqliteTable("jobs", {
   }),
   remote_eu_reason: text("remote_eu_reason"),
 
+  // Role classification
+  role_ai_engineer: integer("role_ai_engineer", { mode: "boolean" }),
+  role_confidence: text("role_confidence", { enum: ["high", "medium", "low"] }),
+  role_reason: text("role_reason"),
+  role_source: text("role_source"),
+
   // Enhanced ATS data (JSON fields)
   ats_data: text("ats_data"), // Full JSON response from ATS API
 
@@ -114,6 +120,12 @@ export const jobs = sqliteTable("jobs", {
   ashby_secondary_locations: text("ashby_secondary_locations"), // JSON array
   ashby_compensation: text("ashby_compensation"), // JSON object
   ashby_address: text("ashby_address"), // JSON object
+
+  // Classification-critical ATS columns (restored — dropped by 0004_nifty_northstar.sql)
+  country: text("country"),
+  workplace_type: text("workplace_type"),
+  categories: text("categories"),       // JSON object (Lever categories / Ashby aggregated)
+  ats_created_at: text("ats_created_at"),
 
   // Report pipeline columns (written by job-reporter-llm worker)
   report_reason: text("report_reason"),

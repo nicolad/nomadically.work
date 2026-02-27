@@ -770,8 +770,9 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
                 print("   ⏩ Advanced to 'enhanced' despite ATS error")
             except Exception as advance_err:
                 print(f"   ⚠️  Could not advance status: {advance_err}")
-        # Pace to avoid ATS rate-limits (Lever: 2 req/sec)
-        await sleep_ms(300)
+        # Pace to avoid ATS rate-limits (Lever: 2 req/sec, Greenhouse: generous)
+        delay = 300 if job.get("source_kind") == "lever" else 100
+        await sleep_ms(delay)
 
     print(
         f"✅ Enhancement complete: {stats['enhanced']} enhanced, "

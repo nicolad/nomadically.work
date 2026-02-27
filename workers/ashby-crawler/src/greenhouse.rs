@@ -258,3 +258,22 @@ pub async fn upsert_greenhouse_jobs_to_d1(
 
     Ok(count)
 }
+
+/// Fetch a single Greenhouse job by board token and job-post ID.
+/// Endpoint includes ?questions=true for full metadata.
+pub async fn fetch_greenhouse_single_job(token: &str, job_post_id: &str) -> Result<GreenhouseJob> {
+    let url = format!(
+        "https://boards-api.greenhouse.io/v1/boards/{}/jobs/{}?questions=true",
+        token, job_post_id
+    );
+    let mut resp = Fetch::Request(Request::new(&url, Method::Get)?).send().await?;
+    let status = resp.status_code();
+    if status != 200 {
+        return Err(Error::RustError(format!(
+            "Greenhouse API returned {} for job {}/{}", status, token, job_post_id
+        )));
+    }
+    let text = resp.text().await?;
+    serde_json::from_str::<GreenhouseJob>(&text)
+        .map_err(|e| Error::RustError(format!("greenhouse single-job parse error for {}/{}: {}", token, job_post_id, e)))
+}

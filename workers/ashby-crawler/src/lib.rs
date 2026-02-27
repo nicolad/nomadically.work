@@ -13,6 +13,7 @@ mod tools;
 mod ashby;
 mod greenhouse;
 mod workable;
+mod lever;
 
 use types::{AtsProvider, ApiResponse, DiscoveredBoard, error_response};
 
@@ -742,6 +743,425 @@ async fn handle_seed(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     })))
 }
 
+// ── URL parsers for ATS external_ids ────────────────────────────────────────
+
+/// Parse Greenhouse external_id → (board_token, job_post_id)
+/// Handles: https://job-boards.greenhouse.io/{token}/jobs/{id}
+///          https://boards.greenhouse.io/{token}/jobs/{id}
+fn parse_greenhouse_url(external_id: &str) -> Option<(String, String)> {
+    let after = external_id.find("greenhouse.io/")
+        .map(|i| &external_id[i + "greenhouse.io/".len()..])?;
+    let jobs_pos = after.find("/jobs/")?;
+    let board_token = &after[..jobs_pos];
+    let rest = &after[jobs_pos + "/jobs/".len()..];
+    let job_post_id = rest.split(|c| c == '?' || c == '#').next().unwrap_or(rest);
+    if board_token.is_empty() || job_post_id.is_empty() {
+        return None;
+    }
+    Some((board_token.to_string(), job_post_id.to_string()))
+}
+
+/// Parse Lever external_id → (site, posting_id)
+/// Handles: https://jobs.lever.co/{site}/{posting_id}
+fn parse_lever_url(external_id: &str) -> Option<(String, String)> {
+    let after = external_id.find("lever.co/")
+        .map(|i| &external_id[i + "lever.co/".len()..])?;
+    let slash = after.find('/')?;
+    let site = &after[..slash];
+    let rest = &after[slash + 1..];
+    let posting_id = rest.split(|c| c == '?' || c == '#').next().unwrap_or(rest);
+    if site.is_empty() || posting_id.is_empty() {
+        return None;
+    }
+    Some((site.to_string(), posting_id.to_string()))
+}
+
+/// Parse Ashby external_id → (board_name, job_id)
+/// Handles: https://jobs.ashbyhq.com/{board}/{job_id}
+///          bare UUID (uses company_key as board_name)
+fn parse_ashby_url(external_id: &str, company_key: &str) -> Option<(String, String)> {
+    if let Some(after) = external_id.find("ashbyhq.com/")
+        .map(|i| &external_id[i + "ashbyhq.com/".len()..])
+    {
+        if let Some(slash) = after.find('/') {
+            let board = &after[..slash];
+            let rest = &after[slash + 1..];
+            let job_id = rest.split(|c| c == '?' || c == '#').next().unwrap_or(rest);
+            if !board.is_empty() && !job_id.is_empty() {
+                return Some((board.to_string(), job_id.to_string()));
+            }
+        }
+    }
+    // Bare UUID fallback
+    if !external_id.starts_with("http") && !company_key.is_empty() {
+        return Some((company_key.to_string(), external_id.to_string()));
+    }
+    None
+}
+
+// ── /enhance-batch handler ───────────────────────────────────────────────────
+
+/// Format Unix milliseconds as ISO 8601 UTC string (no chrono dependency).
+fn format_unix_ms(ms: i64) -> String {
+    let secs  = ms / 1000;
+    let extra_ms = (ms % 1000).unsigned_abs();
+    let s = secs % 60;
+    let m = (secs / 60) % 60;
+    let h = (secs / 3600) % 24;
+    let days = secs / 86400;
+    let (year, month, day) = days_to_ymd(days);
+    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z", year, month, day, h, m, s, extra_ms)
+}
+
+fn days_to_ymd(days: i64) -> (i64, i64, i64) {
+    // Algorithm from https://howardhinnant.github.io/date_algorithms.html
+    let z = days + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365*yoe + yoe/4 - yoe/100);
+    let mp = (5*doy + 2) / 153;
+    let d = doy - (153*mp + 2)/5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    (y, m, d)
+}
+
+/// POST /enhance-batch
+///
+/// Accepts a batch of job specs, fetches each from its ATS API **in parallel**
+/// using `join_all`, then writes results directly to D1 and sets status='enhanced'.
+///
+/// Request body: { "jobs": [{ "id": i64, "source_kind": str, "external_id": str, "company_key": str }] }
+/// Response:     { "enhanced": N, "errors": N, "results": [{id, ok, error?}] }
+async fn handle_enhance_batch(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db = ctx.env.d1("DB")?;
+
+    let body_text = req.text().await?;
+    let body: serde_json::Value = serde_json::from_str(&body_text)
+        .map_err(|e| Error::RustError(format!("invalid JSON: {}", e)))?;
+
+    let jobs_arr = match body.get("jobs").and_then(|v| v.as_array()) {
+        Some(j) => j.clone(),
+        None => return error_response("jobs array required"),
+    };
+
+    struct JobSpec {
+        id: i64,
+        source_kind: String,
+        external_id: String,
+        company_key: String,
+    }
+
+    let specs: Vec<JobSpec> = jobs_arr.iter().filter_map(|j| {
+        let id = j.get("id")?.as_i64()?;
+        let source_kind = j.get("source_kind")?.as_str()?.to_string();
+        let external_id = j.get("external_id")?.as_str()?.to_string();
+        let company_key = j.get("company_key").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        Some(JobSpec { id, source_kind, external_id, company_key })
+    }).collect();
+
+    enum FetchResult {
+        Ashby(ashby::AshbyJobPosting, String),   // posting + board_name
+        Greenhouse(greenhouse::GreenhouseJob),
+        Lever(lever::LeverPosting),
+        Err(String),
+    }
+
+    // Spawn all ATS fetches in parallel
+    let fetch_futures: Vec<_> = specs.iter().map(|spec| {
+        let kind   = spec.source_kind.clone();
+        let eid    = spec.external_id.clone();
+        let ck     = spec.company_key.clone();
+        async move {
+            match kind.as_str() {
+                "ashby" => match parse_ashby_url(&eid, &ck) {
+                    Some((board, job_id)) => {
+                        match ashby::fetch_ashby_single_job(&board, &job_id).await {
+                            Ok(p)  => FetchResult::Ashby(p, board),
+                            Err(e) => FetchResult::Err(format!("{:?}", e)),
+                        }
+                    }
+                    None => FetchResult::Err(format!("cannot parse Ashby URL: {}", eid)),
+                },
+                "greenhouse" => match parse_greenhouse_url(&eid) {
+                    Some((token, job_post_id)) => {
+                        match greenhouse::fetch_greenhouse_single_job(&token, &job_post_id).await {
+                            Ok(j)  => FetchResult::Greenhouse(j),
+                            Err(e) => FetchResult::Err(format!("{:?}", e)),
+                        }
+                    }
+                    None => FetchResult::Err(format!("cannot parse Greenhouse URL: {}", eid)),
+                },
+                "lever" => match parse_lever_url(&eid) {
+                    Some((site, posting_id)) => {
+                        match lever::fetch_lever_single_job(&site, &posting_id).await {
+                            Ok(p)  => FetchResult::Lever(p),
+                            Err(e) => FetchResult::Err(format!("{:?}", e)),
+                        }
+                    }
+                    None => FetchResult::Err(format!("cannot parse Lever URL: {}", eid)),
+                },
+                _ => FetchResult::Err(format!("unsupported source_kind: {}", kind)),
+            }
+        }
+    }).collect();
+
+    let fetched: Vec<FetchResult> = join_all(fetch_futures).await;
+
+    // Write to D1 — one UPDATE per job
+    let mut result_items: Vec<serde_json::Value> = Vec::with_capacity(specs.len());
+    let mut n_enhanced = 0u32;
+    let mut n_errors   = 0u32;
+
+    for (spec, fetch_result) in specs.iter().zip(fetched.iter()) {
+        let db_result: Result<()> = match fetch_result {
+            FetchResult::Ashby(posting, board_name) => {
+                let description = posting.description_html.as_deref()
+                    .or(posting.description_plain.as_deref()).unwrap_or("");
+                let location = posting.location_name.as_deref()
+                    .or(posting.location.as_deref()).unwrap_or("");
+                let workplace_type = match posting.is_remote {
+                    Some(true)  => "remote",
+                    Some(false) => "office",
+                    None        => "",
+                };
+                let published_at = posting.published_at.as_deref().unwrap_or("");
+                let url_val = posting.job_url.as_deref().or(posting.apply_url.as_deref()).unwrap_or("");
+                let department  = posting.department.as_deref().unwrap_or("");
+                let team        = posting.team.as_deref().unwrap_or("");
+                let emp_type    = posting.employment_type.as_deref().unwrap_or("");
+                let job_url     = posting.job_url.as_deref().unwrap_or("");
+                let apply_url   = posting.apply_url.as_deref().unwrap_or("");
+                let is_remote_val = posting.is_remote.map(|v| if v { 1i64 } else { 0i64 });
+                let is_listed_val = posting.is_listed.map(|v| if v { 1i64 } else { 0i64 });
+
+                let sec_locs_json = posting.secondary_locations.as_ref()
+                    .map(|locs| serde_json::to_string(&locs.iter().map(|l| serde_json::json!({
+                        "location": l.location, "address": l.address
+                    })).collect::<Vec<_>>()).unwrap_or_default())
+                    .unwrap_or_default();
+                let comp_json = posting.compensation.as_ref()
+                    .map(|c| serde_json::to_string(c).unwrap_or_default()).unwrap_or_default();
+                let addr_json = posting.address.as_ref()
+                    .map(|a| serde_json::to_string(a).unwrap_or_default()).unwrap_or_default();
+
+                let mut all_locs: Vec<String> = Vec::new();
+                if let Some(loc) = posting.location.as_deref() {
+                    all_locs.push(loc.to_string());
+                }
+                if let Some(secondary) = posting.secondary_locations.as_ref() {
+                    for sl in secondary {
+                        if let Some(loc) = sl.location.as_deref() {
+                            all_locs.push(loc.to_string());
+                        }
+                    }
+                }
+                let categories_json = serde_json::to_string(&serde_json::json!({
+                    "department": posting.department,
+                    "team": posting.team,
+                    "location": posting.location,
+                    "allLocations": all_locs,
+                })).unwrap_or_default();
+
+                let postal_country = posting.address.as_ref()
+                    .and_then(|a| a.get("postalAddress"))
+                    .and_then(|p| p.get("addressCountry"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or("");
+
+                let stmt = db.prepare(
+                    "UPDATE jobs SET
+                        description    = COALESCE(NULLIF(?1,''),  description),
+                        location       = COALESCE(NULLIF(?2,''),  location),
+                        workplace_type = COALESCE(NULLIF(?3,''),  workplace_type),
+                        ats_created_at = COALESCE(NULLIF(?4,''),  ats_created_at),
+                        first_published= COALESCE(NULLIF(?4,''),  first_published),
+                        url            = COALESCE(NULLIF(?5,''),  url),
+                        absolute_url   = COALESCE(NULLIF(?5,''),  absolute_url),
+                        company_name   = COALESCE(NULLIF(?6,''),  company_name),
+                        country        = COALESCE(NULLIF(?7,''),  country),
+                        ashby_department      = NULLIF(?8,''),
+                        ashby_team            = NULLIF(?9,''),
+                        ashby_employment_type = NULLIF(?10,''),
+                        ashby_is_remote       = ?11,
+                        ashby_is_listed       = ?12,
+                        ashby_published_at    = NULLIF(?4,''),
+                        ashby_job_url         = NULLIF(?13,''),
+                        ashby_apply_url       = NULLIF(?14,''),
+                        ashby_secondary_locations = NULLIF(?15,''),
+                        ashby_compensation    = NULLIF(?16,''),
+                        ashby_address         = NULLIF(?17,''),
+                        categories            = NULLIF(?18,''),
+                        status        = 'enhanced',
+                        updated_at    = datetime('now')
+                    WHERE id = ?19"
+                ).bind(&[
+                    description.into(),                                           // ?1
+                    location.into(),                                              // ?2
+                    workplace_type.into(),                                        // ?3
+                    published_at.into(),                                          // ?4
+                    url_val.into(),                                               // ?5
+                    board_name.as_str().into(),                                   // ?6 company_name = board slug
+                    postal_country.into(),                                        // ?7
+                    department.into(),                                            // ?8
+                    team.into(),                                                  // ?9
+                    emp_type.into(),                                              // ?10
+                    is_remote_val.map(|v| JsValue::from_f64(v as f64))
+                        .unwrap_or(JsValue::NULL),                               // ?11
+                    is_listed_val.map(|v| JsValue::from_f64(v as f64))
+                        .unwrap_or(JsValue::NULL),                               // ?12
+                    job_url.into(),                                               // ?13
+                    apply_url.into(),                                             // ?14
+                    sec_locs_json.into(),                                         // ?15
+                    comp_json.into(),                                             // ?16
+                    addr_json.into(),                                             // ?17
+                    categories_json.into(),                                       // ?18
+                    JsValue::from_f64(spec.id as f64),                           // ?19
+                ])?;
+                stmt.run().await.map(|_| ())
+                    .map_err(|e| Error::RustError(format!("D1 write error: {:?}", e)))
+            }
+
+            FetchResult::Greenhouse(job) => {
+                let description = job.content.as_deref().unwrap_or("");
+                let location = job.location.as_ref()
+                    .and_then(|l| l.name.as_deref()).unwrap_or("");
+                let absolute_url = job.absolute_url.as_deref().unwrap_or("");
+                let updated_at = job.updated_at.as_deref().unwrap_or("");
+                let departments_json = job.departments.as_ref()
+                    .map(|d| serde_json::to_string(d).unwrap_or_default()).unwrap_or_default();
+                let offices_json = job.offices.as_ref()
+                    .map(|o| serde_json::to_string(o).unwrap_or_default()).unwrap_or_default();
+                let metadata_json = job.metadata.as_ref()
+                    .map(|m| serde_json::to_string(m).unwrap_or_default()).unwrap_or_default();
+                let dc_json = job.data_compliance.as_ref()
+                    .map(|d| serde_json::to_string(d).unwrap_or_default()).unwrap_or_default();
+
+                let stmt = db.prepare(
+                    "UPDATE jobs SET
+                        description    = COALESCE(NULLIF(?1,''),  description),
+                        location       = COALESCE(NULLIF(?2,''),  location),
+                        absolute_url   = COALESCE(NULLIF(?3,''),  absolute_url),
+                        url            = COALESCE(NULLIF(?3,''),  url),
+                        internal_job_id= COALESCE(?4,             internal_job_id),
+                        requisition_id = COALESCE(NULLIF(?5,''),  requisition_id),
+                        departments    = NULLIF(?6,''),
+                        offices        = NULLIF(?7,''),
+                        metadata       = NULLIF(?8,''),
+                        data_compliance= NULLIF(?9,''),
+                        ats_created_at = COALESCE(NULLIF(?10,''), ats_created_at),
+                        status         = 'enhanced',
+                        updated_at     = datetime('now')
+                    WHERE id = ?11"
+                ).bind(&[
+                    description.into(),                                                           // ?1
+                    location.into(),                                                              // ?2
+                    absolute_url.into(),                                                          // ?3
+                    job.internal_job_id.map(|v| JsValue::from_f64(v as f64))
+                        .unwrap_or(JsValue::NULL),                                               // ?4
+                    job.requisition_id.as_deref().unwrap_or("").into(),                          // ?5
+                    departments_json.into(),                                                      // ?6
+                    offices_json.into(),                                                          // ?7
+                    metadata_json.into(),                                                         // ?8
+                    dc_json.into(),                                                               // ?9
+                    updated_at.into(),                                                            // ?10
+                    JsValue::from_f64(spec.id as f64),                                           // ?11
+                ])?;
+                stmt.run().await.map(|_| ())
+                    .map_err(|e| Error::RustError(format!("D1 write error: {:?}", e)))
+            }
+
+            FetchResult::Lever(posting) => {
+                let description = posting.description.as_deref()
+                    .or(posting.description_plain.as_deref()).unwrap_or("");
+                let location = posting.categories.as_ref()
+                    .and_then(|c| c.location.as_deref()).unwrap_or("");
+                let absolute_url = posting.hosted_url.as_deref()
+                    .or(posting.apply_url.as_deref()).unwrap_or("");
+                let workplace_type = posting.workplace_type.as_deref().unwrap_or("");
+                let country = posting.country.as_deref().unwrap_or("");
+                let categories_json = posting.categories.as_ref()
+                    .map(|c| serde_json::to_string(c).unwrap_or_default()).unwrap_or_default();
+                let opening_json = posting.opening.as_ref()
+                    .map(|o| serde_json::to_string(o).unwrap_or_default()).unwrap_or_default();
+                let opening_plain = posting.opening_plain.as_deref().unwrap_or("");
+                let desc_body = posting.description_body.as_deref().unwrap_or("");
+                let desc_body_plain = posting.description_body_plain.as_deref().unwrap_or("");
+                let additional = posting.additional.as_deref().unwrap_or("");
+                let additional_plain = posting.additional_plain.as_deref().unwrap_or("");
+                let lists_json = posting.lists.as_ref()
+                    .map(|l| serde_json::to_string(l).unwrap_or_default()).unwrap_or_default();
+                let ats_created_at_str = posting.created_at
+                    .map(|ms| format_unix_ms(ms))
+                    .unwrap_or_default();
+
+                let stmt = db.prepare(
+                    "UPDATE jobs SET
+                        description      = COALESCE(NULLIF(?1,''),  description),
+                        location         = COALESCE(NULLIF(?2,''),  location),
+                        absolute_url     = COALESCE(NULLIF(?3,''),  absolute_url),
+                        url              = COALESCE(NULLIF(?3,''),  url),
+                        workplace_type   = COALESCE(NULLIF(?4,''),  workplace_type),
+                        country          = COALESCE(NULLIF(?5,''),  country),
+                        categories       = NULLIF(?6,''),
+                        opening          = NULLIF(?7,''),
+                        opening_plain    = NULLIF(?8,''),
+                        description_body = NULLIF(?9,''),
+                        description_body_plain = NULLIF(?10,''),
+                        additional       = NULLIF(?11,''),
+                        additional_plain = NULLIF(?12,''),
+                        lists            = NULLIF(?13,''),
+                        ats_created_at   = COALESCE(NULLIF(?14,''), ats_created_at),
+                        status           = 'enhanced',
+                        updated_at       = datetime('now')
+                    WHERE id = ?15"
+                ).bind(&[
+                    description.into(),                                           // ?1
+                    location.into(),                                              // ?2
+                    absolute_url.into(),                                          // ?3
+                    workplace_type.into(),                                        // ?4
+                    country.into(),                                               // ?5
+                    categories_json.into(),                                       // ?6
+                    opening_json.into(),                                          // ?7
+                    opening_plain.into(),                                         // ?8
+                    desc_body.into(),                                             // ?9
+                    desc_body_plain.into(),                                       // ?10
+                    additional.into(),                                            // ?11
+                    additional_plain.into(),                                      // ?12
+                    lists_json.into(),                                            // ?13
+                    ats_created_at_str.into(),                                    // ?14
+                    JsValue::from_f64(spec.id as f64),                           // ?15
+                ])?;
+                stmt.run().await.map(|_| ())
+                    .map_err(|e| Error::RustError(format!("D1 write error: {:?}", e)))
+            }
+
+            FetchResult::Err(msg) => Err(Error::RustError(msg.clone())),
+        };
+
+        match db_result {
+            Ok(_) => {
+                n_enhanced += 1;
+                result_items.push(serde_json::json!({ "id": spec.id, "ok": true }));
+            }
+            Err(e) => {
+                n_errors += 1;
+                let msg = format!("{:?}", e);
+                console_log!("[enhance-batch] job {} failed: {}", spec.id, msg);
+                result_items.push(serde_json::json!({ "id": spec.id, "ok": false, "error": msg }));
+            }
+        }
+    }
+
+    Response::from_json(&ApiResponse::success(serde_json::json!({
+        "enhanced": n_enhanced,
+        "errors":   n_errors,
+        "results":  result_items,
+    })))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTER
 // ═══════════════════════════════════════════════════════════════════════════
@@ -769,10 +1189,12 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/enrich", handle_enrich)
         .get_async("/enrich-all", handle_enrich_all)
         .get_async("/tools", handle_tools)
+        // ATS batch enhancement
+        .post_async("/enhance-batch", handle_enhance_batch)
         // Root
         .get("/", |_, _| {
             Response::from_json(&serde_json::json!({
-                "service": "ats-crawler v0.8 (multi-ats: ashby + greenhouse + workable)",
+                "service": "ats-crawler v0.9 (multi-ats: ashby + greenhouse + workable + enhance-batch)",
                 "providers": ["ashby", "greenhouse", "workable"],
                 "core_endpoints": {
                     "GET /crawl":       "Crawl CC index → D1. ?provider=ashby|greenhouse|workable&crawl_id=&pages_per_run=",
@@ -785,10 +1207,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                     "GET /seed":        "Seed companies directly. ?provider=workable&sites=stripe,netlify,io-global",
                 },
                 "rig_endpoints": {
-                    "GET /search":      "Okapi BM25 search over enriched corpus (all providers). ?q=&top_n=",
-                    "GET /enrich":      "On-demand ResultPipeline for one board. ?slug=",
-                    "GET /enrich-all":  "On-demand batch ResultPipeline. ?limit=",
-                    "GET /tools":       "ToolRegistry + function-calling schemas. ?call=&args=",
+                    "GET /search":           "Okapi BM25 search over enriched corpus (all providers). ?q=&top_n=",
+                    "GET /enrich":           "On-demand ResultPipeline for one board. ?slug=",
+                    "GET /enrich-all":       "On-demand batch ResultPipeline. ?limit=",
+                    "GET /tools":            "ToolRegistry + function-calling schemas. ?call=&args=",
+                    "POST /enhance-batch":   "Parallel ATS fetch + D1 write for a batch of jobs. Body: {jobs: [{id, source_kind, external_id, company_key}]}",
                 },
                 "cron_phases": {
                     "phase_1": "CC crawl → upsert companies (5 pages/provider/run, resumable)",

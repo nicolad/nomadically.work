@@ -42,6 +42,10 @@
       "binding": "EU_CLASSIFIER",
       "service": "nomadically-work-eu-classifier",
     },
+    {
+      "binding": "ATS_CRAWLER",
+      "service": "ats-crawler",
+    },
   ],
   "vars": {
     "LANGCHAIN_TRACING_V2": "true",

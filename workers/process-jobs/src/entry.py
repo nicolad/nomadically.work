@@ -37,7 +37,7 @@ from enum import Enum
 from typing import Literal
 from urllib.parse import quote
 
-from js import JSON, fetch
+from js import JSON, Request as JsRequest, fetch
 from dataclasses import dataclass, field
 from workers import Response, WorkerEntrypoint
 
@@ -271,7 +271,9 @@ async def d1_all(db, sql: str, params: list | None = None) -> list[dict]:
     if params:
         stmt = stmt.bind(*JSON.parse(json.dumps(params)))
     result = await stmt.all()
-    return to_py(result.results)
+    # Use JSON.stringify only on result.results (a JS array) then parse in Python.
+    # Avoids Pyodide proxy recursion overhead on large result sets.
+    return json.loads(JSON.stringify(result.results))
 
 
 async def d1_run(db, sql: str, params: list | None = None):
@@ -322,10 +324,15 @@ async def fetch_json(
 
             if not response.ok:
                 text = await response.text()
-                raise Exception(f"HTTP {response.status}: {text}")
+                last_err = Exception(f"HTTP {response.status}: {text}")
+                if response.status in (401, 403, 404):
+                    break  # non-retriable: exit retry loop immediately (1 subrequest used)
+                raise last_err  # retriable (caught below, will retry with backoff)
 
-            data = await response.json()
-            return to_py(data)
+            # Use response.text() + json.loads() instead of response.json() + to_py()
+            # to avoid JSON.stringify on large JS proxies (CPU-expensive in Pyodide).
+            text = await response.text()
+            return json.loads(text)
 
         except Exception as e:
             last_err = e
@@ -467,52 +474,17 @@ async def fetch_lever_data(site: str, posting_id: str) -> dict:
 
 
 async def fetch_ashby_data(board_name: str, job_id: str) -> dict:
-    """Fetch from Ashby — tries single-job endpoint, falls back to board listing."""
+    """Fetch from Ashby — single-job endpoint only.
+
+    Board listing fallback removed: fetching the full board JSON (100s of jobs ×
+    full descriptions) is too CPU-intensive for the Python Worker runtime.
+    Compensation data is not required for EU classification.
+    """
     direct_url = (
         f"https://api.ashbyhq.com/posting-api/job-board/"
         f"{quote(board_name)}/job/{quote(job_id)}"
     )
-    try:
-        posting = await fetch_json(direct_url)
-        # If no compensation, try board listing which supports it
-        if not posting.get("compensation"):
-            try:
-                board_url = (
-                    f"https://api.ashbyhq.com/posting-api/job-board/"
-                    f"{quote(board_name)}?includeCompensation=true"
-                )
-                board = await fetch_json(board_url)
-                match = next(
-                    (j for j in (board.get("jobs") or []) if j.get("id") == job_id),
-                    None,
-                )
-                if match:
-                    return match
-            except Exception:
-                pass
-        return posting
-    except Exception:
-        pass
-
-    # Fallback: board listing
-    board_url = (
-        f"https://api.ashbyhq.com/posting-api/job-board/"
-        f"{quote(board_name)}?includeCompensation=true"
-    )
-    board = await fetch_json(board_url)
-    posting = next(
-        (
-            j
-            for j in (board.get("jobs") or [])
-            if j.get("id") == job_id or (j.get("jobUrl") or "").find(job_id) >= 0
-        ),
-        None,
-    )
-    if not posting:
-        raise Exception(
-            f'Ashby job not found on board "{board_name}" with ID "{job_id}".'
-        )
-    return posting
+    return await fetch_json(direct_url)
 
 
 # --- D1 Update Builders --------------------------------------------------
@@ -696,16 +668,17 @@ async def enhance_job(db, job: dict) -> dict:
         return {"enhanced": False, "error": str(e)}
 
 
-async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
-    """Phase 1: Enhance jobs with status='new'.
+async def enhance_unenhanced_jobs(db, env=None, limit: int = 50) -> dict:
+    """Phase 1: Enhance jobs with status='new' via Rust ATS crawler.
 
-    Picks up newly ingested jobs and fetches rich ATS data.
-    On success, advances status to 'enhanced'.
+    Sends a batch of job specs to the ats-crawler worker which fetches
+    all ATS APIs in parallel (native Rust join_all) and writes results
+    to D1 directly. No subrequest limit issues — the Rust worker handles
+    the HTTP tier.
     """
     print("🔍 Phase 1 — Finding jobs with status='new'...")
 
-    # Non-ATS sources (remotive, remoteok, himalayas, jobicy, etc.) arrive pre-enriched.
-    # Promote them directly to 'enhanced' — no ATS API fetch needed.
+    # Promote non-ATS jobs directly (no external fetch needed)
     non_ats_result = await d1_run(
         db,
         """UPDATE jobs SET status = ?, updated_at = datetime('now')
@@ -719,60 +692,83 @@ async def enhance_unenhanced_jobs(db, limit: int = 50) -> dict:
 
     rows = await d1_all(
         db,
-        """
-        SELECT id, external_id, source_kind, company_key, title,
-               location, description, url, absolute_url
-        FROM jobs
-        WHERE (status IS NULL OR status = ?)
-          AND source_kind IN ('greenhouse', 'lever', 'ashby')
-        ORDER BY created_at DESC
-        LIMIT ?
-        """,
+        """SELECT id, external_id, source_kind, company_key
+           FROM jobs
+           WHERE (status IS NULL OR status = ?)
+             AND source_kind IN ('greenhouse', 'lever', 'ashby')
+           ORDER BY created_at DESC
+           LIMIT ?""",
         [JobStatus.NEW.value, limit],
     )
 
-    print(f"📋 Found {len(rows)} ATS jobs to enhance")
+    if not rows:
+        return {"enhanced": non_ats_promoted, "errors": 0}
+
+    print(f"📋 Found {len(rows)} ATS jobs to enhance via Rust crawler")
+
+    # Call Rust ats-crawler /enhance-batch
+    ats_crawler = getattr(env, "ATS_CRAWLER", None) if env else None
+    request_body = json.dumps({"jobs": [
+        {"id": r["id"], "source_kind": r["source_kind"],
+         "external_id": r["external_id"], "company_key": r.get("company_key") or ""}
+        for r in rows
+    ]})
 
     stats = {"enhanced": non_ats_promoted, "errors": 0}
 
-    for job in rows:
-        company_key = job.get("company_key") or ""
-        digit_count = sum(1 for c in company_key if c.isdigit())
-        if company_key and digit_count / len(company_key) > 0.4:
-            print(f"   🚫 Skipping job {job['id']}: spam company key ({company_key!r})")
-            try:
+    if ats_crawler is not None:
+        try:
+            js_req = JsRequest.new(
+                "https://ats-crawler/enhance-batch",
+                to_js_obj({
+                    "method": "POST",
+                    "headers": {"Content-Type": "application/json"},
+                    "body": request_body,
+                }),
+            )
+            resp = await ats_crawler.fetch(js_req)
+            text = await resp.text()
+            data = json.loads(text)
+            result = data.get("data") or data  # ApiResponse wraps in .data
+            enhanced = result.get("enhanced", 0)
+            errors   = result.get("errors",   0)
+            stats["enhanced"] += enhanced
+            stats["errors"]   += errors
+            print(f"✅ Rust crawler enhanced {enhanced} jobs, {errors} errors")
+
+            # Advance jobs that failed ATS fetch to 'enhanced' anyway
+            # (classification can still proceed on existing title/description)
+            if errors > 0:
+                failed_ids = [
+                    r["id"] for r in (result.get("results") or [])
+                    if not r.get("ok")
+                ]
+                if failed_ids:
+                    for fid in failed_ids:
+                        await d1_run(
+                            db,
+                            "UPDATE jobs SET status = 'enhanced', updated_at = datetime('now') WHERE id = ?",
+                            [fid],
+                        )
+        except Exception as e:
+            print(f"❌ ATS crawler service binding failed: {e}")
+            # Fall back to advancing all as enhanced (no ATS data but pipeline continues)
+            for r in rows:
                 await d1_run(
                     db,
-                    "UPDATE jobs SET status = 'archived', updated_at = datetime('now') WHERE id = ?",
-                    [job["id"]],
+                    "UPDATE jobs SET status = 'enhanced', updated_at = datetime('now') WHERE id = ?",
+                    [r["id"]],
                 )
-            except Exception as e:
-                print(f"   ⚠️  Could not archive spam job: {e}")
-            stats["errors"] += 1
-            continue
-
-        print(f"🔄 Enhancing {job.get('source_kind')} job {job['id']}: {job.get('title')}")
-        result = await enhance_job(db, job)
-
-        if result["enhanced"]:
-            stats["enhanced"] += 1
-            print("   ✅ Enhanced")
-        else:
-            stats["errors"] += 1
-            print(f"   ❌ {result.get('error', 'unknown')}")
-            # Advance status anyway so the job is not stuck in Phase 1
-            try:
-                await d1_run(
-                    db,
-                    "UPDATE jobs SET status = ?, updated_at = datetime('now') WHERE id = ?",
-                    [JobStatus.ENHANCED.value, job["id"]],
-                )
-                print("   ⏩ Advanced to 'enhanced' despite ATS error")
-            except Exception as advance_err:
-                print(f"   ⚠️  Could not advance status: {advance_err}")
-        # Pace to avoid ATS rate-limits (Lever: 2 req/sec, Greenhouse: generous)
-        delay = 300 if job.get("source_kind") == "lever" else 100
-        await sleep_ms(delay)
+            stats["errors"] += len(rows)
+    else:
+        # No service binding — advance without ATS data (dev/local mode)
+        print("Warning: ATS_CRAWLER binding not available — advancing without ATS data")
+        for r in rows:
+            await d1_run(
+                db,
+                "UPDATE jobs SET status = 'enhanced', updated_at = datetime('now') WHERE id = ?",
+                [r["id"]],
+            )
 
     print(
         f"✅ Enhancement complete: {stats['enhanced']} enhanced, "
@@ -1353,12 +1349,14 @@ async def classify_unclassified_jobs(db, env, limit: int = 50) -> dict:
         try:
             request_body = json.dumps({"limit": limit})
             response = await eu_classifier.fetch(
-                "https://eu-classifier/classify",
-                to_js_obj({
-                    "method": "POST",
-                    "headers": {"Content-Type": "application/json"},
-                    "body": request_body,
-                }),
+                JsRequest.new(
+                    "https://eu-classifier/classify",
+                    to_js_obj({
+                        "method": "POST",
+                        "headers": {"Content-Type": "application/json"},
+                        "body": request_body,
+                    }),
+                )
             )
             data = to_py(await response.json())
             if data.get("success"):
@@ -1686,9 +1684,10 @@ class Default(WorkerEntrypoint):
             db = self.env.DB
 
             # Batch sizes tuned for Python Worker CPU limits (cron gets ~15 min wall clock).
-            # Enhancement: 100ms delay × 500 jobs ≈ 50s + API latency — increased to drain backlog faster.
-            # Tagging/classify: LLM calls, keep small.
-            enhance_stats  = await enhance_unenhanced_jobs(db, 500)
+            # Enhancement: 25/run. CF Workers limit is 50 subrequests per invocation;
+            # 1 ATS fetch per job + retries budget = safe ceiling of 25.
+            # 25/hr × 24 = 600/day drains 6k backlog in ~10 days.
+            enhance_stats  = await enhance_unenhanced_jobs(db, self.env, 25)
             tag_stats      = await tag_roles_for_enhanced_jobs(
                 db, getattr(self.env, "AI", None),
                 deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
@@ -1736,7 +1735,7 @@ class Default(WorkerEntrypoint):
                 print(f"📨 Queue message: action={action}, limit={limit}")
 
                 if action == "enhance":
-                    stats = await enhance_unenhanced_jobs(db, limit)
+                    stats = await enhance_unenhanced_jobs(db, self.env, limit)
                     print(f"   Enhanced: {stats['enhanced']}, Errors: {stats['errors']}")
 
                 elif action == "tag":
@@ -1768,7 +1767,7 @@ class Default(WorkerEntrypoint):
                     print(f"   Skills: {stats['extracted']} extracted across {stats['processed']} jobs")
 
                 else:  # "process" — full pipeline
-                    enhance_stats  = await enhance_unenhanced_jobs(db, limit)
+                    enhance_stats  = await enhance_unenhanced_jobs(db, self.env, limit)
                     tag_stats      = await tag_roles_for_enhanced_jobs(
                         db, getattr(self.env, "AI", None),
                         deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
@@ -1874,7 +1873,7 @@ class Default(WorkerEntrypoint):
     async def handle_enhance(self, request, cors_headers: dict):
         """Run Phase 1 only — ATS enhancement (new → enhanced)."""
         limit = await self._parse_limit(request)
-        stats = await enhance_unenhanced_jobs(self.env.DB, limit)
+        stats = await enhance_unenhanced_jobs(self.env.DB, self.env, limit)
         return Response.json(
             {"success": True, "message": f"Enhanced {stats['enhanced']} jobs", "stats": stats},
             headers=cors_headers,
@@ -1938,12 +1937,14 @@ class Default(WorkerEntrypoint):
             try:
                 request_body = json.dumps({"job_id": job_id})
                 response = await eu_classifier.fetch(
-                    "https://eu-classifier/classify-one",
-                    to_js_obj({
-                        "method": "POST",
-                        "headers": {"Content-Type": "application/json"},
-                        "body": request_body,
-                    }),
+                    JsRequest.new(
+                        "https://eu-classifier/classify-one",
+                        to_js_obj({
+                            "method": "POST",
+                            "headers": {"Content-Type": "application/json"},
+                            "body": request_body,
+                        }),
+                    )
                 )
                 data = to_py(await response.json())
                 return Response.json(data, headers=cors_headers)
@@ -1978,7 +1979,7 @@ class Default(WorkerEntrypoint):
         limit = await self._parse_limit(request)
         db    = self.env.DB
 
-        enhance_stats  = await enhance_unenhanced_jobs(db, limit)
+        enhance_stats  = await enhance_unenhanced_jobs(db, self.env, limit)
         tag_stats      = await tag_roles_for_enhanced_jobs(
             db, getattr(self.env, "AI", None),
             deepseek_api_key  = getattr(self.env, "DEEPSEEK_API_KEY", None),
@@ -2039,7 +2040,18 @@ class Default(WorkerEntrypoint):
         print(f"   ℹ️  Checkpoint skipped (langgraph-checkpoint removed for size)")
 
     async def _parse_limit(self, request) -> int:
-        """Parse optional limit from request body JSON, defaulting to 10000 (all)."""
+        """Parse optional limit from query string or request body JSON, defaulting to 50."""
+        # 1. Query string: /enhance?limit=50
+        try:
+            url_str = str(request.url)
+            if "limit=" in url_str:
+                qs_part = url_str.split("limit=", 1)[1].split("&")[0]
+                val = int(qs_part)
+                if val > 0:
+                    return val
+        except Exception:
+            pass
+        # 2. Body JSON: {"limit": 50}
         try:
             body  = to_py(await request.json())
             limit = body.get("limit")
@@ -2047,4 +2059,4 @@ class Default(WorkerEntrypoint):
                 return int(limit)
         except Exception:
             pass
-        return 10000
+        return 50

@@ -54,8 +54,8 @@ export async function jobsQuery(
       conditions.push(eq(jobs.is_remote_eu, true));
     }
 
-    // Exclude jobs explicitly classified as non-target roles (keep unclassified/null)
-    conditions.push(or(isNull(jobs.role_ai_engineer), eq(jobs.role_ai_engineer, true))!);
+    // TODO: re-enable role_ai_engineer filter once classification pipeline produces AI-tagged jobs
+    // conditions.push(or(isNull(jobs.role_ai_engineer), eq(jobs.role_ai_engineer, true))!);
 
     // Filter by sourceType (ATS provider) — single value, kept for backward compat
     if (args.sourceType) {

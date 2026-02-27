@@ -278,3 +278,21 @@ pub async fn upsert_ashby_jobs_to_d1(
 
     Ok(count)
 }
+
+/// Fetch a single Ashby job posting by board name and job ID.
+pub async fn fetch_ashby_single_job(board_name: &str, job_id: &str) -> Result<AshbyJobPosting> {
+    let url = format!(
+        "https://api.ashbyhq.com/posting-api/job-board/{}/job/{}",
+        board_name, job_id
+    );
+    let mut resp = Fetch::Request(Request::new(&url, Method::Get)?).send().await?;
+    let status = resp.status_code();
+    if status != 200 {
+        return Err(Error::RustError(format!(
+            "Ashby API returned {} for job {}/{}", status, board_name, job_id
+        )));
+    }
+    let text = resp.text().await?;
+    serde_json::from_str::<AshbyJobPosting>(&text)
+        .map_err(|e| Error::RustError(format!("ashby single-job parse error for {}/{}: {}", board_name, job_id, e)))
+}

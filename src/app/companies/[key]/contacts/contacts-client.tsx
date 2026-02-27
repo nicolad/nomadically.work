@@ -810,7 +810,8 @@ export function CompanyContactsClient({
         ) : (
           <Flex direction="column" gap="2">
             {contactsList.map((contact) => (
-              <Card key={contact.id}>
+              <Link key={contact.id} href={`/contacts/${contact.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+              <Card style={{ cursor: "pointer" }}>
                 <Box p="3">
                   <Flex align="start" justify="between" gap="3" wrap="wrap">
                     <Box style={{ minWidth: 0 }}>
@@ -918,6 +919,7 @@ export function CompanyContactsClient({
                   </Flex>
                 </Box>
               </Card>
+              </Link>
             ))}
           </Flex>
         )}

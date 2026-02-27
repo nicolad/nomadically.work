@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   useGetContactQuery,
   useGetContactEmailsQuery,
+  useGetResendEmailQuery,
   useFindContactEmailMutation,
   useUpdateContactMutation,
   useDeleteContactMutation,
@@ -617,6 +618,149 @@ function DeleteContactDialog({
   );
 }
 
+// ─── Email Detail Dialog ─────────────────────────────────────────────────────
+
+type ContactEmailRow = {
+  id: number;
+  resendId: string;
+  subject: string;
+  fromEmail: string;
+  toEmails: string[];
+  status: string;
+  sentAt?: string | null;
+  createdAt: string;
+};
+
+function EmailDetailDialog({ email }: { email: ContactEmailRow }) {
+  const [open, setOpen] = useState(false);
+
+  const { data, loading } = useGetResendEmailQuery({
+    variables: { resendId: email.resendId },
+    skip: !open,
+  });
+
+  const detail = data?.resendEmail;
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger>
+        <Card style={{ cursor: "pointer" }}>
+          <Box p="3">
+            <Flex justify="between" align="start" gap="2" wrap="wrap">
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                <Text size="2" weight="medium" as="p" style={{ wordBreak: "break-word" }}>
+                  {email.subject}
+                </Text>
+                <Text size="1" color="gray" as="p" mt="1">
+                  {email.sentAt
+                    ? new Date(email.sentAt).toLocaleString()
+                    : new Date(email.createdAt).toLocaleString()}
+                </Text>
+              </Box>
+              <Badge
+                color={
+                  email.status === "delivered"
+                    ? "green"
+                    : email.status === "bounced"
+                      ? "red"
+                      : "blue"
+                }
+                variant="soft"
+                size="1"
+              >
+                {email.status}
+              </Badge>
+            </Flex>
+          </Box>
+        </Card>
+      </Dialog.Trigger>
+
+      <Dialog.Content maxWidth="580px">
+        <Dialog.Title>{email.subject}</Dialog.Title>
+
+        {loading ? (
+          <Flex justify="center" py="6">
+            <Spinner size="3" />
+          </Flex>
+        ) : detail ? (
+          <Flex direction="column" gap="3">
+            {/* Meta */}
+            <Flex direction="column" gap="1">
+              <Text size="1" color="gray">
+                <Text weight="medium">From:</Text> {detail.from}
+              </Text>
+              <Text size="1" color="gray">
+                <Text weight="medium">To:</Text> {detail.to.join(", ")}
+              </Text>
+              {detail.cc && detail.cc.length > 0 && (
+                <Text size="1" color="gray">
+                  <Text weight="medium">CC:</Text> {detail.cc.join(", ")}
+                </Text>
+              )}
+              <Text size="1" color="gray">
+                <Text weight="medium">Sent:</Text>{" "}
+                {new Date(detail.createdAt).toLocaleString()}
+              </Text>
+              {detail.lastEvent && (
+                <Flex align="center" gap="2">
+                  <Text size="1" color="gray" weight="medium">Status:</Text>
+                  <Badge
+                    color={
+                      detail.lastEvent === "delivered"
+                        ? "green"
+                        : detail.lastEvent === "bounced"
+                          ? "red"
+                          : detail.lastEvent === "opened"
+                            ? "teal"
+                            : "blue"
+                    }
+                    variant="soft"
+                    size="1"
+                  >
+                    {detail.lastEvent}
+                  </Badge>
+                </Flex>
+              )}
+            </Flex>
+
+            <Separator size="4" />
+
+            {/* Body */}
+            {detail.text ? (
+              <Box
+                style={{
+                  background: "var(--gray-2)",
+                  borderRadius: "var(--radius-3)",
+                  padding: "var(--space-4)",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: "1.6",
+                  maxHeight: 400,
+                  overflow: "auto",
+                }}
+              >
+                <Text size="2">{detail.text}</Text>
+              </Box>
+            ) : (
+              <Text size="2" color="gray">No body content.</Text>
+            )}
+          </Flex>
+        ) : (
+          <Callout.Root color="red" size="1">
+            <Callout.Icon><ExclamationTriangleIcon /></Callout.Icon>
+            <Callout.Text>Failed to load email from Resend.</Callout.Text>
+          </Callout.Root>
+        )}
+
+        <Flex justify="end" mt="4">
+          <Dialog.Close>
+            <Button variant="soft" color="gray">Close</Button>
+          </Dialog.Close>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ContactDetailClient({ contactId }: { contactId: number }) {
@@ -1033,70 +1177,7 @@ export function ContactDetailClient({ contactId }: { contactId: number }) {
           ) : (
             <Flex direction="column" gap="2">
               {emailsData.contactEmails.map((email) => (
-                <Dialog.Root key={email.id}>
-                  <Dialog.Trigger>
-                    <Card style={{ cursor: "pointer" }}>
-                      <Box p="3">
-                        <Flex justify="between" align="start" gap="2" wrap="wrap">
-                          <Box style={{ flex: 1, minWidth: 0 }}>
-                            <Text size="2" weight="medium" as="p" style={{ wordBreak: "break-word" }}>
-                              {email.subject}
-                            </Text>
-                            <Text size="1" color="gray" as="p" mt="1">
-                              {email.sentAt
-                                ? new Date(email.sentAt).toLocaleString()
-                                : new Date(email.createdAt).toLocaleString()}
-                            </Text>
-                          </Box>
-                          <Badge
-                            color={
-                              email.status === "delivered"
-                                ? "green"
-                                : email.status === "bounced"
-                                  ? "red"
-                                  : "blue"
-                            }
-                            variant="soft"
-                            size="1"
-                          >
-                            {email.status}
-                          </Badge>
-                        </Flex>
-                      </Box>
-                    </Card>
-                  </Dialog.Trigger>
-
-                  <Dialog.Content maxWidth="560px">
-                    <Dialog.Title>{email.subject}</Dialog.Title>
-                    <Dialog.Description size="2" color="gray" mb="4">
-                      {email.sentAt
-                        ? new Date(email.sentAt).toLocaleString()
-                        : new Date(email.createdAt).toLocaleString()}
-                      {" · "}
-                      {email.fromEmail} → {email.toEmails.join(", ")}
-                    </Dialog.Description>
-
-                    <Box
-                      style={{
-                        background: "var(--gray-2)",
-                        borderRadius: "var(--radius-3)",
-                        padding: "var(--space-4)",
-                        whiteSpace: "pre-wrap",
-                        lineHeight: "1.6",
-                      }}
-                    >
-                      <Text size="2">
-                        {email.textContent ?? "(no content saved)"}
-                      </Text>
-                    </Box>
-
-                    <Flex justify="end" mt="4">
-                      <Dialog.Close>
-                        <Button variant="soft" color="gray">Close</Button>
-                      </Dialog.Close>
-                    </Flex>
-                  </Dialog.Content>
-                </Dialog.Root>
+                <EmailDetailDialog key={email.id} email={email} />
               ))}
             </Flex>
           )}

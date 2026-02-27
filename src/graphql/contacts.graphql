@@ -49,6 +49,22 @@ mutation DeleteContact($id: Int!) {
   }
 }
 
+query GetResendEmail($resendId: String!) {
+  resendEmail(resendId: $resendId) {
+    id
+    from
+    to
+    subject
+    text
+    html
+    lastEvent
+    createdAt
+    scheduledAt
+    cc
+    bcc
+  }
+}
+
 query GetContactEmails($contactId: Int!) {
   contactEmails(contactId: $contactId) {
     id

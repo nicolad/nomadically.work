@@ -1326,6 +1326,7 @@ export type Query = {
   prepResourcesByCategory: Array<PrepResource>;
   prompt: Maybe<Prompt>;
   prompts: Array<RegisteredPrompt>;
+  resendEmail: Maybe<ResendEmailDetail>;
   resumeStatus: Maybe<ResumeStatus>;
   studyTopic: Maybe<StudyTopic>;
   studyTopics: Array<StudyTopic>;
@@ -1479,6 +1480,11 @@ export type QueryPromptArgs = {
 };
 
 
+export type QueryResendEmailArgs = {
+  resendId: Scalars['String']['input'];
+};
+
+
 export type QueryResumeStatusArgs = {
   email: Scalars['String']['input'];
 };
@@ -1548,6 +1554,21 @@ export type ResearchItem = {
   summary: Scalars['String']['output'];
   title: Scalars['String']['output'];
   url: Scalars['URL']['output'];
+};
+
+export type ResendEmailDetail = {
+  __typename?: 'ResendEmailDetail';
+  bcc: Maybe<Array<Scalars['String']['output']>>;
+  cc: Maybe<Array<Scalars['String']['output']>>;
+  createdAt: Scalars['String']['output'];
+  from: Scalars['String']['output'];
+  html: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  lastEvent: Maybe<Scalars['String']['output']>;
+  scheduledAt: Maybe<Scalars['String']['output']>;
+  subject: Maybe<Scalars['String']['output']>;
+  text: Maybe<Scalars['String']['output']>;
+  to: Array<Scalars['String']['output']>;
 };
 
 export type ResumeAnswer = {
@@ -2137,6 +2158,13 @@ export type DeleteContactMutationVariables = Exact<{
 
 
 export type DeleteContactMutation = { __typename?: 'Mutation', deleteContact: { __typename?: 'DeleteContactResult', success: boolean, message: string } };
+
+export type GetResendEmailQueryVariables = Exact<{
+  resendId: Scalars['String']['input'];
+}>;
+
+
+export type GetResendEmailQuery = { __typename?: 'Query', resendEmail: { __typename?: 'ResendEmailDetail', id: string, from: string, to: Array<string>, subject: string | null, text: string | null, html: string | null, lastEvent: string | null, createdAt: string, scheduledAt: string | null, cc: Array<string> | null, bcc: Array<string> | null } | null };
 
 export type GetContactEmailsQueryVariables = Exact<{
   contactId: Scalars['Int']['input'];
@@ -4773,6 +4801,59 @@ export function useDeleteContactMutation(baseOptions?: Apollo.MutationHookOption
 export type DeleteContactMutationHookResult = ReturnType<typeof useDeleteContactMutation>;
 export type DeleteContactMutationResult = Apollo.MutationResult<DeleteContactMutation>;
 export type DeleteContactMutationOptions = Apollo.BaseMutationOptions<DeleteContactMutation, DeleteContactMutationVariables>;
+export const GetResendEmailDocument = gql`
+    query GetResendEmail($resendId: String!) {
+  resendEmail(resendId: $resendId) {
+    id
+    from
+    to
+    subject
+    text
+    html
+    lastEvent
+    createdAt
+    scheduledAt
+    cc
+    bcc
+  }
+}
+    `;
+
+/**
+ * __useGetResendEmailQuery__
+ *
+ * To run a query within a React component, call `useGetResendEmailQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetResendEmailQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetResendEmailQuery({
+ *   variables: {
+ *      resendId: // value for 'resendId'
+ *   },
+ * });
+ */
+export function useGetResendEmailQuery(baseOptions: Apollo.QueryHookOptions<GetResendEmailQuery, GetResendEmailQueryVariables> & ({ variables: GetResendEmailQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetResendEmailQuery, GetResendEmailQueryVariables>(GetResendEmailDocument, options);
+      }
+export function useGetResendEmailLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetResendEmailQuery, GetResendEmailQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetResendEmailQuery, GetResendEmailQueryVariables>(GetResendEmailDocument, options);
+        }
+// @ts-ignore
+export function useGetResendEmailSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetResendEmailQuery, GetResendEmailQueryVariables>): Apollo.UseSuspenseQueryResult<GetResendEmailQuery, GetResendEmailQueryVariables>;
+export function useGetResendEmailSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetResendEmailQuery, GetResendEmailQueryVariables>): Apollo.UseSuspenseQueryResult<GetResendEmailQuery | undefined, GetResendEmailQueryVariables>;
+export function useGetResendEmailSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetResendEmailQuery, GetResendEmailQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetResendEmailQuery, GetResendEmailQueryVariables>(GetResendEmailDocument, options);
+        }
+export type GetResendEmailQueryHookResult = ReturnType<typeof useGetResendEmailQuery>;
+export type GetResendEmailLazyQueryHookResult = ReturnType<typeof useGetResendEmailLazyQuery>;
+export type GetResendEmailSuspenseQueryHookResult = ReturnType<typeof useGetResendEmailSuspenseQuery>;
+export type GetResendEmailQueryResult = Apollo.QueryResult<GetResendEmailQuery, GetResendEmailQueryVariables>;
 export const GetContactEmailsDocument = gql`
     query GetContactEmails($contactId: Int!) {
   contactEmails(contactId: $contactId) {

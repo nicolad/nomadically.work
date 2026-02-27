@@ -1,4 +1,5 @@
 import { contacts, companies, contactEmails } from "@/db/schema";
+import { resend } from "@/lib/resend";
 import { eq, and, like, or, count } from "drizzle-orm";
 import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
@@ -163,6 +164,24 @@ export const contactResolvers = {
         .from(contactEmails)
         .where(eq(contactEmails.contact_id, args.contactId))
         .orderBy(contactEmails.created_at);
+    },
+
+    async resendEmail(_parent: unknown, args: { resendId: string }) {
+      const data = await resend.instance.getEmail(args.resendId);
+      if (!data) return null;
+      return {
+        id: data.id,
+        from: data.from,
+        to: Array.isArray(data.to) ? data.to : [data.to],
+        subject: data.subject ?? null,
+        text: data.text ?? null,
+        html: data.html ?? null,
+        lastEvent: data.last_event ?? null,
+        createdAt: data.created_at,
+        scheduledAt: data.scheduled_at ?? null,
+        cc: data.cc ?? null,
+        bcc: data.bcc ?? null,
+      };
     },
   },
 

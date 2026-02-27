@@ -3,6 +3,21 @@ extend type Query {
   contact(id: Int!): Contact
   contactByEmail(email: String!): Contact
   contactEmails(contactId: Int!): [ContactEmail!]!
+  resendEmail(resendId: String!): ResendEmailDetail
+}
+
+type ResendEmailDetail {
+  id: String!
+  from: String!
+  to: [String!]!
+  subject: String
+  text: String
+  html: String
+  lastEvent: String
+  createdAt: String!
+  scheduledAt: String
+  cc: [String!]
+  bcc: [String!]
 }
 
 extend type Mutation {

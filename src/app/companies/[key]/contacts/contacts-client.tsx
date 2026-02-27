@@ -9,6 +9,7 @@ import {
   useFindContactEmailMutation,
   useFindCompanyEmailsMutation,
   useApplyEmailPatternMutation,
+  useCreateContactMutation,
 } from "@/__generated__/hooks";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
@@ -45,6 +46,7 @@ import {
   MagnifyingGlassIcon,
   MagicWandIcon,
   PaperPlaneIcon,
+  PlusIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
 import { BatchEmailModal } from "@/components/admin/BatchEmailModal";
@@ -306,6 +308,148 @@ function FindEmailButton({
   );
 }
 
+function CreateContactDialog({
+  companyId,
+  companyName,
+  onCreated,
+}: {
+  companyId: number;
+  companyName: string | null | undefined;
+  onCreated: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    position: "",
+    linkedinUrl: "",
+  });
+  const [createContact, { loading }] = useCreateContactMutation();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleOpenChange = (val: boolean) => {
+    setOpen(val);
+    if (!val) {
+      setForm({ firstName: "", lastName: "", email: "", position: "", linkedinUrl: "" });
+      setError(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
+    setError(null);
+    try {
+      await createContact({
+        variables: {
+          input: {
+            firstName: form.firstName.trim(),
+            lastName: form.lastName.trim() || undefined,
+            email: form.email.trim() || undefined,
+            position: form.position.trim() || undefined,
+            linkedinUrl: form.linkedinUrl.trim() || undefined,
+            companyId,
+          },
+        },
+      });
+      setOpen(false);
+      onCreated();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create contact.");
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+      <Dialog.Trigger>
+        <Button size="2" variant="solid">
+          <PlusIcon />
+          Add contact
+        </Button>
+      </Dialog.Trigger>
+
+      <Dialog.Content maxWidth="440px">
+        <Dialog.Title>Add contact</Dialog.Title>
+        {companyName && (
+          <Dialog.Description size="2" color="gray" mb="4">
+            {companyName}
+          </Dialog.Description>
+        )}
+
+        <Flex direction="column" gap="3">
+          {error && (
+            <Callout.Root color="red" size="1">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text>{error}</Callout.Text>
+            </Callout.Root>
+          )}
+
+          <Flex gap="2">
+            <Box style={{ flex: 1 }}>
+              <Text size="1" color="gray" mb="1" as="p">First name *</Text>
+              <TextField.Root
+                placeholder="First name"
+                value={form.firstName}
+                onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+              />
+            </Box>
+            <Box style={{ flex: 1 }}>
+              <Text size="1" color="gray" mb="1" as="p">Last name</Text>
+              <TextField.Root
+                placeholder="Last name"
+                value={form.lastName}
+                onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+              />
+            </Box>
+          </Flex>
+
+          <Box>
+            <Text size="1" color="gray" mb="1" as="p">Position</Text>
+            <TextField.Root
+              placeholder="e.g. Engineering Manager"
+              value={form.position}
+              onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))}
+            />
+          </Box>
+
+          <Box>
+            <Text size="1" color="gray" mb="1" as="p">Email</Text>
+            <TextField.Root
+              type="email"
+              placeholder="name@company.com"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            />
+          </Box>
+
+          <Box>
+            <Text size="1" color="gray" mb="1" as="p">LinkedIn URL</Text>
+            <TextField.Root
+              placeholder="https://linkedin.com/in/…"
+              value={form.linkedinUrl}
+              onChange={(e) => setForm((f) => ({ ...f, linkedinUrl: e.target.value }))}
+            />
+          </Box>
+        </Flex>
+
+        <Flex gap="3" mt="4" justify="end">
+          <Dialog.Close>
+            <Button variant="soft" color="gray">Cancel</Button>
+          </Dialog.Close>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Saving…" : "Create contact"}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
 export function CompanyContactsClient({
   companyKey,
 }: {
@@ -539,6 +683,12 @@ export function CompanyContactsClient({
               : `${totalCount} contact${totalCount !== 1 ? "s" : ""}`}
           </Text>
           <Flex gap="2" align="center" wrap="wrap">
+            <CreateContactDialog
+              companyId={company.id}
+              companyName={company.name}
+              onCreated={refetch}
+            />
+
             {/* Email discovery actions */}
             <Button
               size="2"

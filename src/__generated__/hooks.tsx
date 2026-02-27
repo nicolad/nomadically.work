@@ -1982,6 +1982,13 @@ export type CompanyAuditQueryVariables = Exact<{
 
 export type CompanyAuditQuery = { __typename?: 'Query', company: { __typename?: 'Company', facts_count: number, snapshots_count: number, id: number, key: string, name: string, logo_url: string | null, website: string | null, description: string | null, industry: string | null, size: string | null, location: string | null, created_at: string, updated_at: string, linkedin_url: string | null, category: CompanyCategory, tags: Array<string>, services: Array<string>, service_taxonomy: Array<string>, industries: Array<string>, score: number, score_reasons: Array<string>, last_seen_crawl_id: string | null, last_seen_capture_timestamp: string | null, last_seen_source_url: string | null, facts: Array<{ __typename?: 'CompanyFact', id: number, company_id: number, field: string, value_json: any | null, value_text: string | null, normalized_value: any | null, confidence: number, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, snapshots: Array<{ __typename?: 'CompanySnapshot', id: number, company_id: number, source_url: string, crawl_id: string | null, capture_timestamp: string | null, fetched_at: string, http_status: number | null, mime: string | null, content_hash: string | null, text_sample: string | null, jsonld: any | null, extracted: any | null, created_at: string, evidence: { __typename?: 'Evidence', source_type: SourceType, source_url: string, crawl_id: string | null, capture_timestamp: string | null, observed_at: string, method: ExtractMethod, extractor_version: string | null, http_status: number | null, mime: string | null, content_hash: string | null, warc: { __typename?: 'WarcPointer', filename: string, offset: number, length: number, digest: string | null } | null } }>, ashby_enrichment: { __typename?: 'AshbyEnrichment', company_name: string | null, industry_tags: Array<string>, tech_signals: Array<string>, size_signal: string | null, enriched_at: string | null } | null } | null };
 
+export type GetContactQueryVariables = Exact<{
+  id: Scalars['Int']['input'];
+}>;
+
+
+export type GetContactQuery = { __typename?: 'Query', contact: { __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, emails: Array<string>, bouncedEmails: Array<string>, linkedinUrl: string | null, company: string | null, companyId: number | null, position: string | null, emailVerified: boolean | null, doNotContact: boolean, githubHandle: string | null, telegramHandle: string | null, tags: Array<string>, nbResult: string | null, createdAt: string, updatedAt: string } | null };
+
 export type GetContactsQueryVariables = Exact<{
   companyId?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
@@ -1990,7 +1997,7 @@ export type GetContactsQueryVariables = Exact<{
 }>;
 
 
-export type GetContactsQuery = { __typename?: 'Query', contacts: { __typename?: 'ContactsResult', totalCount: number, contacts: Array<{ __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, bouncedEmails: Array<string>, linkedinUrl: string | null, position: string | null, githubHandle: string | null, telegramHandle: string | null, emailVerified: boolean | null, doNotContact: boolean, nbResult: string | null, tags: Array<string>, createdAt: string }> } };
+export type GetContactsQuery = { __typename?: 'Query', contacts: { __typename?: 'ContactsResult', totalCount: number, contacts: Array<{ __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, bouncedEmails: Array<string>, linkedinUrl: string | null, position: string | null, company: string | null, companyId: number | null, githubHandle: string | null, telegramHandle: string | null, emailVerified: boolean | null, doNotContact: boolean, nbResult: string | null, tags: Array<string>, createdAt: string }> } };
 
 export type ImportContactsMutationVariables = Exact<{
   contacts: Array<ContactInput> | ContactInput;
@@ -2024,6 +2031,13 @@ export type ApplyEmailPatternMutationVariables = Exact<{
 
 
 export type ApplyEmailPatternMutation = { __typename?: 'Mutation', applyEmailPattern: { __typename?: 'ApplyEmailPatternResult', success: boolean, message: string, contactsUpdated: number, pattern: string | null, contacts: Array<{ __typename?: 'Contact', id: number, email: string | null, emailVerified: boolean | null }> } };
+
+export type CreateContactMutationVariables = Exact<{
+  input: CreateContactInput;
+}>;
+
+
+export type CreateContactMutation = { __typename?: 'Mutation', createContact: { __typename?: 'Contact', id: number, firstName: string, lastName: string, email: string | null, linkedinUrl: string | null, position: string | null, companyId: number | null, githubHandle: string | null, telegramHandle: string | null, tags: Array<string> } };
 
 export type GetGreenhouseJobsQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
@@ -4421,6 +4435,66 @@ export type CompanyAuditQueryHookResult = ReturnType<typeof useCompanyAuditQuery
 export type CompanyAuditLazyQueryHookResult = ReturnType<typeof useCompanyAuditLazyQuery>;
 export type CompanyAuditSuspenseQueryHookResult = ReturnType<typeof useCompanyAuditSuspenseQuery>;
 export type CompanyAuditQueryResult = Apollo.QueryResult<CompanyAuditQuery, CompanyAuditQueryVariables>;
+export const GetContactDocument = gql`
+    query GetContact($id: Int!) {
+  contact(id: $id) {
+    id
+    firstName
+    lastName
+    email
+    emails
+    bouncedEmails
+    linkedinUrl
+    company
+    companyId
+    position
+    emailVerified
+    doNotContact
+    githubHandle
+    telegramHandle
+    tags
+    nbResult
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useGetContactQuery__
+ *
+ * To run a query within a React component, call `useGetContactQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetContactQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetContactQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetContactQuery(baseOptions: Apollo.QueryHookOptions<GetContactQuery, GetContactQueryVariables> & ({ variables: GetContactQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetContactQuery, GetContactQueryVariables>(GetContactDocument, options);
+      }
+export function useGetContactLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetContactQuery, GetContactQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetContactQuery, GetContactQueryVariables>(GetContactDocument, options);
+        }
+// @ts-ignore
+export function useGetContactSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetContactQuery, GetContactQueryVariables>): Apollo.UseSuspenseQueryResult<GetContactQuery, GetContactQueryVariables>;
+export function useGetContactSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContactQuery, GetContactQueryVariables>): Apollo.UseSuspenseQueryResult<GetContactQuery | undefined, GetContactQueryVariables>;
+export function useGetContactSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContactQuery, GetContactQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetContactQuery, GetContactQueryVariables>(GetContactDocument, options);
+        }
+export type GetContactQueryHookResult = ReturnType<typeof useGetContactQuery>;
+export type GetContactLazyQueryHookResult = ReturnType<typeof useGetContactLazyQuery>;
+export type GetContactSuspenseQueryHookResult = ReturnType<typeof useGetContactSuspenseQuery>;
+export type GetContactQueryResult = Apollo.QueryResult<GetContactQuery, GetContactQueryVariables>;
 export const GetContactsDocument = gql`
     query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
   contacts(companyId: $companyId, search: $search, limit: $limit, offset: $offset) {
@@ -4432,6 +4506,8 @@ export const GetContactsDocument = gql`
       bouncedEmails
       linkedinUrl
       position
+      company
+      companyId
       githubHandle
       telegramHandle
       emailVerified
@@ -4673,6 +4749,48 @@ export function useApplyEmailPatternMutation(baseOptions?: Apollo.MutationHookOp
 export type ApplyEmailPatternMutationHookResult = ReturnType<typeof useApplyEmailPatternMutation>;
 export type ApplyEmailPatternMutationResult = Apollo.MutationResult<ApplyEmailPatternMutation>;
 export type ApplyEmailPatternMutationOptions = Apollo.BaseMutationOptions<ApplyEmailPatternMutation, ApplyEmailPatternMutationVariables>;
+export const CreateContactDocument = gql`
+    mutation CreateContact($input: CreateContactInput!) {
+  createContact(input: $input) {
+    id
+    firstName
+    lastName
+    email
+    linkedinUrl
+    position
+    companyId
+    githubHandle
+    telegramHandle
+    tags
+  }
+}
+    `;
+export type CreateContactMutationFn = Apollo.MutationFunction<CreateContactMutation, CreateContactMutationVariables>;
+
+/**
+ * __useCreateContactMutation__
+ *
+ * To run a mutation, you first call `useCreateContactMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateContactMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createContactMutation, { data, loading, error }] = useCreateContactMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateContactMutation(baseOptions?: Apollo.MutationHookOptions<CreateContactMutation, CreateContactMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateContactMutation, CreateContactMutationVariables>(CreateContactDocument, options);
+      }
+export type CreateContactMutationHookResult = ReturnType<typeof useCreateContactMutation>;
+export type CreateContactMutationResult = Apollo.MutationResult<CreateContactMutation>;
+export type CreateContactMutationOptions = Apollo.BaseMutationOptions<CreateContactMutation, CreateContactMutationVariables>;
 export const GetGreenhouseJobsDocument = gql`
     query GetGreenhouseJobs($search: String, $limit: Int, $offset: Int) {
   jobs(sourceType: "greenhouse", search: $search, limit: $limit, offset: $offset) {

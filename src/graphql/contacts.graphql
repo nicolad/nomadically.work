@@ -1,3 +1,26 @@
+query GetContact($id: Int!) {
+  contact(id: $id) {
+    id
+    firstName
+    lastName
+    email
+    emails
+    bouncedEmails
+    linkedinUrl
+    company
+    companyId
+    position
+    emailVerified
+    doNotContact
+    githubHandle
+    telegramHandle
+    tags
+    nbResult
+    createdAt
+    updatedAt
+  }
+}
+
 query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
   contacts(companyId: $companyId, search: $search, limit: $limit, offset: $offset) {
     contacts {
@@ -8,6 +31,8 @@ query GetContacts($companyId: Int, $search: String, $limit: Int, $offset: Int) {
       bouncedEmails
       linkedinUrl
       position
+      company
+      companyId
       githubHandle
       telegramHandle
       emailVerified
@@ -73,5 +98,20 @@ mutation ApplyEmailPattern($companyId: Int!) {
       email
       emailVerified
     }
+  }
+}
+
+mutation CreateContact($input: CreateContactInput!) {
+  createContact(input: $input) {
+    id
+    firstName
+    lastName
+    email
+    linkedinUrl
+    position
+    companyId
+    githubHandle
+    telegramHandle
+    tags
   }
 }

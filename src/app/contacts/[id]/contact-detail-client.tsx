@@ -1033,35 +1033,70 @@ export function ContactDetailClient({ contactId }: { contactId: number }) {
           ) : (
             <Flex direction="column" gap="2">
               {emailsData.contactEmails.map((email) => (
-                <Card key={email.id}>
-                  <Box p="3">
-                    <Flex justify="between" align="start" gap="2" wrap="wrap">
-                      <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Text size="2" weight="medium" as="p" style={{ wordBreak: "break-word" }}>
-                          {email.subject}
-                        </Text>
-                        <Text size="1" color="gray" as="p" mt="1">
-                          {email.sentAt
-                            ? new Date(email.sentAt).toLocaleString()
-                            : new Date(email.createdAt).toLocaleString()}
-                        </Text>
+                <Dialog.Root key={email.id}>
+                  <Dialog.Trigger>
+                    <Card style={{ cursor: "pointer" }}>
+                      <Box p="3">
+                        <Flex justify="between" align="start" gap="2" wrap="wrap">
+                          <Box style={{ flex: 1, minWidth: 0 }}>
+                            <Text size="2" weight="medium" as="p" style={{ wordBreak: "break-word" }}>
+                              {email.subject}
+                            </Text>
+                            <Text size="1" color="gray" as="p" mt="1">
+                              {email.sentAt
+                                ? new Date(email.sentAt).toLocaleString()
+                                : new Date(email.createdAt).toLocaleString()}
+                            </Text>
+                          </Box>
+                          <Badge
+                            color={
+                              email.status === "delivered"
+                                ? "green"
+                                : email.status === "bounced"
+                                  ? "red"
+                                  : "blue"
+                            }
+                            variant="soft"
+                            size="1"
+                          >
+                            {email.status}
+                          </Badge>
+                        </Flex>
                       </Box>
-                      <Badge
-                        color={
-                          email.status === "delivered"
-                            ? "green"
-                            : email.status === "bounced"
-                              ? "red"
-                              : "blue"
-                        }
-                        variant="soft"
-                        size="1"
-                      >
-                        {email.status}
-                      </Badge>
+                    </Card>
+                  </Dialog.Trigger>
+
+                  <Dialog.Content maxWidth="560px">
+                    <Dialog.Title>{email.subject}</Dialog.Title>
+                    <Dialog.Description size="2" color="gray" mb="4">
+                      {email.sentAt
+                        ? new Date(email.sentAt).toLocaleString()
+                        : new Date(email.createdAt).toLocaleString()}
+                      {" · "}
+                      {email.fromEmail} → {email.toEmails.join(", ")}
+                    </Dialog.Description>
+
+                    <Box
+                      style={{
+                        background: "var(--gray-2)",
+                        borderRadius: "var(--radius-3)",
+                        padding: "var(--space-4)",
+                        whiteSpace: "pre-wrap",
+                        lineHeight: "1.6",
+                      }}
+                    >
+                      <Text size="2">
+                        {email.textContent ?? "(no content saved)"}
+                      </Text>
+                    </Box>
+
+                    <Flex justify="end" mt="4">
+                      <Dialog.Close>
+                        <Button variant="soft" color="gray">Close</Button>
+                      </Dialog.Close>
                     </Flex>
-                  </Box>
-                </Card>
+                  </Dialog.Content>
+                </Dialog.Root>
               ))}
             </Flex>
           )}

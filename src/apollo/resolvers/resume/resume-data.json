@@ -33,7 +33,7 @@
     "languages": [
       { "name": "JavaScript", "level": 100 },
       { "name": "TypeScript", "level": 90 },
-      { "name": "CSS/HTML", "level": 100 },
+      { "name": "Python", "level": 70 },
       { "name": "Go", "level": 60 }
     ],
     "frameworks": [
@@ -144,44 +144,20 @@
       "isWorkingHere": false,
       "endDate": "Feb 2018",
       "highlights": [],
-      "summary": "<ul><li>Developed full-stack event planning application using Node.js, Express.js, Angular, and MongoDB with RESTful API architecture.</li><li>Implemented user authentication and authorization using JWT tokens and bcrypt password encryption.</li><li>Optimized MongoDB queries and database indexing.</li><li>Applied functional programming principles with Ramda.js for cleaner, more maintainable code.</li></ul>",
+      "summary": "<ul><li>Built full-stack event planning application with Node.js, Express.js, Angular, and MongoDB.</li><li>Implemented JWT authentication, optimized MongoDB queries and database indexing.</li></ul>",
       "years": "10 months"
     },
     {
       "id": "7",
-      "name": "Endava",
-      "position": "Front End Developer",
-      "url": "",
-      "startDate": "Apr 2016",
-      "isWorkingHere": false,
-      "endDate": "Nov 2016",
-      "highlights": [],
-      "summary": "<ul><li>Developed responsive frontend interfaces for enterprise .NET application.</li><li>Collaborated with backend team to integrate RESTful APIs.</li><li>Implemented cross-browser compatible UI components using HTML5 and CSS3 features.</li></ul>",
-      "years": "8 months"
-    },
-    {
-      "id": "8",
-      "name": "ProPeople (currently FFW Agency)",
-      "position": "Front End Developer",
-      "url": "",
-      "startDate": "Oct 2013",
-      "isWorkingHere": false,
-      "endDate": "May 2015",
-      "highlights": [],
-      "summary": "<ul><li><strong>Project: Stanford University - Freeman Spogli Institute</strong> - Built frontend for Drupal multisite serving Stanford's international studies department.</li><li>Developed custom Drupal themes using HTML5, CSS3, SASS preprocessor, and jQuery.</li><li>Implemented responsive web design using CSS media queries for mobile-first approach.</li><li><strong>Tech stack:</strong> HTML5, CSS3, SASS, jQuery, Drupal, JavaScript, Responsive Design</li></ul>",
-      "years": "1.5 years"
-    },
-    {
-      "id": "9",
-      "name": "Best4u Group",
+      "name": "Endava, ProPeople (FFW Agency), Best4u Group",
       "position": "Front End Developer",
       "url": "",
       "startDate": "May 2013",
       "isWorkingHere": false,
-      "endDate": "Oct 2013",
+      "endDate": "Nov 2016",
       "highlights": [],
-      "summary": "<ul><li>Converted PSD designs into responsive HTML/CSS/JavaScript templates.</li><li>Integrated templates with WordPress and proprietary CMS platforms.</li><li>Delivered pixel-perfect implementations with strong attention to detail.</li></ul>",
-      "years": "5 months"
+      "summary": "<ul><li>Built responsive frontends for enterprise clients including Stanford University (Drupal multisite), .NET applications, and WordPress platforms.</li><li>Developed custom themes, integrated RESTful APIs, and delivered pixel-perfect implementations using HTML5, CSS3, SASS, and jQuery.</li></ul>",
+      "years": "3 years"
     }
   ],
 
@@ -206,34 +182,28 @@
       {
         "id": "1",
         "name": "Nomadically.work",
-        "description": "Full-stack AI job board aggregator for remote EU roles. Multi-agent pipeline (DeepSeek, Claude, OpenAI) for automated classification, skill extraction, and natural-language search. Next.js 16, GraphQL, Cloudflare D1, ingestion from 3 ATS platforms, production LLM observability.",
+        "description": "AI job board aggregator for remote EU roles -- Next.js 16, GraphQL, Cloudflare D1, multi-model LLM pipeline.",
         "githubUrl": "https://github.com/nicolad/nomadically.work",
         "websiteUrl": "https://nomadically.work",
         "highlights": [
-          "Built full-stack AI job board: Next.js 16 App Router, React 19, TypeScript 5.9, GraphQL API layer, automated data pipelines, multi-model LLM orchestration, edge-deployed serverless Cloudflare Workers + D1 cloud infrastructure.",
-          "Architected multi-LLM routing layer — Claude for high-accuracy classification, DeepSeek for cost-efficient bulk processing — backed by Promptfoo + Mastra Evals for accuracy validation and zero-downtime model swaps.",
-          "Engineered agentic AI pipeline using Mastra agents, LangGraph, and Vercel AI SDK v6 orchestrating DeepSeek, Claude, and OpenAI for real-time classification, skill extraction, and EU remote categorization.",
-          "Implemented event-driven data ingestion from 3 ATS platforms (Greenhouse, Lever, Ashby) via Trigger.dev + Inngest orchestration with retry policies, dead-letter queues, Brave Search API discovery, and CI/CD-integrated pipeline validation.",
-          "Built RAG-powered hybrid search combining BM25 lexical scoring with vector embeddings (LlamaIndex/LlamaParse), plus text-to-SQL converting natural language queries into parameterized Drizzle ORM expressions against D1.",
-          "Designed GraphQL API with DataLoader-based batching to eliminate N+1 queries on job-to-company resolution; Drizzle ORM + GraphQL Codegen for end-to-end TypeScript type safety from DB schema to Apollo Client hooks.",
-          "Engineered Cloudflare D1 Gateway Worker achieving 10-100x throughput improvement over REST API via batch query support, stale-while-revalidate caching, and structured error handling.",
-          "Developed Python Worker on Cloudflare for LangChain LCEL chain execution with Pydantic model validation and schema enforcement, enabling zero-cost LLM inference via Workers AI."
+          "Architected multi-LLM routing layer (Claude, DeepSeek, OpenAI) with Promptfoo + Mastra Evals for accuracy validation, zero-downtime model swaps, and cost-optimized inference.",
+          "Engineered agentic AI pipeline using Mastra agents, LangGraph, and Vercel AI SDK v6 for real-time job classification, skill extraction, and EU remote categorization.",
+          "Built RAG-powered hybrid search combining BM25 lexical scoring with vector embeddings (LlamaIndex) and text-to-SQL converting natural language queries into parameterized Drizzle ORM expressions.",
+          "Implemented event-driven ingestion from 3 ATS platforms (Greenhouse, Lever, Ashby) via Trigger.dev with retry policies, dead-letter queues, and CI/CD-integrated pipeline validation.",
+          "Designed GraphQL API with DataLoader batching, end-to-end TypeScript type safety (Drizzle ORM + GraphQL Codegen), and Cloudflare D1 Gateway Worker with 10-100x throughput improvement via batch queries and stale-while-revalidate caching."
         ]
       },
       {
         "id": "2",
         "name": "ResearchThera.com",
-        "description": "AI-powered therapeutic journaling platform with agentic orchestration (Mastra + DeepSeek), 7-source academic research pipeline with AI quality gating, clinical NLP normalization, RAG retrieval, voice synthesis, and Langfuse prompt management. Next.js 16, GraphQL, Cloudflare D1/R2, Trigger.dev.",
+        "description": "AI therapeutic journaling platform -- agentic orchestration, 7-source research pipeline, clinical NLP, RAG, voice synthesis. Next.js 16, GraphQL, Cloudflare D1/R2.",
         "githubUrl": "https://github.com/nicolad/research-thera",
         "websiteUrl": "https://researchthera.com",
         "highlights": [
-          "Built AI-powered therapeutic journaling platform with multi-agent Mastra orchestration (storyTellerAgent + therapeuticAgent powered by DeepSeek), Next.js 16, React 19, Apollo Server 5, Cloudflare D1/R2, and end-to-end type safety via GraphQL Codegen + Drizzle ORM.",
-          "Designed multi-stage agentic workflow: DeepSeek clinical NLP normalization → parallel 7-source research ingestion → OpenAlex enrichment (300 candidates) → LLM quality gate → top-20 persistence to D1 + vector store for RAG retrieval.",
-          "Built custom 'research-grounding' evaluation scorer using DeepSeek-as-judge for evidence validation; tuned 3-threshold gating (relevance 0.75, confidence 0.55, blended 0.72) to filter unsupported clinical claims.",
-          "Developed clinical NLP restatement system normalizing multilingual user goals into clinical language — classifying developmental tiers and behavioral direction to constrain outputs across CBT, MBSR, ACT, and DBT frameworks.",
-          "Implemented Langfuse prompt versioning with runtime registry loading for no-deploy prompt updates, request-level distributed tracing for latency attribution, per-model cost tracking, and A/B prompt evaluation.",
-          "Engineered serverless TTS microservice chunking content via RAG segmentation, streaming audio to R2 with presigned URL playback — decoupled via Trigger.dev v4 durable background tasks.",
-          "Architected schema-first GraphQL API with TypeScript type safety via GraphQL Codegen; WebSocket subscriptions for real-time progress tracking with long-running research and audio jobs."
+          "Designed multi-stage agentic workflow: clinical NLP normalization -> parallel 7-source research ingestion -> OpenAlex enrichment (300 candidates) -> LLM quality gate -> top-20 persistence to D1 + vector store for RAG retrieval.",
+          "Built custom evaluation scorer using DeepSeek-as-judge for evidence validation; tuned 3-threshold gating (relevance 0.75, confidence 0.55, blended 0.72) to filter unsupported clinical claims.",
+          "Implemented Langfuse prompt versioning with runtime registry loading for no-deploy prompt updates, distributed tracing, per-model cost tracking, and A/B prompt evaluation.",
+          "Engineered serverless TTS microservice with RAG-based content chunking, streaming audio to R2 via Trigger.dev v4 durable background tasks."
         ]
       }
     ]
@@ -242,7 +212,7 @@
     {
       "id": "1",
       "organization": "Nautilus Trader",
-      "position": "Open-Source Contributor – Algorithmic Trading Engine",
+      "position": "Open-Source Contributor -- Algorithmic Trading Engine",
       "url": "https://github.com/nautechsystems/nautilus_trader/pulls?q=is%3Apr+is%3Aclosed+author%3Anicolad",
       "startDate": "April 2025",
       "endDate": null,

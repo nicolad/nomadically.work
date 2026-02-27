@@ -40,14 +40,15 @@ const s = StyleSheet.create({
   /* Header */
   header: { marginBottom: 6, paddingBottom: 6, borderBottom: `2pt solid ${C.primary}`, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   headerLeft: {},
-  headerRight: { alignItems: "flex-end", justifyContent: "center", gap: 2 },
+  headerRight: { flexDirection: "row", gap: 16 },
+  contactCol: { alignItems: "flex-end", gap: 2 },
   name: { fontSize: 22, fontFamily: "Helvetica-Bold", letterSpacing: -0.3, lineHeight: 1.2, marginBottom: 2 },
   label: { fontSize: 12, color: C.secondary, lineHeight: 1.2 },
   contactItem: { fontSize: 8.5, color: C.secondary, textAlign: "right" as const },
   contactLink: { fontSize: 8.5, color: C.accent, textDecoration: "none", textAlign: "right" as const },
 
   /* Summary */
-  summary: { fontSize: 9, lineHeight: 1.5, marginBottom: 6 },
+  summary: { fontSize: 9, lineHeight: 1.5, marginBottom: 3 },
 
   /* Sections */
   sectionTitle: {
@@ -57,34 +58,32 @@ const s = StyleSheet.create({
     letterSpacing: 0.8,
     borderBottom: `0.5pt solid ${C.border}`,
     paddingBottom: 3,
-    marginBottom: 5,
-    marginTop: 6,
+    marginBottom: 3,
+    marginTop: 4,
   },
 
-  /* Skills — inline rows */
-  skillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 3, marginBottom: 4 },
-  skillGroupInline: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 3, marginBottom: 3 },
-  skillGroupLabel: { fontSize: 8, fontFamily: "Helvetica-Bold", marginRight: 2 },
-  skillTag: { fontSize: 7.5, backgroundColor: C.tagBg, borderRadius: 2, paddingVertical: 1, paddingHorizontal: 4 },
+  /* Skills — compact paragraph */
+  skillsParagraph: { fontSize: 8.5, lineHeight: 1.5, marginBottom: 2 },
+  skillGroupLabel: { fontFamily: "Helvetica-Bold" },
 
   /* Work entries */
-  entry: { marginBottom: 7 },
+  entry: { marginBottom: 5 },
   entryHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 1 },
   entryTitle: { fontSize: 10, fontFamily: "Helvetica-Bold" },
   entryDates: { fontSize: 8, color: C.secondary, flexShrink: 0 },
-  company: { fontSize: 9, color: C.secondary, marginBottom: 2 },
+  company: { fontSize: 9, color: C.secondary, marginBottom: 1 },
   bulletList: { paddingLeft: 10 },
-  bullet: { fontSize: 8.5, lineHeight: 1.4, marginBottom: 1 },
+  bullet: { fontSize: 8.5, lineHeight: 1.4, marginBottom: 0.5 },
   techStack: { fontSize: 8, color: C.secondary, marginTop: 1 },
   techLabel: { fontFamily: "Helvetica-Bold" },
 
   /* Projects */
   projectTitle: { fontSize: 10, fontFamily: "Helvetica-Bold" },
   projectLink: { color: C.accent, textDecoration: "none" },
-  projectDesc: { fontSize: 8.5, color: C.secondary, marginBottom: 2 },
+  projectDesc: { fontSize: 8.5, color: C.secondary, marginBottom: 1 },
 
   /* Volunteer / Open Source */
-  volRole: { fontSize: 9, color: C.secondary, marginBottom: 2 },
+  volRole: { fontSize: 9, color: C.secondary, marginBottom: 1 },
 
   /* Education */
   eduRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
@@ -139,8 +138,6 @@ function ResumeDocument({ data }: { data: typeof resumeData }) {
     { title: "Frameworks:", items: [...skills.frameworks, ...skills.libraries] },
     { title: "Technologies:", items: skills.technologies },
     { title: "Databases:", items: skills.databases },
-    { title: "Tools:", items: skills.tools },
-    { title: "Practices:", items: skills.practices },
   ];
 
   return (
@@ -153,18 +150,18 @@ function ResumeDocument({ data }: { data: typeof resumeData }) {
             <Text style={s.label}>{basics.label}</Text>
           </View>
           <View style={s.headerRight}>
-            <Text style={s.contactItem}>{basics.email}</Text>
-            <Text style={s.contactItem}>{basics.phone}</Text>
-            {basics.profiles.map((p) => (
-              <Link key={p.network} src={p.url} style={s.contactLink}>
-                {p.network === "github" ? "GitHub" : "LinkedIn"}: {p.username}
+            <View style={s.contactCol}>
+              <Text style={s.contactItem}>{basics.email}</Text>
+              <Link src={basics.profiles[0].url} style={s.contactLink}>
+                {basics.profiles[0].url.replace("https://", "")}
               </Link>
-            ))}
-            {basics.url && (
-              <Link src={basics.url} style={s.contactLink}>
-                {basics.url.replace("https://", "")}
+            </View>
+            <View style={s.contactCol}>
+              <Text style={s.contactItem}>{basics.phone}</Text>
+              <Link src={basics.profiles[1].url} style={s.contactLink}>
+                {basics.profiles[1].url.replace("https://", "")}
               </Link>
-            )}
+            </View>
           </View>
         </View>
 
@@ -172,16 +169,41 @@ function ResumeDocument({ data }: { data: typeof resumeData }) {
         <Text style={s.sectionTitle}>Summary</Text>
         <Text style={s.summary}>{basics.summary}</Text>
 
-        {/* Skills — compact inline rows */}
+        {/* Skills — compact paragraph */}
         <Text style={s.sectionTitle}>Skills</Text>
-        {skillGroups.map((group) => (
-          <View key={group.title} style={s.skillGroupInline}>
-            <Text style={s.skillGroupLabel}>{group.title}</Text>
-            {group.items.map((item) => (
-              <Text key={item.name} style={s.skillTag}>{item.name}</Text>
+        <Text style={s.skillsParagraph}>
+          {skillGroups.map((group, gi) => (
+            <React.Fragment key={group.title}>
+              {gi > 0 && "  |  "}
+              <Text style={s.skillGroupLabel}>{group.title}</Text>
+              {"  "}{group.items.map((item) => item.name).join(", ")}
+            </React.Fragment>
+          ))}
+        </Text>
+
+        {/* AI Projects */}
+        {activities.aiProjects?.length > 0 && (
+          <>
+            <Text style={s.sectionTitle}>AI Personal Projects</Text>
+            {activities.aiProjects.map((proj) => (
+              <View key={proj.id} style={s.entry} wrap={false}>
+                {proj.websiteUrl ? (
+                  <Link src={proj.websiteUrl} style={[s.projectTitle, s.projectLink]}>
+                    {proj.name}
+                  </Link>
+                ) : (
+                  <Text style={s.projectTitle}>{proj.name}</Text>
+                )}
+                <Text style={s.projectDesc}>{proj.description}</Text>
+                <View style={s.bulletList}>
+                  {proj.highlights.map((h, i) => (
+                    <Text key={i} style={s.bullet}>{"•  "}{h}</Text>
+                  ))}
+                </View>
+              </View>
             ))}
-          </View>
-        ))}
+          </>
+        )}
 
         {/* Experience */}
         <Text style={s.sectionTitle}>Experience</Text>
@@ -211,58 +233,7 @@ function ResumeDocument({ data }: { data: typeof resumeData }) {
           );
         })}
 
-        {/* AI Projects */}
-        {activities.aiProjects?.length > 0 && (
-          <>
-            <Text style={s.sectionTitle}>AI & Side Projects</Text>
-            {activities.aiProjects.map((proj) => (
-              <View key={proj.id} style={s.entry} wrap={false}>
-                {proj.websiteUrl ? (
-                  <Link src={proj.websiteUrl} style={[s.projectTitle, s.projectLink]}>
-                    {proj.name}
-                  </Link>
-                ) : (
-                  <Text style={s.projectTitle}>{proj.name}</Text>
-                )}
-                <Text style={s.projectDesc}>{proj.description}</Text>
-                <View style={s.bulletList}>
-                  {proj.highlights.map((h, i) => (
-                    <Text key={i} style={s.bullet}>{"•  "}{h}</Text>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </>
-        )}
 
-        {/* Open Source */}
-        {volunteer.length > 0 && (
-          <>
-            <Text style={s.sectionTitle}>Open Source</Text>
-            {volunteer.map((v) => {
-              const { bullets } = htmlToBullets(v.summary);
-              return (
-                <View key={v.id} style={s.entry} wrap={false}>
-                  {v.url ? (
-                    <Link src={v.url} style={[s.projectTitle, s.projectLink]}>
-                      {v.organization}
-                    </Link>
-                  ) : (
-                    <Text style={s.projectTitle}>{v.organization}</Text>
-                  )}
-                  <Text style={s.volRole}>
-                    {v.position} · {v.startDate} — {v.endDate ?? "Present"}
-                  </Text>
-                  <View style={s.bulletList}>
-                    {bullets.map((b, i) => (
-                      <Text key={i} style={s.bullet}>{"•  "}{b}</Text>
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
-          </>
-        )}
 
         {/* Education */}
         <Text style={s.sectionTitle}>Education</Text>

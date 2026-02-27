@@ -79,7 +79,7 @@ export function Sidebar() {
           {collapsed ? (
             <Image src="/logo.svg" alt="Nomadically" width={32} height={32} priority style={{ objectFit: "contain" }} />
           ) : (
-            <Image src="/logo.svg" alt="Nomadically" width={196} height={40} priority />
+            <Image src="/logo.svg" alt="Nomadically" width={160} height={36} priority />
           )}
         </Link>
 

@@ -91,3 +91,125 @@ Many NoSQL databases relax ACID guarantees for better performance and scalabilit
   'intermediate',
   '["databases", "transactions", "consistency", "interviews"]'
 );
+INSERT INTO study_topics (category, topic, title, summary, body_md, difficulty, tags, created_at, updated_at)
+VALUES (
+  'db',
+  'foreign-key',
+  'Foreign Keys',
+  'A foreign key is a column (or set of columns) in one table that references the primary key of another table, enforcing referential integrity between related data.',
+  '## What is a Foreign Key?
+
+A **foreign key** is a constraint that links a column in one table (the *child* table) to the primary key (or unique key) of another table (the *parent* table). It enforces **referential integrity** — the database guarantees that a referenced row actually exists.
+
+```sql
+CREATE TABLE orders (
+  id       INTEGER PRIMARY KEY,
+  user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  total    DECIMAL(10,2)
+);
+```
+
+---
+
+## Why They Matter
+
+| Without FK | With FK |
+|---|---|
+| Orphaned rows accumulate silently | DB rejects inserts/updates that violate the constraint |
+| Application code must enforce consistency | Constraint enforced at the storage layer |
+| Bugs surface late (at query time) | Bugs surface immediately (at write time) |
+
+---
+
+## Referential Actions
+
+What happens when the parent row is deleted or updated:
+
+| Action | Behavior |
+|---|---|
+| `RESTRICT` / `NO ACTION` | Reject the delete/update if child rows exist (default) |
+| `CASCADE` | Automatically delete/update child rows |
+| `SET NULL` | Set FK column to NULL in child rows |
+| `SET DEFAULT` | Set FK column to its default value |
+
+```sql
+-- Cascade delete: removing a user deletes their posts too
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+-- Set null: removing a category un-assigns its products
+FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+```
+
+---
+
+## Composite Foreign Keys
+
+A FK can span multiple columns when the parent has a composite primary key:
+
+```sql
+CREATE TABLE order_items (
+  order_id   INTEGER,
+  product_id INTEGER,
+  qty        INTEGER,
+  PRIMARY KEY (order_id, product_id),
+  FOREIGN KEY (order_id, product_id) REFERENCES inventory(order_id, product_id)
+);
+```
+
+---
+
+## Indexing FKs
+
+Foreign key columns should almost always be indexed — without an index, every parent delete triggers a full table scan of the child table.
+
+```sql
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+```
+
+Most databases (PostgreSQL, MySQL) do NOT automatically create an index on FK columns. SQLite does not enforce FK constraints unless `PRAGMA foreign_keys = ON` is set.
+
+---
+
+## SQLite / D1 Gotcha
+
+SQLite parses FK syntax but **does not enforce it by default**:
+
+```sql
+PRAGMA foreign_keys = ON;  -- must be set per connection
+```
+
+In Cloudflare D1, enable this pragma at the start of each connection if you rely on FK constraints.
+
+---
+
+## Common Interview Questions
+
+1. **What is referential integrity?** The guarantee that a FK value always points to an existing parent row (or is NULL).
+2. **FK vs JOIN** — A FK enforces a relationship; a JOIN uses it. You can JOIN without a FK, but the FK makes the relationship explicit and safe.
+3. **Can a FK reference a non-PK column?** Yes — it must reference a column with a `UNIQUE` constraint.
+4. **Circular FKs** — Two tables can reference each other, but inserting requires deferrable constraints or inserting NULLs first.
+5. **Performance** — FKs add a lookup cost on every write to the child table. Always index the FK column.
+
+---
+
+## Quick Reference
+
+```sql
+-- Inline FK declaration
+user_id INTEGER NOT NULL REFERENCES users(id)
+
+-- Table-level constraint with action
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+
+-- Add FK to existing table (PostgreSQL/MySQL)
+ALTER TABLE orders ADD CONSTRAINT fk_orders_user
+  FOREIGN KEY (user_id) REFERENCES users(id);
+
+-- Check for orphaned rows
+SELECT * FROM orders WHERE user_id NOT IN (SELECT id FROM users);
+```',
+  'intermediate',
+  '["referential integrity","constraints","SQL","relational databases","indexes","SQLite"]',
+  datetime('now'),
+  datetime('now')
+);

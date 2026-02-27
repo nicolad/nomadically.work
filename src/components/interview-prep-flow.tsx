@@ -26,6 +26,8 @@ import { GraphTooltip, type TooltipData } from "@/components/prep/GraphTooltip";
 // Map known study topics to their prep pages: key is lowercase label, value is the path
 const TOPIC_PREP_URLS: Record<string, string> = {
   acid: "/study/db/acid",
+  "foreign key": "/study/db/foreign-key",
+  "foreign keys": "/study/db/foreign-key",
 };
 
 // --- Status helpers ---

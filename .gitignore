@@ -71,7 +71,6 @@ scripts/*.log
 # workspace runtime files
 workspace/*
 !workspace/.gitkeep
-!src/workspace/skills/
 src/workspace/skills/*
 !src/workspace/skills/*.md
 results/*.json
@@ -86,5 +85,4 @@ results/*.json
 .claude/settings.local.json
 
 # Rust build artifacts
-/target/
-workers/*/target/
+**/target/

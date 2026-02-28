@@ -1386,6 +1386,7 @@ export type Query = {
   prompts: Array<RegisteredPrompt>;
   resendEmail: Maybe<ResendEmailDetail>;
   resumeStatus: Maybe<ResumeStatus>;
+  studyCategories: Array<Scalars['String']['output']>;
   studyTopic: Maybe<StudyTopic>;
   studyTopics: Array<StudyTopic>;
   textToSql: TextToSqlResult;

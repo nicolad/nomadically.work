@@ -1,5 +1,5 @@
 import type { GraphQLContext } from "../context";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { studyTopics, studyConceptExplanations } from "@/db/schema";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
@@ -51,6 +51,14 @@ export const studyTopicResolvers = {
         .select()
         .from(studyTopics)
         .where(eq(studyTopics.category, args.category));
+    },
+
+    studyCategories: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      const rows = await context.db
+        .selectDistinct({ category: studyTopics.category })
+        .from(studyTopics)
+        .orderBy(sql`${studyTopics.category} asc`);
+      return rows.map((r) => r.category);
     },
   },
 

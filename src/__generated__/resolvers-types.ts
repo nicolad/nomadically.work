@@ -1389,6 +1389,7 @@ export type Query = {
   prompts: Array<RegisteredPrompt>;
   resendEmail: Maybe<ResendEmailDetail>;
   resumeStatus: Maybe<ResumeStatus>;
+  studyCategories: Array<Scalars['String']['output']>;
   studyTopic: Maybe<StudyTopic>;
   studyTopics: Array<StudyTopic>;
   textToSql: TextToSqlResult;
@@ -2898,6 +2899,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   prompts?: Resolver<Array<ResolversTypes['RegisteredPrompt']>, ParentType, ContextType>;
   resendEmail?: Resolver<Maybe<ResolversTypes['ResendEmailDetail']>, ParentType, ContextType, RequireFields<QueryResendEmailArgs, 'resendId'>>;
   resumeStatus?: Resolver<Maybe<ResolversTypes['ResumeStatus']>, ParentType, ContextType, RequireFields<QueryResumeStatusArgs, 'email'>>;
+  studyCategories?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   studyTopic?: Resolver<Maybe<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<QueryStudyTopicArgs, 'category' | 'topic'>>;
   studyTopics?: Resolver<Array<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<QueryStudyTopicsArgs, 'category'>>;
   textToSql?: Resolver<ResolversTypes['TextToSqlResult'], ParentType, ContextType, RequireFields<QueryTextToSqlArgs, 'question'>>;

@@ -17,7 +17,9 @@ export function StudyConceptToolbar({
 }: StudyConceptToolbarProps) {
   if (!selectedText || !selectionRect) return null;
 
-  const top = selectionRect.top + window.scrollY - 50;
+  // selectionRect is viewport-relative (getBoundingClientRect); fixed positioning
+  // uses the same coordinate space, so no scroll offset needed.
+  const top = selectionRect.top - 50;
   const left = selectionRect.left + selectionRect.width / 2;
 
   return (

@@ -1,3 +1,7 @@
+query StudyCategories {
+  studyCategories
+}
+
 query StudyTopic($category: String!, $topic: String!) {
   studyTopic(category: $category, topic: $topic) {
     id

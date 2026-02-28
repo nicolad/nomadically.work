@@ -21,6 +21,7 @@ type StudyConceptExplanation {
 extend type Query {
   studyTopic(category: String!, topic: String!): StudyTopic
   studyTopics(category: String!): [StudyTopic!]!
+  studyCategories: [String!]!
 }
 
 extend type Mutation {

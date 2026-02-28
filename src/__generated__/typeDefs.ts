@@ -1023,6 +1023,7 @@ type Query {
   prompts: [RegisteredPrompt!]!
   resendEmail(resendId: String!): ResendEmailDetail
   resumeStatus(email: String!): ResumeStatus
+  studyCategories: [String!]!
   studyTopic(category: String!, topic: String!): StudyTopic
   studyTopics(category: String!): [StudyTopic!]!
   textToSql(question: String!): TextToSqlResult!

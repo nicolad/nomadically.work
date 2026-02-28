@@ -1389,6 +1389,7 @@ export type Query = {
   prompts: Array<RegisteredPrompt>;
   resendEmail: Maybe<ResendEmailDetail>;
   resumeStatus: Maybe<ResumeStatus>;
+  studyCategories: Array<Scalars['String']['output']>;
   studyTopic: Maybe<StudyTopic>;
   studyTopics: Array<StudyTopic>;
   textToSql: TextToSqlResult;
@@ -2461,6 +2462,11 @@ export type AskAboutResumeQueryVariables = Exact<{
 
 
 export type AskAboutResumeQuery = { __typename?: 'Query', askAboutResume: { __typename?: 'ResumeAnswer', answer: string, context_count: number } | null };
+
+export type StudyCategoriesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type StudyCategoriesQuery = { __typename?: 'Query', studyCategories: Array<string> };
 
 export type StudyTopicQueryVariables = Exact<{
   category: Scalars['String']['input'];
@@ -6567,6 +6573,46 @@ export type AskAboutResumeQueryHookResult = ReturnType<typeof useAskAboutResumeQ
 export type AskAboutResumeLazyQueryHookResult = ReturnType<typeof useAskAboutResumeLazyQuery>;
 export type AskAboutResumeSuspenseQueryHookResult = ReturnType<typeof useAskAboutResumeSuspenseQuery>;
 export type AskAboutResumeQueryResult = Apollo.QueryResult<AskAboutResumeQuery, AskAboutResumeQueryVariables>;
+export const StudyCategoriesDocument = gql`
+    query StudyCategories {
+  studyCategories
+}
+    `;
+
+/**
+ * __useStudyCategoriesQuery__
+ *
+ * To run a query within a React component, call `useStudyCategoriesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useStudyCategoriesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useStudyCategoriesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useStudyCategoriesQuery(baseOptions?: Apollo.QueryHookOptions<StudyCategoriesQuery, StudyCategoriesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<StudyCategoriesQuery, StudyCategoriesQueryVariables>(StudyCategoriesDocument, options);
+      }
+export function useStudyCategoriesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<StudyCategoriesQuery, StudyCategoriesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<StudyCategoriesQuery, StudyCategoriesQueryVariables>(StudyCategoriesDocument, options);
+        }
+// @ts-ignore
+export function useStudyCategoriesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<StudyCategoriesQuery, StudyCategoriesQueryVariables>): Apollo.UseSuspenseQueryResult<StudyCategoriesQuery, StudyCategoriesQueryVariables>;
+export function useStudyCategoriesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StudyCategoriesQuery, StudyCategoriesQueryVariables>): Apollo.UseSuspenseQueryResult<StudyCategoriesQuery | undefined, StudyCategoriesQueryVariables>;
+export function useStudyCategoriesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StudyCategoriesQuery, StudyCategoriesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<StudyCategoriesQuery, StudyCategoriesQueryVariables>(StudyCategoriesDocument, options);
+        }
+export type StudyCategoriesQueryHookResult = ReturnType<typeof useStudyCategoriesQuery>;
+export type StudyCategoriesLazyQueryHookResult = ReturnType<typeof useStudyCategoriesLazyQuery>;
+export type StudyCategoriesSuspenseQueryHookResult = ReturnType<typeof useStudyCategoriesSuspenseQuery>;
+export type StudyCategoriesQueryResult = Apollo.QueryResult<StudyCategoriesQuery, StudyCategoriesQueryVariables>;
 export const StudyTopicDocument = gql`
     query StudyTopic($category: String!, $topic: String!) {
   studyTopic(category: $category, topic: $topic) {

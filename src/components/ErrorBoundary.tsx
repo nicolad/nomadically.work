@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Box, Button, Callout, Container, Heading, Text } from "@radix-ui/themes";
+import { Box, Button, Container, Heading, Text } from "@radix-ui/themes";
 
 interface Props {
   children: ReactNode;
@@ -59,21 +59,17 @@ export class ErrorBoundary extends Component<Props, State> {
       // Default error UI
       return (
         <Container size="2" style={{ padding: "24px" }}>
-          <Callout.Root color="red" role="alert">
-            <Callout.Content>
-              <Heading size="5" mb="2">
-                Something went wrong
-              </Heading>
-              <Text size="2" as="p" mb="3">
-                {this.state.error?.message || "An unexpected error occurred"}
-              </Text>
-              <Box style={{ marginTop: "16px" }}>
-                <Button onClick={this.reset} variant="solid">
-                  Try again
-                </Button>
-              </Box>
-            </Callout.Content>
-          </Callout.Root>
+          <Box role="alert" p="4" style={{ borderRadius: 8, border: "1px solid var(--red-6)", backgroundColor: "var(--red-2)" }}>
+            <Heading size="5" mb="2">Something went wrong</Heading>
+            <Text size="2" as="p" mb="3">
+              {this.state.error?.message || "An unexpected error occurred"}
+            </Text>
+            <Box style={{ marginTop: "16px" }}>
+              <Button onClick={this.reset} variant="solid">
+                Try again
+              </Button>
+            </Box>
+          </Box>
         </Container>
       );
     }

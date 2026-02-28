@@ -57,6 +57,78 @@ pub fn define_tools() -> Vec<rig_compat::ToolDefinition> {
                 },
             ],
         },
+        rig_compat::ToolDefinition {
+            name: "analyze_tech_stack".into(),
+            description: "Extract tech stack (languages, frameworks, infra, AI/ML) from job text".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "score_remote_eu".into(),
+            description: "Score a job's remote-EU compatibility (0-100) with positive signals and red flags".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "extract_agentic_patterns".into(),
+            description: "Detect agentic/AI coding patterns (RAG, tool use, agents, prompt engineering) in job text".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "match_skills".into(),
+            description: "BM25 match job requirements against candidate skills profile, returning fit score".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "classify_seniority".into(),
+            description: "Classify job seniority level (entry/junior/mid/senior/staff+) from description signals".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "detect_ats_provider".into(),
+            description: "Detect ATS provider (Ashby, Greenhouse, Lever, etc.) from URL or text".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "url".into(), description: "URL or text containing ATS provider indicators".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "extract_salary_signals".into(),
+            description: "Extract salary, compensation, equity, and benefits signals from job text".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "score_company_culture".into(),
+            description: "Score engineering culture (async-first, testing, autonomy, learning) from job text".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "generate_application_brief".into(),
+            description: "Generate comprehensive application brief combining all analysis tools".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+                rig_compat::ToolParam { name: "job_title".into(), description: "Job title".into(), r#type: "string".into(), required: false },
+                rig_compat::ToolParam { name: "company".into(), description: "Company name".into(), r#type: "string".into(), required: false },
+            ],
+        },
+        rig_compat::ToolDefinition {
+            name: "rank_job_fit".into(),
+            description: "Composite scoring pipeline ranking overall job fit (remote-EU, skills, agentic, culture)".into(),
+            parameters: vec![
+                rig_compat::ToolParam { name: "text".into(), description: "Job description text".into(), r#type: "string".into(), required: true },
+            ],
+        },
     ]
 }
 
@@ -116,6 +188,67 @@ pub fn build_tool_registry() -> rig_compat::ToolRegistry {
                 "params": { "crawl_id": crawl_id, "pages_per_run": pages, "provider": provider },
             }))
         },
+    );
+
+    // ── Agent analysis tools ───────────────────────────────────────
+    registry.register(
+        "analyze_tech_stack",
+        "Extract tech stack (languages, frameworks, infra, AI/ML) from job text. Args: {text: string}",
+        |args| crate::agents::analyze_tech_stack(args),
+    );
+
+    registry.register(
+        "score_remote_eu",
+        "Score remote-EU compatibility (0-100). Args: {text: string}",
+        |args| crate::agents::score_remote_eu(args),
+    );
+
+    registry.register(
+        "extract_agentic_patterns",
+        "Detect agentic/AI patterns in job text. Args: {text: string}",
+        |args| crate::agents::extract_agentic_patterns(args),
+    );
+
+    registry.register(
+        "match_skills",
+        "BM25 match job requirements against candidate skills. Args: {text: string}",
+        |args| crate::agents::match_skills(args),
+    );
+
+    registry.register(
+        "classify_seniority",
+        "Classify seniority level from job description. Args: {text: string}",
+        |args| crate::agents::classify_seniority(args),
+    );
+
+    registry.register(
+        "detect_ats_provider",
+        "Detect ATS provider from URL or text. Args: {url: string}",
+        |args| crate::agents::detect_ats_provider(args),
+    );
+
+    registry.register(
+        "extract_salary_signals",
+        "Extract salary, equity, and benefits signals. Args: {text: string}",
+        |args| crate::agents::extract_salary_signals(args),
+    );
+
+    registry.register(
+        "score_company_culture",
+        "Score engineering culture signals. Args: {text: string}",
+        |args| crate::agents::score_company_culture(args),
+    );
+
+    registry.register(
+        "generate_application_brief",
+        "Generate comprehensive application brief. Args: {text: string, job_title?: string, company?: string}",
+        |args| crate::agents::generate_application_brief(args),
+    );
+
+    registry.register(
+        "rank_job_fit",
+        "Composite scoring pipeline for overall job fit. Args: {text: string}",
+        |args| crate::agents::rank_job_fit(args),
     );
 
     registry

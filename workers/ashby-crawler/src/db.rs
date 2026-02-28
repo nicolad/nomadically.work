@@ -87,6 +87,36 @@ const MIGRATIONS: &[(&str, &str)] = &[
          WHERE external_id LIKE '%?%'
            AND source_kind = 'greenhouse'
     "),
+    ("0012_agent_analysis", "
+        CREATE TABLE IF NOT EXISTS job_agent_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_url TEXT NOT NULL,
+            job_title TEXT,
+            company_name TEXT,
+            tech_stack TEXT,
+            remote_eu_score INTEGER,
+            remote_eu_detail TEXT,
+            agentic_patterns TEXT,
+            agentic_score INTEGER,
+            skills_match TEXT,
+            skills_match_score INTEGER,
+            seniority TEXT,
+            seniority_level TEXT,
+            ats_provider TEXT,
+            salary_signals TEXT,
+            culture_score INTEGER,
+            culture_detail TEXT,
+            application_brief TEXT,
+            composite_fit_score INTEGER,
+            fit_recommendation TEXT,
+            fit_detail TEXT,
+            analyzed_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(job_url)
+        );
+        CREATE INDEX IF NOT EXISTS idx_job_agent_analysis_score ON job_agent_analysis(composite_fit_score DESC);
+        CREATE INDEX IF NOT EXISTS idx_job_agent_analysis_remote ON job_agent_analysis(remote_eu_score DESC);
+        CREATE INDEX IF NOT EXISTS idx_job_agent_analysis_recommendation ON job_agent_analysis(fit_recommendation);
+    "),
 ];
 
 pub async fn apply_pending_migrations(db: &D1Database) -> Result<()> {

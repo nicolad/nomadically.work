@@ -57,6 +57,13 @@ enum Command {
         #[arg(long)]
         api_key: Option<String>,
     },
+
+    /// Spawn 10 parallel agents to research application-prep topics for Plan A Technologies
+    Prep {
+        /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
+        #[arg(long)]
+        api_key: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -163,6 +170,22 @@ Research standards:
             info!("Starting agentic-coding study generation (20 parallel agents)");
             study::run(&api_key, &scholar, &d1).await?;
             info!("All topics saved to D1 — visit /study/agentic-coding");
+        }
+
+        Command::Prep { api_key } => {
+            let api_key = api_key
+                .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
+                .context("DEEPSEEK_API_KEY not set")?;
+
+            let scholar = SemanticScholarClient::new(
+                std::env::var("SEMANTIC_SCHOLAR_API_KEY").ok().as_deref(),
+            );
+
+            let d1 = D1Client::from_env()?;
+
+            info!("Starting application-prep study generation (10 parallel agents)");
+            study::run_prep(&api_key, &scholar, &d1).await?;
+            info!("All topics saved to D1 — visit /study/application-prep");
         }
     }
 

@@ -10,6 +10,7 @@ mod db;
 mod enrichment;
 mod search;
 mod tools;
+mod agents;
 mod ashby;
 mod greenhouse;
 mod workable;
@@ -1163,6 +1164,247 @@ async fn handle_enhance_batch(mut req: Request, ctx: RouteContext<()>) -> Result
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// AGENT ANALYSIS HANDLERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// POST /analyze — Run all 10 agent tools on a job posting, store results in D1
+async fn handle_analyze(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db_handle = ctx.env.d1("DB")?;
+    let body: serde_json::Value = req.json().await
+        .map_err(|e| worker::Error::from(format!("Invalid JSON: {e}")))?;
+
+    let text = body.get("text").and_then(|v| v.as_str())
+        .ok_or_else(|| worker::Error::from("Missing 'text' field"))?;
+    let job_url = body.get("job_url").and_then(|v| v.as_str()).unwrap_or("");
+    let job_title = body.get("job_title").and_then(|v| v.as_str()).unwrap_or("");
+    let company = body.get("company").and_then(|v| v.as_str()).unwrap_or("");
+
+    let input = serde_json::json!({"text": text, "job_title": job_title, "company": company, "url": job_url});
+
+    let tech_stack = agents::analyze_tech_stack(input.clone()).unwrap_or_default();
+    let remote_eu = agents::score_remote_eu(input.clone()).unwrap_or_default();
+    let agentic = agents::extract_agentic_patterns(input.clone()).unwrap_or_default();
+    let skills = agents::match_skills(input.clone()).unwrap_or_default();
+    let seniority = agents::classify_seniority(input.clone()).unwrap_or_default();
+    let ats = agents::detect_ats_provider(input.clone()).unwrap_or_default();
+    let salary = agents::extract_salary_signals(input.clone()).unwrap_or_default();
+    let culture = agents::score_company_culture(input.clone()).unwrap_or_default();
+    let brief = agents::generate_application_brief(input.clone()).unwrap_or_default();
+    let fit = agents::rank_job_fit(input.clone()).unwrap_or_default();
+
+    let remote_score = remote_eu.get("score").and_then(|v| v.as_i64()).unwrap_or(0);
+    let agentic_score = agentic.get("agentic_score").and_then(|v| v.as_i64()).unwrap_or(0);
+    let skills_score = skills.get("fit_score").and_then(|v| v.as_i64()).unwrap_or(0);
+    let seniority_level = seniority.get("level").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+    let culture_score_val = culture.get("culture_score").and_then(|v| v.as_i64()).unwrap_or(0);
+    let composite_score = fit.get("composite_score").and_then(|v| v.as_i64()).unwrap_or(0);
+    let recommendation = fit.get("recommendation").and_then(|v| v.as_str()).unwrap_or("skip").to_string();
+
+    db_handle.prepare(
+        "INSERT OR REPLACE INTO job_agent_analysis (job_url, job_title, company_name, tech_stack, remote_eu_score, remote_eu_detail, agentic_patterns, agentic_score, skills_match, skills_match_score, seniority, seniority_level, ats_provider, salary_signals, culture_score, culture_detail, application_brief, composite_fit_score, fit_recommendation, fit_detail, analyzed_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, datetime('now'))"
+    )
+    .bind(&[
+        job_url.into(),
+        job_title.into(),
+        company.into(),
+        serde_json::to_string(&tech_stack).unwrap_or_default().into(),
+        (remote_score as f64).into(),
+        serde_json::to_string(&remote_eu).unwrap_or_default().into(),
+        serde_json::to_string(&agentic).unwrap_or_default().into(),
+        (agentic_score as f64).into(),
+        serde_json::to_string(&skills).unwrap_or_default().into(),
+        (skills_score as f64).into(),
+        serde_json::to_string(&seniority).unwrap_or_default().into(),
+        seniority_level.into(),
+        serde_json::to_string(&ats).unwrap_or_default().into(),
+        serde_json::to_string(&salary).unwrap_or_default().into(),
+        (culture_score_val as f64).into(),
+        serde_json::to_string(&culture).unwrap_or_default().into(),
+        serde_json::to_string(&brief).unwrap_or_default().into(),
+        (composite_score as f64).into(),
+        recommendation.into(),
+        serde_json::to_string(&fit).unwrap_or_default().into(),
+    ])?
+    .run().await?;
+
+    Response::from_json(&ApiResponse::success(serde_json::json!({
+        "job_url": job_url,
+        "job_title": job_title,
+        "company": company,
+        "analysis": {
+            "tech_stack": tech_stack,
+            "remote_eu": remote_eu,
+            "agentic_patterns": agentic,
+            "skills_match": skills,
+            "seniority": seniority,
+            "ats_provider": ats,
+            "salary_signals": salary,
+            "company_culture": culture,
+            "application_brief": brief,
+            "job_fit": fit,
+        }
+    })))
+}
+
+/// GET /analysis — Query stored analyses. ?job_url=... or ?min_score=60&limit=10
+async fn handle_get_analysis(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db_handle = ctx.env.d1("DB")?;
+    let url = req.url()?;
+    let params: HashMap<String, String> = url.query_pairs().into_owned().collect();
+
+    if let Some(job_url) = params.get("job_url") {
+        let row = db_handle
+            .prepare("SELECT * FROM job_agent_analysis WHERE job_url = ?1")
+            .bind(&[job_url.as_str().into()])?
+            .first::<serde_json::Value>(None)
+            .await?;
+
+        match row {
+            Some(r) => Response::from_json(&ApiResponse::success(r)),
+            None => Response::from_json(&ApiResponse::success(serde_json::json!({
+                "found": false,
+                "job_url": job_url,
+            }))),
+        }
+    } else {
+        let min_score: i64 = params.get("min_score")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let limit: u32 = params.get("limit")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(10)
+            .min(100);
+        let recommendation = params.get("recommendation");
+
+        let (sql, binds): (String, Vec<JsValue>) = if let Some(rec) = recommendation {
+            (
+                "SELECT * FROM job_agent_analysis WHERE composite_fit_score >= ?1 AND fit_recommendation = ?2 ORDER BY composite_fit_score DESC LIMIT ?3".into(),
+                vec![(min_score as f64).into(), rec.as_str().into(), (limit as f64).into()],
+            )
+        } else {
+            (
+                "SELECT * FROM job_agent_analysis WHERE composite_fit_score >= ?1 ORDER BY composite_fit_score DESC LIMIT ?2".into(),
+                vec![(min_score as f64).into(), (limit as f64).into()],
+            )
+        };
+
+        let rows = db_handle
+            .prepare(&sql)
+            .bind(&binds)?
+            .all()
+            .await?
+            .results::<serde_json::Value>()?;
+
+        Response::from_json(&ApiResponse::success(serde_json::json!({
+            "count": rows.len(),
+            "analyses": rows,
+        })))
+    }
+}
+
+/// POST /analyze-batch — Analyze multiple jobs. Body: { "jobs": [{ "text", "job_url", "job_title", "company" }] }
+async fn handle_analyze_batch(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db_handle = ctx.env.d1("DB")?;
+    let body: serde_json::Value = req.json().await
+        .map_err(|e| worker::Error::from(format!("Invalid JSON: {e}")))?;
+
+    let jobs = body.get("jobs").and_then(|v| v.as_array())
+        .ok_or_else(|| worker::Error::from("Missing 'jobs' array"))?;
+
+    let mut results = Vec::with_capacity(jobs.len());
+    let mut n_ok = 0u32;
+    let mut n_err = 0u32;
+
+    for job in jobs {
+        let text = match job.get("text").and_then(|v| v.as_str()) {
+            Some(t) => t,
+            None => {
+                n_err += 1;
+                results.push(serde_json::json!({"ok": false, "error": "Missing 'text'"}));
+                continue;
+            }
+        };
+        let job_url = job.get("job_url").and_then(|v| v.as_str()).unwrap_or("");
+        let job_title = job.get("job_title").and_then(|v| v.as_str()).unwrap_or("");
+        let company = job.get("company").and_then(|v| v.as_str()).unwrap_or("");
+
+        let input = serde_json::json!({"text": text, "job_title": job_title, "company": company, "url": job_url});
+
+        let tech_stack = agents::analyze_tech_stack(input.clone()).unwrap_or_default();
+        let remote_eu = agents::score_remote_eu(input.clone()).unwrap_or_default();
+        let agentic = agents::extract_agentic_patterns(input.clone()).unwrap_or_default();
+        let skills = agents::match_skills(input.clone()).unwrap_or_default();
+        let seniority = agents::classify_seniority(input.clone()).unwrap_or_default();
+        let ats = agents::detect_ats_provider(input.clone()).unwrap_or_default();
+        let salary = agents::extract_salary_signals(input.clone()).unwrap_or_default();
+        let culture = agents::score_company_culture(input.clone()).unwrap_or_default();
+        let brief = agents::generate_application_brief(input.clone()).unwrap_or_default();
+        let fit = agents::rank_job_fit(input.clone()).unwrap_or_default();
+
+        let remote_score = remote_eu.get("score").and_then(|v| v.as_i64()).unwrap_or(0);
+        let agentic_score = agentic.get("agentic_score").and_then(|v| v.as_i64()).unwrap_or(0);
+        let skills_score = skills.get("fit_score").and_then(|v| v.as_i64()).unwrap_or(0);
+        let seniority_level = seniority.get("level").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+        let culture_score_val = culture.get("culture_score").and_then(|v| v.as_i64()).unwrap_or(0);
+        let composite_score = fit.get("composite_score").and_then(|v| v.as_i64()).unwrap_or(0);
+        let recommendation = fit.get("recommendation").and_then(|v| v.as_str()).unwrap_or("skip").to_string();
+
+        let db_result = db_handle.prepare(
+            "INSERT OR REPLACE INTO job_agent_analysis (job_url, job_title, company_name, tech_stack, remote_eu_score, remote_eu_detail, agentic_patterns, agentic_score, skills_match, skills_match_score, seniority, seniority_level, ats_provider, salary_signals, culture_score, culture_detail, application_brief, composite_fit_score, fit_recommendation, fit_detail, analyzed_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, datetime('now'))"
+        )
+        .bind(&[
+            job_url.into(),
+            job_title.into(),
+            company.into(),
+            serde_json::to_string(&tech_stack).unwrap_or_default().into(),
+            (remote_score as f64).into(),
+            serde_json::to_string(&remote_eu).unwrap_or_default().into(),
+            serde_json::to_string(&agentic).unwrap_or_default().into(),
+            (agentic_score as f64).into(),
+            serde_json::to_string(&skills).unwrap_or_default().into(),
+            (skills_score as f64).into(),
+            serde_json::to_string(&seniority).unwrap_or_default().into(),
+            seniority_level.into(),
+            serde_json::to_string(&ats).unwrap_or_default().into(),
+            serde_json::to_string(&salary).unwrap_or_default().into(),
+            (culture_score_val as f64).into(),
+            serde_json::to_string(&culture).unwrap_or_default().into(),
+            serde_json::to_string(&brief).unwrap_or_default().into(),
+            (composite_score as f64).into(),
+            recommendation.clone().into(),
+            serde_json::to_string(&fit).unwrap_or_default().into(),
+        ])?
+        .run().await;
+
+        match db_result {
+            Ok(_) => {
+                n_ok += 1;
+                results.push(serde_json::json!({
+                    "ok": true,
+                    "job_url": job_url,
+                    "composite_fit_score": composite_score,
+                    "fit_recommendation": recommendation,
+                }));
+            }
+            Err(e) => {
+                n_err += 1;
+                results.push(serde_json::json!({
+                    "ok": false,
+                    "job_url": job_url,
+                    "error": format!("{:?}", e),
+                }));
+            }
+        }
+    }
+
+    Response::from_json(&ApiResponse::success(serde_json::json!({
+        "analyzed": n_ok,
+        "errors": n_err,
+        "results": results,
+    })))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ROUTER
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1191,6 +1433,10 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/tools", handle_tools)
         // ATS batch enhancement
         .post_async("/enhance-batch", handle_enhance_batch)
+        // Agent analysis
+        .post_async("/analyze", handle_analyze)
+        .get_async("/analysis", handle_get_analysis)
+        .post_async("/analyze-batch", handle_analyze_batch)
         // Root
         .get("/", |_, _| {
             Response::from_json(&serde_json::json!({
@@ -1216,6 +1462,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 "cron_phases": {
                     "phase_1": "CC crawl → upsert companies (5 pages/provider/run, resumable)",
                     "phase_2": "Job sync → fetch jobs for 10 boards/provider/run",
+                },
+                "agent_endpoints": {
+                    "POST /analyze":       "Run 10 agent tools on a job posting. Body: {text, job_url, job_title?, company?}",
+                    "GET /analysis":       "Query stored analyses. ?job_url=... or ?min_score=60&limit=10&recommendation=",
+                    "POST /analyze-batch": "Batch analyze jobs. Body: {jobs: [{text, job_url, job_title?, company?}]}",
                 },
                 "rig_patterns": ["Bm25Index", "ResultPipeline", "SlugExtractor", "ToolRegistry", "ConcurrentRunner"],
             }))

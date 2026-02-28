@@ -181,16 +181,256 @@ pub const TOPICS: &[TopicDef] = &[
     },
 ];
 
+pub const APPLICATION_TOPICS: &[TopicDef] = &[
+    TopicDef {
+        slug: "cursor-workflow-mastery",
+        title: "Mastering Cursor IDE for Professional Development",
+        difficulty: "intermediate",
+        tags: &["cursor", "IDE", "ai-coding", "productivity"],
+        search_queries: &["Cursor IDE AI coding assistant", "AI-powered code editor productivity"],
+        prompt_focus: "How to use Cursor effectively as a primary development tool. Composer vs Chat vs Tab completion. Multi-file editing, codebase indexing, .cursorrules. Workflow patterns for senior engineers.",
+    },
+    TopicDef {
+        slug: "openai-agent-integration",
+        title: "Integrating OpenAI APIs into Production Applications",
+        difficulty: "advanced",
+        tags: &["OpenAI", "API", "production", "agents"],
+        search_queries: &["OpenAI API production integration", "GPT function calling production systems"],
+        prompt_focus: "Building production systems with OpenAI: structured outputs, function calling, streaming, error handling, rate limiting, cost management. Assistants API vs Chat Completions for agents.",
+    },
+    TopicDef {
+        slug: "fullstack-typescript-agents",
+        title: "Building Agentic TypeScript Fullstack Applications",
+        difficulty: "advanced",
+        tags: &["TypeScript", "fullstack", "agents", "Node.js"],
+        search_queries: &["TypeScript AI agent framework", "Node.js autonomous agent development"],
+        prompt_focus: "End-to-end TypeScript agent systems: Vercel AI SDK, LangChain.js, custom agent loops. Type-safe tool definitions, streaming responses, server actions for agent UIs.",
+    },
+    TopicDef {
+        slug: "react-ai-patterns",
+        title: "React Patterns for AI-Powered User Interfaces",
+        difficulty: "intermediate",
+        tags: &["React", "AI", "UI", "streaming"],
+        search_queries: &["React AI user interface patterns", "streaming LLM responses React components"],
+        prompt_focus: "React patterns for AI apps: streaming text display, optimistic UI for agent actions, chat interfaces, tool-use visualization. useChat/useCompletion hooks. Server components for AI.",
+    },
+    TopicDef {
+        slug: "cloudflare-worker-agents",
+        title: "Deploying AI Agents on Cloudflare Workers",
+        difficulty: "advanced",
+        tags: &["Cloudflare", "Workers", "edge", "AI"],
+        search_queries: &["Cloudflare Workers AI deployment", "edge computing AI agents serverless"],
+        prompt_focus: "Running AI workloads on CF Workers: Workers AI, Vectorize, D1 for agent state, Queues for async agent tasks. WASM constraints, cold start optimization, KV for caching.",
+    },
+    TopicDef {
+        slug: "testing-ai-applications",
+        title: "Testing Strategies for AI-Integrated Applications",
+        difficulty: "intermediate",
+        tags: &["testing", "Jest", "Playwright", "AI", "evaluation"],
+        search_queries: &["testing AI applications strategies", "LLM integration testing evaluation"],
+        prompt_focus: "Testing AI features: mocking LLM responses in Jest, E2E testing AI flows with Playwright, evaluation-driven development, snapshot testing for prompts, deterministic vs stochastic testing.",
+    },
+    TopicDef {
+        slug: "mongodb-vector-search",
+        title: "MongoDB Atlas Vector Search for AI Applications",
+        difficulty: "intermediate",
+        tags: &["MongoDB", "vector-search", "RAG", "embeddings"],
+        search_queries: &["MongoDB Atlas vector search", "vector database MongoDB AI applications"],
+        prompt_focus: "Using MongoDB Atlas as a vector DB: $vectorSearch aggregation, embedding storage, hybrid search (text + vector), index management. Comparison with dedicated vector DBs for RAG.",
+    },
+    TopicDef {
+        slug: "microservice-agent-orchestration",
+        title: "Orchestrating AI Agents Across Microservices",
+        difficulty: "advanced",
+        tags: &["microservices", "orchestration", "agents", "distributed"],
+        search_queries: &["microservice AI agent orchestration", "distributed agent systems architecture"],
+        prompt_focus: "Distributing agent workloads across services: event-driven agent coordination, message queues for tool execution, shared state management, service mesh for agent communication.",
+    },
+    TopicDef {
+        slug: "state-management-ai",
+        title: "State Management Patterns for AI-Heavy React Apps",
+        difficulty: "intermediate",
+        tags: &["state-management", "Zustand", "Redux", "React", "AI"],
+        search_queries: &["React state management AI applications", "Zustand Redux AI chat state"],
+        prompt_focus: "Managing complex AI state in React: conversation history, streaming responses, tool call results, optimistic updates. Zustand vs Redux for AI apps. Persisting agent memory client-side.",
+    },
+    TopicDef {
+        slug: "production-llm-deployment",
+        title: "Deploying LLMs in Production: Cost, Latency, Reliability",
+        difficulty: "advanced",
+        tags: &["production", "deployment", "LLM", "infrastructure"],
+        search_queries: &["LLM production deployment optimization", "large language model serving infrastructure"],
+        prompt_focus: "Production LLM ops: model routing for cost (cheap-first escalation), caching strategies, fallback chains, load balancing, token budgets, latency optimization, monitoring and alerting.",
+    },
+];
+
+pub async fn run_prep(api_key: &str, _scholar: &SemanticScholarClient, d1: &D1Client) -> Result<()> {
+    let api_key = Arc::new(api_key.to_string());
+    let d1 = Arc::new(d1.clone());
+
+    info!("Spawning {} parallel DeepSeek agents (no Semantic Scholar)…", APPLICATION_TOPICS.len());
+
+    let mut handles = Vec::with_capacity(APPLICATION_TOPICS.len());
+
+    for (i, topic_def) in APPLICATION_TOPICS.iter().enumerate() {
+        let api_key = Arc::clone(&api_key);
+        let d1 = Arc::clone(&d1);
+
+        let handle = tokio::spawn(async move {
+            let agent_id = i + 1;
+            info!(agent = agent_id, topic = topic_def.slug, "Prep agent starting (direct, no tools)");
+
+            match run_direct_agent(agent_id, topic_def, &api_key).await {
+                Ok(row) => {
+                    match d1.insert_study_topic(&row).await {
+                        Ok(()) => {
+                            info!(agent = agent_id, topic = topic_def.slug, "Saved to D1");
+                            Ok(row)
+                        }
+                        Err(e) => {
+                            error!(agent = agent_id, topic = topic_def.slug, "D1 insert failed: {e}");
+                            Err(e)
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(agent = agent_id, topic = topic_def.slug, "Prep agent failed: {e}");
+                    Err(e)
+                }
+            }
+        });
+
+        handles.push((topic_def.slug, handle));
+    }
+
+    let mut successes = 0;
+    let mut failures = 0;
+
+    for (slug, handle) in handles {
+        match handle.await {
+            Ok(Ok(_)) => successes += 1,
+            Ok(Err(e)) => {
+                error!(topic = slug, "Failed: {e}");
+                failures += 1;
+            }
+            Err(e) => {
+                error!(topic = slug, "Task panicked: {e}");
+                failures += 1;
+            }
+        }
+    }
+
+    info!(successes, failures, total = APPLICATION_TOPICS.len(), "All prep agents complete");
+
+    if failures > 0 {
+        anyhow::bail!("{failures}/{} prep agents failed", APPLICATION_TOPICS.len());
+    }
+
+    Ok(())
+}
+
+/// Run a single agent WITHOUT Semantic Scholar tools — pure DeepSeek generation.
+async fn run_direct_agent(
+    _agent_id: usize,
+    topic_def: &TopicDef,
+    api_key: &str,
+) -> Result<StudyTopicRow> {
+    let client = Client::new(api_key);
+
+    let preamble = format!(
+        r#"You are a senior technical writer creating practical study material for a software engineer preparing for a Fullstack Developer interview at Plan A Technologies.
+
+The role requires: React, TypeScript/Node.js, Cloudflare/AWS, MongoDB/PostgreSQL, Cursor IDE as primary tool, OpenAI models for agentic workflows, Jest/Playwright testing, microservices architecture.
+
+Your task: Write a comprehensive, practical study guide on "{title}".
+
+Write in this EXACT format — return ONLY the markdown body, no JSON wrapper:
+
+## Overview
+2-3 paragraphs explaining the concept clearly. What it is, why it matters for this role.
+
+## Key Concepts
+Bullet points of the core ideas, each with 1-2 sentence explanation.
+
+## How It Works
+Technical explanation with architecture diagrams in code blocks where helpful.
+
+## Practical Patterns
+3-4 concrete implementation patterns with code examples (TypeScript/React preferred).
+
+## Interview Talking Points
+5-6 points to discuss in an interview. Frame as "When asked about X, explain Y because Z."
+
+## Common Pitfalls
+3-4 mistakes engineers make. Be specific and blunt.
+
+## Hands-On Exercises
+2-3 practical exercises to build skill. Include acceptance criteria.
+
+Write at a senior engineer level. Be precise, avoid fluff. Focus on practical knowledge over theory."#,
+        title = topic_def.title,
+    );
+
+    let user_prompt = format!(
+        "Write a study guide on: **{title}**\n\nFocus: {focus}",
+        title = topic_def.title,
+        focus = topic_def.prompt_focus,
+    );
+
+    // No tools — direct DeepSeek generation
+    let agent = client
+        .agent("deepseek-chat")
+        .preamble(&preamble)
+        .build();
+
+    let body_md = agent
+        .prompt(user_prompt)
+        .await
+        .with_context(|| format!("agent failed for {}", topic_def.slug))?;
+
+    let summary = body_md
+        .lines()
+        .skip_while(|l| l.starts_with('#') || l.trim().is_empty())
+        .take_while(|l| !l.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let summary = if summary.len() > 300 {
+        format!("{}…", &summary[..297])
+    } else {
+        summary
+    };
+
+    Ok(StudyTopicRow {
+        category: "application-prep".into(),
+        topic: topic_def.slug.into(),
+        title: topic_def.title.into(),
+        summary,
+        body_md,
+        difficulty: topic_def.difficulty.into(),
+        tags: topic_def.tags.iter().map(|s| s.to_string()).collect(),
+    })
+}
+
 pub async fn run(api_key: &str, scholar: &SemanticScholarClient, d1: &D1Client) -> Result<()> {
+    run_topics(TOPICS, "agentic-coding", api_key, scholar, d1).await
+}
+
+async fn run_topics(
+    topics: &'static [TopicDef],
+    category: &'static str,
+    api_key: &str,
+    scholar: &SemanticScholarClient,
+    d1: &D1Client,
+) -> Result<()> {
     let api_key = Arc::new(api_key.to_string());
     let scholar = Arc::new(scholar.clone());
     let d1 = Arc::new(d1.clone());
 
-    info!("Spawning {} parallel DeepSeek agents…", TOPICS.len());
+    info!("Spawning {} parallel DeepSeek agents (category: {})…", topics.len(), category);
 
-    let mut handles = Vec::with_capacity(TOPICS.len());
+    let mut handles = Vec::with_capacity(topics.len());
 
-    for (i, topic_def) in TOPICS.iter().enumerate() {
+    for (i, topic_def) in topics.iter().enumerate() {
         let api_key = Arc::clone(&api_key);
         let scholar = Arc::clone(&scholar);
         let d1 = Arc::clone(&d1);
@@ -199,7 +439,7 @@ pub async fn run(api_key: &str, scholar: &SemanticScholarClient, d1: &D1Client) 
             let agent_id = i + 1;
             info!(agent = agent_id, topic = topic_def.slug, "Agent starting");
 
-            match run_single_agent(agent_id, topic_def, &api_key, &scholar).await {
+            match run_single_agent(agent_id, topic_def, category, &api_key, &scholar).await {
                 Ok(row) => {
                     match d1.insert_study_topic(&row).await {
                         Ok(()) => {
@@ -239,10 +479,10 @@ pub async fn run(api_key: &str, scholar: &SemanticScholarClient, d1: &D1Client) 
         }
     }
 
-    info!(successes, failures, total = TOPICS.len(), "All agents complete");
+    info!(successes, failures, total = topics.len(), "All agents complete");
 
     if failures > 0 {
-        anyhow::bail!("{failures}/{} agents failed", TOPICS.len());
+        anyhow::bail!("{failures}/{} agents failed", topics.len());
     }
 
     Ok(())
@@ -251,6 +491,7 @@ pub async fn run(api_key: &str, scholar: &SemanticScholarClient, d1: &D1Client) 
 async fn run_single_agent(
     _agent_id: usize,
     topic_def: &TopicDef,
+    category: &str,
     api_key: &str,
     scholar: &SemanticScholarClient,
 ) -> Result<StudyTopicRow> {
@@ -349,7 +590,7 @@ After researching, write the complete study guide following the format in your i
     };
 
     Ok(StudyTopicRow {
-        category: "agentic-coding".into(),
+        category: category.into(),
         topic: topic_def.slug.into(),
         title: topic_def.title.into(),
         summary,

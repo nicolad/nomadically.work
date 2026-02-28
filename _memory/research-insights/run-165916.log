@@ -1,0 +1,34 @@
+========================================
+PARALLEL RESEARCH AGENTS
+Started: Sat Feb 28 16:59:16 EET 2026
+========================================
+[r1] Starting: remote EU job classification
+[r2] Starting: ESCO skill taxonomy matching
+[r3] Starting: job posting deduplication
+[r4] Starting: resume job matching algorithms
+[r5] Starting: remote work sentiment analysis
+
+Waiting for 5 agents to complete...
+[2m2026-02-28T14:59:17.124241Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research context loaded [3mtopic[0m[2m=[0mremote EU job classification [3mfocus[0m[2m=[0m["EU job market", "remote-first detection", "location extraction"]
+[2m2026-02-28T14:59:17.124408Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research context loaded [3mtopic[0m[2m=[0mjob posting deduplication [3mfocus[0m[2m=[0m["near-duplicate detection", "entity resolution", "ATS aggregation"]
+[2m2026-02-28T14:59:17.124247Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research context loaded [3mtopic[0m[2m=[0mESCO skill taxonomy matching [3mfocus[0m[2m=[0m["skill normalization", "multilingual NLP", "job-resume matching"]
+[2m2026-02-28T14:59:17.124862Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research context loaded [3mtopic[0m[2m=[0mresume job matching algorithms [3mfocus[0m[2m=[0m["semantic similarity", "ranking", "embedding models"]
+[2m2026-02-28T14:59:17.124897Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research context loaded [3mtopic[0m[2m=[0mremote work sentiment analysis [3mfocus[0m[2m=[0m["job description signals", "company remote culture", "distributed teams"]
+[2m2026-02-28T14:59:17.128810Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Sending research context to DeepSeek Reasoner (may take 30–120s)…
+[2m2026-02-28T14:59:17.128840Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Sending research context to DeepSeek Reasoner (may take 30–120s)…
+[2m2026-02-28T14:59:17.128916Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Sending research context to DeepSeek Reasoner (may take 30–120s)…
+[2m2026-02-28T14:59:17.129071Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Sending research context to DeepSeek Reasoner (may take 30–120s)…
+[2m2026-02-28T14:59:17.129076Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Sending research context to DeepSeek Reasoner (may take 30–120s)…
+Error: DeepSeek agent call failed
+
+Caused by:
+    0: DeepSeek API returned an error status
+    1: HTTP status client error (400 Bad Request) for url (https://api.deepseek.com/v1/chat/completions)
+[2m2026-02-28T15:03:22.495344Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research complete (8233 chars)
+[2m2026-02-28T15:03:22.495746Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Insights written to "_memory/research-insights/r4-resume-job-matching-algorithms-150322.md"
+[2m2026-02-28T15:03:29.265233Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research complete (9827 chars)
+[2m2026-02-28T15:03:29.265596Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Insights written to "_memory/research-insights/r2-esco-skill-taxonomy-matching-150329.md"
+[2m2026-02-28T15:04:52.583456Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research complete (9316 chars)
+[2m2026-02-28T15:04:52.584561Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Insights written to "_memory/research-insights/r5-remote-work-sentiment-analysis-150452.md"
+[2m2026-02-28T15:05:02.790765Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Research complete (9034 chars)
+[2m2026-02-28T15:05:02.791066Z[0m [32m INFO[0m [2mresearch_agent[0m[2m:[0m Insights written to "_memory/research-insights/r3-job-posting-deduplication-150502.md"

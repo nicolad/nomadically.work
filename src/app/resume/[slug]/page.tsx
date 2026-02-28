@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import resumeData from "@/apollo/resolvers/resume/resume-data.json";
 import "./resume.css";
+import { sanitizeHtml } from "@/lib/html-sanitizer";
 
 const SLUGS: Record<string, typeof resumeData> = {
   vadim: resumeData,
@@ -74,7 +75,7 @@ export default async function ResumePdfPage({ params }: Props) {
                 <div className="company">{job.name}</div>
                 <div
                   className="summary"
-                  dangerouslySetInnerHTML={{ __html: job.summary }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.summary) }}
                 />
               </div>
             ))}
@@ -128,7 +129,7 @@ export default async function ResumePdfPage({ params }: Props) {
                   </div>
                   <div
                     className="summary"
-                    dangerouslySetInnerHTML={{ __html: v.summary }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(v.summary) }}
                   />
                 </div>
               ))}

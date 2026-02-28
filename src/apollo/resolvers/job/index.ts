@@ -14,6 +14,23 @@ import type {
   MutationResolvers,
 } from "@/__generated__/resolvers-types";
 
+/**
+ * Safely parse JSON strings with proper error handling and logging
+ */
+function safeJsonParse<T>(value: string | null | undefined, defaultValue: T): T {
+  if (!value) return defaultValue;
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.warn("[safeJsonParse] Failed to parse JSON:", {
+      error: error instanceof Error ? error.message : String(error),
+      valueLength: value?.length,
+      valuePreview: value?.substring(0, 100),
+    });
+    return defaultValue;
+  }
+}
+
 async function dispatchToReporter(payload: {
   jobId: number;
   reportedBy: string;
@@ -110,74 +127,36 @@ const Job: JobResolvers<GraphQLContext, Job> = {
   },
   metadata(parent) {
     if (!parent.metadata) return [];
-    try {
-      const parsed = JSON.parse(parent.metadata);
-      // Coerce non-string `value` fields to strings for GraphQL
-      return parsed.map((m: any) => ({
-        ...m,
-        value: m.value == null ? null : typeof m.value === 'string' ? m.value : JSON.stringify(m.value),
-      }));
-    } catch {
-      return [];
-    }
+    const parsed = safeJsonParse<any[]>(parent.metadata, []);
+    // Coerce non-string `value` fields to strings for GraphQL
+    return parsed.map((m: any) => ({
+      ...m,
+      value: m.value == null ? null : typeof m.value === 'string' ? m.value : JSON.stringify(m.value),
+    }));
   },
   departments(parent) {
-    if (!parent.departments) return [];
-    try {
-      return JSON.parse(parent.departments);
-    } catch {
-      return [];
-    }
+    return safeJsonParse(parent.departments, []);
   },
   offices(parent) {
-    if (!parent.offices) return [];
-    try {
-      return JSON.parse(parent.offices);
-    } catch {
-      return [];
-    }
+    return safeJsonParse(parent.offices, []);
   },
   questions(parent) {
-    if (!parent.questions) return [];
-    try {
-      return JSON.parse(parent.questions);
-    } catch {
-      return [];
-    }
+    return safeJsonParse(parent.questions, []);
   },
   location_questions(parent) {
-    if (!parent.location_questions) return [];
-    try {
-      return JSON.parse(parent.location_questions);
-    } catch {
-      return [];
-    }
+    return safeJsonParse(parent.location_questions, []);
   },
   compliance(parent) {
-    if (!parent.compliance) return [];
-    try {
-      return JSON.parse(parent.compliance);
-    } catch {
-      return [];
-    }
+    return safeJsonParse(parent.compliance, []);
   },
   demographic_questions(parent) {
     if (!parent.demographic_questions) return null;
-    try {
-      const parsed = JSON.parse(parent.demographic_questions);
-      if (Object.keys(parsed).length === 0) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
+    const parsed = safeJsonParse<any>(parent.demographic_questions, null);
+    if (!parsed || Object.keys(parsed).length === 0) return null;
+    return parsed;
   },
   data_compliance(parent) {
-    if (!parent.data_compliance) return [];
-    try {
-      return JSON.parse(parent.data_compliance);
-    } catch {
-      return [];
-    }
+    return safeJsonParse(parent.data_compliance, []);
   },
 
   // Ashby ATS field resolvers - read from individual columns
@@ -204,46 +183,38 @@ const Job: JobResolvers<GraphQLContext, Job> = {
   },
   ashby_secondary_locations(parent) {
     if (!parent.ashby_secondary_locations) return [];
-    try {
-      return typeof parent.ashby_secondary_locations === "string"
-        ? JSON.parse(parent.ashby_secondary_locations)
-        : parent.ashby_secondary_locations;
-    } catch {
-      return [];
+    if (typeof parent.ashby_secondary_locations !== "string") {
+      return parent.ashby_secondary_locations;
     }
+    return safeJsonParse(parent.ashby_secondary_locations, []);
   },
   ashby_compensation(parent) {
     if (!parent.ashby_compensation) return null;
-    try {
-      const parsed =
-        typeof parent.ashby_compensation === "string"
-          ? JSON.parse(parent.ashby_compensation)
-          : parent.ashby_compensation;
-      if (
-        !parsed ||
-        (!parsed.compensationTierSummary &&
-          !parsed.scrapeableCompensationSalarySummary &&
-          (!parsed.compensationTiers ||
-            parsed.compensationTiers.length === 0) &&
-          (!parsed.summaryComponents ||
-            parsed.summaryComponents.length === 0))
-      ) {
-        return null;
-      }
-      return parsed;
-    } catch {
+    const parsed = safeJsonParse<any>(
+      typeof parent.ashby_compensation === "string"
+        ? parent.ashby_compensation
+        : parent.ashby_compensation,
+      null
+    );
+    if (
+      !parsed ||
+      (!parsed.compensationTierSummary &&
+        !parsed.scrapeableCompensationSalarySummary &&
+        (!parsed.compensationTiers ||
+          parsed.compensationTiers.length === 0) &&
+        (!parsed.summaryComponents ||
+          parsed.summaryComponents.length === 0))
+    ) {
       return null;
     }
+    return parsed;
   },
   ashby_address(parent) {
     if (!parent.ashby_address) return null;
-    try {
-      return typeof parent.ashby_address === "string"
-        ? JSON.parse(parent.ashby_address)
-        : parent.ashby_address;
-    } catch {
-      return null;
+    if (typeof parent.ashby_address !== "string") {
+      return parent.ashby_address;
     }
+    return safeJsonParse(parent.ashby_address, null);
   },
 
   async skillMatch(parent, _args, context) {
@@ -252,7 +223,7 @@ const Job: JobResolvers<GraphQLContext, Job> = {
     const settings = await context.loaders.userSettings.load(context.userId);
 
     if (!settings?.preferred_skills) return null;
-    const preferredSkills: string[] = JSON.parse(settings.preferred_skills);
+    const preferredSkills: string[] = safeJsonParse(settings.preferred_skills, []);
     if (!preferredSkills.length) return null;
 
     const jobSkills = await context.loaders.jobSkills.load(parent.id);

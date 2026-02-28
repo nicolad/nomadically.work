@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { companies, atsBoards, companySnapshots } from "@/db/schema";
 import type { GraphQLContext } from "../context";
@@ -15,6 +15,12 @@ import type {
 /**
  * Enhanced company data mutation resolver
  * Triggers company data enhancement/enrichment using DeepSeek AI extraction
+ * 
+ * Note: D1 has limited transaction support. This function uses sequential operations
+ * with proper error handling. For production use with high concurrency, consider:
+ * 1. Using Cloudflare D1's new transaction API when available
+ * 2. Implementing optimistic locking with version numbers
+ * 3. Using unique constraints with ON CONFLICT clauses (upsert pattern)
  */
 export async function enhanceCompany(
   _parent: any,
@@ -191,24 +197,33 @@ export async function enhanceCompany(
           updated_at: new Date().toISOString(),
         };
 
-        // Check if ATS board already exists
-        const existing = await context.db.query.atsBoards.findFirst({
-          where: eq(atsBoards.url, board.url),
-        });
-
-        if (existing) {
-          // Update existing board
-          await context.db
-            .update(atsBoards)
-            .set({
-              ...boardData,
-              last_seen_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .where(eq(atsBoards.id, existing.id));
-        } else {
-          // Insert new board
+        // TOCTOU Fix: Use try-insert-on-conflict-update pattern instead of check-then-insert
+        // This prevents race conditions where two concurrent requests both see "no existing record"
+        // and both try to insert, causing a unique constraint violation.
+        try {
           await context.db.insert(atsBoards).values(boardData);
+        } catch (insertError: any) {
+          // If insert fails due to unique constraint violation, update instead
+          if (insertError.message?.includes("UNIQUE constraint failed")) {
+            // Board already exists, update it
+            const existing = await context.db.query.atsBoards.findFirst({
+              where: eq(atsBoards.url, board.url),
+            });
+            
+            if (existing) {
+              await context.db
+                .update(atsBoards)
+                .set({
+                  ...boardData,
+                  last_seen_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .where(eq(atsBoards.id, existing.id));
+            }
+          } else {
+            // Re-throw if it's a different error
+            throw insertError;
+          }
         }
       }
     }

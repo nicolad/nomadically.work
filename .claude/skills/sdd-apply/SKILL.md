@@ -105,6 +105,7 @@ If none, say "None."}
 - If you discover the design is wrong or incomplete, NOTE IT in your return summary — don't silently deviate
 - If a task is blocked by something unexpected, STOP and report back
 - NEVER implement tasks that weren't assigned to you
+- NEVER create bash script files (.sh) in repository — use bash tool for simple commands only, delegate complex operations to Task tool with agents
 - Load and follow any relevant coding skills for the project stack (e.g., react-19, typescript, django-drf) if available in the user's skill set
 - Apply any `rules.apply` from `openspec/config.yaml`
 - If the project uses TDD, write a failing test FIRST, then implement to make it pass, then refactor

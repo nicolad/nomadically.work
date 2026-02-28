@@ -9,14 +9,32 @@ import type { GraphQLContext } from "../context";
 import { isAdminEmail } from "@/lib/admin";
 import { enhanceCompany } from "./enhance-company";
 
+/**
+ * Safely parse JSON strings with proper error handling and logging
+ * Prevents crashes from malformed JSON data in database
+ */
+function safeJsonParse<T>(value: string | null | undefined, defaultValue: T): T {
+  if (!value) return defaultValue;
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.warn("[safeJsonParse] Failed to parse JSON:", {
+      error: error instanceof Error ? error.message : String(error),
+      valueLength: value?.length,
+      valuePreview: value?.substring(0, 100),
+    });
+    return defaultValue;
+  }
+}
+
 export const companyResolvers = {
   Company: {
     ashby_enrichment(parent: any) {
       if (!parent.ashby_enriched_at) return null;
       return {
         company_name: parent.name ?? null,
-        industry_tags: parent.ashby_industry_tags ? JSON.parse(parent.ashby_industry_tags) : [],
-        tech_signals: parent.ashby_tech_signals ? JSON.parse(parent.ashby_tech_signals) : [],
+        industry_tags: safeJsonParse(parent.ashby_industry_tags, []),
+        tech_signals: safeJsonParse(parent.ashby_tech_signals, []),
         size_signal: parent.ashby_size_signal ?? null,
         enriched_at: parent.ashby_enriched_at,
       };
@@ -27,21 +45,21 @@ export const companyResolvers = {
       const category = parent.category?.toUpperCase() || "UNKNOWN";
       return validCategories.includes(category) ? category : "OTHER";
     },
-    // Parse JSON fields
+    // Parse JSON fields with proper error handling
     tags(parent: any) {
-      return parent.tags ? JSON.parse(parent.tags) : [];
+      return safeJsonParse(parent.tags, []);
     },
     services(parent: any) {
-      return parent.services ? JSON.parse(parent.services) : [];
+      return safeJsonParse(parent.services, []);
     },
     service_taxonomy(parent: any) {
-      return parent.service_taxonomy ? JSON.parse(parent.service_taxonomy) : [];
+      return safeJsonParse(parent.service_taxonomy, []);
     },
     industries(parent: any) {
-      return parent.industries ? JSON.parse(parent.industries) : [];
+      return safeJsonParse(parent.industries, []);
     },
     score_reasons(parent: any) {
-      return parent.score_reasons ? JSON.parse(parent.score_reasons) : [];
+      return safeJsonParse(parent.score_reasons, []);
     },
     async ats_boards(parent: any, _args: any, context: GraphQLContext) {
       try {

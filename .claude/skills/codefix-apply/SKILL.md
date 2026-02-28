@@ -94,3 +94,4 @@ Write to `~/.claude/state/codefix-implementation-log.json`:
 4. Follow existing code style
 5. Run lint after changes
 6. If unsure, confidence < 0.7 and explain
+7. Never create bash script files (.sh) in repository — use bash tool for simple commands only, delegate complex operations to Task tool with agents

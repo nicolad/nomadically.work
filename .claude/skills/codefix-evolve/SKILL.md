@@ -73,3 +73,4 @@ Write to `~/.claude/state/codefix-evolution-log.json`.
 4. High regression risk → defer and explain
 5. CLAUDE.md changes require extra scrutiny
 6. Hook changes must preserve fail-open design
+7. Never create bash script files (.sh) in repository — use bash tool for simple commands only, delegate complex operations to Task tool with agents

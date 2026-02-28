@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Container,
   Heading,
@@ -223,9 +223,11 @@ function SettingsPageContent() {
     initialLocations,
     initialSkills,
     initialExcludedCompanies,
+    handleSave,
+    handleCancel,
   ]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!user?.id) {
       showToast("You must be signed in to save settings", "error");
       return;
@@ -263,15 +265,22 @@ function SettingsPageContent() {
       setSaveStatus("idle");
       showToast("Failed to save settings. Please try again.", "error");
     }
-  };
+  }, [
+    user?.id,
+    locationChips,
+    skillChips,
+    excludedCompaniesChips,
+    updateSettings,
+    refetch,
+  ]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (hasUnsavedChanges()) {
       setShowDiscardDialog(true);
     } else {
       router.push("/");
     }
-  };
+  }, [hasUnsavedChanges, router]);
 
   const handleDiscard = () => {
     setLocationChips(initialLocations);

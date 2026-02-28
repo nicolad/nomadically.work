@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
 
 /**
  * Resend Webhook Handler
@@ -47,6 +48,51 @@ interface ResendWebhookEvent {
   };
 }
 
+/**
+ * Verify Svix webhook signature
+ * Svix uses HMAC-SHA256 to sign webhooks
+ */
+function verifySignature(
+  payload: string,
+  signature: string,
+  secret: string,
+  timestamp: string,
+  webhookId: string,
+): boolean {
+  // Check timestamp freshness (5 minutes)
+  const now = Math.floor(Date.now() / 1000);
+  const webhookTimestamp = parseInt(timestamp, 10);
+  if (Math.abs(now - webhookTimestamp) > 300) {
+    console.error("[RESEND_WEBHOOK] Webhook timestamp too old");
+    return false;
+  }
+
+  // Create signed payload
+  const signedPayload = `${webhookId}.${timestamp}.${payload}`;
+
+  // Create HMAC-SHA256 signature
+  // Svix uses base64-encoded secret
+  const secretBytes = Buffer.from(secret.replace("whsec_", ""), "base64");
+  const hmac = createHmac("sha256", secretBytes);
+  hmac.update(signedPayload);
+  const expectedSignature = `v1,${hmac.digest("base64")}`;
+
+  // Constant-time comparison to prevent timing attacks
+  const signatureBytes = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expectedSignature);
+
+  if (signatureBytes.length !== expectedBytes.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < signatureBytes.length; i++) {
+    result |= signatureBytes[i] ^ expectedBytes[i];
+  }
+
+  return result === 0;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const signature = req.headers.get("svix-signature");
@@ -70,6 +116,17 @@ export async function POST(req: NextRequest) {
     }
 
     const rawBody = await req.text();
+
+    // Verify webhook signature BEFORE parsing
+    const isValid = verifySignature(rawBody, signature, WEBHOOK_SECRET, timestamp, webhookId);
+    if (!isValid) {
+      console.error("[RESEND_WEBHOOK] Invalid signature");
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 },
+      );
+    }
+
     let event: ResendWebhookEvent;
 
     try {

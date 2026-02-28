@@ -25,8 +25,6 @@ export function ExerciseTimer({ durationMinutes = 10 }: ExerciseTimerProps) {
       intervalRef.current = setInterval(() => {
         setRemaining((prev) => {
           if (prev <= 1) {
-            clear();
-            setRunning(false);
             return 0;
           }
           return prev - 1;
@@ -34,7 +32,14 @@ export function ExerciseTimer({ durationMinutes = 10 }: ExerciseTimerProps) {
       }, 1000);
     }
     return clear;
-  }, [running, remaining, clear]);
+  }, [running, clear]);
+
+  // Separate effect to handle timer completion
+  useEffect(() => {
+    if (remaining === 0 && running) {
+      setRunning(false);
+    }
+  }, [remaining, running]);
 
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;

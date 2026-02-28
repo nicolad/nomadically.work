@@ -1,6 +1,6 @@
 import { ApolloServer } from "@apollo/server";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { schema } from "@/apollo/schema";
 import { GraphQLContext } from "@/apollo/context";
 import { auth, clerkClient } from "@clerk/nextjs/server";
@@ -12,6 +12,45 @@ import { createLoaders } from "@/apollo/loaders";
 // See: https://vercel.com/docs/functions/runtimes/node-js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Simple in-memory rate limiter
+// Production: Consider using Redis or Cloudflare KV for distributed rate limiting
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+const RATE_LIMIT = {
+  WINDOW_MS: 60 * 1000, // 1 minute window
+  MAX_REQUESTS: 100, // 100 requests per minute
+};
+
+function checkRateLimit(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
+  const now = Date.now();
+  const record = rateLimitStore.get(identifier);
+
+  if (!record || now > record.resetTime) {
+    // New window
+    rateLimitStore.set(identifier, { count: 1, resetTime: now + RATE_LIMIT.WINDOW_MS });
+    return { allowed: true, remaining: RATE_LIMIT.MAX_REQUESTS - 1, resetTime: now + RATE_LIMIT.WINDOW_MS };
+  }
+
+  if (record.count >= RATE_LIMIT.MAX_REQUESTS) {
+    // Rate limit exceeded
+    return { allowed: false, remaining: 0, resetTime: record.resetTime };
+  }
+
+  // Increment count
+  record.count++;
+  return { allowed: true, remaining: RATE_LIMIT.MAX_REQUESTS - record.count, resetTime: record.resetTime };
+}
+
+// Cleanup old entries periodically to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (now > value.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, RATE_LIMIT.WINDOW_MS);
 
 const apolloServer = new ApolloServer<GraphQLContext>({ schema });
 
@@ -58,10 +97,68 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
   },
 );
 
+async function getRateLimitIdentifier(request: NextRequest): Promise<string> {
+  // Try to get user ID from auth
+  try {
+    const { userId } = await auth();
+    if (userId) {
+      return `user:${userId}`;
+    }
+  } catch {
+    // Auth not available
+  }
+
+  // Fallback to IP address
+  const ip = request.headers.get("x-forwarded-for") || 
+             request.headers.get("x-real-ip") || 
+             "anonymous";
+  return `ip:${ip}`;
+}
+
 export async function GET(request: NextRequest) {
+  const identifier = await getRateLimitIdentifier(request);
+  const rateLimit = checkRateLimit(identifier);
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { 
+        error: "Rate limit exceeded", 
+        message: `Too many requests. Please try again after ${new Date(rateLimit.resetTime).toISOString()}` 
+      },
+      { 
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(RATE_LIMIT.MAX_REQUESTS),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(rateLimit.resetTime),
+        },
+      }
+    );
+  }
+
   return handler(request);
 }
 
 export async function POST(request: NextRequest) {
+  const identifier = await getRateLimitIdentifier(request);
+  const rateLimit = checkRateLimit(identifier);
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { 
+        error: "Rate limit exceeded", 
+        message: `Too many requests. Please try again after ${new Date(rateLimit.resetTime).toISOString()}` 
+      },
+      { 
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(RATE_LIMIT.MAX_REQUESTS),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(rateLimit.resetTime),
+        },
+      }
+    );
+  }
+
   return handler(request);
 }

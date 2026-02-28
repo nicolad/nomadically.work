@@ -50,7 +50,7 @@ function mapApplication(
   };
 }
 
-async function getApplicationById(id: number, userEmail: string, db: GraphQLContext["db"]) {
+async function getApplicationById(id: number, db: GraphQLContext["db"]) {
   const [row] = await db
     .select({
       app: applications,
@@ -61,7 +61,7 @@ async function getApplicationById(id: number, userEmail: string, db: GraphQLCont
     .from(applications)
     .leftJoin(jobs, eq(jobs.url, applications.job_id))
     .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
-    .where(and(eq(applications.id, id), eq(applications.user_email, userEmail)));
+    .where(eq(applications.id, id));
   if (!row) return null;
   return mapApplication(row.app, row.jobDescription, row.jobCompanyKey ?? row.nameCompanyKey);
 }
@@ -83,12 +83,8 @@ export const applicationResolvers = {
   },
   Query: {
     async applications(_parent: any, _args: any, context: GraphQLContext) {
-      if (!context.userEmail) {
-        throw new Error("Unauthorized");
-      }
-
       try {
-        const userApplications = await context.db
+        const allApplications = await context.db
           .select({
             app: applications,
             jobDescription: jobs.description,
@@ -98,10 +94,9 @@ export const applicationResolvers = {
           .from(applications)
           .leftJoin(jobs, eq(jobs.url, applications.job_id))
           .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
-          .where(eq(applications.user_email, context.userEmail))
           .orderBy(desc(applications.created_at));
 
-        return userApplications.map(({ app, jobDescription, jobCompanyKey, nameCompanyKey }) =>
+        return allApplications.map(({ app, jobDescription, jobCompanyKey, nameCompanyKey }) =>
           mapApplication(app, jobDescription, jobCompanyKey ?? nameCompanyKey),
         );
       } catch (error) {
@@ -111,24 +106,7 @@ export const applicationResolvers = {
     },
 
     async application(_parent: any, args: { id: number }, context: GraphQLContext) {
-      if (!context.userEmail) {
-        throw new Error("Unauthorized");
-      }
-
-      const [row] = await context.db
-        .select({
-          app: applications,
-          jobDescription: jobs.description,
-          jobCompanyKey: jobs.company_key,
-          nameCompanyKey: companies.key,
-        })
-        .from(applications)
-        .leftJoin(jobs, eq(jobs.url, applications.job_id))
-        .leftJoin(companies, sql`lower(${companies.key}) = lower(${applications.company_name}) OR lower(${companies.name}) = lower(${applications.company_name})`)
-        .where(and(eq(applications.id, args.id), eq(applications.user_email, context.userEmail)));
-
-      if (!row) return null;
-      return mapApplication(row.app, row.jobDescription, row.jobCompanyKey ?? row.nameCompanyKey);
+      return getApplicationById(args.id, context.db);
     },
   },
   Mutation: {
@@ -229,7 +207,7 @@ export const applicationResolvers = {
         }
 
         // Re-fetch with JOINs so companyKey resolves correctly
-        const result = await getApplicationById(updated.id, context.userEmail!, context.db);
+        const result = await getApplicationById(updated.id, context.db);
         return result ?? mapApplication(updated);
       } catch (error) {
         console.error("Error updating application:", error);
@@ -247,7 +225,7 @@ export const applicationResolvers = {
       }
 
       // Verify ownership before write
-      const app = await getApplicationById(args.applicationId, context.userEmail, context.db);
+      const app = await getApplicationById(args.applicationId, context.db);
       if (!app) throw new Error("Application not found or access denied");
 
       const track = mockTracks.find((t) => t.slug === args.trackSlug);
@@ -276,7 +254,7 @@ export const applicationResolvers = {
       }
 
       // Verify ownership before write
-      const app = await getApplicationById(args.applicationId, context.userEmail, context.db);
+      const app = await getApplicationById(args.applicationId, context.db);
       if (!app) throw new Error("Application not found or access denied");
 
       await context.db
@@ -981,14 +959,19 @@ Return ONLY a JSON object:
 
       function dsCall(userPrompt: string, maxTokens = 2000): Promise<string> {
         return client.chat({
-          model: DEEPSEEK_MODELS.REASONER,
+          model: DEEPSEEK_MODELS.CHAT,
           messages: [
             {
+              role: "system",
+              content: "You are a senior AI engineering coach. Return ONLY valid JSON — no markdown fences, no extra commentary.",
+            },
+            {
               role: "user",
-              content: `You are a senior AI engineering coach. Return ONLY valid JSON — no markdown fences, no extra commentary.\n\n${userPrompt}`,
+              content: userPrompt,
             },
           ],
           max_tokens: maxTokens,
+          temperature: 2.0,
         }).then((r) => {
           const text = r.choices[0]?.message?.content ?? "";
           return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -997,7 +980,15 @@ Return ONLY a JSON object:
 
       function tryParse<T>(raw: string, fallback: T): T {
         try { return JSON.parse(raw) as T; }
-        catch { return fallback; }
+        catch {
+          // DeepSeek Reasoner may embed JSON within reasoning text — extract first {...}
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) {
+            try { return JSON.parse(match[0]) as T; }
+            catch { /* fall through */ }
+          }
+          return fallback;
+        }
       }
 
       const [
@@ -1043,7 +1034,13 @@ Return ONLY a JSON object:
       const overview = overviewResult.status === "fulfilled"
         ? (tryParse<any>(overviewResult.value, {}).overview ?? "")
         : "";
-      if (!overview) throw new Error("Failed to generate overview — cannot proceed");
+      if (!overview) {
+        const reason = overviewResult.status === "rejected"
+          ? `API error: ${overviewResult.reason}`
+          : `Empty or unparseable response: ${overviewResult.status === "fulfilled" ? overviewResult.value.slice(0, 200) : "n/a"}`;
+        console.error("[generateAgenticCoding] Overview failed:", reason);
+        throw new Error("Failed to generate overview — cannot proceed");
+      }
 
       const agenticData = {
         overview,

@@ -17,6 +17,7 @@ export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 export interface ChatMessage {
   role: MessageRole;
   content: string;
+  reasoning_content?: string; // DeepSeek Reasoner: chain-of-thought output
   name?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;

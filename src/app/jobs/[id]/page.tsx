@@ -14,6 +14,7 @@ import {
 } from "@/__generated__/hooks";
 import { orderBy } from "lodash";
 import { extractJobSlug } from "@/lib/job-utils";
+import { sanitizeHtml } from "@/lib/html-sanitizer";
 import {
   Card,
   Badge,
@@ -906,7 +907,7 @@ function JobPageContent() {
                             whiteSpace: "pre-wrap",
                           }}
                           dangerouslySetInnerHTML={{
-                            __html: job.description,
+                            __html: sanitizeHtml(job.description),
                           }}
                         />
                       </Box>
@@ -1102,7 +1103,7 @@ function JobPageContent() {
                             lineHeight: "1.6",
                           }}
                           dangerouslySetInnerHTML={{
-                            __html: job.description,
+                            __html: sanitizeHtml(job.description),
                           }}
                         />
                       </Box>
@@ -1141,7 +1142,7 @@ function JobPageContent() {
                                 size="1"
                                 color="gray"
                                 dangerouslySetInnerHTML={{
-                                  __html: q.description,
+                                  __html: sanitizeHtml(q.description),
                                 }}
                               />
                             )}
@@ -1275,7 +1276,7 @@ function JobPageContent() {
                                   size="1"
                                   as="div"
                                   dangerouslySetInnerHTML={{
-                                    __html: comp.description,
+                                    __html: sanitizeHtml(comp.description),
                                   }}
                                 />
                               </Box>
@@ -1325,7 +1326,7 @@ function JobPageContent() {
                               size="2"
                               as="div"
                               dangerouslySetInnerHTML={{
-                                __html: job.demographic_questions.description,
+                                __html: sanitizeHtml(job.demographic_questions.description),
                               }}
                             />
                           </Box>
@@ -1358,7 +1359,7 @@ function JobPageContent() {
                   color="gray"
                   style={{ whiteSpace: "pre-wrap" }}
                   dangerouslySetInnerHTML={{
-                    __html: job.description || "No description available",
+                    __html: sanitizeHtml(job.description || "No description available"),
                   }}
                 />
               </Card>

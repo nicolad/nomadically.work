@@ -172,6 +172,7 @@ The strategy enforcer (`src/agents/strategy-enforcer.ts`) is available as a plai
 - Mutations that modify production data must include `isAdminEmail()` guard (from `src/lib/admin.ts`).
 - Prefer generated types from `src/__generated__/resolvers-types.ts` over `any`.
 - React providers: `*-provider.tsx` in `src/components/`.
+- **Bash scripts:** Never create `.sh` files or bash scripts in repository. Use bash tool for simple commands only (e.g., `git status`, `npm run build`). Complex operations should use Task tool with agents.
 
 ---
 

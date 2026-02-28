@@ -154,6 +154,7 @@ Return to the orchestrator the same content you wrote to `verify-report.md`:
 
 - ALWAYS read the actual source code — don't trust summaries
 - Compare against SPECS first (behavioral correctness), DESIGN second (structural correctness)
+- Flag creation of bash script files (.sh) as a CRITICAL violation — never create bash scripts in repository
 - Be objective — report what IS, not what should be
 - CRITICAL issues = must fix before archive
 - WARNINGS = should fix but won't block

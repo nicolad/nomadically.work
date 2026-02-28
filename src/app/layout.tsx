@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 import { SidebarProvider } from "@/components/sidebar-provider";
 import { Sidebar, MainContent } from "@/components/sidebar";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -31,12 +32,14 @@ export default function RootLayout({
         <body className={inter.variable}>
           <Theme appearance="dark">
             <Providers>
-              <SidebarProvider>
-                <Flex minHeight="100vh">
-                  <Sidebar />
-                  <MainContent>{children}</MainContent>
-                </Flex>
-              </SidebarProvider>
+              <ErrorBoundary>
+                <SidebarProvider>
+                  <Flex minHeight="100vh">
+                    <Sidebar />
+                    <MainContent>{children}</MainContent>
+                  </Flex>
+                </SidebarProvider>
+              </ErrorBoundary>
             </Providers>
           </Theme>
         </body>

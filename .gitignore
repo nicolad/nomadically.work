@@ -86,4 +86,5 @@ results/*.json
 .claude/settings.local.json
 
 # Rust build artifacts
-workers/ashby-crawler/target/
+/target/
+workers/*/target/

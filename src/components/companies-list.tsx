@@ -40,7 +40,7 @@ export function CompaniesList() {
       params.delete("q");
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchTerm, router, pathname, searchParams]);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
   const [deleteCompanyMutation] = useDeleteCompanyMutation();

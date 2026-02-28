@@ -11,11 +11,20 @@ import {
   generateEmailFromPattern,
 } from "@/lib/neverbounce";
 
+/**
+ * Safely parse JSON arrays with proper error handling and logging
+ * Prevents crashes from malformed JSON data in database
+ */
 function parseJsonArray(val: string | null | undefined): string[] {
   if (!val) return [];
   try {
     return JSON.parse(val);
-  } catch {
+  } catch (error) {
+    console.warn("[parseJsonArray] Failed to parse JSON:", {
+      error: error instanceof Error ? error.message : String(error),
+      valueLength: val?.length,
+      valuePreview: val?.substring(0, 100),
+    });
     return [];
   }
 }

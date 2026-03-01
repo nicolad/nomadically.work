@@ -4,6 +4,7 @@ use tracing::debug;
 
 use crate::cache::Cache;
 use crate::deepseek::DeepSeek;
+use crate::metrics::Metrics;
 use crate::rules::RulesEngine;
 
 const SYSTEM_PROMPT: &str = r#"You are evaluating whether a coding assistant has completed its task. You receive the assistant's last message.
@@ -24,9 +25,11 @@ pub async fn handle(
     input: &Value,
     deepseek: &DeepSeek,
     rules: &RulesEngine,
+    metrics: &Metrics,
 ) -> Result<Option<String>> {
     if input["stop_hook_active"].as_bool().unwrap_or(false) {
         debug!("stop_hook_active=true, allowing stop");
+        metrics.record_local_allow(0);
         return Ok(None);
     }
 
@@ -39,11 +42,12 @@ pub async fn handle(
         return Ok(None);
     }
 
+    let input_chars = last_msg.len();
     let cache_key = Cache::key("Stop", None, last_msg);
     let user_prompt = format!("Assistant's last message:\n{last_msg}");
 
     let decision = deepseek
-        .evaluate(SYSTEM_PROMPT, &user_prompt, Some(&cache_key))
+        .evaluate(SYSTEM_PROMPT, &user_prompt, Some(&cache_key), metrics, input_chars)
         .await?;
 
     if decision.ok {

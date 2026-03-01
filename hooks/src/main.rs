@@ -2,6 +2,7 @@ mod cache;
 mod config;
 mod deepseek;
 mod hooks;
+mod metrics;
 mod rules;
 mod state;
 
@@ -22,13 +23,16 @@ use tracing_subscriber::EnvFilter;
 use crate::cache::Cache;
 use crate::config::Config;
 use crate::deepseek::DeepSeek;
+use crate::metrics::Metrics;
 use crate::rules::RulesEngine;
 use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
-    // Load .env before anything else reads env vars
-    dotenvy::dotenv().ok();
+    let _ = dotenvy::dotenv();
+    if let Ok(home) = std::env::var("HOME") {
+        let _ = dotenvy::from_path(format!("{home}/.env"));
+    }
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -52,16 +56,30 @@ async fn run() -> Result<()> {
     let cache = Cache::new(cfg.cache.ttl_secs, cfg.cache.max_entries);
     let deepseek = DeepSeek::new(api_key, &cfg.deepseek, cache);
     let rules = RulesEngine::new(&cfg.rules);
+    let metrics = Metrics::new();
 
-    let state = Arc::new(AppState { deepseek, rules });
+    let metrics_clone = metrics.clone();
+    let report_interval = cfg.metrics_report_secs;
+    tokio::spawn(async move {
+        metrics_clone.report_loop(report_interval).await;
+    });
+
+    let state = Arc::new(AppState {
+        deepseek,
+        rules,
+        metrics,
+    });
 
     let app = Router::new()
         .route("/hook", post(handle_hook))
         .route("/health", get(health))
+        .route("/metrics", get(get_metrics))
+        .route("/metrics/reset", post(reset_metrics))
         .route("/shutdown", post(shutdown))
         .with_state(state);
 
-    let listener = TcpListener::bind(&bind).await
+    let listener = TcpListener::bind(&bind)
+        .await
         .with_context(|| format!("binding to {bind}"))?;
 
     info!("hooks server listening on {bind}");
@@ -89,7 +107,15 @@ async fn handle_hook(
         }
     };
 
-    match hooks::dispatch(&event, &input, &state.deepseek, &state.rules).await {
+    let start = std::time::Instant::now();
+
+    let result =
+        hooks::dispatch(&event, &input, &state.deepseek, &state.rules, &state.metrics).await;
+
+    let elapsed = start.elapsed();
+    state.metrics.record_latency(&event, elapsed);
+
+    match result {
         Ok(Some(output)) => match serde_json::from_str::<serde_json::Value>(&output) {
             Ok(json) => (StatusCode::OK, Json(json)),
             Err(_) => (StatusCode::OK, Json(serde_json::json!({"message": output}))),
@@ -102,14 +128,30 @@ async fn handle_hook(
     }
 }
 
-async fn health() -> impl IntoResponse {
-    (StatusCode::OK, "ok")
+async fn health(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let cache_size = state.deepseek.cache.len();
+    let snapshot = state.metrics.snapshot();
+    Json(serde_json::json!({
+        "status": "ok",
+        "cache_entries": cache_size,
+        "total_hooks": snapshot.total_hooks,
+        "uptime_secs": snapshot.uptime_secs,
+    }))
+}
+
+async fn get_metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    Json(state.metrics.report())
+}
+
+async fn reset_metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    state.metrics.reset();
+    Json(serde_json::json!({"status": "reset"}))
 }
 
 async fn shutdown() -> impl IntoResponse {
-    info!("shutdown requested via endpoint");
+    info!("shutdown requested");
     tokio::spawn(async {
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         std::process::exit(0);
     });
     (StatusCode::OK, "shutting down")

@@ -1,5 +1,6 @@
 {
   "port": 19836,
+  "metrics_report_secs": 120,
   "deepseek": {
     "max_concurrent": 8,
     "timeout_secs": 30

@@ -6,12 +6,11 @@ pub async fn handle_start(input: &Value) -> Result<Option<String>> {
     let source = input["source"].as_str().unwrap_or("unknown");
     let model = input["model"].as_str().unwrap_or("unknown");
     info!("session started: source={source} model={model}");
-
     Ok(Some(
         json!({
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": "DeepSeek Reasoner hooks active. Safe operations auto-approved, dangerous ones blocked. Bash read commands, git status/log/diff, and test/build commands run without delay."
+                "additionalContext": "[hooks] DeepSeek Reasoner hooks active with usage tracking."
             }
         })
         .to_string(),

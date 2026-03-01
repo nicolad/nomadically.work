@@ -3,6 +3,7 @@ use serde_json::{json, Value};
 use tracing::debug;
 
 use crate::deepseek::DeepSeek;
+use crate::metrics::Metrics;
 use crate::rules::RulesEngine;
 
 const SYSTEM_PROMPT: &str = r#"You are a prompt advisor for a coding assistant. You receive the user's prompt and decide if it needs extra context or clarification hints.
@@ -19,6 +20,7 @@ pub async fn handle(
     input: &Value,
     deepseek: &DeepSeek,
     rules: &RulesEngine,
+    metrics: &Metrics,
 ) -> Result<Option<String>> {
     if !rules.should_evaluate("UserPromptSubmit") {
         return Ok(None);
@@ -26,13 +28,18 @@ pub async fn handle(
 
     let prompt = input["prompt"].as_str().unwrap_or("");
     if prompt.len() < 10 {
+        metrics.record_local_allow(prompt.len());
         return Ok(None);
     }
 
     debug!("evaluating user prompt ({} chars)", prompt.len());
 
+    let input_chars = prompt.len();
     let user_prompt = format!("User prompt:\n{prompt}");
-    let decision = deepseek.evaluate(SYSTEM_PROMPT, &user_prompt, None).await?;
+
+    let decision = deepseek
+        .evaluate(SYSTEM_PROMPT, &user_prompt, None, metrics, input_chars)
+        .await?;
 
     if !decision.ok {
         let reason = decision

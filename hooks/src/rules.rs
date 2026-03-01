@@ -17,7 +17,6 @@ pub struct RulesEngine {
     evaluated_events: Vec<String>,
 }
 
-// RulesEngine is fully immutable after new() — Regex is Send + Sync.
 unsafe impl Send for RulesEngine {}
 unsafe impl Sync for RulesEngine {}
 
@@ -40,9 +39,10 @@ impl RulesEngine {
         for pat in &self.blocked {
             if pat.is_match(command) {
                 debug!("blocked by local rule: {}", pat.as_str());
-                return RuleVerdict::Deny(
-                    format!("Blocked by local safety rule: {}", pat.as_str()),
-                );
+                return RuleVerdict::Deny(format!(
+                    "Blocked by local safety rule: {}",
+                    pat.as_str()
+                ));
             }
         }
         for pat in &self.allowed {
@@ -58,9 +58,7 @@ impl RulesEngine {
         for pat in &self.protected {
             if pat.is_match(path) {
                 debug!("protected path: {}", pat.as_str());
-                return RuleVerdict::Deny(
-                    format!("Protected path matched: {}", pat.as_str()),
-                );
+                return RuleVerdict::Deny(format!("Protected path matched: {}", pat.as_str()));
             }
         }
         RuleVerdict::NeedsEval

@@ -3,10 +3,15 @@ use serde_json::{json, Value};
 use tracing::debug;
 
 use crate::deepseek::DeepSeek;
+use crate::metrics::Metrics;
 
-pub async fn handle(input: &Value) -> Result<Option<String>> {
+pub async fn handle(input: &Value, metrics: &Metrics) -> Result<Option<String>> {
     let tool_name = input["tool_name"].as_str().unwrap_or("");
     debug!("PostToolUse: {tool_name} succeeded");
+    let input_chars = serde_json::to_string(&input["tool_input"])
+        .unwrap_or_default()
+        .len();
+    metrics.record_local_allow(input_chars);
     Ok(None)
 }
 
@@ -18,19 +23,20 @@ Respond ONLY with JSON: {"ok": true, "reason": "your suggestion"}
 pub async fn handle_failure(
     input: &Value,
     deepseek: &DeepSeek,
+    metrics: &Metrics,
 ) -> Result<Option<String>> {
     let tool_name = input["tool_name"].as_str().unwrap_or("");
     let error = input["error"].as_str().unwrap_or("");
-
     debug!("PostToolUseFailure: {tool_name} — {error}");
 
     let user_prompt = format!(
         "Tool: {tool_name}\nInput: {}\nError: {error}",
         serde_json::to_string_pretty(&input["tool_input"]).unwrap_or_default()
     );
+    let input_chars = user_prompt.len();
 
     let decision = deepseek
-        .evaluate(FAILURE_SYSTEM_PROMPT, &user_prompt, None)
+        .evaluate(FAILURE_SYSTEM_PROMPT, &user_prompt, None, metrics, input_chars)
         .await?;
 
     if let Some(suggestion) = decision.reason {

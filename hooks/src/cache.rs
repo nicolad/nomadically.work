@@ -50,11 +50,13 @@ impl Cache {
     }
 
     pub fn set(&self, key: String, value: String) {
-        self.store.insert(key, CacheEntry {
-            value,
-            inserted: Instant::now(),
-        });
-
+        self.store.insert(
+            key,
+            CacheEntry {
+                value,
+                inserted: Instant::now(),
+            },
+        );
         let count = self.insert_count.fetch_add(1, Ordering::Relaxed);
         if count % 64 == 0 {
             self.evict();
@@ -83,7 +85,6 @@ impl Cache {
         }
     }
 
-    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.store.len()
     }

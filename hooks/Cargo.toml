@@ -1,11 +1,11 @@
 [package]
 name = "hooks"
-version = "0.2.0"
+version = "0.4.0"
 edition = "2021"
 description = "Parallel Rust hook server for Claude Code — routes evaluations to DeepSeek Reasoner"
 
 [[bin]]
-name = "hooks"
+name = "hooks-server"
 path = "src/main.rs"
 
 [dependencies]
@@ -20,8 +20,8 @@ regex = "1"
 anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-dirs = "6"
 dotenvy = "0.15"
+dirs = "6"
 
 [profile.release]
 opt-level = 3

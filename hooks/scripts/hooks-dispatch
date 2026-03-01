@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────
+# Single entry point for ALL Claude Code hooks.
+# - SessionStart  → starts the server, returns context JSON
+# - SessionEnd    → prints metrics, stops the server
+# - Everything else → forwards to server via curl, silent on failure
+#
+# NEVER exits non-zero except for intentional blocks (exit 2).
+# NEVER surfaces connection errors to the user.
+# ──────────────────────────────────────────────────────────────
+set -uo pipefail
+
+INPUT=$(cat)
+EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // empty')
+
+HOOKS_SERVER="${HOOKS_SERVER:-hooks-server}"
+HOOKS_PORT="${HOOKS_PORT:-19836}"
+HOOKS_LOG="${HOOKS_LOG:-info}"
+
+PID_FILE="${HOME}/.cache/claude-hooks/server.pid"
+LOG_FILE="${HOME}/.cache/claude-hooks/server.log"
+URL="http://127.0.0.1:${HOOKS_PORT}"
+
+mkdir -p "$(dirname "$PID_FILE")"
+
+# ── Load .env (dotenvy also loads inside the server, this is for the script) ──
+for envfile in .env "$HOME/.env"; do
+    if [ -f "$envfile" ]; then
+        set -a; source "$envfile" 2>/dev/null; set +a
+        break
+    fi
+done
+
+# ── Helpers ──
+
+server_alive() {
+    curl -sf --max-time 1 "${URL}/health" > /dev/null 2>&1
+}
+
+pid_alive() {
+    [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null
+}
+
+start_server() {
+    # Already running
+    if server_alive; then
+        return 0
+    fi
+
+    # Clean stale PID
+    if [ -f "$PID_FILE" ]; then
+        local old_pid
+        old_pid=$(cat "$PID_FILE")
+        kill -0 "$old_pid" 2>/dev/null || rm -f "$PID_FILE"
+    fi
+
+    # Check prerequisites
+    if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+        echo '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[hooks] DEEPSEEK_API_KEY not set — hooks server disabled. Add it to ~/.env"}}'
+        return 1
+    fi
+
+    if ! command -v "$HOOKS_SERVER" > /dev/null 2>&1; then
+        echo '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[hooks] hooks-server binary not in PATH — run: cd hooks && make install"}}'
+        return 1
+    fi
+
+    # Launch as daemon
+    HOOKS_LOG="$HOOKS_LOG" \
+    HOOKS_PORT="$HOOKS_PORT" \
+    DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY" \
+        nohup "$HOOKS_SERVER" >> "$LOG_FILE" 2>&1 &
+
+    echo $! > "$PID_FILE"
+
+    # Wait for health (max 5s)
+    for _ in $(seq 1 20); do
+        if server_alive; then
+            return 0
+        fi
+        sleep 0.25
+    done
+
+    return 1
+}
+
+stop_server() {
+    # Fetch final metrics (best-effort)
+    local metrics_json
+    metrics_json=$(curl -sf --max-time 2 "${URL}/metrics" 2>/dev/null || echo '{}')
+
+    # Graceful shutdown request
+    curl -sf --max-time 2 -X POST "${URL}/shutdown" > /dev/null 2>&1 || true
+    sleep 0.3
+
+    # Kill by PID if still alive
+    if [ -f "$PID_FILE" ]; then
+        local pid
+        pid=$(cat "$PID_FILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+            # Wait briefly for clean exit
+            for _ in $(seq 1 10); do
+                kill -0 "$pid" 2>/dev/null || break
+                sleep 0.1
+            done
+            # Force kill if stuck
+            kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+        fi
+        rm -f "$PID_FILE"
+    fi
+
+    # Log session summary
+    local total saved_pct saved_cost
+    total=$(echo "$metrics_json" | jq -r '.total_hooks // 0')
+    saved_pct=$(echo "$metrics_json" | jq -r '.hooks_without_api_call_pct // 0')
+    saved_cost=$(echo "$metrics_json" | jq -r '.estimated_cost_saved_usd // 0')
+    {
+        echo ""
+        echo "=== Session ended $(date -Iseconds) ==="
+        echo "Total hooks: $total | Saved: ${saved_pct}% | Cost saved: \$${saved_cost}"
+    } >> "$LOG_FILE" 2>/dev/null || true
+}
+
+forward_to_server() {
+    # If server isn't alive, exit 0 (allow everything — fail open)
+    if ! server_alive; then
+        exit 0
+    fi
+
+    # Forward the hook JSON, capture response
+    local response http_code body
+    response=$(curl -sf --max-time 8 \
+        -w "\n%{http_code}" \
+        -H "Content-Type: application/json" \
+        -d "$INPUT" \
+        "${URL}/hook" 2>/dev/null) || {
+        # curl failed (connection refused, timeout, etc) — allow silently
+        exit 0
+    }
+
+    # Split response body from status code
+    http_code=$(echo "$response" | tail -1)
+    body=$(echo "$response" | sed '$d')
+
+    # Non-2xx — allow silently
+    case "$http_code" in
+        2*) ;;
+        *)  exit 0 ;;
+    esac
+
+    # Empty body or empty JSON object — allow (no decision)
+    if [ -z "$body" ] || [ "$body" = "{}" ]; then
+        exit 0
+    fi
+
+    # Print the server's JSON response for Claude Code to read
+    echo "$body"
+    exit 0
+}
+
+# ── Main dispatch ──
+
+case "${EVENT}" in
+    SessionStart)
+        if start_server; then
+            echo '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[hooks] DeepSeek Reasoner server running on port '"$HOOKS_PORT"'. GET http://127.0.0.1:'"$HOOKS_PORT"'/metrics for usage savings."}}'
+        fi
+        # Always exit 0 — never block session start
+        exit 0
+        ;;
+
+    SessionEnd)
+        stop_server
+        # Always exit 0 — never block session end
+        exit 0
+        ;;
+
+    *)
+        forward_to_server
+        ;;
+esac

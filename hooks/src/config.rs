@@ -17,6 +17,8 @@ pub struct Config {
     pub rules: RulesConfig,
     #[serde(default = "default_port")]
     pub port: u16,
+    #[serde(default = "default_metrics_report_secs")]
+    pub metrics_report_secs: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,7 +51,13 @@ pub struct RulesConfig {
     pub evaluated_events: Vec<String>,
 }
 
-fn default_port() -> u16 { DEFAULT_PORT }
+fn default_port() -> u16 {
+    std::env::var("HOOKS_PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_PORT)
+}
+fn default_metrics_report_secs() -> u64 { 120 }
 fn default_max_concurrent() -> usize { 8 }
 fn default_timeout_secs() -> u64 { 30 }
 fn default_cache_ttl() -> u64 { 300 }
@@ -141,13 +149,15 @@ impl Config {
                 cache: CacheConfig::default(),
                 rules: RulesConfig::default(),
                 port: default_port(),
+                metrics_report_secs: default_metrics_report_secs(),
             })
         }
     }
 
     pub fn api_key() -> Result<String> {
-        std::env::var("DEEPSEEK_API_KEY")
-            .context("DEEPSEEK_API_KEY env var is required")
+        dotenvy::var("DEEPSEEK_API_KEY")
+            .or_else(|_| std::env::var("DEEPSEEK_API_KEY"))
+            .context("DEEPSEEK_API_KEY not found in .env or environment")
     }
 
     pub fn bind_addr(&self) -> String {

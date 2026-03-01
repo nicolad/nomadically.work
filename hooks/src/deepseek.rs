@@ -3,12 +3,13 @@ use dashmap::DashMap;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, Semaphore};
 use tracing::{debug, warn};
 
 use crate::cache::Cache;
-use crate::config::{DeepSeekConfig, BASE_URL, MODEL, TEMPERATURE};
+use crate::config::{BASE_URL, MODEL, TEMPERATURE};
+use crate::metrics::Metrics;
 
 #[derive(Clone)]
 pub struct DeepSeek {
@@ -60,7 +61,7 @@ pub struct Decision {
 }
 
 impl DeepSeek {
-    pub fn new(api_key: String, config: &DeepSeekConfig, cache: Cache) -> Self {
+    pub fn new(api_key: String, config: &crate::config::DeepSeekConfig, cache: Cache) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(config.timeout_secs))
             .pool_max_idle_per_host(config.max_concurrent)
@@ -85,11 +86,14 @@ impl DeepSeek {
         system_prompt: &str,
         user_prompt: &str,
         cache_key: Option<&str>,
+        metrics: &Metrics,
+        input_chars: usize,
     ) -> Result<Decision> {
         // Layer 1: Cache
         if let Some(key) = cache_key {
             if let Some(cached) = self.cache.get(key) {
                 debug!("cache hit: {}", &key[..16]);
+                metrics.record_cache_hit(input_chars);
                 return serde_json::from_str(&cached)
                     .context("deserializing cached decision");
             }
@@ -105,8 +109,8 @@ impl DeepSeek {
                     let mut rx = entry.get().subscribe();
                     drop(entry);
                     debug!("dedup: waiting on in-flight {}", &key[..16]);
-                    let decision = rx.recv().await
-                        .context("in-flight sender dropped")?;
+                    metrics.record_dedup_hit();
+                    let decision = rx.recv().await.context("in-flight sender dropped")?;
                     return Ok(decision);
                 }
                 Entry::Vacant(entry) => {
@@ -116,8 +120,11 @@ impl DeepSeek {
             }
         }
 
-        // Layer 3: Semaphore-bounded API call
+        // Layer 3: API call
+        metrics.record_deepseek_call();
+        let start = Instant::now();
         let result = self.call_api(system_prompt, user_prompt).await;
+        metrics.record_deepseek_latency(start.elapsed());
 
         if let Some(ref key) = dedup_key {
             if let Some((_, tx)) = self.in_flight.remove(key) {
@@ -125,12 +132,20 @@ impl DeepSeek {
                     let _ = tx.send(decision.clone());
                 }
             }
-
             if let Ok(ref decision) = result {
                 if let Ok(json) = serde_json::to_string(decision) {
                     self.cache.set(key.clone(), json);
                 }
+                if decision.ok {
+                    metrics.record_deepseek_allow();
+                } else {
+                    metrics.record_deepseek_deny();
+                }
             }
+        }
+
+        if result.is_err() {
+            metrics.record_deepseek_error();
         }
 
         result
@@ -141,22 +156,28 @@ impl DeepSeek {
         system_prompt: &str,
         user_prompt: &str,
     ) -> Result<Decision> {
-        let _permit = self.semaphore.acquire().await
-            .context("semaphore closed")?;
+        let _permit = self.semaphore.acquire().await.context("semaphore closed")?;
 
         debug!("calling DeepSeek Reasoner");
 
         let body = ChatRequest {
             model: MODEL,
             messages: vec![
-                Message { role: "system".into(), content: system_prompt.to_string() },
-                Message { role: "user".into(), content: user_prompt.to_string() },
+                Message {
+                    role: "system".into(),
+                    content: system_prompt.to_string(),
+                },
+                Message {
+                    role: "user".into(),
+                    content: user_prompt.to_string(),
+                },
             ],
             max_tokens: 1024,
             temperature: TEMPERATURE,
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(format!("{BASE_URL}/v1/chat/completions"))
             .bearer_auth(self.api_key.as_str())
             .json(&body)
@@ -170,19 +191,22 @@ impl DeepSeek {
             bail!("DeepSeek API error {status}: {text}");
         }
 
-        let chat_resp: ChatResponse = resp.json().await
-            .context("parsing DeepSeek response")?;
-
-        let choice = chat_resp.choices.into_iter().next()
+        let chat_resp: ChatResponse = resp.json().await.context("parsing DeepSeek response")?;
+        let choice = chat_resp
+            .choices
+            .into_iter()
+            .next()
             .context("empty response from DeepSeek")?;
-
         let content = choice.message.content.trim().to_string();
 
-        let mut decision: Decision = parse_decision(&content)
-            .unwrap_or_else(|e| {
-                warn!("failed to parse decision JSON, defaulting to ok=true: {e}");
-                Decision { ok: true, reason: None, reasoning: None }
-            });
+        let mut decision: Decision = parse_decision(&content).unwrap_or_else(|e| {
+            warn!("failed to parse decision JSON, defaulting to ok=true: {e}");
+            Decision {
+                ok: true,
+                reason: None,
+                reasoning: None,
+            }
+        });
 
         if let Some(reasoning) = choice.message.reasoning_content {
             decision.reasoning = Some(reasoning);
@@ -197,10 +221,21 @@ impl DeepSeek {
         system_prompt: String,
         user_prompt: String,
         cache_key: Option<String>,
+        metrics: Metrics,
+        input_chars: usize,
     ) {
         let this = self.clone();
         tokio::spawn(async move {
-            match this.evaluate(&system_prompt, &user_prompt, cache_key.as_deref()).await {
+            match this
+                .evaluate(
+                    &system_prompt,
+                    &user_prompt,
+                    cache_key.as_deref(),
+                    &metrics,
+                    input_chars,
+                )
+                .await
+            {
                 Ok(d) => debug!("background eval: ok={} reason={:?}", d.ok, d.reason),
                 Err(e) => warn!("background eval failed: {e}"),
             }

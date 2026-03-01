@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, Semaphore};
-use tracing::{debug, warn};
+use tracing::{info, warn};
 
 use crate::cache::Cache;
 use crate::config::{BASE_URL, MODEL, TEMPERATURE};
@@ -92,7 +92,7 @@ impl DeepSeek {
         // Layer 1: Cache
         if let Some(key) = cache_key {
             if let Some(cached) = self.cache.get(key) {
-                debug!("cache hit: {}", &key[..16]);
+                info!("  ↳ cache HIT ({} entries)", self.cache.len());
                 metrics.record_cache_hit(input_chars);
                 return serde_json::from_str(&cached)
                     .context("deserializing cached decision");
@@ -108,7 +108,7 @@ impl DeepSeek {
                 Entry::Occupied(entry) => {
                     let mut rx = entry.get().subscribe();
                     drop(entry);
-                    debug!("dedup: waiting on in-flight {}", &key[..16]);
+                    info!("  ↳ dedup HIT (waiting on in-flight call)");
                     metrics.record_dedup_hit();
                     let decision = rx.recv().await.context("in-flight sender dropped")?;
                     return Ok(decision);
@@ -123,8 +123,21 @@ impl DeepSeek {
         // Layer 3: API call
         metrics.record_deepseek_call();
         let start = Instant::now();
+        info!("  ↳ calling DeepSeek Reasoner ({input_chars} chars)...");
         let result = self.call_api(system_prompt, user_prompt).await;
-        metrics.record_deepseek_latency(start.elapsed());
+        let elapsed = start.elapsed();
+        metrics.record_deepseek_latency(elapsed);
+
+        match &result {
+            Ok(d) => {
+                let verdict = if d.ok { "ok=true" } else { "ok=false" };
+                let reason = d.reason.as_deref().unwrap_or("-");
+                info!("  ↳ DeepSeek responded in {:.1}s: {verdict} | {reason}", elapsed.as_secs_f64());
+            }
+            Err(e) => {
+                info!("  ↳ DeepSeek FAILED in {:.1}s: {e}", elapsed.as_secs_f64());
+            }
+        }
 
         if let Some(ref key) = dedup_key {
             if let Some((_, tx)) = self.in_flight.remove(key) {
@@ -157,8 +170,6 @@ impl DeepSeek {
         user_prompt: &str,
     ) -> Result<Decision> {
         let _permit = self.semaphore.acquire().await.context("semaphore closed")?;
-
-        debug!("calling DeepSeek Reasoner");
 
         let body = ChatRequest {
             model: MODEL,
@@ -236,7 +247,7 @@ impl DeepSeek {
                 )
                 .await
             {
-                Ok(d) => debug!("background eval: ok={} reason={:?}", d.ok, d.reason),
+                Ok(d) => info!("background eval: ok={} reason={:?}", d.ok, d.reason),
                 Err(e) => warn!("background eval failed: {e}"),
             }
         });

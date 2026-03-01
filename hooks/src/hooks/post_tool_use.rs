@@ -1,16 +1,16 @@
 use anyhow::Result;
 use serde_json::{json, Value};
-use tracing::debug;
+use tracing::info;
 
 use crate::deepseek::DeepSeek;
 use crate::metrics::Metrics;
 
 pub async fn handle(input: &Value, metrics: &Metrics) -> Result<Option<String>> {
     let tool_name = input["tool_name"].as_str().unwrap_or("");
-    debug!("PostToolUse: {tool_name} succeeded");
     let input_chars = serde_json::to_string(&input["tool_input"])
         .unwrap_or_default()
         .len();
+    info!("[PostToolUse] {tool_name} succeeded");
     metrics.record_local_allow(input_chars);
     Ok(None)
 }
@@ -27,7 +27,8 @@ pub async fn handle_failure(
 ) -> Result<Option<String>> {
     let tool_name = input["tool_name"].as_str().unwrap_or("");
     let error = input["error"].as_str().unwrap_or("");
-    debug!("PostToolUseFailure: {tool_name} — {error}");
+    let error_short = if error.len() > 120 { &error[..120] } else { error };
+    info!("[PostToolUseFailure] {tool_name} failed | {error_short}");
 
     let user_prompt = format!(
         "Tool: {tool_name}\nInput: {}\nError: {error}",
@@ -39,7 +40,8 @@ pub async fn handle_failure(
         .evaluate(FAILURE_SYSTEM_PROMPT, &user_prompt, None, metrics, input_chars)
         .await?;
 
-    if let Some(suggestion) = decision.reason {
+    if let Some(ref suggestion) = decision.reason {
+        info!("[PostToolUseFailure] DeepSeek suggestion | {suggestion}");
         Ok(Some(
             json!({
                 "hookSpecificOutput": {
@@ -50,6 +52,7 @@ pub async fn handle_failure(
             .to_string(),
         ))
     } else {
+        info!("[PostToolUseFailure] no suggestion from DeepSeek");
         Ok(None)
     }
 }

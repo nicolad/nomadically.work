@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde_json::{json, Value};
-use tracing::debug;
+use tracing::info;
 
 use crate::cache::Cache;
 use crate::deepseek::DeepSeek;
@@ -32,7 +32,7 @@ pub async fn handle(
     let input_chars = input_str.len();
 
     if rules.should_skip_tool(tool_name) {
-        debug!("skipping tool {tool_name} (in skip list)");
+        info!("[PreToolUse] {tool_name} → ALLOW (skip list)");
         metrics.record_local_allow(input_chars);
         return Ok(None);
     }
@@ -40,40 +40,53 @@ pub async fn handle(
     match tool_name {
         "Bash" => {
             let cmd = tool_input["command"].as_str().unwrap_or("");
+            let cmd_short = truncate(cmd, 80);
             match rules.check_command(cmd) {
                 RuleVerdict::Deny(reason) => {
+                    info!("[PreToolUse] Bash → DENY (local rule) | {cmd_short}");
                     metrics.record_local_deny(input_chars);
                     return Ok(Some(deny_json(&reason)));
                 }
                 RuleVerdict::Allow => {
+                    info!("[PreToolUse] Bash → ALLOW (local rule) | {cmd_short}");
                     metrics.record_local_allow(input_chars);
                     return Ok(None);
                 }
-                RuleVerdict::NeedsEval => {}
+                RuleVerdict::NeedsEval => {
+                    info!("[PreToolUse] Bash → needs DeepSeek eval | {cmd_short}");
+                }
             }
         }
         "Write" | "Edit" => {
             let path = tool_input["file_path"].as_str().unwrap_or("");
             match rules.check_file_path(path) {
                 RuleVerdict::Deny(reason) => {
+                    info!("[PreToolUse] {tool_name} → DENY (protected path) | {path}");
                     metrics.record_local_deny(input_chars);
                     return Ok(Some(deny_json(&reason)));
                 }
                 RuleVerdict::Allow => {
+                    info!("[PreToolUse] {tool_name} → ALLOW (local rule) | {path}");
                     metrics.record_local_allow(input_chars);
                     return Ok(None);
                 }
-                RuleVerdict::NeedsEval => {}
+                RuleVerdict::NeedsEval => {
+                    info!("[PreToolUse] {tool_name} → needs DeepSeek eval | {path}");
+                }
             }
         }
         "Read" | "Glob" | "Grep" => {
+            info!("[PreToolUse] {tool_name} → ALLOW (read-only)");
             metrics.record_local_allow(input_chars);
             return Ok(None);
         }
-        _ => {}
+        _ => {
+            info!("[PreToolUse] {tool_name} → needs DeepSeek eval");
+        }
     }
 
     if !rules.should_evaluate("PreToolUse") {
+        info!("[PreToolUse] {tool_name} → ALLOW (eval disabled)");
         return Ok(None);
     }
 
@@ -89,11 +102,13 @@ pub async fn handle(
         .await?;
 
     if decision.ok {
+        info!("[PreToolUse] {tool_name} → ALLOW (DeepSeek)");
         Ok(None)
     } else {
         let reason = decision
             .reason
             .unwrap_or_else(|| "Blocked by DeepSeek review".into());
+        info!("[PreToolUse] {tool_name} → DENY (DeepSeek) | {reason}");
         Ok(Some(deny_json(&reason)))
     }
 }
@@ -107,4 +122,12 @@ fn deny_json(reason: &str) -> String {
         }
     })
     .to_string()
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max])
+    }
 }

@@ -116,13 +116,22 @@ async fn handle_hook(
     state.metrics.record_latency(&event, elapsed);
 
     match result {
-        Ok(Some(output)) => match serde_json::from_str::<serde_json::Value>(&output) {
-            Ok(json) => (StatusCode::OK, Json(json)),
-            Err(_) => (StatusCode::OK, Json(serde_json::json!({"message": output}))),
-        },
-        Ok(None) => (StatusCode::OK, Json(serde_json::json!({}))),
+        Ok(Some(ref output)) => {
+            let has_decision = output.contains("permissionDecision")
+                || output.contains("\"decision\"");
+            let label = if has_decision { "with decision" } else { "with output" };
+            info!("← {event} completed in {:.1}ms ({label})", elapsed.as_secs_f64() * 1000.0);
+            match serde_json::from_str::<serde_json::Value>(output) {
+                Ok(json) => (StatusCode::OK, Json(json)),
+                Err(_) => (StatusCode::OK, Json(serde_json::json!({"message": output}))),
+            }
+        }
+        Ok(None) => {
+            info!("← {event} completed in {:.1}ms (pass-through)", elapsed.as_secs_f64() * 1000.0);
+            (StatusCode::OK, Json(serde_json::json!({})))
+        }
         Err(e) => {
-            error!("hook {event} failed: {e:#}");
+            error!("← {event} FAILED in {:.1}ms: {e:#}", elapsed.as_secs_f64() * 1000.0);
             (StatusCode::OK, Json(serde_json::json!({})))
         }
     }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde_json::{json, Value};
-use tracing::debug;
+use tracing::info;
 
 use crate::cache::Cache;
 use crate::deepseek::DeepSeek;
@@ -28,19 +28,24 @@ pub async fn handle(
     metrics: &Metrics,
 ) -> Result<Option<String>> {
     if input["stop_hook_active"].as_bool().unwrap_or(false) {
-        debug!("stop_hook_active=true, allowing stop");
+        info!("[Stop] → ALLOW (stop_hook_active=true, avoiding loop)");
         metrics.record_local_allow(0);
         return Ok(None);
     }
 
     if !rules.should_evaluate("Stop") {
+        info!("[Stop] → ALLOW (eval disabled)");
         return Ok(None);
     }
 
     let last_msg = input["last_assistant_message"].as_str().unwrap_or("");
     if last_msg.is_empty() {
+        info!("[Stop] → ALLOW (empty message)");
         return Ok(None);
     }
+
+    let msg_preview = if last_msg.len() > 100 { &last_msg[..100] } else { last_msg };
+    info!("[Stop] evaluating completion ({} chars) | {}...", last_msg.len(), msg_preview.replace('\n', " "));
 
     let input_chars = last_msg.len();
     let cache_key = Cache::key("Stop", None, last_msg);
@@ -51,11 +56,13 @@ pub async fn handle(
         .await?;
 
     if decision.ok {
+        info!("[Stop] → ALLOW (DeepSeek: task complete)");
         Ok(None)
     } else {
         let reason = decision
             .reason
             .unwrap_or_else(|| "DeepSeek thinks more work is needed".into());
+        info!("[Stop] → BLOCK (DeepSeek) | {reason}");
         Ok(Some(json!({"decision": "block", "reason": reason}).to_string()))
     }
 }

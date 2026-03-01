@@ -27,6 +27,9 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
+    // Load .env before anything else reads env vars
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_env("HOOKS_LOG")

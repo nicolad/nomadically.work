@@ -121,140 +121,140 @@ const SECTIONS: &[BackendSectionDef] = &[
         slug: "system_design",
         title: "System Design",
         prompt_template: "{ctx}\n\nCreate a comprehensive backend interview prep section on SYSTEM DESIGN tailored to this role. Cover: designing scalable architectures, load balancing, CDNs, horizontal vs vertical scaling, capacity estimation, and trade-offs (CAP theorem, consistency models). Include 4 interview questions with ideal answers specific to this company's domain. Provide 2 code/diagram examples showing system design patterns relevant to their stack.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "distributed_systems",
         title: "Distributed Systems",
         prompt_template: "{ctx}\n\nSearch for academic papers on distributed systems, consensus algorithms, and distributed databases. Then create a backend interview prep section on DISTRIBUTED SYSTEMS tailored to this role. Cover: consensus (Raft, Paxos), distributed transactions (2PC, sagas), vector clocks, CRDTs, partition tolerance. Include 4 interview questions with research-backed ideal answers. Cite real papers.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: true,
     },
     BackendSectionDef {
         slug: "database_design",
         title: "Database Design & Modeling",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on DATABASE DESIGN tailored to this role. Cover: normalization (1NF-BCNF), denormalization strategies, indexing (B-tree, hash, GIN, GiST), schema design patterns (star schema, EAV), migrations. Include 4 interview questions with ideal answers referencing their likely database stack. Provide SQL examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "sql_optimization",
         title: "SQL Query Optimization",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on SQL QUERY OPTIMIZATION tailored to this role. Cover: EXPLAIN plans, index strategies, query rewriting, N+1 problems, connection pooling, prepared statements, CTEs vs subqueries, window functions. Include 4 interview questions with ideal answers. Provide before/after SQL optimization examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "nosql_patterns",
         title: "NoSQL & Data Store Patterns",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on NOSQL AND DATA STORE PATTERNS tailored to this role. Cover: document stores (MongoDB), key-value (Redis), column-family (Cassandra), graph (Neo4j), time-series (InfluxDB), choosing the right store. Include 4 interview questions with ideal answers. Provide data modeling examples for their domain.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "api_design",
         title: "API Design & Protocols",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on API DESIGN tailored to this role. Cover: REST best practices, GraphQL (schema design, N+1, DataLoader), gRPC, WebSockets, API versioning, pagination (cursor vs offset), rate limiting, HATEOAS. Include 4 interview questions with ideal answers specific to their API stack. Provide code examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "auth_security",
         title: "Authentication & Authorization",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on AUTH & SECURITY tailored to this role. Cover: OAuth 2.0 / OIDC, JWT (structure, rotation, revocation), session management, RBAC vs ABAC, API key patterns, CORS, CSRF, secure cookie flags. Include 4 interview questions with ideal answers. Provide code examples for their auth stack.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "caching",
         title: "Caching Strategies",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on CACHING STRATEGIES tailored to this role. Cover: cache-aside, read-through, write-through, write-behind, CDN caching, HTTP cache headers, Redis patterns, cache invalidation strategies, thundering herd, cache stampede prevention. Include 4 interview questions with ideal answers. Provide implementation examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "message_queues",
         title: "Message Queues & Async Processing",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on MESSAGE QUEUES tailored to this role. Cover: Kafka, RabbitMQ, SQS, pub/sub patterns, exactly-once semantics, dead letter queues, backpressure, idempotency, saga pattern with queues. Include 4 interview questions with ideal answers. Provide architecture diagrams in ASCII and code examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "microservices",
         title: "Microservices Architecture",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on MICROSERVICES tailored to this role. Cover: service decomposition, API gateway, service mesh, circuit breakers, bulkhead pattern, sidecar, strangler fig migration, inter-service communication (sync vs async), data ownership. Include 4 interview questions with ideal answers. Provide practical examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "testing",
         title: "Testing Strategies",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on TESTING STRATEGIES tailored to this role. Cover: unit/integration/e2e testing pyramid, contract testing (Pact), property-based testing, mutation testing, test doubles (mocks/stubs/fakes), load testing (k6, Artillery), chaos engineering. Include 4 interview questions with ideal answers. Provide test code examples for their stack.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "devops",
         title: "DevOps & CI/CD",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on DEVOPS & CI/CD tailored to this role. Cover: Docker (multi-stage builds, layer caching), Kubernetes (pods, services, deployments, HPA), CI/CD pipelines, blue-green/canary deployments, GitOps, Infrastructure as Code (Terraform, Pulumi). Include 4 interview questions with ideal answers.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "security_owasp",
         title: "Security & OWASP",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on SECURITY & OWASP tailored to this role. Cover: OWASP Top 10 (2021), SQL injection, XSS, SSRF, IDOR, supply chain attacks, secrets management, CSP headers, HTTPS/TLS, input validation, output encoding. Include 4 interview questions with ideal answers. Provide secure vs insecure code examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "performance",
         title: "Performance Engineering",
         prompt_template: "{ctx}\n\nSearch for academic papers on web application performance, latency optimization, and backend scalability. Then create a backend interview prep section on PERFORMANCE ENGINEERING tailored to this role. Cover: profiling, flame graphs, p99 latency, database query optimization, connection pooling, lazy loading, pagination, compression. Include 4 interview questions with research-backed answers. Cite papers.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: true,
     },
     BackendSectionDef {
         slug: "concurrency_async",
         title: "Concurrency & Async Patterns",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on CONCURRENCY & ASYNC PATTERNS tailored to this role. Cover: event loop (Node.js), async/await, promises, worker threads, race conditions, deadlocks, mutexes, semaphores, actor model, CSP. Include 4 interview questions with ideal answers. Provide code examples showing common concurrency bugs and fixes.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "observability",
         title: "Observability & Monitoring",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on OBSERVABILITY tailored to this role. Cover: three pillars (logs, metrics, traces), OpenTelemetry, structured logging, distributed tracing, SLOs/SLIs/SLAs, alerting strategies, Grafana/Prometheus, error budgets, on-call practices. Include 4 interview questions with ideal answers. Provide instrumentation examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "event_driven",
         title: "Event-Driven Architecture",
         prompt_template: "{ctx}\n\nSearch for academic papers on event-driven architecture, event sourcing, and CQRS. Then create a backend interview prep section on EVENT-DRIVEN ARCHITECTURE tailored to this role. Cover: event sourcing, CQRS, domain events, event stores, eventual consistency, projections, snapshotting, event schema evolution. Include 4 interview questions with research-backed answers. Cite papers.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: true,
     },
     BackendSectionDef {
         slug: "serverless_edge",
         title: "Serverless & Edge Computing",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on SERVERLESS & EDGE COMPUTING tailored to this role. Cover: Lambda/Workers/Deno Deploy, cold starts, edge functions, D1/KV/R2, Vercel serverless, function composition, state management in serverless, cost modeling. Include 4 interview questions with ideal answers. Provide architecture examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "typescript_node",
         title: "TypeScript & Node.js Deep Dive",
         prompt_template: "{ctx}\n\nCreate a backend interview prep section on TYPESCRIPT & NODE.JS tailored to this role. Cover: type system (generics, conditional types, mapped types, template literals), Node.js internals (event loop phases, libuv, streams, backpressure), runtime performance (V8 optimization, memory leaks, garbage collection). Include 4 interview questions with ideal answers. Provide advanced TS code examples.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: false,
     },
     BackendSectionDef {
         slug: "ai_ml_integration",
         title: "AI/ML Integration in Backend Systems",
         prompt_template: "{ctx}\n\nSearch for academic papers on integrating machine learning models into production systems, MLOps, and AI-powered applications. Then create a backend interview prep section on AI/ML INTEGRATION tailored to this role. Cover: embedding APIs (OpenAI, Anthropic), RAG architecture, vector databases, prompt engineering patterns, model serving, AI observability (Langfuse), guardrails. Include 4 interview questions with research-backed answers. Cite papers.\n\n{schema}",
-        max_tokens: 4000,
+        max_tokens: 8192,
         use_scholar: true,
     },
 ];
@@ -502,17 +502,22 @@ fn try_parse_json(raw: &str) -> Value {
     if let Some(fence_start) = text.find("```json") {
         let after_fence = &text[fence_start + 7..]; // skip "```json"
         let after_fence = after_fence.trim_start_matches('\n');
-        // Find the last ``` (not a ````), working backwards
+        // Strip trailing ``` with optional whitespace/newlines
+        let stripped = after_fence.trim_end();
+        let stripped = if stripped.ends_with("```") {
+            stripped[..stripped.len() - 3].trim_end()
+        } else {
+            stripped
+        };
+        if let Ok(v) = serde_json::from_str::<Value>(stripped) {
+            return v;
+        }
+        // Try finding last \n``` pattern
         if let Some(fence_end) = after_fence.rfind("\n```") {
             let json_block = after_fence[..fence_end].trim();
             if let Ok(v) = serde_json::from_str::<Value>(json_block) {
                 return v;
             }
-        }
-        // Try: everything after ```json until end, stripping trailing ```
-        let stripped = after_fence.trim_end().trim_end_matches("```").trim();
-        if let Ok(v) = serde_json::from_str::<Value>(stripped) {
-            return v;
         }
     }
 

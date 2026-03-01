@@ -156,10 +156,6 @@ impl Metrics {
         self.inner.total_latency_us.fetch_add(us, Ordering::Relaxed);
         if us < 1000 {
             self.inner.local_latency_us.fetch_add(us, Ordering::Relaxed);
-        } else {
-            self.inner
-                .deepseek_latency_us
-                .fetch_add(us, Ordering::Relaxed);
         }
         self.record_event(event);
     }
@@ -184,7 +180,7 @@ impl Metrics {
         let estimated_tokens_saved = i.estimated_tokens_saved.load(Ordering::Relaxed);
 
         let total_hooks =
-            local_allow + local_deny + cache_hit + dedup_hit + deepseek_call + deepseek_error;
+            local_allow + local_deny + cache_hit + dedup_hit + deepseek_call;
         let hooks_without_api = local_allow + local_deny + cache_hit + dedup_hit;
         let pct = if total_hooks > 0 {
             (hooks_without_api as f64 / total_hooks as f64) * 100.0

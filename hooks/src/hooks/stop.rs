@@ -44,7 +44,8 @@ pub async fn handle(
         return Ok(None);
     }
 
-    let msg_preview = if last_msg.len() > 100 { &last_msg[..100] } else { last_msg };
+    let msg_preview_end = last_msg.floor_char_boundary(100);
+    let msg_preview = if last_msg.len() > 100 { &last_msg[..msg_preview_end] } else { last_msg };
     info!("[Stop] evaluating completion ({} chars) | {}...", last_msg.len(), msg_preview.replace('\n', " "));
 
     let input_chars = last_msg.len();

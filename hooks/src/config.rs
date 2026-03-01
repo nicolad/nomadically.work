@@ -2,9 +2,9 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-pub const BASE_URL: &str = "https://api.deepseek.com";
+pub const BASE_URL: &str = "https://api.deepseek.com/beta";
 pub const MODEL: &str = "deepseek-reasoner";
-pub const TEMPERATURE: f32 = 2.0;
+pub const TEMPERATURE: f32 = 1.0;
 pub const DEFAULT_PORT: u16 = 19836;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

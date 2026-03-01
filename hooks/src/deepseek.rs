@@ -189,7 +189,7 @@ impl DeepSeek {
 
         let resp = self
             .client
-            .post(format!("{BASE_URL}/v1/chat/completions"))
+            .post(format!("{BASE_URL}/chat/completions"))
             .bearer_auth(self.api_key.as_str())
             .json(&body)
             .send()

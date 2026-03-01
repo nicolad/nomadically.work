@@ -34,7 +34,8 @@ pub async fn handle(
         return Ok(None);
     }
 
-    let prompt_preview = if prompt.len() > 80 { &prompt[..80] } else { prompt };
+    let prompt_preview_end = prompt.floor_char_boundary(80);
+    let prompt_preview = if prompt.len() > 80 { &prompt[..prompt_preview_end] } else { prompt };
     info!("[UserPrompt] evaluating ({} chars) | {}...", prompt.len(), prompt_preview.replace('\n', " "));
 
     let input_chars = prompt.len();

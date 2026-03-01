@@ -22,7 +22,8 @@ pub async fn handle(
         }
         "Bash" => {
             let cmd = tool_input["command"].as_str().unwrap_or("");
-            let cmd_short = if cmd.len() > 60 { &cmd[..60] } else { cmd };
+            let cmd_short_end = cmd.floor_char_boundary(60);
+            let cmd_short = if cmd.len() > 60 { &cmd[..cmd_short_end] } else { cmd };
             match rules.check_command(cmd) {
                 RuleVerdict::Allow => {
                     info!("[Permission] Bash → AUTO-ALLOW (safe cmd) | {cmd_short}");

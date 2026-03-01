@@ -7,6 +7,30 @@ schema {
   mutation: Mutation
 }
 
+type AIBackendPrep {
+  aiMlIntegration: BackendPrepSection
+  apiDesign: BackendPrepSection
+  authSecurity: BackendPrepSection
+  caching: BackendPrepSection
+  concurrencyAsync: BackendPrepSection
+  databaseDesign: BackendPrepSection
+  devops: BackendPrepSection
+  distributedSystems: BackendPrepSection
+  eventDriven: BackendPrepSection
+  generatedAt: String!
+  messageQueues: BackendPrepSection
+  microservices: BackendPrepSection
+  nosqlPatterns: BackendPrepSection
+  observability: BackendPrepSection
+  performance: BackendPrepSection
+  securityOwasp: BackendPrepSection
+  serverlessEdge: BackendPrepSection
+  sqlOptimization: BackendPrepSection
+  systemDesign: BackendPrepSection
+  testing: BackendPrepSection
+  typescriptNode: BackendPrepSection
+}
+
 type AIInterviewPrep {
   generatedAt: String!
   requirements: [AIInterviewPrepRequirement!]!
@@ -139,6 +163,7 @@ type AgenticCodingResource {
 
 type Application {
   agenticCoding: AgenticCoding
+  aiBackendPrep: AIBackendPrep
   aiInterviewPrep: AIInterviewPrep
   aiInterviewQuestions: AIInterviewQuestions
   companyKey: String
@@ -230,6 +255,32 @@ type AshbyPostalAddress {
 type AshbySecondaryLocation {
   address: AshbyPostalAddress
   location: String!
+}
+
+type BackendPrepCodeExample {
+  code: String!
+  explanation: String!
+  language: String!
+  title: String!
+}
+
+type BackendPrepInterviewQuestion {
+  difficulty: String!
+  followUps: [String!]!
+  idealAnswer: String!
+  question: String!
+}
+
+type BackendPrepSection {
+  codeExamples: [BackendPrepCodeExample!]!
+  commonPitfalls: [String!]!
+  deepDive: String!
+  interviewQuestions: [BackendPrepInterviewQuestion!]!
+  keyConcepts: [String!]!
+  overview: String!
+  researchInsights: String
+  talkingPoints: [String!]!
+  title: String!
 }
 
 type ChatMessage {
@@ -829,6 +880,7 @@ type Mutation {
   findCompanyEmails(companyId: Int!): EnhanceAllContactsResult!
   findContactEmail(contactId: Int!): FindContactEmailResult!
   generateAgenticCoding(applicationId: Int!): Application!
+  generateBackendPrep(applicationId: Int!): Application!
   generateInterviewPrep(applicationId: Int!): Application!
   generateInterviewQuestions(applicationId: Int!, type: String!): Application!
   generateRequirementFromSelection(applicationId: Int!, selectedText: String!): Application!

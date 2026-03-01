@@ -21,6 +21,14 @@ struct D1Query {
 struct D1Response {
     success: bool,
     errors: Vec<serde_json::Value>,
+    #[serde(default)]
+    result: Vec<D1ResultSet>,
+}
+
+#[derive(Deserialize)]
+struct D1ResultSet {
+    #[serde(default)]
+    results: Vec<serde_json::Value>,
 }
 
 impl D1Client {
@@ -82,6 +90,83 @@ impl D1Client {
         }
 
         info!(topic = %topic.topic, "Inserted into D1");
+        Ok(())
+    }
+
+    /// Execute a SELECT query and return result rows as `Vec<Value>`.
+    pub async fn query(&self, sql: &str, params: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>> {
+        let query = D1Query {
+            sql: sql.into(),
+            params,
+        };
+
+        let url = format!(
+            "https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query",
+            self.account_id, self.database_id,
+        );
+
+        let resp = self
+            .http
+            .post(&url)
+            .bearer_auth(&self.api_token)
+            .json(&query)
+            .send()
+            .await
+            .context("D1 API request failed")?;
+
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("D1 API error {status}: {body}");
+        }
+
+        let data: D1Response = resp.json().await.context("parsing D1 response")?;
+        if !data.success {
+            anyhow::bail!("D1 query failed: {:?}", data.errors);
+        }
+
+        let rows = data
+            .result
+            .into_iter()
+            .next()
+            .map(|rs| rs.results)
+            .unwrap_or_default();
+
+        Ok(rows)
+    }
+
+    /// Execute a write statement (INSERT/UPDATE/DELETE). Checks for `success: true`.
+    pub async fn execute(&self, sql: &str, params: Vec<serde_json::Value>) -> Result<()> {
+        let query = D1Query {
+            sql: sql.into(),
+            params,
+        };
+
+        let url = format!(
+            "https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query",
+            self.account_id, self.database_id,
+        );
+
+        let resp = self
+            .http
+            .post(&url)
+            .bearer_auth(&self.api_token)
+            .json(&query)
+            .send()
+            .await
+            .context("D1 API request failed")?;
+
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("D1 API error {status}: {body}");
+        }
+
+        let data: D1Response = resp.json().await.context("parsing D1 response")?;
+        if !data.success {
+            anyhow::bail!("D1 execute failed: {:?}", data.errors);
+        }
+
         Ok(())
     }
 }

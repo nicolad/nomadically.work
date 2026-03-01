@@ -314,6 +314,41 @@ nav a:hover {
   }
 }
 
+/* ---------- iPad / tablet touch improvements ---------- */
+@media (pointer: coarse) {
+  /* Larger tap targets for badges used as buttons */
+  .rt-Badge {
+    min-height: 32px !important;
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Larger touch targets on small buttons */
+  .rt-Button:where([data-size="1"]) {
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+  }
+
+  /* Smooth momentum scrolling for overflow containers */
+  .deep-dive-content pre,
+  .deep-dive-content table {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Ensure tables don't break layout on narrow viewports */
+.deep-dive-content table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Code blocks scroll gracefully on touch */
+.deep-dive-content pre {
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 0.3; transform: scale(0.85); }
   50% { opacity: 1; transform: scale(1); }

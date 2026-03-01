@@ -19,6 +19,31 @@ export type Scalars = {
   Upload: { input: File; output: File; }
 };
 
+export type AiBackendPrep = {
+  __typename: 'AIBackendPrep';
+  aiMlIntegration: Maybe<BackendPrepSection>;
+  apiDesign: Maybe<BackendPrepSection>;
+  authSecurity: Maybe<BackendPrepSection>;
+  caching: Maybe<BackendPrepSection>;
+  concurrencyAsync: Maybe<BackendPrepSection>;
+  databaseDesign: Maybe<BackendPrepSection>;
+  devops: Maybe<BackendPrepSection>;
+  distributedSystems: Maybe<BackendPrepSection>;
+  eventDriven: Maybe<BackendPrepSection>;
+  generatedAt: Scalars['String']['output'];
+  messageQueues: Maybe<BackendPrepSection>;
+  microservices: Maybe<BackendPrepSection>;
+  nosqlPatterns: Maybe<BackendPrepSection>;
+  observability: Maybe<BackendPrepSection>;
+  performance: Maybe<BackendPrepSection>;
+  securityOwasp: Maybe<BackendPrepSection>;
+  serverlessEdge: Maybe<BackendPrepSection>;
+  sqlOptimization: Maybe<BackendPrepSection>;
+  systemDesign: Maybe<BackendPrepSection>;
+  testing: Maybe<BackendPrepSection>;
+  typescriptNode: Maybe<BackendPrepSection>;
+};
+
 export type AiInterviewPrep = {
   __typename: 'AIInterviewPrep';
   generatedAt: Scalars['String']['output'];
@@ -162,6 +187,7 @@ export type AgenticCodingResource = {
 export type Application = {
   __typename: 'Application';
   agenticCoding: Maybe<AgenticCoding>;
+  aiBackendPrep: Maybe<AiBackendPrep>;
   aiInterviewPrep: Maybe<AiInterviewPrep>;
   aiInterviewQuestions: Maybe<AiInterviewQuestions>;
   companyKey: Maybe<Scalars['String']['output']>;
@@ -260,6 +286,35 @@ export type AshbySecondaryLocation = {
   __typename: 'AshbySecondaryLocation';
   address: Maybe<AshbyPostalAddress>;
   location: Scalars['String']['output'];
+};
+
+export type BackendPrepCodeExample = {
+  __typename: 'BackendPrepCodeExample';
+  code: Scalars['String']['output'];
+  explanation: Scalars['String']['output'];
+  language: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type BackendPrepInterviewQuestion = {
+  __typename: 'BackendPrepInterviewQuestion';
+  difficulty: Scalars['String']['output'];
+  followUps: Array<Scalars['String']['output']>;
+  idealAnswer: Scalars['String']['output'];
+  question: Scalars['String']['output'];
+};
+
+export type BackendPrepSection = {
+  __typename: 'BackendPrepSection';
+  codeExamples: Array<BackendPrepCodeExample>;
+  commonPitfalls: Array<Scalars['String']['output']>;
+  deepDive: Scalars['String']['output'];
+  interviewQuestions: Array<BackendPrepInterviewQuestion>;
+  keyConcepts: Array<Scalars['String']['output']>;
+  overview: Scalars['String']['output'];
+  researchInsights: Maybe<Scalars['String']['output']>;
+  talkingPoints: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
 };
 
 export type ChatMessage = {
@@ -892,6 +947,7 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateAgenticCoding: Application;
+  generateBackendPrep: Application;
   generateInterviewPrep: Application;
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
@@ -1045,6 +1101,11 @@ export type MutationFindContactEmailArgs = {
 
 
 export type MutationGenerateAgenticCodingArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
+export type MutationGenerateBackendPrepArgs = {
   applicationId: Scalars['Int']['input'];
 };
 

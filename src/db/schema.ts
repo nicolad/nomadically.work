@@ -490,6 +490,7 @@ export const applications = sqliteTable("applications", {
   ai_interview_prep: text("ai_interview_prep"), // JSON: AIInterviewPrep shape
   ai_interview_questions: text("ai_interview_questions"), // JSON: AIInterviewQuestions shape
   ai_agentic_coding: text("ai_agentic_coding"), // JSON: AgenticCoding shape
+  ai_backend_prep: text("ai_backend_prep"), // JSON: BackendPrep shape (20-section backend interview prep)
   created_at: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

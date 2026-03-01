@@ -88,6 +88,51 @@ fragment ApplicationFields on Application {
     }
     generatedAt
   }
+  aiBackendPrep {
+    systemDesign { ...BackendPrepSectionFields }
+    distributedSystems { ...BackendPrepSectionFields }
+    databaseDesign { ...BackendPrepSectionFields }
+    sqlOptimization { ...BackendPrepSectionFields }
+    nosqlPatterns { ...BackendPrepSectionFields }
+    apiDesign { ...BackendPrepSectionFields }
+    authSecurity { ...BackendPrepSectionFields }
+    caching { ...BackendPrepSectionFields }
+    messageQueues { ...BackendPrepSectionFields }
+    microservices { ...BackendPrepSectionFields }
+    testing { ...BackendPrepSectionFields }
+    devops { ...BackendPrepSectionFields }
+    securityOwasp { ...BackendPrepSectionFields }
+    performance { ...BackendPrepSectionFields }
+    concurrencyAsync { ...BackendPrepSectionFields }
+    observability { ...BackendPrepSectionFields }
+    eventDriven { ...BackendPrepSectionFields }
+    serverlessEdge { ...BackendPrepSectionFields }
+    typescriptNode { ...BackendPrepSectionFields }
+    aiMlIntegration { ...BackendPrepSectionFields }
+    generatedAt
+  }
+}
+
+fragment BackendPrepSectionFields on BackendPrepSection {
+  title
+  overview
+  keyConcepts
+  deepDive
+  interviewQuestions {
+    question
+    idealAnswer
+    followUps
+    difficulty
+  }
+  codeExamples {
+    title
+    language
+    code
+    explanation
+  }
+  commonPitfalls
+  talkingPoints
+  researchInsights
 }
 
 query GetApplications {
@@ -282,6 +327,35 @@ mutation GenerateAgenticCoding($applicationId: Int!) {
         url
         description
       }
+      generatedAt
+    }
+  }
+}
+
+mutation GenerateBackendPrep($applicationId: Int!) {
+  generateBackendPrep(applicationId: $applicationId) {
+    id
+    aiBackendPrep {
+      systemDesign { ...BackendPrepSectionFields }
+      distributedSystems { ...BackendPrepSectionFields }
+      databaseDesign { ...BackendPrepSectionFields }
+      sqlOptimization { ...BackendPrepSectionFields }
+      nosqlPatterns { ...BackendPrepSectionFields }
+      apiDesign { ...BackendPrepSectionFields }
+      authSecurity { ...BackendPrepSectionFields }
+      caching { ...BackendPrepSectionFields }
+      messageQueues { ...BackendPrepSectionFields }
+      microservices { ...BackendPrepSectionFields }
+      testing { ...BackendPrepSectionFields }
+      devops { ...BackendPrepSectionFields }
+      securityOwasp { ...BackendPrepSectionFields }
+      performance { ...BackendPrepSectionFields }
+      concurrencyAsync { ...BackendPrepSectionFields }
+      observability { ...BackendPrepSectionFields }
+      eventDriven { ...BackendPrepSectionFields }
+      serverlessEdge { ...BackendPrepSectionFields }
+      typescriptNode { ...BackendPrepSectionFields }
+      aiMlIntegration { ...BackendPrepSectionFields }
       generatedAt
     }
   }

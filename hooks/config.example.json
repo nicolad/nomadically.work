@@ -1,0 +1,39 @@
+{
+  "port": 19836,
+  "deepseek": {
+    "max_concurrent": 8,
+    "timeout_secs": 30
+  },
+  "cache": {
+    "ttl_secs": 300,
+    "max_entries": 2000
+  },
+  "rules": {
+    "blocked_commands": [
+      "rm\\s+-rf\\s+/",
+      "rm\\s+-rf\\s+~",
+      "mkfs\\.",
+      "dd\\s+if=.*of=/dev/",
+      ">\\s*/dev/sd",
+      "chmod\\s+-R\\s+777\\s+/"
+    ],
+    "allowed_commands": [
+      "^(cat|ls|pwd|echo|head|tail|wc|file|which|whoami|date|uname)\\b",
+      "^git\\s+(status|log|diff|branch|show)\\b",
+      "^(npm|yarn|pnpm)\\s+(test|lint|check|build)\\b",
+      "^cargo\\s+(test|check|clippy|build|fmt)\\b",
+      "^(python|node|deno|bun)\\s+-c\\s+"
+    ],
+    "protected_paths": [
+      "\\.env",
+      "\\.git/",
+      "id_rsa",
+      "\\.ssh/",
+      "\\.gnupg/",
+      "secrets?\\.",
+      "credentials"
+    ],
+    "skip_tools": ["Read", "Glob", "Grep"],
+    "evaluated_events": ["PreToolUse", "Stop", "UserPromptSubmit"]
+  }
+}

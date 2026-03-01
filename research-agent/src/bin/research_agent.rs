@@ -3,7 +3,9 @@ use clap::{Parser, Subcommand};
 use chrono::Utc;
 use research_agent::{
     agent::Client,
+    backend,
     d1::D1Client,
+    enhance,
     research_context::ResearchContext,
     study,
     tools::{GetPaperDetail, SearchPapers},
@@ -60,6 +62,28 @@ enum Command {
 
     /// Spawn 10 parallel agents to research application-prep topics for Plan A Technologies
     Prep {
+        /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
+        #[arg(long)]
+        api_key: Option<String>,
+    },
+
+    /// Spawn 10 parallel agents to enhance application's agentic coding section
+    Enhance {
+        /// Application ID in D1
+        #[arg(long)]
+        app_id: i64,
+
+        /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
+        #[arg(long)]
+        api_key: Option<String>,
+    },
+
+    /// Spawn 20 parallel agents for backend interview prep
+    Backend {
+        /// Application ID in D1
+        #[arg(long)]
+        app_id: i64,
+
         /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
         #[arg(long)]
         api_key: Option<String>,
@@ -186,6 +210,38 @@ Research standards:
             info!("Starting application-prep study generation (10 parallel agents)");
             study::run_prep(&api_key, &scholar, &d1).await?;
             info!("All topics saved to D1 — visit /study/application-prep");
+        }
+
+        Command::Enhance { app_id, api_key } => {
+            let api_key = api_key
+                .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
+                .context("DEEPSEEK_API_KEY not set")?;
+
+            let scholar = SemanticScholarClient::new(
+                std::env::var("SEMANTIC_SCHOLAR_API_KEY").ok().as_deref(),
+            );
+
+            let d1 = D1Client::from_env()?;
+
+            info!(app_id, "Starting agentic coding enhancement (10 parallel agents)");
+            enhance::run(app_id, &api_key, &scholar, &d1).await?;
+            info!(app_id, "Agentic coding data saved to D1");
+        }
+
+        Command::Backend { app_id, api_key } => {
+            let api_key = api_key
+                .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
+                .context("DEEPSEEK_API_KEY not set")?;
+
+            let scholar = SemanticScholarClient::new(
+                std::env::var("SEMANTIC_SCHOLAR_API_KEY").ok().as_deref(),
+            );
+
+            let d1 = D1Client::from_env()?;
+
+            info!(app_id, "Starting backend interview prep (20 parallel agents)");
+            backend::run(app_id, &api_key, &scholar, &d1).await?;
+            info!(app_id, "Backend prep data saved to D1");
         }
     }
 

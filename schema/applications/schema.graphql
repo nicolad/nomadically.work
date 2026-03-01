@@ -15,6 +15,7 @@ extend type Mutation {
   linkSelectionToRequirement(applicationId: Int!, requirement: String!, sourceQuote: String!): Application!
   generateInterviewQuestions(applicationId: Int!, type: String!): Application!
   generateAgenticCoding(applicationId: Int!): Application!
+  generateBackendPrep(applicationId: Int!): Application!
   deleteApplication(id: Int!): DeleteApplicationResponse!
 }
 
@@ -86,6 +87,56 @@ type AgenticCodingOutcome {
   improvement: String!
 }
 
+type BackendPrepInterviewQuestion {
+  question: String!
+  idealAnswer: String!
+  followUps: [String!]!
+  difficulty: String!
+}
+
+type BackendPrepCodeExample {
+  title: String!
+  language: String!
+  code: String!
+  explanation: String!
+}
+
+type BackendPrepSection {
+  title: String!
+  overview: String!
+  keyConcepts: [String!]!
+  deepDive: String!
+  interviewQuestions: [BackendPrepInterviewQuestion!]!
+  codeExamples: [BackendPrepCodeExample!]!
+  commonPitfalls: [String!]!
+  talkingPoints: [String!]!
+  researchInsights: String
+}
+
+type AIBackendPrep {
+  systemDesign: BackendPrepSection
+  distributedSystems: BackendPrepSection
+  databaseDesign: BackendPrepSection
+  sqlOptimization: BackendPrepSection
+  nosqlPatterns: BackendPrepSection
+  apiDesign: BackendPrepSection
+  authSecurity: BackendPrepSection
+  caching: BackendPrepSection
+  messageQueues: BackendPrepSection
+  microservices: BackendPrepSection
+  testing: BackendPrepSection
+  devops: BackendPrepSection
+  securityOwasp: BackendPrepSection
+  performance: BackendPrepSection
+  concurrencyAsync: BackendPrepSection
+  observability: BackendPrepSection
+  eventDriven: BackendPrepSection
+  serverlessEdge: BackendPrepSection
+  typescriptNode: BackendPrepSection
+  aiMlIntegration: BackendPrepSection
+  generatedAt: String!
+}
+
 type AgenticCoding {
   overview: String!
   workflowPattern: String
@@ -141,6 +192,7 @@ type Application {
   aiInterviewPrep: AIInterviewPrep
   aiInterviewQuestions: AIInterviewQuestions
   agenticCoding: AgenticCoding
+  aiBackendPrep: AIBackendPrep
 }
 
 input QuestionAnswerInput {

@@ -22,6 +22,31 @@ export type Scalars = {
   Upload: { input: File; output: File; }
 };
 
+export type AiBackendPrep = {
+  __typename?: 'AIBackendPrep';
+  aiMlIntegration: Maybe<BackendPrepSection>;
+  apiDesign: Maybe<BackendPrepSection>;
+  authSecurity: Maybe<BackendPrepSection>;
+  caching: Maybe<BackendPrepSection>;
+  concurrencyAsync: Maybe<BackendPrepSection>;
+  databaseDesign: Maybe<BackendPrepSection>;
+  devops: Maybe<BackendPrepSection>;
+  distributedSystems: Maybe<BackendPrepSection>;
+  eventDriven: Maybe<BackendPrepSection>;
+  generatedAt: Scalars['String']['output'];
+  messageQueues: Maybe<BackendPrepSection>;
+  microservices: Maybe<BackendPrepSection>;
+  nosqlPatterns: Maybe<BackendPrepSection>;
+  observability: Maybe<BackendPrepSection>;
+  performance: Maybe<BackendPrepSection>;
+  securityOwasp: Maybe<BackendPrepSection>;
+  serverlessEdge: Maybe<BackendPrepSection>;
+  sqlOptimization: Maybe<BackendPrepSection>;
+  systemDesign: Maybe<BackendPrepSection>;
+  testing: Maybe<BackendPrepSection>;
+  typescriptNode: Maybe<BackendPrepSection>;
+};
+
 export type AiInterviewPrep = {
   __typename?: 'AIInterviewPrep';
   generatedAt: Scalars['String']['output'];
@@ -165,6 +190,7 @@ export type AgenticCodingResource = {
 export type Application = {
   __typename?: 'Application';
   agenticCoding: Maybe<AgenticCoding>;
+  aiBackendPrep: Maybe<AiBackendPrep>;
   aiInterviewPrep: Maybe<AiInterviewPrep>;
   aiInterviewQuestions: Maybe<AiInterviewQuestions>;
   companyKey: Maybe<Scalars['String']['output']>;
@@ -263,6 +289,35 @@ export type AshbySecondaryLocation = {
   __typename?: 'AshbySecondaryLocation';
   address: Maybe<AshbyPostalAddress>;
   location: Scalars['String']['output'];
+};
+
+export type BackendPrepCodeExample = {
+  __typename?: 'BackendPrepCodeExample';
+  code: Scalars['String']['output'];
+  explanation: Scalars['String']['output'];
+  language: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type BackendPrepInterviewQuestion = {
+  __typename?: 'BackendPrepInterviewQuestion';
+  difficulty: Scalars['String']['output'];
+  followUps: Array<Scalars['String']['output']>;
+  idealAnswer: Scalars['String']['output'];
+  question: Scalars['String']['output'];
+};
+
+export type BackendPrepSection = {
+  __typename?: 'BackendPrepSection';
+  codeExamples: Array<BackendPrepCodeExample>;
+  commonPitfalls: Array<Scalars['String']['output']>;
+  deepDive: Scalars['String']['output'];
+  interviewQuestions: Array<BackendPrepInterviewQuestion>;
+  keyConcepts: Array<Scalars['String']['output']>;
+  overview: Scalars['String']['output'];
+  researchInsights: Maybe<Scalars['String']['output']>;
+  talkingPoints: Array<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
 };
 
 export type ChatMessage = {
@@ -895,6 +950,7 @@ export type Mutation = {
   findCompanyEmails: EnhanceAllContactsResult;
   findContactEmail: FindContactEmailResult;
   generateAgenticCoding: Application;
+  generateBackendPrep: Application;
   generateInterviewPrep: Application;
   generateInterviewQuestions: Application;
   generateRequirementFromSelection: Application;
@@ -1048,6 +1104,11 @@ export type MutationFindContactEmailArgs = {
 
 
 export type MutationGenerateAgenticCodingArgs = {
+  applicationId: Scalars['Int']['input'];
+};
+
+
+export type MutationGenerateBackendPrepArgs = {
   applicationId: Scalars['Int']['input'];
 };
 
@@ -1928,6 +1989,7 @@ export type DirectiveResolverFn<TResult = Record<PropertyKey, never>, TParent = 
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
+  AIBackendPrep: ResolverTypeWrapper<Partial<AiBackendPrep>>;
   AIInterviewPrep: ResolverTypeWrapper<Partial<AiInterviewPrep>>;
   AIInterviewPrepRequirement: ResolverTypeWrapper<Partial<AiInterviewPrepRequirement>>;
   AIInterviewQuestion: ResolverTypeWrapper<Partial<AiInterviewQuestion>>;
@@ -1954,6 +2016,9 @@ export type ResolversTypes = {
   AshbyEnrichment: ResolverTypeWrapper<Partial<AshbyEnrichment>>;
   AshbyPostalAddress: ResolverTypeWrapper<Partial<AshbyPostalAddress>>;
   AshbySecondaryLocation: ResolverTypeWrapper<Partial<AshbySecondaryLocation>>;
+  BackendPrepCodeExample: ResolverTypeWrapper<Partial<BackendPrepCodeExample>>;
+  BackendPrepInterviewQuestion: ResolverTypeWrapper<Partial<BackendPrepInterviewQuestion>>;
+  BackendPrepSection: ResolverTypeWrapper<Partial<BackendPrepSection>>;
   Boolean: ResolverTypeWrapper<Partial<Scalars['Boolean']['output']>>;
   ChatMessage: ResolverTypeWrapper<Partial<ChatMessage>>;
   ChatMessageInput: ResolverTypeWrapper<Partial<ChatMessageInput>>;
@@ -2058,6 +2123,7 @@ export type ResolversTypes = {
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
+  AIBackendPrep: Partial<AiBackendPrep>;
   AIInterviewPrep: Partial<AiInterviewPrep>;
   AIInterviewPrepRequirement: Partial<AiInterviewPrepRequirement>;
   AIInterviewQuestion: Partial<AiInterviewQuestion>;
@@ -2081,6 +2147,9 @@ export type ResolversParentTypes = {
   AshbyEnrichment: Partial<AshbyEnrichment>;
   AshbyPostalAddress: Partial<AshbyPostalAddress>;
   AshbySecondaryLocation: Partial<AshbySecondaryLocation>;
+  BackendPrepCodeExample: Partial<BackendPrepCodeExample>;
+  BackendPrepInterviewQuestion: Partial<BackendPrepInterviewQuestion>;
+  BackendPrepSection: Partial<BackendPrepSection>;
   Boolean: Partial<Scalars['Boolean']['output']>;
   ChatMessage: Partial<ChatMessage>;
   ChatMessageInput: Partial<ChatMessageInput>;
@@ -2173,6 +2242,30 @@ export type ResolversParentTypes = {
   UserSettingsInput: Partial<UserSettingsInput>;
   WarcPointer: Partial<WarcPointer>;
   WarcPointerInput: Partial<WarcPointerInput>;
+};
+
+export type AiBackendPrepResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIBackendPrep'] = ResolversParentTypes['AIBackendPrep']> = {
+  aiMlIntegration?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  apiDesign?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  authSecurity?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  caching?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  concurrencyAsync?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  databaseDesign?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  devops?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  distributedSystems?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  eventDriven?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  generatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  messageQueues?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  microservices?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  nosqlPatterns?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  observability?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  performance?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  securityOwasp?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  serverlessEdge?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  sqlOptimization?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  systemDesign?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  testing?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
+  typescriptNode?: Resolver<Maybe<ResolversTypes['BackendPrepSection']>, ParentType, ContextType>;
 };
 
 export type AiInterviewPrepResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AIInterviewPrep'] = ResolversParentTypes['AIInterviewPrep']> = {
@@ -2274,6 +2367,7 @@ export type AgenticCodingResourceResolvers<ContextType = GraphQLContext, ParentT
 
 export type ApplicationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Application'] = ResolversParentTypes['Application']> = {
   agenticCoding?: Resolver<Maybe<ResolversTypes['AgenticCoding']>, ParentType, ContextType>;
+  aiBackendPrep?: Resolver<Maybe<ResolversTypes['AIBackendPrep']>, ParentType, ContextType>;
   aiInterviewPrep?: Resolver<Maybe<ResolversTypes['AIInterviewPrep']>, ParentType, ContextType>;
   aiInterviewQuestions?: Resolver<Maybe<ResolversTypes['AIInterviewQuestions']>, ParentType, ContextType>;
   companyKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -2345,6 +2439,32 @@ export type AshbyPostalAddressResolvers<ContextType = GraphQLContext, ParentType
 export type AshbySecondaryLocationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AshbySecondaryLocation'] = ResolversParentTypes['AshbySecondaryLocation']> = {
   address?: Resolver<Maybe<ResolversTypes['AshbyPostalAddress']>, ParentType, ContextType>;
   location?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type BackendPrepCodeExampleResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BackendPrepCodeExample'] = ResolversParentTypes['BackendPrepCodeExample']> = {
+  code?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  explanation?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  language?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type BackendPrepInterviewQuestionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BackendPrepInterviewQuestion'] = ResolversParentTypes['BackendPrepInterviewQuestion']> = {
+  difficulty?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  followUps?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  idealAnswer?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  question?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type BackendPrepSectionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BackendPrepSection'] = ResolversParentTypes['BackendPrepSection']> = {
+  codeExamples?: Resolver<Array<ResolversTypes['BackendPrepCodeExample']>, ParentType, ContextType>;
+  commonPitfalls?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  deepDive?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  interviewQuestions?: Resolver<Array<ResolversTypes['BackendPrepInterviewQuestion']>, ParentType, ContextType>;
+  keyConcepts?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  overview?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  researchInsights?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  talkingPoints?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export type ChatMessageResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ChatMessage'] = ResolversParentTypes['ChatMessage']> = {
@@ -2743,6 +2863,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   findCompanyEmails?: Resolver<ResolversTypes['EnhanceAllContactsResult'], ParentType, ContextType, RequireFields<MutationFindCompanyEmailsArgs, 'companyId'>>;
   findContactEmail?: Resolver<ResolversTypes['FindContactEmailResult'], ParentType, ContextType, RequireFields<MutationFindContactEmailArgs, 'contactId'>>;
   generateAgenticCoding?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateAgenticCodingArgs, 'applicationId'>>;
+  generateBackendPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateBackendPrepArgs, 'applicationId'>>;
   generateInterviewPrep?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewPrepArgs, 'applicationId'>>;
   generateInterviewQuestions?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateInterviewQuestionsArgs, 'applicationId' | 'type'>>;
   generateRequirementFromSelection?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateRequirementFromSelectionArgs, 'applicationId' | 'selectedText'>>;
@@ -3075,6 +3196,7 @@ export type WarcPointerResolvers<ContextType = GraphQLContext, ParentType extend
 };
 
 export type Resolvers<ContextType = GraphQLContext> = {
+  AIBackendPrep?: AiBackendPrepResolvers<ContextType>;
   AIInterviewPrep?: AiInterviewPrepResolvers<ContextType>;
   AIInterviewPrepRequirement?: AiInterviewPrepRequirementResolvers<ContextType>;
   AIInterviewQuestion?: AiInterviewQuestionResolvers<ContextType>;
@@ -3096,6 +3218,9 @@ export type Resolvers<ContextType = GraphQLContext> = {
   AshbyEnrichment?: AshbyEnrichmentResolvers<ContextType>;
   AshbyPostalAddress?: AshbyPostalAddressResolvers<ContextType>;
   AshbySecondaryLocation?: AshbySecondaryLocationResolvers<ContextType>;
+  BackendPrepCodeExample?: BackendPrepCodeExampleResolvers<ContextType>;
+  BackendPrepInterviewQuestion?: BackendPrepInterviewQuestionResolvers<ContextType>;
+  BackendPrepSection?: BackendPrepSectionResolvers<ContextType>;
   ChatMessage?: ChatMessageResolvers<ContextType>;
   CompaniesResponse?: CompaniesResponseResolvers<ContextType>;
   Company?: CompanyResolvers<ContextType>;

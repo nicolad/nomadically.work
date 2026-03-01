@@ -26,7 +26,12 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setCollapsed(true);
+    // Auto-collapse on tablet-width screens (iPad portrait = 768px, landscape = 1024px)
+    if (stored === null && window.innerWidth <= 1024) {
+      setCollapsed(true);
+    } else if (stored === "true") {
+      setCollapsed(true);
+    }
   }, []);
 
   const toggle = useCallback(() => {

@@ -78,6 +78,24 @@ enum Command {
         api_key: Option<String>,
     },
 
+    /// Normalize study_topics category slugs in D1 (e.g. "Node.js" → "nodejs")
+    SlugFix,
+
+    /// Generate study topic stubs for a dynamic category using DeepSeek Reasoner (no Semantic Scholar)
+    StudyGen {
+        /// Category slug (e.g. "nodejs", "rust", "system-design")
+        #[arg(short, long)]
+        category: String,
+
+        /// Number of topics to generate (default: 10, max: 20)
+        #[arg(long, default_value = "10")]
+        count: usize,
+
+        /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
+        #[arg(long)]
+        api_key: Option<String>,
+    },
+
     /// Spawn 20 parallel agents for backend interview prep
     Backend {
         /// Application ID in D1
@@ -92,6 +110,10 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env.local from the repo root (parent of the research/ crate)
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(std::path::Path::new("."));
+    let _ = dotenvy::from_path(root.join(".env.local"));
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -226,6 +248,46 @@ Research standards:
             info!(app_id, "Starting agentic coding enhancement (10 parallel agents)");
             enhance::run(app_id, &api_key, &scholar, &d1).await?;
             info!(app_id, "Agentic coding data saved to D1");
+        }
+
+        Command::SlugFix => {
+            let d1 = D1Client::from_env()?;
+
+            // Fetch all distinct categories so we can compute correct slugs
+            let rows = d1.query("SELECT DISTINCT category FROM study_topics", vec![]).await?;
+            let categories: Vec<String> = rows
+                .iter()
+                .filter_map(|r| r.get("category").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                .collect();
+
+            info!("Found {} distinct categories", categories.len());
+
+            for cat in &categories {
+                let slug = cat.to_lowercase().replace(' ', "-").replace(|c: char| !c.is_alphanumeric() && c != '-', "");
+                if &slug != cat {
+                    info!(from = %cat, to = %slug, "Renaming category");
+                    d1.execute(
+                        "UPDATE study_topics SET category = ?1 WHERE category = ?2",
+                        vec![slug.clone().into(), cat.clone().into()],
+                    ).await?;
+                    info!(slug = %slug, "Done");
+                }
+            }
+
+            info!("slug-fix complete");
+        }
+
+        Command::StudyGen { category, count, api_key } => {
+            let api_key = api_key
+                .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
+                .context("DEEPSEEK_API_KEY not set")?;
+
+            let d1 = D1Client::from_env()?;
+            let count = count.min(20);
+
+            info!(category = %category, count, "Generating study topics with DeepSeek Reasoner");
+            study::run_gen(&category, count, &api_key, &d1).await?;
+            info!(category = %category, "Topics saved to D1 — visit /study/{category}");
         }
 
         Command::Backend { app_id, api_key } => {

@@ -916,6 +916,7 @@ export type Mutation = {
   createLangSmithPrompt: LangSmithPrompt;
   createOpportunity: Opportunity;
   createPrompt: Prompt;
+  createStudyTopic: StudyTopic;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteApplication: DeleteApplicationResponse;
@@ -958,6 +959,7 @@ export type Mutation = {
   generateStudyConceptExplanation: StudyConceptExplanation;
   generateStudyDeepDive: StudyTopic;
   generateStudyTopicDeepDive: Application;
+  generateStudyTopicsForCategory: Array<StudyTopic>;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
@@ -1042,6 +1044,16 @@ export type MutationCreateOpportunityArgs = {
 
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
+};
+
+
+export type MutationCreateStudyTopicArgs = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  difficulty?: InputMaybe<Scalars['String']['input']>;
+  summary?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  topic?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1153,6 +1165,12 @@ export type MutationGenerateStudyTopicDeepDiveArgs = {
   force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
   studyTopic: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyTopicsForCategoryArgs = {
+  category: Scalars['String']['input'];
+  count?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -2849,6 +2867,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createLangSmithPrompt?: Resolver<ResolversTypes['LangSmithPrompt'], ParentType, ContextType, RequireFields<MutationCreateLangSmithPromptArgs, 'promptIdentifier'>>;
   createOpportunity?: Resolver<ResolversTypes['Opportunity'], ParentType, ContextType, RequireFields<MutationCreateOpportunityArgs, 'input'>>;
   createPrompt?: Resolver<ResolversTypes['Prompt'], ParentType, ContextType, RequireFields<MutationCreatePromptArgs, 'input'>>;
+  createStudyTopic?: Resolver<ResolversTypes['StudyTopic'], ParentType, ContextType, Partial<MutationCreateStudyTopicArgs>>;
   createTrack?: Resolver<ResolversTypes['Track'], ParentType, ContextType, RequireFields<MutationCreateTrackArgs, 'input'>>;
   deleteAllJobs?: Resolver<ResolversTypes['DeleteJobResponse'], ParentType, ContextType>;
   deleteApplication?: Resolver<ResolversTypes['DeleteApplicationResponse'], ParentType, ContextType, RequireFields<MutationDeleteApplicationArgs, 'id'>>;
@@ -2871,6 +2890,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   generateStudyConceptExplanation?: Resolver<ResolversTypes['StudyConceptExplanation'], ParentType, ContextType, RequireFields<MutationGenerateStudyConceptExplanationArgs, 'selectedText' | 'studyTopicId'>>;
   generateStudyDeepDive?: Resolver<ResolversTypes['StudyTopic'], ParentType, ContextType, RequireFields<MutationGenerateStudyDeepDiveArgs, 'studyTopicId'>>;
   generateStudyTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateStudyTopicDeepDiveArgs, 'applicationId' | 'requirement' | 'studyTopic'>>;
+  generateStudyTopicsForCategory?: Resolver<Array<ResolversTypes['StudyTopic']>, ParentType, ContextType, RequireFields<MutationGenerateStudyTopicsForCategoryArgs, 'category'>>;
   generateTopicDeepDive?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationGenerateTopicDeepDiveArgs, 'applicationId' | 'requirement'>>;
   importContacts?: Resolver<ResolversTypes['ImportContactsResult'], ParentType, ContextType, RequireFields<MutationImportContactsArgs, 'contacts'>>;
   ingestResumeParse?: Resolver<Maybe<ResolversTypes['ResumeIngestResult']>, ParentType, ContextType, RequireFields<MutationIngestResumeParseArgs, 'email' | 'filename' | 'job_id'>>;

@@ -4,6 +4,7 @@ import type { DeepPlannerTask } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { isAdminEmail } from "@/lib/admin";
 import { ulid } from "ulid";
+import { after } from "next/server";
 
 const STATUS_MAP: Record<string, string> = {
   pending: "PENDING",
@@ -163,9 +164,10 @@ export const deepPlannerResolvers = {
         if (task.context) parsedContext = JSON.parse(task.context);
       } catch {}
 
-      // Fire-and-forget: call sdd-agent /sdd/pipeline
-      // The worker updates deep_planner_tasks in D1 directly as it progresses
-      const pipelineBody = {
+      // Drive SDD pipeline phase-by-phase using next/server after().
+      // Each phase is a separate worker invocation (fits 30s CPU limit).
+      // after() runs after the response is sent but stays alive in the Vercel runtime.
+      const stepBody = {
         name: `dp-${args.id}`,
         task_id: args.id,
         description: task.problem_description,
@@ -178,15 +180,34 @@ export const deepPlannerResolvers = {
         ].filter(Boolean).join("\n"),
       };
 
-      fetch(`${SDD_AGENT_URL}/sdd/pipeline`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pipelineBody),
-      }).catch((err) => {
-        log("error", "SDD pipeline fetch failed", {
-          taskId: args.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
+      after(async () => {
+        const PHASES = ["propose", "spec", "design", "tasks", "apply", "verify", "archive"];
+        for (const phase of PHASES) {
+          try {
+            log("info", `Running phase: ${phase}`, { taskId: args.id });
+            const res = await fetch(`${SDD_AGENT_URL}/sdd/step`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(stepBody),
+            });
+            if (!res.ok) {
+              const body = await res.text();
+              log("error", `Phase ${phase} failed`, { taskId: args.id, status: res.status, body: body.slice(0, 500) });
+              break;
+            }
+            const result = await res.json() as { ok: boolean; data?: { mode?: string } };
+            if (result?.data?.mode === "step-complete") {
+              log("info", "Pipeline complete", { taskId: args.id });
+              break;
+            }
+          } catch (err) {
+            log("error", `Phase ${phase} fetch error`, {
+              taskId: args.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            break;
+          }
+        }
       });
 
       return mapDeepPlannerTask(updated);

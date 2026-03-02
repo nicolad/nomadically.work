@@ -28,6 +28,33 @@ query StudyTopics($category: String!) {
   }
 }
 
+mutation CreateStudyTopic(
+  $category: String
+  $topic: String
+  $title: String
+  $summary: String
+  $difficulty: String
+  $tags: [String!]
+) {
+  createStudyTopic(
+    category: $category
+    topic: $topic
+    title: $title
+    summary: $summary
+    difficulty: $difficulty
+    tags: $tags
+  ) {
+    id
+    category
+    topic
+    title
+    summary
+    difficulty
+    tags
+    createdAt
+  }
+}
+
 mutation GenerateStudyConceptExplanation(
   $studyTopicId: ID!
   $selectedText: String!
@@ -49,5 +76,16 @@ mutation GenerateStudyDeepDive($studyTopicId: ID!, $force: Boolean) {
   generateStudyDeepDive(studyTopicId: $studyTopicId, force: $force) {
     id
     deepDive
+  }
+}
+
+mutation GenerateStudyTopicsForCategory($category: String!, $count: Int) {
+  generateStudyTopicsForCategory(category: $category, count: $count) {
+    id
+    topic
+    title
+    summary
+    difficulty
+    tags
   }
 }

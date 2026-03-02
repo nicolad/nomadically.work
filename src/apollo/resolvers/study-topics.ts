@@ -1,9 +1,15 @@
 import type { GraphQLContext } from "../context";
 import { eq, and, sql } from "drizzle-orm";
 import { studyTopics, studyConceptExplanations } from "@/db/schema";
+import { isAdminEmail } from "@/lib/admin";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { createDeepSeekClient, DEEPSEEK_MODELS } from "@/deepseek";
+import type { ChatMessage } from "@/deepseek/types";
+
+function toSlug(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
 
 async function sha256Hex(input: string): Promise<string> {
   const encoded = new TextEncoder().encode(input);
@@ -63,6 +69,91 @@ export const studyTopicResolvers = {
   },
 
   Mutation: {
+    createStudyTopic: async (
+      _: unknown,
+      args: { category?: string; topic?: string; title?: string; summary?: string; difficulty?: string; tags?: string[] },
+      context: GraphQLContext,
+    ) => {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
+      const [row] = await context.db
+        .insert(studyTopics)
+        .values({
+          category: toSlug(args.category?.trim() ?? ""),
+          topic: toSlug(args.topic?.trim() ?? ""),
+          title: args.title?.trim() ?? "",
+          summary: args.summary?.trim() ?? null,
+          difficulty: (args.difficulty ?? "intermediate") as "beginner" | "intermediate" | "advanced",
+          tags: args.tags?.length ? JSON.stringify(args.tags) : null,
+        })
+        .returning();
+
+      return row!;
+    },
+
+    generateStudyTopicsForCategory: async (
+      _: unknown,
+      args: { category: string; count?: number },
+      context: GraphQLContext,
+    ) => {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
+      const category = toSlug(args.category.trim());
+      const count = Math.min(args.count ?? 5, 10);
+
+      const client = createDeepSeekClient();
+      const messages: ChatMessage[] = [
+        {
+          role: "system",
+          content: "You are a technical interview coach. Output ONLY valid JSON, no markdown, no code fences.",
+        },
+        {
+          role: "user",
+          content: `Generate ${count} study topics for the "${category}" category for software engineering interview prep.
+Return a JSON array of objects with these fields:
+- topic: kebab-case slug (string)
+- title: display name (string)
+- summary: one sentence description (string)
+- difficulty: one of "beginner", "intermediate", "advanced"
+- tags: array of 2-4 relevant tag strings`,
+        },
+      ];
+
+      const response = await client.chat({ model: DEEPSEEK_MODELS.REASONER, messages, max_tokens: 2000 });
+      const text = response.choices[0]?.message?.content ?? "";
+
+      let parsed: Array<{ topic: string; title: string; summary?: string; difficulty?: string; tags?: string[] }>;
+      try {
+        const clean = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+        parsed = JSON.parse(clean);
+      } catch {
+        throw new Error("AI returned invalid JSON");
+      }
+
+      const results = await Promise.all(
+        parsed.map((t) =>
+          context.db
+            .insert(studyTopics)
+            .values({
+              category,
+              topic: toSlug(t.topic ?? t.title ?? ""),
+              title: t.title ?? "",
+              summary: t.summary ?? null,
+              difficulty: (t.difficulty ?? "intermediate") as "beginner" | "intermediate" | "advanced",
+              tags: t.tags?.length ? JSON.stringify(t.tags) : null,
+            })
+            .onConflictDoNothing()
+            .returning(),
+        ),
+      );
+
+      return results.flatMap((rows) => rows);
+    },
+
     generateStudyConceptExplanation: async (
       _: unknown,
       args: { studyTopicId: string; selectedText: string; context?: string },

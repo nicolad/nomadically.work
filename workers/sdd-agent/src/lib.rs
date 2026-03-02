@@ -632,6 +632,108 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
     Response::from_json(&ApiResponse::success(result))
 }
 
+/// Phase ordering for step-by-step pipeline execution.
+const STEP_PHASES: [(SddPhase, &str, u32); 7] = [
+    (SddPhase::Propose, "Generating proposal", 15),
+    (SddPhase::Spec, "Writing specifications", 30),
+    (SddPhase::Design, "Creating design", 45),
+    (SddPhase::Tasks, "Breaking down tasks", 60),
+    (SddPhase::Apply, "Implementing changes", 75),
+    (SddPhase::Verify, "Verifying implementation", 90),
+    (SddPhase::Archive, "Archiving artifacts", 100),
+];
+
+/// POST /sdd/step — Run one SDD phase, update D1, then self-chain to the next.
+/// Each invocation fits within the 30s CPU limit.
+async fn handle_sdd_step(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let body: Value = req.json().await?;
+    let env = ctx.env;
+    let db = env.d1("DB")?;
+
+    let name = body["name"].as_str().unwrap_or("");
+    let description = body["description"].as_str().unwrap_or("");
+    let task_id = body["task_id"].as_str().unwrap_or("");
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let context = body["context"].as_str().unwrap_or("");
+
+    if name.is_empty() || description.is_empty() {
+        return error_response("'name' and 'description' are required");
+    }
+
+    sdd::SddChangeStore::ensure_table(&db).await?;
+
+    let now = worker::Date::now().to_string();
+    let mut change = sdd::SddChangeStore::load(&db, name).await?
+        .unwrap_or_else(|| SddChange {
+            name: name.into(),
+            description: description.into(),
+            phases_completed: Vec::new(),
+            phases_in_progress: Vec::new(),
+            artifacts: HashMap::new(),
+            created_at: now.clone(),
+            updated_at: now,
+        });
+
+    // Find the next phase to execute
+    let next = STEP_PHASES.iter().find(|(phase, _, _)| !change.phases_completed.contains(phase));
+
+    let (phase, step_label, checkpoint) = match next {
+        Some(p) => p,
+        None => {
+            // All phases done — mark task complete
+            let output = STEP_PHASES.iter()
+                .filter_map(|(p, _, _)| change.artifacts.get(p.as_str()).map(|a| format!("## Phase: {}\n\n{}", p.as_str(), a.as_str().unwrap_or(""))))
+                .collect::<Vec<_>>()
+                .join("\n\n---\n\n");
+            if !task_id.is_empty() {
+                finish_task(&db, task_id, "complete", Some(&output), None, 102).await;
+            }
+            return Response::from_json(&ApiResponse::success(json!({
+                "mode": "step-complete",
+                "change": name,
+                "phases_completed": change.phases_completed.iter().map(|p| p.as_str()).collect::<Vec<_>>(),
+            })));
+        }
+    };
+
+    // Update progress
+    if !task_id.is_empty() {
+        update_task_progress(&db, task_id, step_label, *checkpoint).await;
+    }
+
+    // Execute the single phase
+    let client = deepseek::DeepSeekClient::from_env(&env)?;
+    let mut pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    if let Some(docs) = load_workflow_docs(&db, workflow_type).await {
+        pipeline = pipeline.with_workflow_docs(docs);
+    }
+
+    match pipeline.execute_phase(*phase, &change, context).await {
+        Ok(r) => {
+            change.artifacts.insert(phase.as_str().into(), r.clone());
+            change.phases_completed.push(*phase);
+            change.updated_at = worker::Date::now().to_string();
+            sdd::SddChangeStore::save(&db, &change).await?;
+
+            Response::from_json(&ApiResponse::success(json!({
+                "mode": "step",
+                "change": name,
+                "phase": phase.as_str(),
+                "result": r,
+                "next": STEP_PHASES.iter()
+                    .find(|(p, _, _)| !change.phases_completed.contains(p))
+                    .map(|(p, _, _)| p.as_str()),
+            })))
+        }
+        Err(e) => {
+            if !task_id.is_empty() {
+                finish_task(&db, task_id, "failed", None, Some(&format!("{e}")), *checkpoint).await;
+            }
+            Err(e)
+        }
+    }
+}
+
 /// POST /sdd/phase — Execute a specific SDD phase
 async fn handle_sdd_phase(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let body: Value = req.json().await?;
@@ -1067,6 +1169,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .post_async("/sdd/continue", handle_sdd_continue)
         .post_async("/sdd/ff", handle_sdd_ff)
         .post_async("/sdd/pipeline", handle_sdd_pipeline)
+        .post_async("/sdd/step", handle_sdd_step)
         .post_async("/sdd/phase", handle_sdd_phase)
         .post_async("/sdd/explore", handle_sdd_explore)
         .post_async("/sdd/apply", handle_sdd_apply)

@@ -916,6 +916,7 @@ export type Mutation = {
   createLangSmithPrompt: LangSmithPrompt;
   createOpportunity: Opportunity;
   createPrompt: Prompt;
+  createStudyTopic: StudyTopic;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteApplication: DeleteApplicationResponse;
@@ -958,6 +959,7 @@ export type Mutation = {
   generateStudyConceptExplanation: StudyConceptExplanation;
   generateStudyDeepDive: StudyTopic;
   generateStudyTopicDeepDive: Application;
+  generateStudyTopicsForCategory: Array<StudyTopic>;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
@@ -1042,6 +1044,16 @@ export type MutationCreateOpportunityArgs = {
 
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
+};
+
+
+export type MutationCreateStudyTopicArgs = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  difficulty?: InputMaybe<Scalars['String']['input']>;
+  summary?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  topic?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1153,6 +1165,12 @@ export type MutationGenerateStudyTopicDeepDiveArgs = {
   force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
   studyTopic: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyTopicsForCategoryArgs = {
+  category: Scalars['String']['input'];
+  count?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -2553,6 +2571,18 @@ export type StudyTopicsQueryVariables = Exact<{
 
 export type StudyTopicsQuery = { __typename?: 'Query', studyTopics: Array<{ __typename?: 'StudyTopic', id: string, topic: string, title: string, summary: string | null, difficulty: string, tags: Array<string> }> };
 
+export type CreateStudyTopicMutationVariables = Exact<{
+  category?: InputMaybe<Scalars['String']['input']>;
+  topic?: InputMaybe<Scalars['String']['input']>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  summary?: InputMaybe<Scalars['String']['input']>;
+  difficulty?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+}>;
+
+
+export type CreateStudyTopicMutation = { __typename?: 'Mutation', createStudyTopic: { __typename?: 'StudyTopic', id: string, category: string, topic: string, title: string, summary: string | null, difficulty: string, tags: Array<string>, createdAt: string } };
+
 export type GenerateStudyConceptExplanationMutationVariables = Exact<{
   studyTopicId: Scalars['ID']['input'];
   selectedText: Scalars['String']['input'];
@@ -2569,6 +2599,14 @@ export type GenerateStudyDeepDiveMutationVariables = Exact<{
 
 
 export type GenerateStudyDeepDiveMutation = { __typename?: 'Mutation', generateStudyDeepDive: { __typename?: 'StudyTopic', id: string, deepDive: string | null } };
+
+export type GenerateStudyTopicsForCategoryMutationVariables = Exact<{
+  category: Scalars['String']['input'];
+  count?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GenerateStudyTopicsForCategoryMutation = { __typename?: 'Mutation', generateStudyTopicsForCategory: Array<{ __typename?: 'StudyTopic', id: string, topic: string, title: string, summary: string | null, difficulty: string, tags: Array<string> }> };
 
 export type GenerateResearchMutationVariables = Exact<{
   goalDescription: Scalars['String']['input'];
@@ -6966,6 +7004,58 @@ export type StudyTopicsQueryHookResult = ReturnType<typeof useStudyTopicsQuery>;
 export type StudyTopicsLazyQueryHookResult = ReturnType<typeof useStudyTopicsLazyQuery>;
 export type StudyTopicsSuspenseQueryHookResult = ReturnType<typeof useStudyTopicsSuspenseQuery>;
 export type StudyTopicsQueryResult = Apollo.QueryResult<StudyTopicsQuery, StudyTopicsQueryVariables>;
+export const CreateStudyTopicDocument = gql`
+    mutation CreateStudyTopic($category: String, $topic: String, $title: String, $summary: String, $difficulty: String, $tags: [String!]) {
+  createStudyTopic(
+    category: $category
+    topic: $topic
+    title: $title
+    summary: $summary
+    difficulty: $difficulty
+    tags: $tags
+  ) {
+    id
+    category
+    topic
+    title
+    summary
+    difficulty
+    tags
+    createdAt
+  }
+}
+    `;
+export type CreateStudyTopicMutationFn = Apollo.MutationFunction<CreateStudyTopicMutation, CreateStudyTopicMutationVariables>;
+
+/**
+ * __useCreateStudyTopicMutation__
+ *
+ * To run a mutation, you first call `useCreateStudyTopicMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateStudyTopicMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createStudyTopicMutation, { data, loading, error }] = useCreateStudyTopicMutation({
+ *   variables: {
+ *      category: // value for 'category'
+ *      topic: // value for 'topic'
+ *      title: // value for 'title'
+ *      summary: // value for 'summary'
+ *      difficulty: // value for 'difficulty'
+ *      tags: // value for 'tags'
+ *   },
+ * });
+ */
+export function useCreateStudyTopicMutation(baseOptions?: Apollo.MutationHookOptions<CreateStudyTopicMutation, CreateStudyTopicMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateStudyTopicMutation, CreateStudyTopicMutationVariables>(CreateStudyTopicDocument, options);
+      }
+export type CreateStudyTopicMutationHookResult = ReturnType<typeof useCreateStudyTopicMutation>;
+export type CreateStudyTopicMutationResult = Apollo.MutationResult<CreateStudyTopicMutation>;
+export type CreateStudyTopicMutationOptions = Apollo.BaseMutationOptions<CreateStudyTopicMutation, CreateStudyTopicMutationVariables>;
 export const GenerateStudyConceptExplanationDocument = gql`
     mutation GenerateStudyConceptExplanation($studyTopicId: ID!, $selectedText: String!, $context: String) {
   generateStudyConceptExplanation(
@@ -7043,6 +7133,45 @@ export function useGenerateStudyDeepDiveMutation(baseOptions?: Apollo.MutationHo
 export type GenerateStudyDeepDiveMutationHookResult = ReturnType<typeof useGenerateStudyDeepDiveMutation>;
 export type GenerateStudyDeepDiveMutationResult = Apollo.MutationResult<GenerateStudyDeepDiveMutation>;
 export type GenerateStudyDeepDiveMutationOptions = Apollo.BaseMutationOptions<GenerateStudyDeepDiveMutation, GenerateStudyDeepDiveMutationVariables>;
+export const GenerateStudyTopicsForCategoryDocument = gql`
+    mutation GenerateStudyTopicsForCategory($category: String!, $count: Int) {
+  generateStudyTopicsForCategory(category: $category, count: $count) {
+    id
+    topic
+    title
+    summary
+    difficulty
+    tags
+  }
+}
+    `;
+export type GenerateStudyTopicsForCategoryMutationFn = Apollo.MutationFunction<GenerateStudyTopicsForCategoryMutation, GenerateStudyTopicsForCategoryMutationVariables>;
+
+/**
+ * __useGenerateStudyTopicsForCategoryMutation__
+ *
+ * To run a mutation, you first call `useGenerateStudyTopicsForCategoryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateStudyTopicsForCategoryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateStudyTopicsForCategoryMutation, { data, loading, error }] = useGenerateStudyTopicsForCategoryMutation({
+ *   variables: {
+ *      category: // value for 'category'
+ *      count: // value for 'count'
+ *   },
+ * });
+ */
+export function useGenerateStudyTopicsForCategoryMutation(baseOptions?: Apollo.MutationHookOptions<GenerateStudyTopicsForCategoryMutation, GenerateStudyTopicsForCategoryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateStudyTopicsForCategoryMutation, GenerateStudyTopicsForCategoryMutationVariables>(GenerateStudyTopicsForCategoryDocument, options);
+      }
+export type GenerateStudyTopicsForCategoryMutationHookResult = ReturnType<typeof useGenerateStudyTopicsForCategoryMutation>;
+export type GenerateStudyTopicsForCategoryMutationResult = Apollo.MutationResult<GenerateStudyTopicsForCategoryMutation>;
+export type GenerateStudyTopicsForCategoryMutationOptions = Apollo.BaseMutationOptions<GenerateStudyTopicsForCategoryMutation, GenerateStudyTopicsForCategoryMutationVariables>;
 export const GenerateResearchDocument = gql`
     mutation GenerateResearch($goalDescription: String!) {
   generateResearch(goalDescription: $goalDescription) {

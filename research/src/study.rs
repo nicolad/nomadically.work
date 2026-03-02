@@ -313,6 +313,178 @@ pub async fn run_prep(api_key: &str, _scholar: &SemanticScholarClient, d1: &D1Cl
     Ok(())
 }
 
+/// Generate and write full study topics for a dynamic category using DeepSeek Reasoner.
+///
+/// Phase 1 (Reasoner, single call): generate topic stubs (slug, title, summary, difficulty,
+///          tags, prompt_focus) for the requested category.
+/// Phase 2 (Chat, parallel workers): spawn N parallel agents — one per stub — to write full
+///          body_md content. Uses the same `TeamLead` + `TaskQueue` pattern as `run_prep`.
+pub async fn run_gen(category: &str, count: usize, api_key: &str, d1: &D1Client) -> Result<()> {
+    // ── Phase 1: DeepSeek Reasoner → stubs ────────────────────────────────────
+    let client = Client::new(api_key);
+
+    let system = "You are a technical interview coach. \
+        Output ONLY valid JSON — a JSON array, no markdown, no code fences, no extra text.";
+
+    let prompt = format!(
+        "Generate {count} study topics for the \"{category}\" category for software engineering interview prep.\n\
+         Return a JSON array where each object has:\n\
+         - slug: kebab-case identifier (string)\n\
+         - title: display name (string)\n\
+         - summary: one sentence description (string)\n\
+         - difficulty: one of \"beginner\", \"intermediate\", \"advanced\"\n\
+         - tags: array of 2-4 relevant strings\n\
+         - prompt_focus: 1-2 sentence content brief for a later write phase",
+    );
+
+    info!(category, count, "Phase 1 — DeepSeek Reasoner generating stubs");
+    let agent = client.agent("deepseek-reasoner").preamble(system).build();
+    let raw = agent
+        .prompt(prompt)
+        .await
+        .with_context(|| format!("Reasoner call failed for category={category}"))?;
+
+    let clean = raw
+        .trim()
+        .trim_start_matches("```json")
+        .trim_start_matches("```")
+        .trim_end_matches("```")
+        .trim();
+
+    #[derive(Clone, serde::Deserialize)]
+    struct TopicStub {
+        slug: String,
+        title: String,
+        #[serde(default)]
+        summary: String,
+        #[serde(default = "default_difficulty")]
+        difficulty: String,
+        #[serde(default)]
+        tags: Vec<String>,
+        #[serde(default)]
+        prompt_focus: String,
+    }
+    fn default_difficulty() -> String { "intermediate".into() }
+
+    let stubs: Vec<TopicStub> = serde_json::from_str(clean)
+        .with_context(|| format!("Failed to parse Reasoner JSON for category={category}"))?;
+
+    info!(category, count = stubs.len(), "Phase 2 — spawning {} parallel write agents", stubs.len());
+
+    // ── Phase 2: parallel write agents (deepseek-chat, one per stub) ──────────
+    let api_key = Arc::new(api_key.to_string());
+    let d1 = Arc::new(d1.clone());
+    let category = Arc::new(category.to_string());
+
+    let queue: TaskQueue<TopicStub> = TaskQueue::new();
+    for stub in &stubs {
+        queue.push(stub.slug.clone(), stub.clone(), vec![], 2).await;
+    }
+
+    let mailbox = Mailbox::new();
+    let (_shutdown_tx, shutdown) = shutdown_pair();
+    let summary = TeamLead::new(stubs.len())
+        .run(queue, mailbox, shutdown, move |ctx, task| {
+            let api_key = Arc::clone(&api_key);
+            let d1 = Arc::clone(&d1);
+            let category = Arc::clone(&category);
+            let stub = task.payload;
+            async move {
+                info!(worker = %ctx.worker_id, slug = %stub.slug, "Writing study guide");
+                let row = write_gen_topic(&stub.slug, &stub.title, &stub.prompt_focus, &category, &api_key).await?;
+                d1.insert_study_topic(&row)
+                    .await
+                    .with_context(|| format!("D1 insert failed for {}", stub.slug))?;
+                info!(worker = %ctx.worker_id, slug = %stub.slug, "Saved to D1");
+                Ok::<(), anyhow::Error>(())
+            }
+        })
+        .await;
+
+    info!(
+        completed = summary.completed,
+        failed = summary.failed,
+        "All gen agents complete"
+    );
+
+    if summary.failed > 0 {
+        anyhow::bail!("{}/{} gen agents failed", summary.failed, stubs.len());
+    }
+
+    Ok(())
+}
+
+/// Write full body_md for a single dynamically generated topic (no Semantic Scholar).
+async fn write_gen_topic(
+    slug: &str,
+    title: &str,
+    focus: &str,
+    category: &str,
+    api_key: &str,
+) -> Result<StudyTopicRow> {
+    let client = Client::new(api_key);
+
+    let preamble = format!(
+        r#"You are a senior technical writer creating practical study material for a software engineer preparing for interviews.
+
+Your task: Write a comprehensive, practical study guide on "{title}" (category: {category}).
+
+Write in this EXACT format — return ONLY the markdown body:
+
+## Overview
+2-3 paragraphs: what it is, why it matters.
+
+## Key Concepts
+Bullet points with 1-2 sentence explanations.
+
+## How It Works
+Technical explanation with code examples (TypeScript preferred).
+
+## Practical Patterns
+3-4 concrete implementation patterns.
+
+## Interview Talking Points
+5-6 points. Frame as "When asked about X, explain Y because Z."
+
+## Common Pitfalls
+3-4 specific mistakes engineers make.
+
+Write at a senior engineer level. Be precise, no fluff."#,
+        title = title,
+        category = category,
+    );
+
+    let user_prompt = format!(
+        "Write a study guide on: **{title}**\n\nFocus: {focus}",
+        title = title,
+        focus = focus,
+    );
+
+    let agent = client.agent("deepseek-chat").preamble(&preamble).build();
+    let body_md = agent
+        .prompt(user_prompt)
+        .await
+        .with_context(|| format!("write_gen_topic failed for {slug}"))?;
+
+    let summary = body_md
+        .lines()
+        .skip_while(|l| l.starts_with('#') || l.trim().is_empty())
+        .take_while(|l| !l.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let summary = if summary.len() > 300 { format!("{}…", &summary[..297]) } else { summary };
+
+    Ok(StudyTopicRow {
+        category: category.to_string(),
+        topic: slug.to_string(),
+        title: title.to_string(),
+        summary,
+        body_md,
+        difficulty: "intermediate".to_string(),
+        tags: vec![],
+    })
+}
+
 /// Run a single agent WITHOUT Semantic Scholar tools — pure DeepSeek generation.
 async fn run_direct_agent(
     topic_def: TopicDef,

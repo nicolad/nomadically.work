@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   Badge,
+  Button,
   Card,
   Container,
   Flex,
@@ -11,7 +13,11 @@ import {
   Skeleton,
   Text,
 } from "@radix-ui/themes";
-import { useStudyTopicsQuery } from "@/__generated__/hooks";
+import { MagicWandIcon } from "@radix-ui/react-icons";
+import { useStudyTopicsQuery, useGenerateStudyTopicsForCategoryMutation } from "@/__generated__/hooks";
+import { useAuth } from "@/lib/auth-hooks";
+import { ADMIN_EMAIL } from "@/lib/constants";
+import { StudyTopicModal } from "@/components/study/StudyTopicModal";
 
 function difficultyColor(d: string) {
   if (d === "beginner") return "green" as const;
@@ -23,8 +29,19 @@ export default function StudyCategoryPage() {
   const params = useParams<{ category: string }>();
   const { category } = params;
 
-  const { data, loading } = useStudyTopicsQuery({ variables: { category } });
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  const { data, loading, refetch } = useStudyTopicsQuery({ variables: { category } });
   const topics = data?.studyTopics ?? [];
+
+  const [generateTopics, { loading: generating }] = useGenerateStudyTopicsForCategoryMutation();
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  async function handleGenerate() {
+    await generateTopics({ variables: { category } });
+    refetch();
+  }
 
   if (loading) {
     return (
@@ -46,43 +63,64 @@ export default function StudyCategoryPage() {
           ← Study
         </Link>
       </Text>
-      <Heading size="7" mb="6" style={{ textTransform: "capitalize" }}>
-        {category}
-      </Heading>
+      <Flex align="center" gap="2" mb="6">
+        <Heading size="7" style={{ textTransform: "capitalize" }}>
+          {category}
+        </Heading>
+        {isAdmin && (
+          <Button
+            size="1"
+            variant="soft"
+            color="violet"
+            ml="auto"
+            loading={generating}
+            onClick={handleGenerate}
+          >
+            <MagicWandIcon /> Generate Topics
+          </Button>
+        )}
+      </Flex>
 
       {topics.length === 0 ? (
         <Text color="gray">No topics in this category yet.</Text>
       ) : (
         <Flex direction="column" gap="3">
           {topics.map((t) => (
-            <Link
+            <Card
               key={t.id}
-              href={`/study/${category}/${t.topic}`}
-              style={{ textDecoration: "none" }}
+              style={{ cursor: "pointer" }}
+              onClick={() => setSelectedTopic(t.topic)}
             >
-              <Card style={{ cursor: "pointer" }}>
-                <Heading size="4" mb="1">
-                  {t.title}
-                </Heading>
-                {t.summary && (
-                  <Text color="gray" size="2" mb="2" as="p">
-                    {t.summary}
-                  </Text>
-                )}
-                <Flex gap="2" wrap="wrap">
-                  <Badge color={difficultyColor(t.difficulty)} size="1">
-                    {t.difficulty}
+              <Heading size="4" mb="1">
+                {t.title}
+              </Heading>
+              {t.summary && (
+                <Text color="gray" size="2" mb="2" as="p">
+                  {t.summary}
+                </Text>
+              )}
+              <Flex gap="2" wrap="wrap">
+                <Badge color={difficultyColor(t.difficulty)} size="1">
+                  {t.difficulty}
+                </Badge>
+                {t.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" size="1">
+                    {tag}
                   </Badge>
-                  {t.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" size="1">
-                      {tag}
-                    </Badge>
-                  ))}
-                </Flex>
-              </Card>
-            </Link>
+                ))}
+              </Flex>
+            </Card>
           ))}
         </Flex>
+      )}
+
+      {selectedTopic && (
+        <StudyTopicModal
+          category={category}
+          topic={selectedTopic}
+          open={selectedTopic !== null}
+          onOpenChange={(open) => { if (!open) setSelectedTopic(null); }}
+        />
       )}
     </Container>
   );

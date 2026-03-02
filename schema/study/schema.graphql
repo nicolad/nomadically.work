@@ -25,6 +25,14 @@ extend type Query {
 }
 
 extend type Mutation {
+  createStudyTopic(
+    category: String
+    topic: String
+    title: String
+    summary: String
+    difficulty: String
+    tags: [String!]
+  ): StudyTopic!
   generateStudyConceptExplanation(
     studyTopicId: ID!
     selectedText: String!
@@ -34,4 +42,5 @@ extend type Mutation {
     studyTopicId: ID!
     force: Boolean
   ): StudyTopic!
+  generateStudyTopicsForCategory(category: String!, count: Int): [StudyTopic!]!
 }

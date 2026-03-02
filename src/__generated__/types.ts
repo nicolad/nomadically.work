@@ -913,6 +913,7 @@ export type Mutation = {
   createLangSmithPrompt: LangSmithPrompt;
   createOpportunity: Opportunity;
   createPrompt: Prompt;
+  createStudyTopic: StudyTopic;
   createTrack: Track;
   deleteAllJobs: DeleteJobResponse;
   deleteApplication: DeleteApplicationResponse;
@@ -955,6 +956,7 @@ export type Mutation = {
   generateStudyConceptExplanation: StudyConceptExplanation;
   generateStudyDeepDive: StudyTopic;
   generateStudyTopicDeepDive: Application;
+  generateStudyTopicsForCategory: Array<StudyTopic>;
   generateTopicDeepDive: Application;
   importContacts: ImportContactsResult;
   ingestResumeParse: Maybe<ResumeIngestResult>;
@@ -1039,6 +1041,16 @@ export type MutationCreateOpportunityArgs = {
 
 export type MutationCreatePromptArgs = {
   input: CreatePromptInput;
+};
+
+
+export type MutationCreateStudyTopicArgs = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  difficulty?: InputMaybe<Scalars['String']['input']>;
+  summary?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  topic?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1150,6 +1162,12 @@ export type MutationGenerateStudyTopicDeepDiveArgs = {
   force?: InputMaybe<Scalars['Boolean']['input']>;
   requirement: Scalars['String']['input'];
   studyTopic: Scalars['String']['input'];
+};
+
+
+export type MutationGenerateStudyTopicsForCategoryArgs = {
+  category: Scalars['String']['input'];
+  count?: InputMaybe<Scalars['Int']['input']>;
 };
 
 

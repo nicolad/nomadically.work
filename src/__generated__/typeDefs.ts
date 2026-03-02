@@ -846,6 +846,7 @@ type Mutation {
   createLangSmithPrompt(input: CreateLangSmithPromptInput, promptIdentifier: String!): LangSmithPrompt!
   createOpportunity(input: CreateOpportunityInput!): Opportunity!
   createPrompt(input: CreatePromptInput!): Prompt!
+  createStudyTopic(category: String, difficulty: String, summary: String, tags: [String!], title: String, topic: String): StudyTopic!
   createTrack(input: CreateTrackInput!): Track!
   deleteAllJobs: DeleteJobResponse!
   deleteApplication(id: Int!): DeleteApplicationResponse!
@@ -888,6 +889,7 @@ type Mutation {
   generateStudyConceptExplanation(context: String, selectedText: String!, studyTopicId: ID!): StudyConceptExplanation!
   generateStudyDeepDive(force: Boolean, studyTopicId: ID!): StudyTopic!
   generateStudyTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!, studyTopic: String!): Application!
+  generateStudyTopicsForCategory(category: String!, count: Int): [StudyTopic!]!
   generateTopicDeepDive(applicationId: Int!, force: Boolean, requirement: String!): Application!
   importContacts(contacts: [ContactInput!]!): ImportContactsResult!
   ingestResumeParse(email: String!, filename: String!, job_id: String!): ResumeIngestResult

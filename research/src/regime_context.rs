@@ -218,8 +218,6 @@ fn infer_strategy(regime: &str) -> String {
         "scalping".into()
     } else if r.contains("mean") || r.contains("revert") || r.contains("sideways") || r.contains("low") {
         "bollinger".into()
-    } else if r.contains("highvol") || r.contains("volatile") {
-        "rsi".into()
     } else {
         "rsi".into()
     }

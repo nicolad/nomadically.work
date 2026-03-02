@@ -8,6 +8,7 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde_json::{Value, json};
+use tracing::info;
 
 // ─── ToolDefinition ──────────────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ impl Client {
             preamble: String::new(),
             tools: Vec::new(),
             base_url: "https://api.deepseek.com".into(),
+            worker_id: String::new(),
         }
     }
 }
@@ -56,6 +58,8 @@ pub struct AgentBuilder {
     preamble: String,
     tools: Vec<Box<dyn Tool>>,
     base_url: String,
+    /// Stable worker identity for log correlation (mirrors agent-teams worker IDs).
+    worker_id: String,
 }
 
 impl AgentBuilder {
@@ -76,6 +80,14 @@ impl AgentBuilder {
         self
     }
 
+    /// Attach a stable worker ID for log correlation.
+    ///
+    /// Corresponds to the `worker-NN` identity assigned by [`TeamLead`].
+    pub fn worker_id(mut self, id: impl Into<String>) -> Self {
+        self.worker_id = id.into();
+        self
+    }
+
     pub fn build(self) -> DeepSeekAgent {
         DeepSeekAgent {
             api_key: self.api_key,
@@ -83,6 +95,7 @@ impl AgentBuilder {
             preamble: self.preamble,
             tools: self.tools,
             base_url: self.base_url,
+            worker_id: self.worker_id,
             http: reqwest::Client::new(),
         }
     }
@@ -96,12 +109,15 @@ pub struct DeepSeekAgent {
     preamble: String,
     tools: Vec<Box<dyn Tool>>,
     base_url: String,
+    /// Stable identity for log correlation. Empty string if not set.
+    worker_id: String,
     http: reqwest::Client,
 }
 
 impl DeepSeekAgent {
     /// Run the agentic tool-use loop and return the final text response.
     pub async fn prompt(&self, user_prompt: String) -> Result<String> {
+        let worker = if self.worker_id.is_empty() { "agent" } else { &self.worker_id };
         let tools_json: Vec<Value> = self
             .tools
             .iter()
@@ -167,6 +183,7 @@ impl DeepSeekAgent {
                         let args: Value =
                             serde_json::from_str(args_str).unwrap_or(json!({}));
 
+                        info!(worker = %worker, tool = %fn_name, "Tool call");
                         let result = match self.tools.iter().find(|t| t.name() == fn_name) {
                             Some(tool) => tool
                                 .call_json(args)

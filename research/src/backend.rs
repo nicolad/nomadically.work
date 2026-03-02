@@ -1,13 +1,18 @@
 /// 20 parallel DeepSeek agents for backend interview prep.
 /// Agents #2, #14, #17, #20 use Semantic Scholar for research-backed insights.
+///
+/// Uses [`TeamLead`] + [`TaskQueue`] for dynamic claiming, retry (max 2 attempts),
+/// and cooperative shutdown — matching the agent-teams coordination model.
 use crate::agent::Client;
 use crate::d1::D1Client;
+use crate::team::{shutdown_pair, Mailbox, TaskQueue, TeamLead};
 use crate::tools::{GetPaperDetail, SearchPapers};
 use anyhow::{Context, Result};
 use semantic_scholar::SemanticScholarClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::{error, info};
 
 // ─── BackendPrep JSON shape ─────────────────────────────────────────────────
@@ -91,6 +96,7 @@ struct AppRow {
 
 // ─── Section definition ─────────────────────────────────────────────────────
 
+#[derive(Clone, Copy)]
 struct BackendSectionDef {
     slug: &'static str,
     title: &'static str,
@@ -285,7 +291,6 @@ pub async fn run(
         .job_description
         .context("No job description on this application")?;
 
-    // Strip HTML tags and limit
     let plain_desc = strip_html(&job_desc);
     let plain_desc = if plain_desc.len() > 8000 {
         &plain_desc[..8000]
@@ -293,66 +298,63 @@ pub async fn run(
         &plain_desc
     };
 
-    let ctx = format!("Role: {job_title} at {company}\n\nJob Description:\n{plain_desc}");
+    let job_ctx = format!("Role: {job_title} at {company}\n\nJob Description:\n{plain_desc}");
+    info!(app_id, job_title = %job_title, company = %company, "Fetched application, queuing 20 backend prep tasks");
 
-    info!(app_id, job_title = %job_title, company = %company, "Fetched application, spawning 20 backend prep agents");
-
-    // 2. Spawn 20 parallel agents
-    let api_key = Arc::new(api_key.to_string());
-    let ctx = Arc::new(ctx);
-    let scholar = Arc::new(scholar.clone());
-
-    let mut handles = Vec::with_capacity(SECTIONS.len());
-
+    // 2. Build task queue — all sections independent (no deps), up to 2 attempts each.
+    let queue: TaskQueue<BackendSectionDef> = TaskQueue::new();
     for def in SECTIONS {
-        let api_key = Arc::clone(&api_key);
-        let ctx = Arc::clone(&ctx);
-        let scholar = Arc::clone(&scholar);
-
-        let handle = tokio::spawn(async move {
-            info!(section = def.slug, "Backend agent starting");
-            let result = run_section_agent(def, &api_key, &ctx, &scholar).await;
-            match &result {
-                Ok(val) => info!(section = def.slug, len = val.to_string().len(), "Backend agent done"),
-                Err(e) => error!(section = def.slug, "Backend agent failed: {e}"),
-            }
-            (def.slug, result)
-        });
-
-        handles.push(handle);
+        queue.push(def.slug, *def, vec![], 2).await;
     }
 
-    // 3. Collect results
-    let mut data = BackendPrep {
+    // 3. Shared result store that workers write into as they complete.
+    let results = Arc::new(Mutex::new(BackendPrep {
         generated_at: chrono::Utc::now().to_rfc3339(),
         ..Default::default()
-    };
+    }));
 
-    let mut successes = 0;
-    let mut failures = 0;
+    let api_key = Arc::new(api_key.to_string());
+    let job_ctx = Arc::new(job_ctx);
+    let scholar = Arc::new(scholar.clone());
+    let results_clone = Arc::clone(&results);
 
-    for handle in handles {
-        let (slug, result) = handle.await.context("task panicked")?;
-        match result {
-            Ok(val) => {
-                apply_section(&mut data, slug, val);
-                successes += 1;
+    // 4. Team lead with 20 workers — each claims tasks from the shared queue.
+    let mailbox = Mailbox::new();
+    let (_shutdown_tx, shutdown) = shutdown_pair();
+    let summary = TeamLead::new(SECTIONS.len())
+        .run(queue, mailbox, shutdown, move |ctx, task| {
+            let api_key = Arc::clone(&api_key);
+            let job_ctx = Arc::clone(&job_ctx);
+            let scholar = Arc::clone(&scholar);
+            let results = Arc::clone(&results_clone);
+            let def = task.payload;
+            async move {
+                info!(worker = %ctx.worker_id, section = %def.slug, "Backend agent starting");
+                let val = run_section_agent(def, &api_key, &job_ctx, &scholar).await?;
+                let mut data = results.lock().await;
+                apply_section(&mut data, def.slug, val);
+                info!(worker = %ctx.worker_id, section = %def.slug, "Backend agent done");
+                Ok::<(), anyhow::Error>(())
             }
-            Err(e) => {
-                error!(section = slug, "Failed: {e}");
-                failures += 1;
-            }
-        }
+        })
+        .await;
+
+    info!(
+        completed = summary.completed,
+        failed = summary.failed,
+        total = summary.total(),
+        "All backend prep workers finished"
+    );
+
+    // 5. Fail hard only if nothing succeeded at all — partial data is usable.
+    if summary.completed == 0 {
+        anyhow::bail!("All {} backend prep agents failed — nothing to save", SECTIONS.len());
     }
 
-    info!(successes, failures, "All 20 backend prep agents complete");
-
-    // Save if we have any content at all — partial data is better than nothing
-    if successes == 0 {
-        anyhow::bail!("All 20 agents failed — nothing to save");
-    }
-
-    // 4. Write back to D1
+    // 6. Write back to D1
+    let data = Arc::try_unwrap(results)
+        .map_err(|_| anyhow::anyhow!("results Arc still held — this is a bug"))?
+        .into_inner();
     let json_str = serde_json::to_string(&data)?;
     info!(app_id, bytes = json_str.len(), "Writing backend prep to D1");
 
@@ -370,7 +372,7 @@ pub async fn run(
 // ─── Run a single section agent ─────────────────────────────────────────────
 
 async fn run_section_agent(
-    def: &BackendSectionDef,
+    def: BackendSectionDef,
     api_key: &str,
     ctx: &str,
     scholar: &SemanticScholarClient,
@@ -454,8 +456,7 @@ async fn run_section_agent(
             .to_string();
 
         let parsed = try_parse_json(&cleaned);
-        if parsed.as_object().map_or(true, |o| o.is_empty()) {
-            // Log first and last 300 chars for debugging
+        if parsed.as_object().is_none_or(|o| o.is_empty()) {
             let preview: String = raw_text.chars().take(300).collect();
             let tail: String = raw_text.chars().rev().take(300).collect::<String>().chars().rev().collect();
             error!(section = def.slug, "Failed to parse JSON. Head: {preview}");
@@ -468,7 +469,7 @@ async fn run_section_agent(
 
 /// Strip HTML tags and normalize whitespace.
 fn strip_html(html: &str) -> String {
-    html.replace(|c: char| c == '<', " <")
+    html.replace('<', " <")
         .split('<')
         .map(|s| {
             if let Some(idx) = s.find('>') {
@@ -502,17 +503,15 @@ fn try_parse_json(raw: &str) -> Value {
     if let Some(fence_start) = text.find("```json") {
         let after_fence = &text[fence_start + 7..]; // skip "```json"
         let after_fence = after_fence.trim_start_matches('\n');
-        // Strip trailing ``` with optional whitespace/newlines
         let stripped = after_fence.trim_end();
-        let stripped = if stripped.ends_with("```") {
-            stripped[..stripped.len() - 3].trim_end()
+        let stripped = if let Some(s) = stripped.strip_suffix("```") {
+            s.trim_end()
         } else {
             stripped
         };
         if let Ok(v) = serde_json::from_str::<Value>(stripped) {
             return v;
         }
-        // Try finding last \n``` pattern
         if let Some(fence_end) = after_fence.rfind("\n```") {
             let json_block = after_fence[..fence_end].trim();
             if let Ok(v) = serde_json::from_str::<Value>(json_block) {
@@ -535,13 +534,10 @@ fn try_parse_json(raw: &str) -> Value {
     // 4. Find first { and try to parse from there to end
     if let Some(start) = text.find('{') {
         let sub = &text[start..];
-        // Strip trailing ``` if present
         let sub = sub.trim_end().trim_end_matches("```").trim();
-        // Try parsing the whole remainder (serde handles nested braces correctly)
         if let Ok(v) = serde_json::from_str::<Value>(sub) {
             return v;
         }
-        // Try from last } backwards
         if let Some(end) = sub.rfind('}') {
             if let Ok(v) = serde_json::from_str::<Value>(&sub[..=end]) {
                 return v;

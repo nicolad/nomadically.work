@@ -5,4 +5,5 @@ pub mod enhance;
 pub mod regime_context;
 pub mod research_context;
 pub mod study;
+pub mod team;
 pub mod tools;

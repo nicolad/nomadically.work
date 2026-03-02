@@ -1,14 +1,19 @@
 /// 20 parallel DeepSeek agents researching agentic coding topics,
 /// backed by Semantic Scholar paper search, saving results to D1.
+///
+/// Uses [`TeamLead`] + [`TaskQueue`] for dynamic claiming, retry (max 2 attempts),
+/// and cooperative shutdown — matching the agent-teams coordination model.
 use crate::agent::Client;
 use crate::d1::{D1Client, StudyTopicRow};
+use crate::team::{shutdown_pair, Mailbox, TaskQueue, TeamLead};
 use crate::tools::{GetPaperDetail, SearchPapers};
 use anyhow::{Context, Result};
 use semantic_scholar::SemanticScholarClient;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 /// One agentic coding study topic definition.
+#[derive(Clone, Copy)]
 pub struct TopicDef {
     pub slug: &'static str,
     pub title: &'static str,
@@ -268,62 +273,41 @@ pub async fn run_prep(api_key: &str, _scholar: &SemanticScholarClient, d1: &D1Cl
     let api_key = Arc::new(api_key.to_string());
     let d1 = Arc::new(d1.clone());
 
-    info!("Spawning {} parallel DeepSeek agents (no Semantic Scholar)…", APPLICATION_TOPICS.len());
+    info!("Queuing {} prep tasks (direct, no Semantic Scholar)…", APPLICATION_TOPICS.len());
 
-    let mut handles = Vec::with_capacity(APPLICATION_TOPICS.len());
-
-    for (i, topic_def) in APPLICATION_TOPICS.iter().enumerate() {
-        let api_key = Arc::clone(&api_key);
-        let d1 = Arc::clone(&d1);
-
-        let handle = tokio::spawn(async move {
-            let agent_id = i + 1;
-            info!(agent = agent_id, topic = topic_def.slug, "Prep agent starting (direct, no tools)");
-
-            match run_direct_agent(agent_id, topic_def, &api_key).await {
-                Ok(row) => {
-                    match d1.insert_study_topic(&row).await {
-                        Ok(()) => {
-                            info!(agent = agent_id, topic = topic_def.slug, "Saved to D1");
-                            Ok(row)
-                        }
-                        Err(e) => {
-                            error!(agent = agent_id, topic = topic_def.slug, "D1 insert failed: {e}");
-                            Err(e)
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!(agent = agent_id, topic = topic_def.slug, "Prep agent failed: {e}");
-                    Err(e)
-                }
-            }
-        });
-
-        handles.push((topic_def.slug, handle));
+    let queue: TaskQueue<TopicDef> = TaskQueue::new();
+    for topic_def in APPLICATION_TOPICS {
+        queue.push(topic_def.slug, *topic_def, vec![], 2).await;
     }
 
-    let mut successes = 0;
-    let mut failures = 0;
-
-    for (slug, handle) in handles {
-        match handle.await {
-            Ok(Ok(_)) => successes += 1,
-            Ok(Err(e)) => {
-                error!(topic = slug, "Failed: {e}");
-                failures += 1;
+    let mailbox = Mailbox::new();
+    let (_shutdown_tx, shutdown) = shutdown_pair();
+    let summary = TeamLead::new(APPLICATION_TOPICS.len())
+        .run(queue, mailbox, shutdown, move |ctx, task| {
+            let api_key = Arc::clone(&api_key);
+            let d1 = Arc::clone(&d1);
+            let topic_def = task.payload;
+            async move {
+                info!(worker = %ctx.worker_id, topic = topic_def.slug, "Prep agent starting");
+                let row = run_direct_agent(topic_def, &api_key).await?;
+                d1.insert_study_topic(&row)
+                    .await
+                    .with_context(|| format!("D1 insert failed for {}", topic_def.slug))?;
+                info!(worker = %ctx.worker_id, topic = topic_def.slug, "Saved to D1");
+                Ok::<(), anyhow::Error>(())
             }
-            Err(e) => {
-                error!(topic = slug, "Task panicked: {e}");
-                failures += 1;
-            }
-        }
-    }
+        })
+        .await;
 
-    info!(successes, failures, total = APPLICATION_TOPICS.len(), "All prep agents complete");
+    info!(
+        completed = summary.completed,
+        failed = summary.failed,
+        total = summary.total(),
+        "All prep agents complete"
+    );
 
-    if failures > 0 {
-        anyhow::bail!("{failures}/{} prep agents failed", APPLICATION_TOPICS.len());
+    if summary.failed > 0 {
+        anyhow::bail!("{}/{} prep agents failed", summary.failed, APPLICATION_TOPICS.len());
     }
 
     Ok(())
@@ -331,8 +315,7 @@ pub async fn run_prep(api_key: &str, _scholar: &SemanticScholarClient, d1: &D1Cl
 
 /// Run a single agent WITHOUT Semantic Scholar tools — pure DeepSeek generation.
 async fn run_direct_agent(
-    _agent_id: usize,
-    topic_def: &TopicDef,
+    topic_def: TopicDef,
     api_key: &str,
 ) -> Result<StudyTopicRow> {
     let client = Client::new(api_key);
@@ -415,6 +398,22 @@ pub async fn run(api_key: &str, scholar: &SemanticScholarClient, d1: &D1Client) 
     run_topics(TOPICS, "agentic-coding", api_key, scholar, d1).await
 }
 
+// ─── 2-step research pipeline ────────────────────────────────────────────────
+//
+// Each topic spawns two tasks:
+//
+//   search:{slug}  (no deps)       — query Semantic Scholar, send findings to mailbox
+//   write:{slug}   (depends_on search) — recv findings from mailbox, write the guide
+//
+// This matches the agent-teams mailbox pattern: workers communicate via named
+// inboxes without going through the lead.
+
+#[derive(Clone)]
+enum ResearchTask {
+    Search(TopicDef),
+    Write { topic: TopicDef, category: &'static str },
+}
+
 async fn run_topics(
     topics: &'static [TopicDef],
     category: &'static str,
@@ -426,89 +425,143 @@ async fn run_topics(
     let scholar = Arc::new(scholar.clone());
     let d1 = Arc::new(d1.clone());
 
-    info!("Spawning {} parallel DeepSeek agents (category: {})…", topics.len(), category);
+    info!("Queuing {} 2-step search→write tasks (category: {})…", topics.len(), category);
 
-    let mut handles = Vec::with_capacity(topics.len());
+    // Push paired tasks for each topic.
+    // write:{slug} depends on search:{slug} completing first.
+    let queue: TaskQueue<ResearchTask> = TaskQueue::new();
+    for topic_def in topics {
+        let search_id = queue
+            .push(format!("search:{}", topic_def.slug), ResearchTask::Search(*topic_def), vec![], 2)
+            .await;
+        queue
+            .push(
+                format!("write:{}", topic_def.slug),
+                ResearchTask::Write { topic: *topic_def, category },
+                vec![search_id],
+                2,
+            )
+            .await;
+    }
 
-    for (i, topic_def) in topics.iter().enumerate() {
-        let api_key = Arc::clone(&api_key);
-        let scholar = Arc::clone(&scholar);
-        let d1 = Arc::clone(&d1);
-
-        let handle = tokio::spawn(async move {
-            let agent_id = i + 1;
-            info!(agent = agent_id, topic = topic_def.slug, "Agent starting");
-
-            match run_single_agent(agent_id, topic_def, category, &api_key, &scholar).await {
-                Ok(row) => {
-                    match d1.insert_study_topic(&row).await {
-                        Ok(()) => {
-                            info!(agent = agent_id, topic = topic_def.slug, "Saved to D1");
-                            Ok(row)
-                        }
-                        Err(e) => {
-                            error!(agent = agent_id, topic = topic_def.slug, "D1 insert failed: {e}");
-                            Err(e)
-                        }
+    // Use topics.len() workers so search and write tasks for different topics
+    // can run in parallel; write tasks block on their own search completing.
+    let mailbox = Mailbox::new();
+    let (_shutdown_tx, shutdown) = shutdown_pair();
+    let summary = TeamLead::new(topics.len())
+        .run(queue, mailbox, shutdown, move |ctx, task| {
+            let api_key = Arc::clone(&api_key);
+            let scholar = Arc::clone(&scholar);
+            let d1 = Arc::clone(&d1);
+            async move {
+                match task.payload {
+                    ResearchTask::Search(topic) => {
+                        info!(worker = %ctx.worker_id, topic = topic.slug, "Search phase starting");
+                        let findings = search_topic_papers(topic, &scholar, &api_key).await?;
+                        ctx.mailbox
+                            .send(&ctx.worker_id, format!("findings:{}", topic.slug), "paper-findings", findings)
+                            .await;
+                        info!(worker = %ctx.worker_id, topic = topic.slug, "Search phase done, findings in mailbox");
+                    }
+                    ResearchTask::Write { topic, category } => {
+                        info!(worker = %ctx.worker_id, topic = topic.slug, "Write phase starting");
+                        let env = ctx.mailbox.recv_wait(&format!("findings:{}", topic.slug)).await;
+                        let row = write_study_guide(topic, category, &env.body, &api_key).await?;
+                        d1.insert_study_topic(&row)
+                            .await
+                            .with_context(|| format!("D1 insert failed for {}", topic.slug))?;
+                        info!(worker = %ctx.worker_id, topic = topic.slug, "Saved to D1");
                     }
                 }
-                Err(e) => {
-                    error!(agent = agent_id, topic = topic_def.slug, "Agent failed: {e}");
-                    Err(e)
-                }
+                Ok::<(), anyhow::Error>(())
             }
-        });
+        })
+        .await;
 
-        handles.push((topic_def.slug, handle));
-    }
+    info!(
+        completed = summary.completed,
+        failed = summary.failed,
+        total = summary.total(),
+        "All agents complete"
+    );
 
-    let mut successes = 0;
-    let mut failures = 0;
-
-    for (slug, handle) in handles {
-        match handle.await {
-            Ok(Ok(_)) => successes += 1,
-            Ok(Err(e)) => {
-                error!(topic = slug, "Failed: {e}");
-                failures += 1;
-            }
-            Err(e) => {
-                error!(topic = slug, "Task panicked: {e}");
-                failures += 1;
-            }
-        }
-    }
-
-    info!(successes, failures, total = topics.len(), "All agents complete");
-
-    if failures > 0 {
-        anyhow::bail!("{failures}/{} agents failed", topics.len());
+    if summary.failed > 0 {
+        anyhow::bail!("{}/{} agents failed", summary.failed, topics.len() * 2);
     }
 
     Ok(())
 }
 
-async fn run_single_agent(
-    _agent_id: usize,
-    topic_def: &TopicDef,
-    category: &str,
-    api_key: &str,
+// ─── Search phase ─────────────────────────────────────────────────────────────
+
+/// Run the Semantic Scholar research phase for a topic.
+///
+/// Returns raw paper findings as markdown — no study guide writing.
+/// The result is delivered to the mailbox under `findings:{slug}` for the
+/// write phase to consume.
+async fn search_topic_papers(
+    topic: TopicDef,
     scholar: &SemanticScholarClient,
+    api_key: &str,
+) -> Result<String> {
+    let client = Client::new(api_key);
+
+    let system = format!(
+        "You are a research assistant. Find the most relevant academic papers on \"{title}\". \
+         Use the search tools to find 3-5 key papers. For each paper return:\n\
+         - Title, year, citation count\n\
+         - Key contribution in 1-2 sentences\n\
+         - Why it matters for agentic coding\n\
+         Return ONLY a markdown bullet list of findings — no study guide, no extra text.",
+        title = topic.title,
+    );
+
+    let queries_str = topic
+        .search_queries
+        .iter()
+        .enumerate()
+        .map(|(i, q)| format!("  {}. \"{}\"", i + 1, q))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let prompt = format!(
+        "Find academic papers on: **{title}**\n\nTry these queries:\n{queries}\n\n\
+         Then try 1-2 additional queries you think are relevant.\n\n\
+         Return a markdown bullet list of the most relevant papers found.",
+        title = topic.title,
+        queries = queries_str,
+    );
+
+    let agent = client
+        .agent("deepseek-chat")
+        .preamble(&system)
+        .tool(SearchPapers(scholar.clone()))
+        .tool(GetPaperDetail(scholar.clone()))
+        .build();
+
+    agent.prompt(prompt).await.with_context(|| format!("search phase failed for {}", topic.slug))
+}
+
+// ─── Write phase ──────────────────────────────────────────────────────────────
+
+/// Write a full study guide given pre-fetched paper findings.
+///
+/// Called after the search phase delivers its output to the mailbox.
+/// Uses DeepSeek without tools — all research is already in `findings`.
+async fn write_study_guide(
+    topic: TopicDef,
+    category: &str,
+    findings: &str,
+    api_key: &str,
 ) -> Result<StudyTopicRow> {
     let client = Client::new(api_key);
 
     let preamble = format!(
         r#"You are a technical writer creating study material on agentic coding for software engineers preparing for AI engineering interviews.
 
-Your task: Research "{title}" using Semantic Scholar, then write a comprehensive study guide.
+Your task: Write a comprehensive study guide on "{title}" using the research findings provided.
 
-RESEARCH PHASE:
-- Search for relevant academic papers using the provided tools
-- Find 3-5 key papers with concrete implementations or benchmarks
-- Get full details on the 2-3 most relevant papers
-
-WRITING PHASE:
-After researching, write the study content in this EXACT format — return ONLY the markdown body, no JSON wrapper:
+Write in this EXACT format — return ONLY the markdown body, no JSON wrapper:
 
 ## Overview
 2-3 paragraphs explaining the concept clearly. What it is, why it matters for agentic coding.
@@ -523,7 +576,7 @@ Technical explanation of the mechanism. Include pseudocode or architecture diagr
 3-4 concrete implementation patterns with code examples (TypeScript/Python preferred).
 
 ## Research Findings
-Summarize the most relevant papers you found:
+Summarize the most relevant papers from the provided findings:
 - Paper title (year, citations) — key finding and relevance
 - Include actionable insights from each
 
@@ -534,68 +587,43 @@ Summarize the most relevant papers you found:
 3-4 mistakes engineers make with this concept. Be specific and blunt.
 
 ## Further Reading
-Links to papers found, official docs, key blog posts.
+Papers listed in the research findings, official docs, key blog posts.
 
 Write at a senior engineer level. Be precise, avoid fluff. Include real examples over abstract theory."#,
-        title = topic_def.title,
+        title = topic.title,
     );
-
-    let search_queries_str = topic_def
-        .search_queries
-        .iter()
-        .enumerate()
-        .map(|(i, q)| format!("  {}. \"{}\"", i + 1, q))
-        .collect::<Vec<_>>()
-        .join("\n");
 
     let user_prompt = format!(
-        r#"Research and write a study guide on: **{title}**
-
-Focus: {focus}
-
-Start by searching for papers with these queries:
-{queries}
-
-Then search for 1-2 additional queries you think are relevant.
-
-After researching, write the complete study guide following the format in your instructions."#,
-        title = topic_def.title,
-        focus = topic_def.prompt_focus,
-        queries = search_queries_str,
+        "Write a study guide on: **{title}**\n\nFocus: {focus}\n\n\
+         ## Research Findings (from search phase)\n\n{findings}",
+        title = topic.title,
+        focus = topic.prompt_focus,
+        findings = findings,
     );
 
-    let agent = client
-        .agent("deepseek-chat")
-        .preamble(&preamble)
-        .tool(SearchPapers(scholar.clone()))
-        .tool(GetPaperDetail(scholar.clone()))
-        .build();
+    // Pure writing — no tools needed; findings are already in the prompt.
+    let agent = client.agent("deepseek-chat").preamble(&preamble).build();
 
     let body_md = agent
         .prompt(user_prompt)
         .await
-        .with_context(|| format!("agent failed for {}", topic_def.slug))?;
+        .with_context(|| format!("write phase failed for {}", topic.slug))?;
 
-    // Extract a summary from the first paragraph
     let summary = body_md
         .lines()
         .skip_while(|l| l.starts_with('#') || l.trim().is_empty())
         .take_while(|l| !l.trim().is_empty())
         .collect::<Vec<_>>()
         .join(" ");
-    let summary = if summary.len() > 300 {
-        format!("{}…", &summary[..297])
-    } else {
-        summary
-    };
+    let summary = if summary.len() > 300 { format!("{}…", &summary[..297]) } else { summary };
 
     Ok(StudyTopicRow {
         category: category.into(),
-        topic: topic_def.slug.into(),
-        title: topic_def.title.into(),
+        topic: topic.slug.into(),
+        title: topic.title.into(),
         summary,
         body_md,
-        difficulty: topic_def.difficulty.into(),
-        tags: topic_def.tags.iter().map(|s| s.to_string()).collect(),
+        difficulty: topic.difficulty.into(),
+        tags: topic.tags.iter().map(|s| s.to_string()).collect(),
     })
 }

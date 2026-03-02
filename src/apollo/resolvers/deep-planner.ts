@@ -13,7 +13,7 @@ const STATUS_MAP: Record<string, string> = {
   cancelled: "CANCELLED",
 };
 
-// 17 BMAD steps × 6 passes = 102 total checkpoints
+// SDD pipeline phases × passes = total checkpoints
 const TOTAL_STEPS = 102;
 
 function mapDeepPlannerTask(row: DeepPlannerTask) {

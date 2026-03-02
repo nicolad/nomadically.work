@@ -38,20 +38,7 @@ impl SessionStore {
     /// Create D1 table for sessions (run on first request)
     pub async fn ensure_table(db: &D1Database) -> Result<()> {
         db.exec(
-            "CREATE TABLE IF NOT EXISTS agent_sessions (
-                id TEXT PRIMARY KEY,
-                agent_name TEXT NOT NULL,
-                model TEXT NOT NULL,
-                messages TEXT NOT NULL DEFAULT '[]',
-                turn_count INTEGER NOT NULL DEFAULT 0,
-                total_prompt_tokens INTEGER NOT NULL DEFAULT 0,
-                total_completion_tokens INTEGER NOT NULL DEFAULT 0,
-                total_tokens INTEGER NOT NULL DEFAULT 0,
-                metadata TEXT NOT NULL DEFAULT '{}',
-                parent_session_id TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )"
+            "CREATE TABLE IF NOT EXISTS agent_sessions (id TEXT PRIMARY KEY, agent_name TEXT NOT NULL, model TEXT NOT NULL, messages TEXT NOT NULL DEFAULT '[]', turn_count INTEGER NOT NULL DEFAULT 0, total_prompt_tokens INTEGER NOT NULL DEFAULT 0, total_completion_tokens INTEGER NOT NULL DEFAULT 0, total_tokens INTEGER NOT NULL DEFAULT 0, metadata TEXT NOT NULL DEFAULT '{}', parent_session_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
         ).await?;
         Ok(())
     }

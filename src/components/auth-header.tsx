@@ -3,6 +3,7 @@
 import { GearIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
+import { Flex, Text } from "@radix-ui/themes";
 import { Button } from "@/components/ui";
 
 export function AuthHeader() {
@@ -11,22 +12,22 @@ export function AuthHeader() {
 
   if (!isLoaded) {
     return (
-      <span className="yc-row-meta" style={{ padding: "0 4px" }}>
+      <Text size="1" color="gray" px="1">
         …
-      </span>
+      </Text>
     );
   }
 
   if (!isSignedIn) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <Flex direction="column" gap="2">
         <Link href="/sign-in">
           <Button variant="ghost" size="sm" style={{ width: "100%" }}>sign in</Button>
         </Link>
         <Link href="/sign-up">
           <Button variant="primary" size="sm" style={{ width: "100%" }}>sign up</Button>
         </Link>
-      </div>
+      </Flex>
     );
   }
 
@@ -36,20 +37,16 @@ export function AuthHeader() {
     user.username;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span
-        style={{
-          color: "var(--gray-9)",
-          fontSize: 12,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
+    <Flex direction="column" gap="2">
+      <Text
+        size="1"
+        color="gray"
+        truncate
         title={displayName ?? undefined}
       >
         {displayName}
-      </span>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      </Text>
+      <Flex align="center" gap="2">
         <Link href="/settings" style={{ display: "flex", alignItems: "center" }}>
           <GearIcon width={14} height={14} style={{ color: "var(--gray-9)" }} />
         </Link>
@@ -60,7 +57,7 @@ export function AuthHeader() {
         >
           sign out
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

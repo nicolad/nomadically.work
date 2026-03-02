@@ -16,6 +16,14 @@ const STATUS_MAP: Record<string, string> = {
 // SDD pipeline phases × passes = total checkpoints
 const TOTAL_STEPS = 102;
 
+const SDD_AGENT_URL = process.env.SDD_AGENT_URL || "https://sdd-agent.eeeew.workers.dev";
+
+function log(level: string, msg: string, data?: Record<string, unknown>) {
+  const entry = { ts: new Date().toISOString(), level, msg, ...data };
+  if (level === "error") console.error(JSON.stringify(entry));
+  else console.log(JSON.stringify(entry));
+}
+
 function mapDeepPlannerTask(row: DeepPlannerTask) {
   const checkpointCount = row.checkpoint_count ?? 0;
   const progressPercent =
@@ -114,7 +122,7 @@ export const deepPlannerResolvers = {
     ) {
       assertAdmin(context);
 
-      // Verify task exists and is pending
+      // Verify task exists
       const rows = await context.db
         .select()
         .from(deepPlannerTasks)
@@ -127,23 +135,124 @@ export const deepPlannerResolvers = {
         throw new Error("Task is already running");
       }
 
-      // Trigger the worker (fire-and-forget)
-      const workerUrl = process.env.DEEP_PLANNER_WORKER_URL;
-      const apiKey = process.env.DEEP_PLANNER_API_KEY;
-      if (workerUrl) {
-        fetch(`${workerUrl}/trigger`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(apiKey ? { "X-API-Key": apiKey } : {}),
-          },
-          body: JSON.stringify({ task_id: args.id }),
-        }).catch((err) => {
-          console.error("[triggerDeepPlannerTask] Worker trigger failed:", err);
-        });
-      }
+      // Mark task as running
+      const now = new Date().toISOString();
+      const [updated] = await context.db
+        .update(deepPlannerTasks)
+        .set({
+          status: "running",
+          current_step: "Initializing SDD pipeline",
+          started_at: task.started_at ?? now,
+          updated_at: now,
+        })
+        .where(eq(deepPlannerTasks.id, args.id))
+        .returning();
 
-      return mapDeepPlannerTask(task);
+      log("info", "Triggering SDD pipeline", {
+        taskId: args.id,
+        workflowType: task.workflow_type,
+        sddAgentUrl: SDD_AGENT_URL,
+      });
+
+      // Parse context for repo URLs
+      let parsedContext: Record<string, string> = {};
+      try {
+        if (task.context) parsedContext = JSON.parse(task.context);
+      } catch {}
+
+      // Fire-and-forget: call sdd-agent /sdd/pipeline
+      // The worker updates D1 directly as it progresses through phases
+      const pipelineBody = {
+        name: `dp-${args.id}`,
+        description: task.problem_description,
+        workflow_type: task.workflow_type,
+        context: [
+          task.problem_description,
+          parsedContext.repoUrl ? `Base repo: ${parsedContext.repoUrl}` : "",
+          parsedContext.integrationRepoUrl ? `Integration repo: ${parsedContext.integrationRepoUrl}` : "",
+          parsedContext.note || "",
+        ].filter(Boolean).join("\n"),
+      };
+
+      fetch(`${SDD_AGENT_URL}/sdd/pipeline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pipelineBody),
+      })
+        .then(async (res) => {
+          const body = await res.text();
+          const completedAt = new Date().toISOString();
+
+          if (!res.ok) {
+            log("error", "SDD pipeline returned error", {
+              taskId: args.id,
+              status: res.status,
+              body: body.slice(0, 500),
+            });
+            await context.db
+              .update(deepPlannerTasks)
+              .set({
+                status: "failed",
+                error_message: `SDD agent error (${res.status}): ${body.slice(0, 200)}`,
+                completed_at: completedAt,
+                updated_at: completedAt,
+              })
+              .where(eq(deepPlannerTasks.id, args.id));
+            return;
+          }
+
+          log("info", "SDD pipeline completed", { taskId: args.id });
+
+          // Parse result and store as output artifact
+          let outputArtifact = body;
+          try {
+            const parsed = JSON.parse(body);
+            if (parsed?.data?.results) {
+              outputArtifact = parsed.data.results
+                .map((r: { phase?: string; result?: string }) =>
+                  `## Phase: ${r.phase || "unknown"}\n\n${r.result || ""}`
+                )
+                .join("\n\n---\n\n");
+            }
+          } catch {
+            // Use raw body as artifact
+          }
+
+          await context.db
+            .update(deepPlannerTasks)
+            .set({
+              status: "complete",
+              output_artifact: outputArtifact,
+              checkpoint_count: TOTAL_STEPS,
+              current_step: "Complete",
+              completed_at: completedAt,
+              updated_at: completedAt,
+            })
+            .where(eq(deepPlannerTasks.id, args.id));
+        })
+        .catch(async (err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          log("error", "SDD pipeline fetch failed", { taskId: args.id, error: msg });
+          const failedAt = new Date().toISOString();
+          try {
+            await context.db
+              .update(deepPlannerTasks)
+              .set({
+                status: "failed",
+                error_message: `Worker unreachable: ${msg}`,
+                completed_at: failedAt,
+                updated_at: failedAt,
+              })
+              .where(eq(deepPlannerTasks.id, args.id));
+          } catch (dbErr) {
+            log("error", "Failed to update task status after error", {
+              taskId: args.id,
+              dbError: String(dbErr),
+            });
+          }
+        });
+
+      return mapDeepPlannerTask(updated);
     },
 
     async cancelDeepPlannerTask(

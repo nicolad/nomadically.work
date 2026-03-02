@@ -404,15 +404,7 @@ impl SddChangeStore {
     /// Create D1 table for SDD changes
     pub async fn ensure_table(db: &D1Database) -> Result<()> {
         db.exec(
-            "CREATE TABLE IF NOT EXISTS sdd_changes (
-                name TEXT PRIMARY KEY,
-                description TEXT NOT NULL,
-                phases_completed TEXT NOT NULL DEFAULT '[]',
-                phases_in_progress TEXT NOT NULL DEFAULT '[]',
-                artifacts TEXT NOT NULL DEFAULT '{}',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )"
+            "CREATE TABLE IF NOT EXISTS sdd_changes (name TEXT PRIMARY KEY, description TEXT NOT NULL, phases_completed TEXT NOT NULL DEFAULT '[]', phases_in_progress TEXT NOT NULL DEFAULT '[]', artifacts TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
         ).await?;
         Ok(())
     }

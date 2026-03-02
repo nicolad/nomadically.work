@@ -315,12 +315,7 @@ impl ToolExecutor {
 
     async fn ensure_file_store(&self) -> std::result::Result<(), String> {
         self.db()?.exec(
-            "CREATE TABLE IF NOT EXISTS file_store (
-                path TEXT PRIMARY KEY,
-                content TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            )"
+            "CREATE TABLE IF NOT EXISTS file_store (path TEXT PRIMARY KEY, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))"
         ).await.map_err(|e| format!("Failed to create file_store: {e}"))?;
         Ok(())
     }

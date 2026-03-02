@@ -1,6 +1,6 @@
 "use client";
 
-import { Flex, Box } from "@radix-ui/themes";
+import { Flex, Box, IconButton, Text } from "@radix-ui/themes";
 import {
   GitHubLogoIcon,
   BackpackIcon,
@@ -68,22 +68,15 @@ export function Sidebar() {
     >
       <nav>
         {/* logo */}
-        <Link
-          href="/"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            paddingLeft: collapsed ? 0 : 10,
-            overflow: "hidden",
-          }}
-        >
+        <Flex asChild align="center" justify="center" style={{ paddingLeft: collapsed ? 0 : 10, overflow: "hidden" }}>
+        <Link href="/">
           {collapsed ? (
             <Image src="/logo.svg" alt="Nomadically" width={32} height={32} priority style={{ objectFit: "contain" }} />
           ) : (
             <Image src="/logo.svg" alt="Nomadically" width={160} height={36} priority />
           )}
         </Link>
+        </Flex>
 
         {/* primary links */}
         <Flex direction="column" gap="1" mt="5" flexGrow="1">
@@ -101,7 +94,7 @@ export function Sidebar() {
               }}
             >
               {icon}
-              {!collapsed && <span>{label}</span>}
+              {!collapsed && <Text as="span" size="2">{label}</Text>}
             </NavLink>
           ))}
           {!collapsed && <AdminNav />}
@@ -118,42 +111,29 @@ export function Sidebar() {
           {!collapsed && <AuthHeader />}
           <Flex align="center" justify={collapsed ? "center" : "between"}>
             {!collapsed && (
-              <Link
-                href="https://github.com/nicolad/nomadically.work"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center" }}
-              >
-                <GitHubLogoIcon
-                  width={18}
-                  height={18}
-                  style={{ color: "var(--gray-9)" }}
-                />
-              </Link>
+              <Flex asChild align="center">
+                <Link
+                  href="https://github.com/nicolad/nomadically.work"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <GitHubLogoIcon width={18} height={18} style={{ color: "var(--gray-9)" }} />
+                </Link>
+              </Flex>
             )}
-            <button
+            <IconButton
               onClick={toggle}
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-                border: "none",
-                color: "var(--gray-9)",
-                cursor: "pointer",
-                padding: 4,
-                transition: "color 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gray-12)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--gray-9)")}
+              variant="ghost"
+              color="gray"
+              size="1"
             >
               {collapsed ? (
                 <DoubleArrowRightIcon width={16} height={16} />
               ) : (
                 <DoubleArrowLeftIcon width={16} height={16} />
               )}
-            </button>
+            </IconButton>
           </Flex>
         </Flex>
       </nav>

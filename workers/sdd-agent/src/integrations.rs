@@ -58,13 +58,7 @@ impl WorkflowDocsStore {
     /// Create the table if it doesn't exist.
     pub async fn ensure_table(db: &D1Database) -> Result<()> {
         db.exec(
-            "CREATE TABLE IF NOT EXISTS sdd_workflow_docs (
-                workflow_type TEXT PRIMARY KEY,
-                reference_docs TEXT NOT NULL DEFAULT '',
-                phase_contexts TEXT NOT NULL DEFAULT '{}',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )"
+            "CREATE TABLE IF NOT EXISTS sdd_workflow_docs (workflow_type TEXT PRIMARY KEY, reference_docs TEXT NOT NULL DEFAULT '', phase_contexts TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
         ).await?;
         Ok(())
     }

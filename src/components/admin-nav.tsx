@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { ExclamationTriangleIcon, EnvelopeClosedIcon, CheckboxIcon, GearIcon } from "@radix-ui/react-icons";
+import { Flex } from "@radix-ui/themes";
 import { useUser } from "@clerk/nextjs";
+import { NavLink } from "@/components/ui";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 export function AdminNav() {
@@ -20,40 +21,32 @@ export function AdminNav() {
 
   return (
     <>
-      <Link href="/admin/deep-planner" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <CheckboxIcon width={15} height={15} />
-        tasks
-      </Link>
+      <NavLink href="/admin/deep-planner">
+        <Flex align="center" gap="1">
+          <CheckboxIcon width={15} height={15} />
+          tasks
+        </Flex>
+      </NavLink>
       {isEmailsUser && (
-        <Link
-          href="/admin/emails"
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
-          title="Emails"
-        >
-          <EnvelopeClosedIcon width={14} height={14} />
-          emails
-        </Link>
+        <NavLink href="/admin/emails" title="Emails">
+          <Flex align="center" gap="1">
+            <EnvelopeClosedIcon width={14} height={14} />
+            emails
+          </Flex>
+        </NavLink>
       )}
-      <Link
-        href="/admin/reported-jobs"
-        style={{ display: "flex", alignItems: "center", gap: 6 }}
-        title="Reported jobs review"
-      >
-        <ExclamationTriangleIcon
-          width={14}
-          height={14}
-          style={{ color: "var(--orange-9)" }}
-        />
-        reported
-      </Link>
-      <Link
-        href="/admin/workers"
-        style={{ display: "flex", alignItems: "center", gap: 6 }}
-        title="Workers"
-      >
-        <GearIcon width={14} height={14} />
-        workers
-      </Link>
+      <NavLink href="/admin/reported-jobs" title="Reported jobs review">
+        <Flex align="center" gap="1">
+          <ExclamationTriangleIcon width={14} height={14} style={{ color: "var(--orange-9)" }} />
+          reported
+        </Flex>
+      </NavLink>
+      <NavLink href="/admin/workers" title="Workers">
+        <Flex align="center" gap="1">
+          <GearIcon width={14} height={14} />
+          workers
+        </Flex>
+      </NavLink>
     </>
   );
 }

@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use chrono::Utc;
 use research_agent::{
     agent::Client,
+    app_context::{AppContext, graphql_url_from_app_url},
     backend,
     d1::D1Client,
     enhance,
@@ -22,6 +23,40 @@ use tracing::info;
 struct Cli {
     #[command(subcommand)]
     command: Command,
+}
+
+/// How to locate the application — either a raw D1 ID or a browser URL.
+///
+/// Examples:
+///   --app-id 11
+///   --url http://localhost:3000/applications/11
+#[derive(Clone, Debug, clap::Args)]
+#[group(required = true, multiple = false)]
+struct AppSource {
+    /// Application ID in D1
+    #[arg(long)]
+    app_id: Option<i64>,
+
+    /// Browser URL of the application page (app ID is parsed from the path)
+    /// e.g. http://localhost:3000/applications/11
+    #[arg(long)]
+    url: Option<String>,
+}
+
+impl AppSource {
+    fn app_id(&self) -> Result<i64> {
+        if let Some(id) = self.app_id {
+            return Ok(id);
+        }
+        let url = self.url.as_deref().expect("url must be set if app_id is not");
+        AppContext::id_from_url(url)
+    }
+
+    /// Returns `Some(graphql_endpoint)` when `--url` was given (local dev path),
+    /// `None` when `--app-id` was given (production D1 path).
+    fn graphql_url(&self) -> Option<String> {
+        self.url.as_deref().map(graphql_url_from_app_url)
+    }
 }
 
 #[derive(Subcommand)]
@@ -69,9 +104,18 @@ enum Command {
 
     /// Spawn 10 parallel agents to enhance application's agentic coding section
     Enhance {
-        /// Application ID in D1
+        #[command(flatten)]
+        source: AppSource,
+
+        /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
         #[arg(long)]
-        app_id: i64,
+        api_key: Option<String>,
+    },
+
+    /// Spawn 30 parallel agents (10 agentic-coding + 20 backend) concurrently
+    EnhanceAll {
+        #[command(flatten)]
+        source: AppSource,
 
         /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
         #[arg(long)]
@@ -98,9 +142,8 @@ enum Command {
 
     /// Spawn 20 parallel agents for backend interview prep
     Backend {
-        /// Application ID in D1
-        #[arg(long)]
-        app_id: i64,
+        #[command(flatten)]
+        source: AppSource,
 
         /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
         #[arg(long)]
@@ -111,7 +154,9 @@ enum Command {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load .env.local from the repo root (parent of the research/ crate)
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(std::path::Path::new("."));
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap_or(std::path::Path::new("."));
     let _ = dotenvy::from_path(root.join(".env.local"));
 
     tracing_subscriber::fmt()
@@ -124,14 +169,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Research {
-            topic,
-            focus,
-            output_dir,
-            api_key,
-            stdout,
-            prefix,
-        } => {
+        Command::Research { topic, focus, output_dir, api_key, stdout, prefix } => {
             let focus_areas: Vec<String> =
                 focus.split(',').map(|s| s.trim().to_string()).collect();
             let context = ResearchContext::new(&topic, focus_areas);
@@ -234,7 +272,7 @@ Research standards:
             info!("All topics saved to D1 — visit /study/application-prep");
         }
 
-        Command::Enhance { app_id, api_key } => {
+        Command::Enhance { source, api_key } => {
             let api_key = api_key
                 .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
                 .context("DEEPSEEK_API_KEY not set")?;
@@ -244,16 +282,44 @@ Research standards:
             );
 
             let d1 = D1Client::from_env()?;
+            let app_ctx = resolve_app_context(&source, &d1).await?;
 
-            info!(app_id, "Starting agentic coding enhancement (10 parallel agents)");
-            enhance::run(app_id, &api_key, &scholar, &d1).await?;
-            info!(app_id, "Agentic coding data saved to D1");
+            info!(app_id = app_ctx.app_id, "Starting agentic coding enhancement (10 parallel agents)");
+            enhance::run(&app_ctx, &api_key, &scholar, &d1).await?;
+            info!(app_id = app_ctx.app_id, "Agentic coding data saved to D1");
+        }
+
+        Command::EnhanceAll { source, api_key } => {
+            let api_key = api_key
+                .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
+                .context("DEEPSEEK_API_KEY not set")?;
+
+            let scholar = SemanticScholarClient::new(
+                std::env::var("SEMANTIC_SCHOLAR_API_KEY").ok().as_deref(),
+            );
+
+            let d1 = D1Client::from_env()?;
+            let app_ctx = resolve_app_context(&source, &d1).await?;
+
+            info!(
+                app_id = app_ctx.app_id,
+                "Starting full enhancement: 10 agentic-coding + 20 backend agents (30 total)"
+            );
+
+            let (agentic_result, backend_result) = tokio::join!(
+                enhance::run(&app_ctx, &api_key, &scholar, &d1),
+                backend::run(&app_ctx, &api_key, &scholar, &d1),
+            );
+
+            agentic_result.context("agentic-coding enhancement failed")?;
+            backend_result.context("backend prep enhancement failed")?;
+
+            info!(app_id = app_ctx.app_id, "All 30 agents done — agentic-coding + backend saved to D1");
         }
 
         Command::SlugFix => {
             let d1 = D1Client::from_env()?;
 
-            // Fetch all distinct categories so we can compute correct slugs
             let rows = d1.query("SELECT DISTINCT category FROM study_topics", vec![]).await?;
             let categories: Vec<String> = rows
                 .iter()
@@ -263,13 +329,17 @@ Research standards:
             info!("Found {} distinct categories", categories.len());
 
             for cat in &categories {
-                let slug = cat.to_lowercase().replace(' ', "-").replace(|c: char| !c.is_alphanumeric() && c != '-', "");
+                let slug = cat
+                    .to_lowercase()
+                    .replace(' ', "-")
+                    .replace(|c: char| !c.is_alphanumeric() && c != '-', "");
                 if &slug != cat {
                     info!(from = %cat, to = %slug, "Renaming category");
                     d1.execute(
                         "UPDATE study_topics SET category = ?1 WHERE category = ?2",
                         vec![slug.clone().into(), cat.clone().into()],
-                    ).await?;
+                    )
+                    .await?;
                     info!(slug = %slug, "Done");
                 }
             }
@@ -290,7 +360,7 @@ Research standards:
             info!(category = %category, "Topics saved to D1 — visit /study/{category}");
         }
 
-        Command::Backend { app_id, api_key } => {
+        Command::Backend { source, api_key } => {
             let api_key = api_key
                 .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
                 .context("DEEPSEEK_API_KEY not set")?;
@@ -300,12 +370,28 @@ Research standards:
             );
 
             let d1 = D1Client::from_env()?;
+            let app_ctx = resolve_app_context(&source, &d1).await?;
 
-            info!(app_id, "Starting backend interview prep (20 parallel agents)");
-            backend::run(app_id, &api_key, &scholar, &d1).await?;
-            info!(app_id, "Backend prep data saved to D1");
+            info!(app_id = app_ctx.app_id, "Starting backend interview prep (20 parallel agents)");
+            backend::run(&app_ctx, &api_key, &scholar, &d1).await?;
+            info!(app_id = app_ctx.app_id, "Backend prep data saved to D1");
         }
     }
 
     Ok(())
+}
+
+/// Resolve an [`AppContext`] from either a D1 REST call or a GraphQL query,
+/// depending on whether `--url` or `--app-id` was given.
+async fn resolve_app_context(source: &AppSource, d1: &D1Client) -> Result<AppContext> {
+    let app_id = source.app_id()?;
+
+    if let Some(graphql_url) = source.graphql_url() {
+        info!(app_id, graphql_url = %graphql_url, "Fetching app context via GraphQL");
+        let http = reqwest::Client::new();
+        AppContext::from_graphql(&http, &graphql_url, app_id).await
+    } else {
+        info!(app_id, "Fetching app context from D1");
+        AppContext::from_d1(d1, app_id).await
+    }
 }

@@ -1,4 +1,5 @@
 pub mod agent;
+pub mod app_context;
 pub mod backend;
 pub mod d1;
 pub mod enhance;

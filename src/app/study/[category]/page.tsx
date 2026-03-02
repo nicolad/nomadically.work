@@ -8,13 +8,20 @@ import {
   Button,
   Card,
   Container,
+  Dialog,
   Flex,
   Heading,
   Skeleton,
   Text,
+  TextArea,
+  TextField,
 } from "@radix-ui/themes";
-import { MagicWandIcon } from "@radix-ui/react-icons";
-import { useStudyTopicsQuery, useGenerateStudyTopicsForCategoryMutation } from "@/__generated__/hooks";
+import { MagicWandIcon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  useStudyTopicsQuery,
+  useGenerateStudyTopicsForCategoryMutation,
+  useCreateStudyTopicMutation,
+} from "@/__generated__/hooks";
 import { useAuth } from "@/lib/auth-hooks";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import { StudyTopicModal } from "@/components/study/StudyTopicModal";
@@ -36,11 +43,28 @@ export default function StudyCategoryPage() {
   const topics = data?.studyTopics ?? [];
 
   const [generateTopics, { loading: generating }] = useGenerateStudyTopicsForCategoryMutation();
+  const [createTopic, { loading: creating, error: createError }] = useCreateStudyTopicMutation();
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [form, setForm] = useState({ topic: "", title: "", summary: "", tags: "" });
+
+  const derivedSlug = form.topic || form.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
   async function handleGenerate() {
     await generateTopics({ variables: { category } });
     refetch();
+  }
+
+  async function handleCreate() {
+    const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+    const result = await createTopic({
+      variables: { category, topic: derivedSlug, title: form.title, summary: form.summary, tags },
+    });
+    if (result.data) {
+      setAddOpen(false);
+      setForm({ topic: "", title: "", summary: "", tags: "" });
+      refetch();
+    }
   }
 
   if (loading) {
@@ -68,16 +92,14 @@ export default function StudyCategoryPage() {
           {category}
         </Heading>
         {isAdmin && (
-          <Button
-            size="1"
-            variant="soft"
-            color="violet"
-            ml="auto"
-            loading={generating}
-            onClick={handleGenerate}
-          >
-            <MagicWandIcon /> Generate Topics
-          </Button>
+          <Flex gap="2" ml="auto">
+            <Button size="1" variant="soft" color="gray" onClick={() => setAddOpen(true)}>
+              <PlusIcon /> Add Topic
+            </Button>
+            <Button size="1" variant="soft" color="violet" loading={generating} onClick={handleGenerate}>
+              <MagicWandIcon /> Generate Topics
+            </Button>
+          </Flex>
         )}
       </Flex>
 
@@ -122,6 +144,66 @@ export default function StudyCategoryPage() {
           onOpenChange={(open) => { if (!open) setSelectedTopic(null); }}
         />
       )}
+
+      <Dialog.Root open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) setForm({ topic: "", title: "", summary: "", tags: "" }); }}>
+        <Dialog.Content maxWidth="480px">
+          <Dialog.Title>Add Topic</Dialog.Title>
+          <Flex direction="column" gap="4" mt="4">
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">Title</Text>
+              <TextField.Root
+                placeholder="e.g. Row Level Security"
+                value={form.title}
+                autoFocus
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+              />
+            </Flex>
+            <Flex direction="column" gap="1">
+              <Flex align="center" justify="between">
+                <Text size="2" weight="medium">Slug</Text>
+                {derivedSlug && (
+                  <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>{derivedSlug}</Text>
+                )}
+              </Flex>
+              <TextField.Root
+                placeholder="auto-derived from title"
+                value={form.topic}
+                onChange={(e) => setForm((f) => ({ ...f, topic: e.target.value }))}
+              />
+            </Flex>
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">Summary</Text>
+              <TextArea
+                placeholder="Short description (optional)"
+                value={form.summary}
+                rows={3}
+                onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+              />
+            </Flex>
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">Tags</Text>
+              <TextField.Root
+                placeholder="postgres, security, rls"
+                value={form.tags}
+                onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+              />
+            </Flex>
+            {createError && (
+              <Text size="2" color="red">{createError.message}</Text>
+            )}
+          </Flex>
+          <Flex gap="2" justify="end" mt="5">
+            <Dialog.Close>
+              <Button variant="soft" color="gray">Cancel</Button>
+            </Dialog.Close>
+            <Button loading={creating} onClick={handleCreate}>
+              Create
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
     </Container>
   );
 }

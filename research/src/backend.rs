@@ -4,6 +4,7 @@
 /// Uses [`TeamLead`] + [`TaskQueue`] for dynamic claiming, retry (max 2 attempts),
 /// and cooperative shutdown — matching the agent-teams coordination model.
 use crate::agent::Client;
+use crate::app_context::AppContext;
 use crate::d1::D1Client;
 use crate::team::{shutdown_pair, Mailbox, TaskQueue, TeamLead};
 use crate::tools::{GetPaperDetail, SearchPapers};
@@ -83,15 +84,6 @@ pub struct CodeExample {
     pub language: String,
     pub code: String,
     pub explanation: String,
-}
-
-// ─── Application row from D1 ───────────────────────────────────────────────
-
-#[derive(Debug, Deserialize)]
-struct AppRow {
-    job_title: Option<String>,
-    company_name: Option<String>,
-    job_description: Option<String>,
 }
 
 // ─── Section definition ─────────────────────────────────────────────────────
@@ -268,38 +260,19 @@ const SECTIONS: &[BackendSectionDef] = &[
 // ─── Main entry point ───────────────────────────────────────────────────────
 
 pub async fn run(
-    app_id: i64,
+    ctx: &AppContext,
     api_key: &str,
     scholar: &SemanticScholarClient,
     d1: &D1Client,
 ) -> Result<()> {
-    // 1. Fetch application from D1
-    let rows = d1
-        .query(
-            "SELECT job_title, company_name, job_description FROM applications WHERE id = ?1",
-            vec![json!(app_id)],
-        )
-        .await
-        .context("fetching application from D1")?;
-
-    let row_val = rows.into_iter().next().context("Application not found")?;
-    let app: AppRow = serde_json::from_value(row_val).context("parsing application row")?;
-
-    let job_title = app.job_title.unwrap_or_else(|| "software engineer".into());
-    let company = app.company_name.unwrap_or_else(|| "the company".into());
-    let job_desc = app
-        .job_description
-        .context("No job description on this application")?;
-
-    let plain_desc = strip_html(&job_desc);
-    let plain_desc = if plain_desc.len() > 8000 {
-        &plain_desc[..8000]
-    } else {
-        &plain_desc
-    };
-
-    let job_ctx = format!("Role: {job_title} at {company}\n\nJob Description:\n{plain_desc}");
-    info!(app_id, job_title = %job_title, company = %company, "Fetched application, queuing 20 backend prep tasks");
+    let app_id = ctx.app_id;
+    let job_ctx = ctx.job_ctx();
+    info!(
+        app_id,
+        job_title = %ctx.job_title,
+        company = %ctx.company_name,
+        "Queuing 20 backend prep tasks"
+    );
 
     // 2. Build task queue — all sections independent (no deps), up to 2 attempts each.
     let queue: TaskQueue<BackendSectionDef> = TaskQueue::new();
@@ -467,23 +440,6 @@ async fn run_section_agent(
     }
 }
 
-/// Strip HTML tags and normalize whitespace.
-fn strip_html(html: &str) -> String {
-    html.replace('<', " <")
-        .split('<')
-        .map(|s| {
-            if let Some(idx) = s.find('>') {
-                &s[idx + 1..]
-            } else {
-                s
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
 
 /// Parse JSON from LLM output, handling markdown fences, `<think>` blocks, and embedded JSON.
 fn try_parse_json(raw: &str) -> Value {

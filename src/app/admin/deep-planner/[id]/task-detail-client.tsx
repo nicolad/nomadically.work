@@ -317,16 +317,46 @@ export default function TaskDetailClient() {
             {task.problemDescription}
           </Text>
 
-          {task.context && (
-            <Box>
-              <Text size="1" color="gray" weight="bold" mb="1">
-                Context
-              </Text>
-              <Text size="2" color="gray">
-                {task.context}
-              </Text>
-            </Box>
-          )}
+          {task.context && (() => {
+            let parsed: Record<string, string> | null = null;
+            try { parsed = JSON.parse(task.context); } catch {}
+
+            if (parsed && typeof parsed === "object" && (parsed.nautilusTraderRepoUrl || parsed.integrationRepoUrl)) {
+              return (
+                <Box>
+                  <Text size="1" color="gray" weight="bold" mb="1">
+                    Integration Context
+                  </Text>
+                  <Flex direction="column" gap="1">
+                    {parsed.nautilusTraderRepoUrl && (
+                      <Text size="2" color="gray">
+                        NautilusTrader: <a href={parsed.nautilusTraderRepoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--blue-9)" }}>{parsed.nautilusTraderRepoUrl}</a>
+                      </Text>
+                    )}
+                    {parsed.integrationRepoUrl && (
+                      <Text size="2" color="gray">
+                        Target repo: <a href={parsed.integrationRepoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--blue-9)" }}>{parsed.integrationRepoUrl}</a>
+                      </Text>
+                    )}
+                    {parsed.note && (
+                      <Text size="2" color="gray">{parsed.note}</Text>
+                    )}
+                  </Flex>
+                </Box>
+              );
+            }
+
+            return (
+              <Box>
+                <Text size="1" color="gray" weight="bold" mb="1">
+                  Context
+                </Text>
+                <Text size="2" color="gray">
+                  {task.context}
+                </Text>
+              </Box>
+            );
+          })()}
 
           {/* Current step callout when running */}
           {task.status === "RUNNING" && task.currentStep && (

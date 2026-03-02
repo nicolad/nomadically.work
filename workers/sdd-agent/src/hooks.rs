@@ -10,7 +10,6 @@
 // Hooks are sync closures that return HookOutput (allow/deny/modify).
 // ═══════════════════════════════════════════════════════════════════════════
 
-use serde_json::{json, Value};
 use std::collections::HashMap;
 
 use crate::types::*;
@@ -51,7 +50,7 @@ impl HookRegistry {
     /// If any hook denies, the combined result denies.
     /// Additional context is concatenated.
     pub fn fire(&self, input: &HookInput) -> HookOutput {
-        let matchers = match self.hooks.get(&input.event) {
+        let matchers: &Vec<HookMatcher> = match self.hooks.get(&input.event) {
             Some(m) => m,
             None => return HookOutput::default(),
         };
@@ -63,7 +62,8 @@ impl HookRegistry {
             // Check if matcher pattern matches the tool name
             if let Some(ref pattern) = matcher.matcher {
                 if let Some(ref tool_name) = input.tool_name {
-                    if !pattern.split('|').any(|p| p == tool_name) {
+                    let tool_name_str: &str = tool_name.as_str();
+                    if !pattern.split('|').any(|p: &str| p == tool_name_str) {
                         continue;
                     }
                 } else {
@@ -72,21 +72,21 @@ impl HookRegistry {
             }
 
             for hook in &matcher.hooks {
-                let output = hook(input);
+                let output: HookOutput = hook(input);
 
                 if !output.allow {
                     combined.allow = false;
-                    if let Some(ref reason) = output.deny_reason {
-                        combined.deny_reason = Some(reason.clone());
+                    if let Some(reason) = output.deny_reason {
+                        combined.deny_reason = Some(reason);
                     }
                 }
 
-                if let Some(ref ctx) = output.additional_context {
-                    contexts.push(ctx.clone());
+                if let Some(ctx_str) = output.additional_context {
+                    contexts.push(ctx_str);
                 }
 
-                if let Some(ref modified) = output.modified_input {
-                    combined.modified_input = Some(modified.clone());
+                if let Some(modified) = output.modified_input {
+                    combined.modified_input = Some(modified);
                 }
             }
         }
@@ -100,7 +100,7 @@ impl HookRegistry {
 
     /// Check if any hooks are registered for an event
     pub fn has_hooks(&self, event: &HookEvent) -> bool {
-        self.hooks.get(event).map_or(false, |m| !m.is_empty())
+        self.hooks.get(event).map_or(false, |m: &Vec<HookMatcher>| !m.is_empty())
     }
 }
 

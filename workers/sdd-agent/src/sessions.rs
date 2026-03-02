@@ -12,16 +12,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 use worker::*;
-use serde_json::json;
 use std::collections::HashMap;
 
 use crate::types::*;
 
-/// Generate a unique session ID
+/// Generate a unique session ID with random component to avoid collisions
 fn generate_session_id() -> String {
-    // Use timestamp as unique-ish ID (monotonic in single-threaded WASM)
     let timestamp = worker::Date::now().as_millis();
-    format!("sdd-{timestamp}-{:04x}", timestamp % 0xFFFF)
+    let random = (js_sys::Math::random() * 0xFFFFFF as f64) as u32;
+    format!("sdd-{timestamp}-{random:06x}")
 }
 
 /// Get current ISO timestamp

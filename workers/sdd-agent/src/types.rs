@@ -76,8 +76,7 @@ pub struct ChatMessage {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
+#[derive(Debug, Clone)]
 pub enum ChatContent {
     Text(String),
     Null,
@@ -88,6 +87,26 @@ impl ChatContent {
         match self {
             Self::Text(s) => s,
             Self::Null => "",
+        }
+    }
+}
+
+impl Serialize for ChatContent {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        match self {
+            Self::Text(s) => serializer.serialize_str(s),
+            Self::Null => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ChatContent {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match value {
+            serde_json::Value::String(s) => Ok(Self::Text(s)),
+            serde_json::Value::Null => Ok(Self::Null),
+            other => Ok(Self::Text(other.to_string())),
         }
     }
 }
@@ -190,7 +209,7 @@ pub struct AgentDefinition {
 
 // ── Hook Types (parity with Anthropic hooks) ──────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum HookEvent {
     PreToolUse,
     PostToolUse,

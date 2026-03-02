@@ -22,7 +22,6 @@ use worker::*;
 use crate::types::*;
 use crate::deepseek::DeepSeekClient;
 use crate::hooks::HookRegistry;
-use crate::subagents::ConcurrentRunner;
 
 // ── SDD Pipeline ──────────────────────────────────────────────────────────
 

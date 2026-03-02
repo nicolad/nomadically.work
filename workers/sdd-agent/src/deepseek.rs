@@ -41,7 +41,7 @@ impl DeepSeekClient {
         let body = serde_json::to_string(request)
             .map_err(|e| Error::RustError(format!("Serialize error: {e}")))?;
 
-        let mut headers = Headers::new();
+        let headers = Headers::new();
         headers.set("Content-Type", "application/json")?;
         headers.set("Authorization", &format!("Bearer {}", self.api_key))?;
 
@@ -74,11 +74,12 @@ impl DeepSeekClient {
         tools: Option<Vec<ToolSchema>>,
         effort: &EffortLevel,
     ) -> ChatRequest {
+        let has_tools = tools.is_some();
         ChatRequest {
             model: model.as_str().to_string(),
             messages,
             tools,
-            tool_choice: if tools.is_some() { Some(json!("auto")) } else { None },
+            tool_choice: if has_tools { Some(json!("auto")) } else { None },
             temperature: Some(effort.temperature()),
             max_tokens: Some(effort.max_tokens()),
             stream: Some(false),
@@ -131,16 +132,20 @@ impl DeepSeekClient {
 
     /// Run the agent loop: send prompt, handle tool calls, iterate until done.
     /// This is the core query() equivalent from the Anthropic Agent SDK.
-    pub async fn agent_loop(
+    pub async fn agent_loop<F, Fut>(
         &self,
         system_prompt: &str,
         user_prompt: &str,
         model: &DeepSeekModel,
         tools: &[ToolSchema],
-        tool_executor: &dyn Fn(&str, serde_json::Value) -> std::result::Result<serde_json::Value, String>,
+        tool_executor: F,
         max_turns: u32,
         effort: &EffortLevel,
-    ) -> Result<AgentResult> {
+    ) -> Result<AgentResult>
+    where
+        F: Fn(String, serde_json::Value) -> Fut,
+        Fut: std::future::Future<Output = std::result::Result<serde_json::Value, String>>,
+    {
         let mut messages = vec![
             Self::system_msg(system_prompt),
             Self::user_msg(user_prompt),
@@ -196,7 +201,7 @@ impl DeepSeekClient {
                         let args: serde_json::Value = serde_json::from_str(&call.function.arguments)
                             .unwrap_or(json!({}));
 
-                        let result = tool_executor.execute(&call.function.name, args).await;
+                        let result = tool_executor(call.function.name.clone(), args).await;
                         let result_str = match result {
                             Ok(v) => serde_json::to_string(&v).unwrap_or_default(),
                             Err(e) => json!({"error": e}).to_string(),
@@ -228,8 +233,8 @@ impl DeepSeekClient {
 // ── Tool Executor ─────────────────────────────────────────────────────────
 
 /// Tool executor function type for the agent loop.
-/// In WASM, we use a simple function pointer instead of async_trait.
-/// The caller provides a closure that dispatches tool calls to the registry.
-pub type ToolExecutorFn = Box<dyn Fn(&str, serde_json::Value) -> std::pin::Pin<
+/// In WASM, the caller provides an async closure that dispatches tool calls.
+/// Use with `agent_loop()` which accepts generic `Fn(String, Value) -> Future`.
+pub type ToolExecutorFn = Box<dyn Fn(String, serde_json::Value) -> std::pin::Pin<
     Box<dyn std::future::Future<Output = std::result::Result<serde_json::Value, String>>>
 >>;

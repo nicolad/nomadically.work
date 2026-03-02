@@ -17,8 +17,6 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 
 use crate::types::*;
-use crate::deepseek::DeepSeekClient;
-use crate::tools::ToolRegistry;
 
 // ── Subagent Registry ─────────────────────────────────────────────────────
 
@@ -199,7 +197,7 @@ pub fn sdd_subagents() -> Vec<AgentDefinition> {
 
 // ── SDD Phase System Prompts ──────────────────────────────────────────────
 
-const SDD_EXPLORE_PROMPT: &str = r#"You are the SDD Explorer agent. Your job is to investigate an idea before committing to a change.
+pub const SDD_EXPLORE_PROMPT: &str = r#"You are the SDD Explorer agent. Your job is to investigate an idea before committing to a change.
 
 Exploration produces NO artifacts in openspec/ — it's purely investigative.
 
@@ -215,7 +213,7 @@ Output a structured exploration report with:
 - Recommended approach
 - Open questions for the user"#;
 
-const SDD_PROPOSE_PROMPT: &str = r#"You are the SDD Proposer agent. Your job is to create a change proposal.
+pub const SDD_PROPOSE_PROMPT: &str = r#"You are the SDD Proposer agent. Your job is to create a change proposal.
 
 Create openspec/changes/{change-name}/proposal.md with:
 - **Intent**: Problem being solved
@@ -228,7 +226,7 @@ Create openspec/changes/{change-name}/proposal.md with:
 
 Read existing specs in openspec/specs/ and project config in openspec/config.yaml for context."#;
 
-const SDD_SPEC_PROMPT: &str = r#"You are the SDD Spec Writer agent. Write delta specifications for a change.
+pub const SDD_SPEC_PROMPT: &str = r#"You are the SDD Spec Writer agent. Write delta specifications for a change.
 
 Create openspec/changes/{change-name}/specs/{domain}/spec.md with:
 - **ADDED Requirements**: New behavior (MUST/SHOULD/MAY + Given/When/Then scenarios)
@@ -241,7 +239,7 @@ Rules:
 - Scenarios use Given/When/Then format
 - Reference existing main specs for context"#;
 
-const SDD_DESIGN_PROMPT: &str = r#"You are the SDD Designer agent. Create the technical design document.
+pub const SDD_DESIGN_PROMPT: &str = r#"You are the SDD Designer agent. Create the technical design document.
 
 Create openspec/changes/{change-name}/design.md with:
 - **Technical Approach**: Maps proposal intent to spec requirements
@@ -254,7 +252,7 @@ Create openspec/changes/{change-name}/design.md with:
 
 Read both the proposal and specs to ensure design covers all requirements."#;
 
-const SDD_TASKS_PROMPT: &str = r#"You are the SDD Tasker agent. Break down a change into implementation tasks.
+pub const SDD_TASKS_PROMPT: &str = r#"You are the SDD Tasker agent. Break down a change into implementation tasks.
 
 Create openspec/changes/{change-name}/tasks.md with phased tasks:
 
@@ -273,7 +271,7 @@ Create openspec/changes/{change-name}/tasks.md with phased tasks:
 
 Tasks must be specific, actionable, verifiable, and small."#;
 
-const SDD_APPLY_PROMPT: &str = r#"You are the SDD Applier agent. Implement tasks from the change.
+pub const SDD_APPLY_PROMPT: &str = r#"You are the SDD Applier agent. Implement tasks from the change.
 
 Process:
 1. Read tasks.md to find your assigned task(s)
@@ -286,7 +284,7 @@ Process:
 
 Follow project coding conventions. Never skip tests."#;
 
-const SDD_VERIFY_PROMPT: &str = r#"You are the SDD Verifier agent. Validate implementation against specs and design.
+pub const SDD_VERIFY_PROMPT: &str = r#"You are the SDD Verifier agent. Validate implementation against specs and design.
 
 Check:
 1. **Completeness**: All tasks done? ([x] count == total)
@@ -301,7 +299,7 @@ Create openspec/changes/{change-name}/verify-report.md with:
 - Issues found (CRITICAL / WARNING / SUGGESTION)
 - Verdict: PASS / PASS WITH WARNINGS / FAIL"#;
 
-const SDD_ARCHIVE_PROMPT: &str = r#"You are the SDD Archiver agent. Complete the SDD cycle.
+pub const SDD_ARCHIVE_PROMPT: &str = r#"You are the SDD Archiver agent. Complete the SDD cycle.
 
 Process:
 1. Read verify-report.md (must be PASS or PASS WITH WARNINGS)

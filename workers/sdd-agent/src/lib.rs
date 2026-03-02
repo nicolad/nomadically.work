@@ -115,7 +115,7 @@ async fn handle_agent_query(mut req: Request, ctx: RouteContext<()>) -> Result<R
         Some("max") => EffortLevel::Max,
         _ => EffortLevel::High,
     };
-    let max_turns = body["max_turns"].as_u64().unwrap_or(10) as u32;
+    let _max_turns = body["max_turns"].as_u64().unwrap_or(10) as u32;
     let system_prompt = body["system_prompt"].as_str().unwrap_or(
         "You are an autonomous development agent. Use tools to read, write, and modify code. Follow project conventions."
     );
@@ -143,47 +143,44 @@ async fn handle_agent_query(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let registry = tools::build_builtin_registry();
     let tool_schemas = registry.filter_schemas(&tool_names);
 
-    // Build messages from session history + new prompt
-    let mut messages = session.messages.clone();
-    messages.push(deepseek::DeepSeekClient::system_msg(system_prompt));
-    messages.push(deepseek::DeepSeekClient::user_msg(prompt));
+    // Create async tool executor backed by D1
+    let executor = tools::ToolExecutor::new(env.clone());
 
-    // Execute via DeepSeek
-    let request = deepseek::DeepSeekClient::build_request(
-        &model, messages, Some(tool_schemas), &effort,
-    );
-    let response = client.chat(&request).await?;
+    // Run agent loop with real tool execution
+    let mut agent_result = client.agent_loop(
+        system_prompt,
+        prompt,
+        &model,
+        &tool_schemas,
+        |name, args| {
+            let executor_ref = &executor;
+            async move { executor_ref.execute(&name, args).await }
+        },
+        _max_turns,
+        &effort,
+    ).await?;
 
-    let choice = response.choices.first()
-        .ok_or_else(|| Error::RustError("No choices in response".into()))?;
-
-    let result_text = choice.message.content.as_str().to_string();
-    let tool_calls = choice.message.tool_calls.clone().unwrap_or_default();
-
-    // Update session
+    // Update session with result
     let mut updated_session = session;
     updated_session.messages.push(deepseek::DeepSeekClient::user_msg(prompt));
-    updated_session.messages.push(deepseek::DeepSeekClient::assistant_msg(&result_text));
-    updated_session.turn_count += 1;
-    if let Some(usage) = &response.usage {
-        updated_session.total_usage.prompt_tokens += usage.prompt_tokens;
-        updated_session.total_usage.completion_tokens += usage.completion_tokens;
-        updated_session.total_usage.total_tokens += usage.total_tokens;
+    if let Some(ref result_text) = agent_result.result {
+        updated_session.messages.push(deepseek::DeepSeekClient::assistant_msg(result_text));
     }
+    updated_session.turn_count += agent_result.turns;
+    updated_session.total_usage.prompt_tokens += agent_result.usage.prompt_tokens;
+    updated_session.total_usage.completion_tokens += agent_result.usage.completion_tokens;
+    updated_session.total_usage.total_tokens += agent_result.usage.total_tokens;
+    agent_result.session_id = Some(updated_session.id.clone());
     sessions::SessionStore::update(&db, &updated_session).await?;
 
     Response::from_json(&ApiResponse::success(json!({
-        "result": result_text,
+        "result": agent_result.result,
         "session_id": updated_session.id,
         "model": model.as_str(),
-        "turns": updated_session.turn_count,
-        "usage": response.usage,
-        "tool_calls": tool_calls.iter().map(|tc| json!({
-            "id": tc.id,
-            "function": tc.function.name,
-            "arguments": tc.function.arguments,
-        })).collect::<Vec<_>>(),
-        "finish_reason": choice.finish_reason,
+        "turns": agent_result.turns,
+        "usage": agent_result.usage,
+        "tool_calls_made": agent_result.tool_calls_made,
+        "success": agent_result.success,
     })))
 }
 
@@ -225,26 +222,30 @@ async fn handle_subagent(mut req: Request, ctx: RouteContext<()>) -> Result<Resp
     let tool_schemas = tool_registry.filter_schemas(&agent_def.tools);
     let max_turns = agent_def.max_turns.unwrap_or(10);
 
-    let request = deepseek::DeepSeekClient::build_request(
-        &agent_def.model,
-        vec![
-            deepseek::DeepSeekClient::system_msg(&agent_def.prompt),
-            deepseek::DeepSeekClient::user_msg(prompt),
-        ],
-        if tool_schemas.is_empty() { None } else { Some(tool_schemas) },
-        &EffortLevel::High,
-    );
-    let response = client.chat(&request).await?;
+    // Create async tool executor
+    let executor = tools::ToolExecutor::new(env);
 
-    let choice = response.choices.first()
-        .ok_or_else(|| Error::RustError("No choices in response".into()))?;
+    let agent_result = client.agent_loop(
+        &agent_def.prompt,
+        prompt,
+        &agent_def.model,
+        &tool_schemas,
+        |name, args| {
+            let executor_ref = &executor;
+            async move { executor_ref.execute(&name, args).await }
+        },
+        max_turns,
+        &EffortLevel::High,
+    ).await?;
 
     Response::from_json(&ApiResponse::success(json!({
         "agent": agent_name,
         "model": agent_def.model.as_str(),
-        "result": choice.message.content.as_str(),
-        "tool_calls": choice.message.tool_calls,
-        "usage": response.usage,
+        "result": agent_result.result,
+        "tool_calls_made": agent_result.tool_calls_made,
+        "turns": agent_result.turns,
+        "usage": agent_result.usage,
+        "success": agent_result.success,
     })))
 }
 
@@ -544,6 +545,226 @@ async fn handle_sdd_phase(mut req: Request, ctx: RouteContext<()>) -> Result<Res
     })))
 }
 
+/// POST /sdd/explore — Dedicated explore endpoint
+async fn handle_sdd_explore(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let body: Value = req.json().await?;
+    let env = ctx.env;
+
+    let topic = body["topic"].as_str().unwrap_or("");
+    if topic.is_empty() {
+        return error_response("'topic' is required");
+    }
+
+    let client = deepseek::DeepSeekClient::from_env(&env)?;
+    let tool_registry = tools::build_builtin_registry();
+    let tool_schemas = tool_registry.filter_schemas(
+        &["Read", "Glob", "Grep", "WebSearch"].iter().map(|s| s.to_string()).collect::<Vec<_>>()
+    );
+    let executor = tools::ToolExecutor::new(env.clone());
+
+    let agent_result = client.agent_loop(
+        crate::subagents::SDD_EXPLORE_PROMPT,
+        topic,
+        &DeepSeekModel::Reasoner,
+        &tool_schemas,
+        |name, args| {
+            let executor_ref = &executor;
+            async move { executor_ref.execute(&name, args).await }
+        },
+        15,
+        &EffortLevel::Max,
+    ).await?;
+
+    Response::from_json(&ApiResponse::success(json!({
+        "phase": "explore",
+        "topic": topic,
+        "result": agent_result.result,
+        "turns": agent_result.turns,
+        "tool_calls_made": agent_result.tool_calls_made,
+        "usage": agent_result.usage,
+    })))
+}
+
+/// POST /sdd/apply — Dedicated apply endpoint
+async fn handle_sdd_apply(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let body: Value = req.json().await?;
+    let env = ctx.env;
+    let db = env.d1("DB")?;
+
+    let name = body["name"].as_str().unwrap_or("");
+    if name.is_empty() {
+        return error_response("'name' is required");
+    }
+
+    sdd::SddChangeStore::ensure_table(&db).await?;
+    let mut change = match sdd::SddChangeStore::load(&db, name).await? {
+        Some(c) => c,
+        None => return error_response(&format!("Change '{}' not found", name)),
+    };
+
+    let client = deepseek::DeepSeekClient::from_env(&env)?;
+    let tool_registry = tools::build_builtin_registry();
+    let tool_schemas = tool_registry.filter_schemas(
+        &["Read", "Write", "Edit", "Glob", "Grep"].iter().map(|s| s.to_string()).collect::<Vec<_>>()
+    );
+    let executor = tools::ToolExecutor::new(env.clone());
+    let context = body["context"].as_str().unwrap_or("");
+
+    let user_prompt = format!(
+        "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
+        change.name, change.description,
+        serde_json::to_string_pretty(&change.artifacts).unwrap_or_default(),
+        context,
+    );
+
+    let agent_result = client.agent_loop(
+        crate::subagents::SDD_APPLY_PROMPT,
+        &user_prompt,
+        &DeepSeekModel::Chat,
+        &tool_schemas,
+        |name, args| {
+            let executor_ref = &executor;
+            async move { executor_ref.execute(&name, args).await }
+        },
+        30,
+        &EffortLevel::High,
+    ).await?;
+
+    change.artifacts.insert("apply".into(), json!({ "result": agent_result.result }));
+    change.phases_completed.push(SddPhase::Apply);
+    change.updated_at = worker::Date::now().to_string();
+    sdd::SddChangeStore::save(&db, &change).await?;
+
+    Response::from_json(&ApiResponse::success(json!({
+        "change": name,
+        "phase": "apply",
+        "result": agent_result.result,
+        "turns": agent_result.turns,
+        "tool_calls_made": agent_result.tool_calls_made,
+        "usage": agent_result.usage,
+    })))
+}
+
+/// POST /sdd/verify — Dedicated verify endpoint
+async fn handle_sdd_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let body: Value = req.json().await?;
+    let env = ctx.env;
+    let db = env.d1("DB")?;
+
+    let name = body["name"].as_str().unwrap_or("");
+    if name.is_empty() {
+        return error_response("'name' is required");
+    }
+
+    sdd::SddChangeStore::ensure_table(&db).await?;
+    let mut change = match sdd::SddChangeStore::load(&db, name).await? {
+        Some(c) => c,
+        None => return error_response(&format!("Change '{}' not found", name)),
+    };
+
+    let client = deepseek::DeepSeekClient::from_env(&env)?;
+    let tool_registry = tools::build_builtin_registry();
+    let tool_schemas = tool_registry.filter_schemas(
+        &["Read", "Glob", "Grep"].iter().map(|s| s.to_string()).collect::<Vec<_>>()
+    );
+    let executor = tools::ToolExecutor::new(env.clone());
+    let context = body["context"].as_str().unwrap_or("");
+
+    let user_prompt = format!(
+        "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
+        change.name, change.description,
+        serde_json::to_string_pretty(&change.artifacts).unwrap_or_default(),
+        context,
+    );
+
+    let agent_result = client.agent_loop(
+        crate::subagents::SDD_VERIFY_PROMPT,
+        &user_prompt,
+        &DeepSeekModel::Reasoner,
+        &tool_schemas,
+        |name, args| {
+            let executor_ref = &executor;
+            async move { executor_ref.execute(&name, args).await }
+        },
+        15,
+        &EffortLevel::High,
+    ).await?;
+
+    change.artifacts.insert("verify".into(), json!({ "result": agent_result.result }));
+    change.phases_completed.push(SddPhase::Verify);
+    change.updated_at = worker::Date::now().to_string();
+    sdd::SddChangeStore::save(&db, &change).await?;
+
+    Response::from_json(&ApiResponse::success(json!({
+        "change": name,
+        "phase": "verify",
+        "result": agent_result.result,
+        "turns": agent_result.turns,
+        "tool_calls_made": agent_result.tool_calls_made,
+        "usage": agent_result.usage,
+    })))
+}
+
+/// POST /sdd/archive — Dedicated archive endpoint
+async fn handle_sdd_archive(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let body: Value = req.json().await?;
+    let env = ctx.env;
+    let db = env.d1("DB")?;
+
+    let name = body["name"].as_str().unwrap_or("");
+    if name.is_empty() {
+        return error_response("'name' is required");
+    }
+
+    sdd::SddChangeStore::ensure_table(&db).await?;
+    let mut change = match sdd::SddChangeStore::load(&db, name).await? {
+        Some(c) => c,
+        None => return error_response(&format!("Change '{}' not found", name)),
+    };
+
+    let client = deepseek::DeepSeekClient::from_env(&env)?;
+    let tool_registry = tools::build_builtin_registry();
+    let tool_schemas = tool_registry.filter_schemas(
+        &["Read", "Write", "Glob"].iter().map(|s| s.to_string()).collect::<Vec<_>>()
+    );
+    let executor = tools::ToolExecutor::new(env.clone());
+    let context = body["context"].as_str().unwrap_or("");
+
+    let user_prompt = format!(
+        "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
+        change.name, change.description,
+        serde_json::to_string_pretty(&change.artifacts).unwrap_or_default(),
+        context,
+    );
+
+    let agent_result = client.agent_loop(
+        crate::subagents::SDD_ARCHIVE_PROMPT,
+        &user_prompt,
+        &DeepSeekModel::Chat,
+        &tool_schemas,
+        |name, args| {
+            let executor_ref = &executor;
+            async move { executor_ref.execute(&name, args).await }
+        },
+        10,
+        &EffortLevel::Medium,
+    ).await?;
+
+    change.artifacts.insert("archive".into(), json!({ "result": agent_result.result }));
+    change.phases_completed.push(SddPhase::Archive);
+    change.updated_at = worker::Date::now().to_string();
+    sdd::SddChangeStore::save(&db, &change).await?;
+
+    Response::from_json(&ApiResponse::success(json!({
+        "change": name,
+        "phase": "archive",
+        "result": agent_result.result,
+        "turns": agent_result.turns,
+        "tool_calls_made": agent_result.tool_calls_made,
+        "usage": agent_result.usage,
+    })))
+}
+
 /// GET /sdd/changes — List all SDD changes
 async fn handle_sdd_list(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let db = ctx.env.d1("DB")?;
@@ -622,6 +843,10 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .post_async("/sdd/ff", handle_sdd_ff)
         .post_async("/sdd/pipeline", handle_sdd_pipeline)
         .post_async("/sdd/phase", handle_sdd_phase)
+        .post_async("/sdd/explore", handle_sdd_explore)
+        .post_async("/sdd/apply", handle_sdd_apply)
+        .post_async("/sdd/verify", handle_sdd_verify)
+        .post_async("/sdd/archive", handle_sdd_archive)
         .get_async("/sdd/changes", handle_sdd_list)
 
         // ── Hooks ────────────────────────────────────────────────

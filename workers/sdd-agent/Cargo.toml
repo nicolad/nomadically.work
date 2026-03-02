@@ -11,6 +11,7 @@ worker = { version = "0.7", features = ["d1"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 futures = "0.3"
+js-sys = "0.3"
 
 # NOTE: No tokio/reqwest — wasm32-unknown-unknown target.
 # DeepSeek API called via worker::Fetch (CF Workers native fetch).

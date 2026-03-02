@@ -403,6 +403,7 @@ name = "sdd-agent"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "js-sys",
  "serde",
  "serde_json",
  "worker",

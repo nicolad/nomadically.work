@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  webpack(config) {
+    config.externals = [...(config.externals ?? []), { canvas: "canvas" }];
+    return config;
+  },
   async rewrites() {
     return [
       {

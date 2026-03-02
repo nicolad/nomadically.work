@@ -142,7 +142,10 @@ export const deepPlannerResolvers = {
         .set({
           status: "running",
           current_step: "Initializing SDD pipeline",
-          started_at: task.started_at ?? now,
+          error_message: null,
+          checkpoint_count: 0,
+          started_at: now,
+          completed_at: null,
           updated_at: now,
         })
         .where(eq(deepPlannerTasks.id, args.id))

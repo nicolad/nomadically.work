@@ -1000,4 +1000,8 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
         .run(req, env)
         .await
+        .or_else(|e| {
+            console_error!("Worker error: {:?}", e);
+            Response::error(format!("Worker error: {e}"), 500)
+        })
 }

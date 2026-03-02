@@ -91,6 +91,7 @@ impl DeepSeekClient {
         ChatMessage {
             role: "system".into(),
             content: ChatContent::Text(content.into()),
+            reasoning_content: None,
             tool_calls: None,
             tool_call_id: None,
             name: None,
@@ -102,6 +103,7 @@ impl DeepSeekClient {
         ChatMessage {
             role: "user".into(),
             content: ChatContent::Text(content.into()),
+            reasoning_content: None,
             tool_calls: None,
             tool_call_id: None,
             name: None,
@@ -113,6 +115,7 @@ impl DeepSeekClient {
         ChatMessage {
             role: "assistant".into(),
             content: ChatContent::Text(content.into()),
+            reasoning_content: None,
             tool_calls: None,
             tool_call_id: None,
             name: None,
@@ -124,6 +127,7 @@ impl DeepSeekClient {
         ChatMessage {
             role: "tool".into(),
             content: ChatContent::Text(content.into()),
+            reasoning_content: None,
             tool_calls: None,
             tool_call_id: Some(tool_call_id.into()),
             name: None,
@@ -186,9 +190,11 @@ impl DeepSeekClient {
             if let Some(ref calls) = choice.message.tool_calls {
                 if !calls.is_empty() {
                     // Add assistant message with tool calls to history
+                    // DeepSeek Reasoner requires reasoning_content on assistant messages
                     messages.push(ChatMessage {
                         role: "assistant".into(),
-                        content: ChatContent::Null,
+                        content: choice.message.content.clone(),
+                        reasoning_content: choice.message.reasoning_content.clone(),
                         tool_calls: Some(calls.clone()),
                         tool_call_id: None,
                         name: None,

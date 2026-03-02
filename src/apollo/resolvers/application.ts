@@ -3,6 +3,7 @@ import { applications, applicationTracks, jobs, companies } from "@/db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { mockTracks } from "./track";
 import { createDeepSeekClient, DEEPSEEK_MODELS } from "@/deepseek";
+import { isAdminEmail } from "@/lib/admin";
 
 function mapApplication(
   app: typeof applications.$inferSelect,
@@ -503,6 +504,10 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
       args: { applicationId: number; selectedText: string },
       context: GraphQLContext,
     ) {
+      if (!context.userId || !isAdminEmail(context.userEmail)) {
+        throw new Error("Forbidden");
+      }
+
       const whereClause = context.userEmail
         ? and(eq(applications.id, args.applicationId), eq(applications.user_email, context.userEmail))
         : eq(applications.id, args.applicationId);

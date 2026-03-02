@@ -78,6 +78,14 @@ a:hover svg {
   text-decoration: underline;
 }
 
+/* ---------- sidebar scrollbar hide ---------- */
+nav::-webkit-scrollbar {
+  display: none;
+}
+nav {
+  scrollbar-width: none; /* Firefox */
+}
+
 /* ---------- sidebar nav links ---------- */
 nav a {
   color: var(--gray-11);

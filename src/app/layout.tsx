@@ -34,8 +34,8 @@ export default function RootLayout({
             <Providers>
               <ErrorBoundary>
                 <SidebarProvider>
+                  <Sidebar />
                   <Flex minHeight="100vh">
-                    <Sidebar />
                     <MainContent>{children}</MainContent>
                   </Flex>
                 </SidebarProvider>

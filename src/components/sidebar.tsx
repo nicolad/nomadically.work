@@ -44,29 +44,27 @@ export function Sidebar() {
   const width = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   return (
-    <Flex
-      asChild
-      direction="column"
-      p={collapsed ? "2" : "4"}
-      gap="2"
-      flexShrink="0"
-      style={{
-        width,
-        borderRight: "1px solid var(--gray-6)",
-        background: "var(--gray-2)",
-        position: "fixed",
-        top: 0,
-        left: 0,
-        height: "100vh",
-        overflowY: "hidden",
-        overflowX: "hidden",
-        fontSize: 14,
-        letterSpacing: "0.01em",
-        transition: "width 0.2s ease, padding 0.2s ease",
-        zIndex: 10,
-      }}
-    >
-      <nav>
+      <nav
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          padding: collapsed ? "var(--space-2)" : "var(--space-4)",
+          gap: "var(--space-2)",
+          width,
+          borderRight: "1px solid var(--gray-6)",
+          background: "var(--gray-2)",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          height: "100dvh",
+          overflowY: "auto",
+          overflowX: "hidden",
+          fontSize: 14,
+          letterSpacing: "0.01em",
+          transition: "width 0.2s ease, padding 0.2s ease",
+          zIndex: 10,
+        }}
+      >
         {/* logo */}
         <Flex asChild align="center" justify="center" style={{ paddingLeft: collapsed ? 0 : 10, overflow: "hidden" }}>
         <Link href="/">
@@ -137,7 +135,6 @@ export function Sidebar() {
           </Flex>
         </Flex>
       </nav>
-    </Flex>
   );
 }
 

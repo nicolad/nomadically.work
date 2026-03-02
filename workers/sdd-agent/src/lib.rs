@@ -57,6 +57,33 @@ async fn load_workflow_docs(db: &D1Database, workflow_type: &str) -> Option<inte
     integrations::WorkflowDocsStore::load(db, workflow_type).await.ok().flatten()
 }
 
+/// Update deep_planner_tasks progress in D1 (called by pipeline handler).
+async fn update_task_progress(db: &D1Database, task_id: &str, step: &str, checkpoint: u32) {
+    let now = worker::Date::now().to_string();
+    if let Ok(stmt) = db.prepare("UPDATE deep_planner_tasks SET current_step = ?1, checkpoint_count = ?2, updated_at = ?3 WHERE id = ?4")
+        .bind(&[step.into(), (checkpoint as f64).into(), now.into(), task_id.into()]) {
+        let _ = stmt.run().await;
+    }
+}
+
+/// Mark a deep_planner_task as complete or failed in D1.
+async fn finish_task(db: &D1Database, task_id: &str, status: &str, output: Option<&str>, error: Option<&str>, checkpoints: u32) {
+    let now = worker::Date::now().to_string();
+    if let Ok(stmt) = db.prepare("UPDATE deep_planner_tasks SET status = ?1, output_artifact = ?2, error_message = ?3, checkpoint_count = ?4, current_step = ?5, completed_at = ?6, updated_at = ?7 WHERE id = ?8")
+        .bind(&[
+            status.into(),
+            output.unwrap_or("").into(),
+            error.unwrap_or("").into(),
+            (checkpoints as f64).into(),
+            (if status == "complete" { "Complete" } else { "Failed" }).into(),
+            now.clone().into(),
+            now.into(),
+            task_id.into(),
+        ]) {
+        let _ = stmt.run().await;
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTE HANDLERS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -516,6 +543,8 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
         return error_response("'name' and 'description' are required");
     }
 
+    let task_id = body["task_id"].as_str().unwrap_or("");
+
     sdd::SddChangeStore::ensure_table(&db).await?;
 
     let now = worker::Date::now().to_string();
@@ -539,9 +568,66 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
     let pipeline = pipeline;
     let context = body["context"].as_str().unwrap_or("");
 
-    let result = pipeline.full_pipeline(&mut change, context).await?;
+    // Run phases one by one, updating task progress in D1
+    let phases = [
+        (SddPhase::Propose, "Generating proposal", 15),
+        (SddPhase::Spec, "Writing specifications", 30),
+        (SddPhase::Design, "Creating design", 45),
+        (SddPhase::Tasks, "Breaking down tasks", 60),
+        (SddPhase::Apply, "Implementing changes", 75),
+        (SddPhase::Verify, "Verifying implementation", 90),
+        (SddPhase::Archive, "Archiving artifacts", 100),
+    ];
+
+    let mut results: Vec<Value> = Vec::new();
+
+    for (phase, step_label, checkpoint) in &phases {
+        if change.phases_completed.contains(phase) {
+            continue;
+        }
+
+        if !task_id.is_empty() {
+            update_task_progress(&db, task_id, step_label, *checkpoint).await;
+        }
+
+        match pipeline.execute_phase(*phase, &change, context).await {
+            Ok(r) => {
+                change.artifacts.insert(phase.as_str().into(), r.clone());
+                change.phases_completed.push(*phase);
+                results.push(r);
+            }
+            Err(e) => {
+                if !task_id.is_empty() {
+                    finish_task(&db, task_id, "failed", None, Some(&format!("{e}")), *checkpoint).await;
+                }
+                return Err(e);
+            }
+        }
+    }
+
     change.updated_at = worker::Date::now().to_string();
     sdd::SddChangeStore::save(&db, &change).await?;
+
+    let output = results.iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let phase_name = phases.get(i).map(|p| p.0.as_str()).unwrap_or("unknown");
+            format!("## Phase: {}\n\n{}", phase_name, r.as_str().unwrap_or(""))
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n---\n\n");
+
+    if !task_id.is_empty() {
+        finish_task(&db, task_id, "complete", Some(&output), None, 102).await;
+    }
+
+    let result = json!({
+        "mode": "full-pipeline",
+        "change": change.name,
+        "phases_completed": change.phases_completed.iter().map(|p| p.as_str()).collect::<Vec<_>>(),
+        "total_phases": results.len(),
+        "results": results,
+    });
 
     Response::from_json(&ApiResponse::success(result))
 }

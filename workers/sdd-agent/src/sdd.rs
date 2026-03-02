@@ -22,6 +22,7 @@ use worker::*;
 use crate::types::*;
 use crate::deepseek::DeepSeekClient;
 use crate::hooks::HookRegistry;
+use crate::nautilus;
 
 // ── SDD Pipeline ──────────────────────────────────────────────────────────
 
@@ -31,16 +32,26 @@ use crate::hooks::HookRegistry;
 pub struct SddPipeline {
     client: DeepSeekClient,
     hooks: Option<HookRegistry>,
+    workflow_type: String,
 }
 
 impl SddPipeline {
     pub fn new(client: DeepSeekClient) -> Self {
-        Self { client, hooks: None }
+        Self { client, hooks: None, workflow_type: String::new() }
     }
 
     pub fn with_hooks(mut self, hooks: HookRegistry) -> Self {
         self.hooks = Some(hooks);
         self
+    }
+
+    pub fn with_workflow_type(mut self, wt: &str) -> Self {
+        self.workflow_type = wt.into();
+        self
+    }
+
+    fn is_nautilus(&self) -> bool {
+        self.workflow_type == "nautilus_trader_integration"
     }
 
     /// Run a single SDD phase. Sends context to the appropriate DeepSeek model
@@ -140,15 +151,25 @@ impl SddPipeline {
     }
 
     fn phase_system_prompt(&self, phase: SddPhase) -> String {
-        match phase {
-            SddPhase::Explore => "You are the SDD Explorer. Investigate the idea thoroughly. Analyze the codebase, consider trade-offs, and recommend an approach. Output a structured exploration report.".into(),
-            SddPhase::Propose => "You are the SDD Proposer. Create a change proposal with: Intent, Scope (in/out), Approach, Affected Areas, Risks, Rollback Plan, Success Criteria.".into(),
-            SddPhase::Spec => "You are the SDD Spec Writer. Write delta specifications with ADDED/MODIFIED/REMOVED requirements using RFC 2119 keywords. Every requirement needs Given/When/Then scenarios.".into(),
-            SddPhase::Design => "You are the SDD Designer. Create technical design with: Architecture Decisions (choice + alternatives + rationale), Data Flow, File Changes, Interfaces, Testing Strategy.".into(),
-            SddPhase::Tasks => "You are the SDD Tasker. Break the change into phased implementation tasks. Each task must be specific (file path), actionable, verifiable, and small.".into(),
-            SddPhase::Apply => "You are the SDD Applier. Implement the assigned tasks following specs and design. Match project coding conventions. Mark tasks [x] as complete.".into(),
-            SddPhase::Verify => "You are the SDD Verifier. Check Completeness (all tasks done?), Correctness (specs matched?), Coherence (design followed?), Testing (coverage?). Output PASS/FAIL verdict.".into(),
-            SddPhase::Archive => "You are the SDD Archiver. Merge delta specs into main specs (ADDED→append, MODIFIED→replace, REMOVED→delete). Archive the change folder.".into(),
+        let base = match phase {
+            SddPhase::Explore => "You are the SDD Explorer. Investigate the idea thoroughly. Analyze the codebase, consider trade-offs, and recommend an approach. Output a structured exploration report.",
+            SddPhase::Propose => "You are the SDD Proposer. Create a change proposal with: Intent, Scope (in/out), Approach, Affected Areas, Risks, Rollback Plan, Success Criteria.",
+            SddPhase::Spec => "You are the SDD Spec Writer. Write delta specifications with ADDED/MODIFIED/REMOVED requirements using RFC 2119 keywords. Every requirement needs Given/When/Then scenarios.",
+            SddPhase::Design => "You are the SDD Designer. Create technical design with: Architecture Decisions (choice + alternatives + rationale), Data Flow, File Changes, Interfaces, Testing Strategy.",
+            SddPhase::Tasks => "You are the SDD Tasker. Break the change into phased implementation tasks. Each task must be specific (file path), actionable, verifiable, and small.",
+            SddPhase::Apply => "You are the SDD Applier. Implement the assigned tasks following specs and design. Match project coding conventions. Mark tasks [x] as complete.",
+            SddPhase::Verify => "You are the SDD Verifier. Check Completeness (all tasks done?), Correctness (specs matched?), Coherence (design followed?), Testing (coverage?). Output PASS/FAIL verdict.",
+            SddPhase::Archive => "You are the SDD Archiver. Merge delta specs into main specs (ADDED→append, MODIFIED→replace, REMOVED→delete). Archive the change folder.",
+        };
+
+        if self.is_nautilus() {
+            let nt_phase_ctx = nautilus::nt_phase_context(phase.as_str());
+            format!(
+                "{base}\n\n{nt_phase_ctx}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
+                nautilus::NAUTILUS_TRADER_DOCS
+            )
+        } else {
+            base.into()
         }
     }
 

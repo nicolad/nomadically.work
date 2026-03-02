@@ -33,6 +33,7 @@ mod hooks;
 mod sessions;
 mod subagents;
 mod sdd;
+mod nautilus;
 
 use types::*;
 
@@ -386,7 +387,8 @@ async fn handle_sdd_new(mut req: Request, ctx: RouteContext<()>) -> Result<Respo
 
     // Run proposal phase
     let client = deepseek::DeepSeekClient::from_env(&env)?;
-    let pipeline = sdd::SddPipeline::new(client);
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.execute_phase(SddPhase::Propose, &change, context).await?;
@@ -421,7 +423,8 @@ async fn handle_sdd_continue(mut req: Request, ctx: RouteContext<()>) -> Result<
     };
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
-    let pipeline = sdd::SddPipeline::new(client);
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.continue_change(&mut change, context).await?;
@@ -458,7 +461,8 @@ async fn handle_sdd_ff(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
         });
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
-    let pipeline = sdd::SddPipeline::new(client);
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.fast_forward(&mut change, context).await?;
@@ -495,7 +499,8 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
         });
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
-    let pipeline = sdd::SddPipeline::new(client);
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.full_pipeline(&mut change, context).await?;
@@ -529,7 +534,8 @@ async fn handle_sdd_phase(mut req: Request, ctx: RouteContext<()>) -> Result<Res
     };
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
-    let pipeline = sdd::SddPipeline::new(client);
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.execute_phase(phase, &change, context).await?;
@@ -562,8 +568,20 @@ async fn handle_sdd_explore(mut req: Request, ctx: RouteContext<()>) -> Result<R
     );
     let executor = tools::ToolExecutor::new(env.clone());
 
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let system_prompt = if workflow_type == "nautilus_trader_integration" {
+        format!(
+            "{}\n\n{}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
+            crate::subagents::SDD_EXPLORE_PROMPT,
+            nautilus::nt_phase_context("explore"),
+            nautilus::NAUTILUS_TRADER_DOCS,
+        )
+    } else {
+        crate::subagents::SDD_EXPLORE_PROMPT.to_string()
+    };
+
     let agent_result = client.agent_loop(
-        crate::subagents::SDD_EXPLORE_PROMPT,
+        &system_prompt,
         topic,
         &DeepSeekModel::Reasoner,
         &tool_schemas,
@@ -609,6 +627,7 @@ async fn handle_sdd_apply(mut req: Request, ctx: RouteContext<()>) -> Result<Res
     );
     let executor = tools::ToolExecutor::new(env.clone());
     let context = body["context"].as_str().unwrap_or("");
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
 
     let user_prompt = format!(
         "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
@@ -617,8 +636,19 @@ async fn handle_sdd_apply(mut req: Request, ctx: RouteContext<()>) -> Result<Res
         context,
     );
 
+    let apply_system_prompt = if workflow_type == "nautilus_trader_integration" {
+        format!(
+            "{}\n\n{}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
+            crate::subagents::SDD_APPLY_PROMPT,
+            nautilus::nt_phase_context("apply"),
+            nautilus::NAUTILUS_TRADER_DOCS,
+        )
+    } else {
+        crate::subagents::SDD_APPLY_PROMPT.to_string()
+    };
+
     let agent_result = client.agent_loop(
-        crate::subagents::SDD_APPLY_PROMPT,
+        &apply_system_prompt,
         &user_prompt,
         &DeepSeekModel::Chat,
         &tool_schemas,
@@ -669,6 +699,7 @@ async fn handle_sdd_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Re
     );
     let executor = tools::ToolExecutor::new(env.clone());
     let context = body["context"].as_str().unwrap_or("");
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
 
     let user_prompt = format!(
         "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
@@ -677,8 +708,19 @@ async fn handle_sdd_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         context,
     );
 
+    let verify_system_prompt = if workflow_type == "nautilus_trader_integration" {
+        format!(
+            "{}\n\n{}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
+            crate::subagents::SDD_VERIFY_PROMPT,
+            nautilus::nt_phase_context("verify"),
+            nautilus::NAUTILUS_TRADER_DOCS,
+        )
+    } else {
+        crate::subagents::SDD_VERIFY_PROMPT.to_string()
+    };
+
     let agent_result = client.agent_loop(
-        crate::subagents::SDD_VERIFY_PROMPT,
+        &verify_system_prompt,
         &user_prompt,
         &DeepSeekModel::Reasoner,
         &tool_schemas,

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
 import { UnifiedJobsProvider } from "@/components/unified-jobs-provider";
 import { Container, Box, Flex, Skeleton } from "@radix-ui/themes";

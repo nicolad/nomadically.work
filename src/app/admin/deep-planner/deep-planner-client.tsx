@@ -15,7 +15,6 @@ import {
   Dialog,
   Flex,
   Heading,
-  Select,
   Separator,
   Text,
   TextArea,
@@ -97,9 +96,9 @@ export default function DeepPlannerClient() {
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [workflowType, setWorkflowType] = useState("product_brief");
   const [problemDescription, setProblemDescription] = useState("");
   const [context, setContext] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
   const [integrationRepoUrl, setIntegrationRepoUrl] = useState("");
 
   const { data, loading, error, refetch } = useQuery(DEEP_PLANNER_TASKS_QUERY, {
@@ -164,26 +163,20 @@ export default function DeepPlannerClient() {
 
   const tasks = data?.deepPlannerTasks ?? [];
 
-  const isNt = workflowType === "nautilus_trader_integration";
-
   const handleCreate = () => {
-    if (!isNt && !problemDescription.trim()) return;
-    if (isNt && !integrationRepoUrl.trim()) return;
+    if (!problemDescription.trim()) return;
 
-    let resolvedContext: string | null = context.trim() || null;
-    if (isNt) {
-      resolvedContext = JSON.stringify({
-        nautilusTraderRepoUrl: "https://github.com/nautechsystems/nautilus_trader",
-        integrationRepoUrl: integrationRepoUrl.trim(),
-        ...(context.trim() ? { note: context.trim() } : {}),
-      });
-    }
+    const resolvedContext = JSON.stringify({
+      ...(repoUrl.trim() ? { repoUrl: repoUrl.trim() } : {}),
+      ...(integrationRepoUrl.trim() ? { integrationRepoUrl: integrationRepoUrl.trim() } : {}),
+      ...(context.trim() ? { note: context.trim() } : {}),
+    });
 
     createTask({
       variables: {
-        workflowType,
+        workflowType: "autonomous_sdd",
         problemDescription: problemDescription.trim(),
-        context: resolvedContext,
+        context: resolvedContext === "{}" ? null : resolvedContext,
       },
     });
   };
@@ -194,7 +187,7 @@ export default function DeepPlannerClient() {
         <Box>
           <Heading size="7">Deep Planner</Heading>
           <Text color="gray" size="2">
-            Autonomous planning and integration tasks
+            Autonomous SDD tasks
           </Text>
         </Box>
         <Flex gap="2">
@@ -212,8 +205,8 @@ export default function DeepPlannerClient() {
               if (!open) {
                 setProblemDescription("");
                 setContext("");
+                setRepoUrl("");
                 setIntegrationRepoUrl("");
-                setWorkflowType("product_brief");
               }
             }}
           >
@@ -225,59 +218,37 @@ export default function DeepPlannerClient() {
             <Dialog.Content maxWidth="520px">
               <Dialog.Title>Create Planning Task</Dialog.Title>
               <Dialog.Description size="2" color="gray" mb="4">
-                Run an autonomous planning or NautilusTrader integration workflow.
+                Run an autonomous SDD workflow.
               </Dialog.Description>
               <Flex direction="column" gap="3">
                 <label>
                   <Text size="2" weight="bold" mb="1">
-                    Workflow Type
+                    Base Repo URL
                   </Text>
-                  <Select.Root
-                    value={workflowType}
-                    onValueChange={(v) => {
-                      setWorkflowType(v);
-                      setIntegrationRepoUrl("");
-                    }}
-                  >
-                    <Select.Trigger style={{ width: "100%" }} />
-                    <Select.Content>
-                      <Select.Item value="product_brief">
-                        Product Brief
-                      </Select.Item>
-                      <Select.Item value="nautilus_trader_integration">
-                        NautilusTrader Integration
-                      </Select.Item>
-                    </Select.Content>
-                  </Select.Root>
+                  <TextField.Root
+                    placeholder="https://github.com/nautechsystems/nautilus_trader"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    type="url"
+                  />
                 </label>
-
-                {isNt && (
-                  <label>
-                    <Text size="2" weight="bold" mb="1">
-                      Target Integration Repo URL
-                    </Text>
-                    <TextField.Root
-                      placeholder="https://github.com/owner/repo"
-                      value={integrationRepoUrl}
-                      onChange={(e) => setIntegrationRepoUrl(e.target.value)}
-                      type="url"
-                    />
-                    <Text size="1" color="gray" mt="1">
-                      The repo to integrate with NautilusTrader
-                    </Text>
-                  </label>
-                )}
-
                 <label>
                   <Text size="2" weight="bold" mb="1">
-                    {isNt ? "Integration Description (optional)" : "Problem Description"}
+                    Integration Repo URL
+                  </Text>
+                  <TextField.Root
+                    placeholder="https://github.com/drift-labs"
+                    value={integrationRepoUrl}
+                    onChange={(e) => setIntegrationRepoUrl(e.target.value)}
+                    type="url"
+                  />
+                </label>
+                <label>
+                  <Text size="2" weight="bold" mb="1">
+                    Problem Description
                   </Text>
                   <TextArea
-                    placeholder={
-                      isNt
-                        ? "Describe the integration to build with NautilusTrader..."
-                        : "Describe the planning problem..."
-                    }
+                    placeholder="Describe the planning problem..."
                     value={problemDescription}
                     onChange={(e) => setProblemDescription(e.target.value)}
                     rows={4}
@@ -285,7 +256,7 @@ export default function DeepPlannerClient() {
                 </label>
                 <label>
                   <Text size="2" weight="bold" mb="1">
-                    {isNt ? "Additional Notes (optional)" : "Context (optional)"}
+                    Context (optional)
                   </Text>
                   <TextArea
                     placeholder="Additional context, constraints, or references..."
@@ -303,11 +274,7 @@ export default function DeepPlannerClient() {
                 </Dialog.Close>
                 <Button
                   onClick={handleCreate}
-                  disabled={
-                    (!isNt && !problemDescription.trim()) ||
-                    (isNt && !integrationRepoUrl.trim()) ||
-                    creating
-                  }
+                  disabled={!problemDescription.trim() || creating}
                   loading={creating}
                 >
                   Start Task
@@ -352,7 +319,7 @@ export default function DeepPlannerClient() {
               No planning tasks yet
             </Text>
             <Text color="gray" size="2">
-              Create a planning or integration task to run autonomously.
+              Create an autonomous SDD task.
             </Text>
             <Button onClick={() => setDialogOpen(true)}>
               <PlusIcon /> New Task

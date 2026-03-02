@@ -164,18 +164,22 @@ export default function DeepPlannerClient() {
   const tasks = data?.deepPlannerTasks ?? [];
 
   const handleCreate = () => {
-    if (!problemDescription.trim()) return;
-
     const resolvedContext = JSON.stringify({
       ...(repoUrl.trim() ? { repoUrl: repoUrl.trim() } : {}),
       ...(integrationRepoUrl.trim() ? { integrationRepoUrl: integrationRepoUrl.trim() } : {}),
       ...(context.trim() ? { note: context.trim() } : {}),
     });
 
+    // Derive a default description from repo URLs if not provided
+    const description = problemDescription.trim() || [
+      repoUrl.trim() && `Integrate with ${repoUrl.trim().split("/").pop()}`,
+      integrationRepoUrl.trim() && `using ${integrationRepoUrl.trim().split("/").pop()}`,
+    ].filter(Boolean).join(" ") || "Autonomous SDD task";
+
     createTask({
       variables: {
         workflowType: "autonomous_sdd",
-        problemDescription: problemDescription.trim(),
+        problemDescription: description,
         context: resolvedContext === "{}" ? null : resolvedContext,
       },
     });
@@ -226,7 +230,7 @@ export default function DeepPlannerClient() {
                     Base Repo URL
                   </Text>
                   <TextField.Root
-                    placeholder="https://github.com/nautechsystems/nautilus_trader"
+                    placeholder="https://github.com/owner/repo"
                     value={repoUrl}
                     onChange={(e) => setRepoUrl(e.target.value)}
                     type="url"
@@ -245,7 +249,7 @@ export default function DeepPlannerClient() {
                 </label>
                 <label>
                   <Text size="2" weight="bold" mb="1">
-                    Problem Description
+                    Problem Description (optional)
                   </Text>
                   <TextArea
                     placeholder="Describe the planning problem..."
@@ -274,7 +278,7 @@ export default function DeepPlannerClient() {
                 </Dialog.Close>
                 <Button
                   onClick={handleCreate}
-                  disabled={!problemDescription.trim() || creating}
+                  disabled={creating}
                   loading={creating}
                 >
                   Start Task

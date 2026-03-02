@@ -321,16 +321,16 @@ export default function TaskDetailClient() {
             let parsed: Record<string, string> | null = null;
             try { parsed = JSON.parse(task.context); } catch {}
 
-            if (parsed && typeof parsed === "object" && (parsed.nautilusTraderRepoUrl || parsed.integrationRepoUrl)) {
+            if (parsed && typeof parsed === "object" && (parsed.repoUrl || parsed.integrationRepoUrl)) {
               return (
                 <Box>
                   <Text size="1" color="gray" weight="bold" mb="1">
                     Integration Context
                   </Text>
                   <Flex direction="column" gap="1">
-                    {parsed.nautilusTraderRepoUrl && (
+                    {parsed.repoUrl && (
                       <Text size="2" color="gray">
-                        NautilusTrader: <a href={parsed.nautilusTraderRepoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--blue-9)" }}>{parsed.nautilusTraderRepoUrl}</a>
+                        Base repo: <a href={parsed.repoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--blue-9)" }}>{parsed.repoUrl}</a>
                       </Text>
                     )}
                     {parsed.integrationRepoUrl && (

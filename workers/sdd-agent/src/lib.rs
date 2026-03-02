@@ -33,8 +33,6 @@ mod hooks;
 mod sessions;
 mod subagents;
 mod sdd;
-mod nautilus;
-
 use types::*;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -568,17 +566,7 @@ async fn handle_sdd_explore(mut req: Request, ctx: RouteContext<()>) -> Result<R
     );
     let executor = tools::ToolExecutor::new(env.clone());
 
-    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
-    let system_prompt = if workflow_type == "nautilus_trader_integration" {
-        format!(
-            "{}\n\n{}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
-            crate::subagents::SDD_EXPLORE_PROMPT,
-            nautilus::nt_phase_context("explore"),
-            nautilus::NAUTILUS_TRADER_DOCS,
-        )
-    } else {
-        crate::subagents::SDD_EXPLORE_PROMPT.to_string()
-    };
+    let system_prompt = crate::subagents::SDD_EXPLORE_PROMPT.to_string();
 
     let agent_result = client.agent_loop(
         &system_prompt,
@@ -627,7 +615,6 @@ async fn handle_sdd_apply(mut req: Request, ctx: RouteContext<()>) -> Result<Res
     );
     let executor = tools::ToolExecutor::new(env.clone());
     let context = body["context"].as_str().unwrap_or("");
-    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
 
     let user_prompt = format!(
         "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
@@ -636,16 +623,7 @@ async fn handle_sdd_apply(mut req: Request, ctx: RouteContext<()>) -> Result<Res
         context,
     );
 
-    let apply_system_prompt = if workflow_type == "nautilus_trader_integration" {
-        format!(
-            "{}\n\n{}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
-            crate::subagents::SDD_APPLY_PROMPT,
-            nautilus::nt_phase_context("apply"),
-            nautilus::NAUTILUS_TRADER_DOCS,
-        )
-    } else {
-        crate::subagents::SDD_APPLY_PROMPT.to_string()
-    };
+    let apply_system_prompt = crate::subagents::SDD_APPLY_PROMPT.to_string();
 
     let agent_result = client.agent_loop(
         &apply_system_prompt,
@@ -699,7 +677,6 @@ async fn handle_sdd_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Re
     );
     let executor = tools::ToolExecutor::new(env.clone());
     let context = body["context"].as_str().unwrap_or("");
-    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
 
     let user_prompt = format!(
         "## Change: {}\n\n{}\n\n## Artifacts\n{}\n\n## Additional Context\n{}",
@@ -708,16 +685,7 @@ async fn handle_sdd_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         context,
     );
 
-    let verify_system_prompt = if workflow_type == "nautilus_trader_integration" {
-        format!(
-            "{}\n\n{}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
-            crate::subagents::SDD_VERIFY_PROMPT,
-            nautilus::nt_phase_context("verify"),
-            nautilus::NAUTILUS_TRADER_DOCS,
-        )
-    } else {
-        crate::subagents::SDD_VERIFY_PROMPT.to_string()
-    };
+    let verify_system_prompt = crate::subagents::SDD_VERIFY_PROMPT.to_string();
 
     let agent_result = client.agent_loop(
         &verify_system_prompt,

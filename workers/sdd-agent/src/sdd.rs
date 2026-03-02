@@ -22,8 +22,6 @@ use worker::*;
 use crate::types::*;
 use crate::deepseek::DeepSeekClient;
 use crate::hooks::HookRegistry;
-use crate::nautilus;
-
 // ── SDD Pipeline ──────────────────────────────────────────────────────────
 
 /// The SDD pipeline orchestrator — drives changes through all phases.
@@ -48,10 +46,6 @@ impl SddPipeline {
     pub fn with_workflow_type(mut self, wt: &str) -> Self {
         self.workflow_type = wt.into();
         self
-    }
-
-    fn is_nautilus(&self) -> bool {
-        self.workflow_type == "nautilus_trader_integration"
     }
 
     /// Run a single SDD phase. Sends context to the appropriate DeepSeek model
@@ -162,15 +156,7 @@ impl SddPipeline {
             SddPhase::Archive => "You are the SDD Archiver. Merge delta specs into main specs (ADDED→append, MODIFIED→replace, REMOVED→delete). Archive the change folder.",
         };
 
-        if self.is_nautilus() {
-            let nt_phase_ctx = nautilus::nt_phase_context(phase.as_str());
-            format!(
-                "{base}\n\n{nt_phase_ctx}\n\n--- NAUTILUS TRADER REFERENCE ---\n{}",
-                nautilus::NAUTILUS_TRADER_DOCS
-            )
-        } else {
-            base.into()
-        }
+        base.into()
     }
 
     // ── Pipeline Execution Modes ──────────────────────────────────────────

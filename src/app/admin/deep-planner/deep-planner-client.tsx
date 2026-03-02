@@ -100,6 +100,7 @@ export default function DeepPlannerClient() {
   const [workflowType, setWorkflowType] = useState("product_brief");
   const [problemDescription, setProblemDescription] = useState("");
   const [context, setContext] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
 
   const { data, loading, error, refetch } = useQuery(DEEP_PLANNER_TASKS_QUERY, {
     skip: !isAdmin,
@@ -113,6 +114,7 @@ export default function DeepPlannerClient() {
         setDialogOpen(false);
         setProblemDescription("");
         setContext("");
+        setRepoUrl("");
         refetch();
       },
     }
@@ -162,13 +164,25 @@ export default function DeepPlannerClient() {
 
   const tasks = data?.deepPlannerTasks ?? [];
 
+  const isSdd = workflowType === "autonomous_sdd";
+
   const handleCreate = () => {
     if (!problemDescription.trim()) return;
+    if (isSdd && !repoUrl.trim()) return;
+
+    let resolvedContext: string | null = context.trim() || null;
+    if (isSdd) {
+      resolvedContext = JSON.stringify({
+        repoUrl: repoUrl.trim(),
+        ...(context.trim() ? { note: context.trim() } : {}),
+      });
+    }
+
     createTask({
       variables: {
         workflowType,
         problemDescription: problemDescription.trim(),
-        context: context.trim() || null,
+        context: resolvedContext,
       },
     });
   };
@@ -190,16 +204,27 @@ export default function DeepPlannerClient() {
           >
             <ReloadIcon /> Refresh
           </Button>
-          <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog.Root
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setProblemDescription("");
+                setContext("");
+                setRepoUrl("");
+                setWorkflowType("product_brief");
+              }
+            }}
+          >
             <Dialog.Trigger>
               <Button>
                 <PlusIcon /> New Task
               </Button>
             </Dialog.Trigger>
-            <Dialog.Content maxWidth="500px">
+            <Dialog.Content maxWidth="520px">
               <Dialog.Title>Create Planning Task</Dialog.Title>
               <Dialog.Description size="2" color="gray" mb="4">
-                Assign a BMAD workflow to run autonomously.
+                Run an autonomous planning or SDD workflow.
               </Dialog.Description>
               <Flex direction="column" gap="3">
                 <label>
@@ -208,22 +233,47 @@ export default function DeepPlannerClient() {
                   </Text>
                   <Select.Root
                     value={workflowType}
-                    onValueChange={setWorkflowType}
+                    onValueChange={(v) => {
+                      setWorkflowType(v);
+                      setRepoUrl("");
+                    }}
                   >
                     <Select.Trigger style={{ width: "100%" }} />
                     <Select.Content>
                       <Select.Item value="product_brief">
                         Product Brief
                       </Select.Item>
+                      <Select.Item value="autonomous_sdd">
+                        Autonomous SDD
+                      </Select.Item>
                     </Select.Content>
                   </Select.Root>
                 </label>
+
+                {isSdd && (
+                  <label>
+                    <Text size="2" weight="bold" mb="1">
+                      Repo URL
+                    </Text>
+                    <TextField.Root
+                      placeholder="https://github.com/owner/repo"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                      type="url"
+                    />
+                  </label>
+                )}
+
                 <label>
                   <Text size="2" weight="bold" mb="1">
-                    Problem Description
+                    {isSdd ? "Task Description" : "Problem Description"}
                   </Text>
                   <TextArea
-                    placeholder="Describe the planning problem..."
+                    placeholder={
+                      isSdd
+                        ? "Describe the change or feature to implement..."
+                        : "Describe the planning problem..."
+                    }
                     value={problemDescription}
                     onChange={(e) => setProblemDescription(e.target.value)}
                     rows={4}
@@ -231,7 +281,7 @@ export default function DeepPlannerClient() {
                 </label>
                 <label>
                   <Text size="2" weight="bold" mb="1">
-                    Context (optional)
+                    {isSdd ? "Additional Notes (optional)" : "Context (optional)"}
                   </Text>
                   <TextArea
                     placeholder="Additional context, constraints, or references..."
@@ -249,7 +299,11 @@ export default function DeepPlannerClient() {
                 </Dialog.Close>
                 <Button
                   onClick={handleCreate}
-                  disabled={!problemDescription.trim() || creating}
+                  disabled={
+                    !problemDescription.trim() ||
+                    (isSdd && !repoUrl.trim()) ||
+                    creating
+                  }
                   loading={creating}
                 >
                   Start Task

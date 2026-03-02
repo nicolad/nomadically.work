@@ -2,12 +2,11 @@
 
 import { useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Box, Flex, Text, Separator } from "@radix-ui/themes";
+import { Box, Flex, Heading, Text } from "@radix-ui/themes";
 import { SearchQueryBar } from "./SearchQueryBar";
 import { UserPreferences } from "./user-preferences";
 import { JobsList } from "./jobs-list";
 import { SourceFilter } from "./SourceFilter";
-import { pageHeading, pageSubheading } from "./unified-jobs-provider.css";
 
 export function UnifiedJobsProvider() {
   const router = useRouter();
@@ -45,16 +44,15 @@ export function UnifiedJobsProvider() {
 
   return (
     <>
-      <Box mb="5">
-        <Text as="h1" size="5" weight="bold" mb="1" className={pageHeading}>
+      <Box mb="4">
+        <Heading as="h1" size="6" mb="2" style={{ letterSpacing: "-0.02em" }}>
           remote EU jobs
-        </Text>
-        <Text as="p" size="2" className={pageSubheading} mb="4">
+        </Heading>
+        <Text as="p" size="2" color="gray">
           engineering and tech roles open to candidates in the EU
         </Text>
       </Box>
-      <Separator size="4" mb="4" />
-      <Box>
+      <Box mb="3">
         <UserPreferences />
         <SearchQueryBar
           onSearchSubmit={handleSearch}
@@ -64,7 +62,7 @@ export function UnifiedJobsProvider() {
           <SourceFilter selected={sourcesFilter} onChange={handleSourcesChange} />
         </Flex>
       </Box>
-      <Box mt="4">
+      <Box>
         <JobsList searchFilter={searchFilter} sourceTypes={sourcesFilter} />
       </Box>
     </>

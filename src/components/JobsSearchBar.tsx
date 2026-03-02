@@ -9,7 +9,7 @@
 "use client";
 
 import * as React from "react";
-import { Flex, TextField, IconButton, Tooltip } from "@radix-ui/themes";
+import { TextField, IconButton, Tooltip } from "@radix-ui/themes";
 import { MagnifyingGlassIcon, Cross2Icon } from "@radix-ui/react-icons";
 
 type Props = {
@@ -92,7 +92,6 @@ export function JobsSearchBar({
     <TextField.Root
       ref={inputRef}
       size="3"
-      radius="medium"
       variant="surface"
       value={value}
       placeholder={placeholder}
@@ -108,36 +107,20 @@ export function JobsSearchBar({
         <MagnifyingGlassIcon />
       </TextField.Slot>
 
-      <TextField.Slot side="right">
-        <Flex gap="2" align="center">
-          {value.length > 0 && (
-            <Tooltip content="Clear (Esc)">
-              <IconButton
-                variant="ghost"
-                radius="full"
-                aria-label="Clear input"
-                onClick={clear}
-              >
-                <Cross2Icon />
-              </IconButton>
-            </Tooltip>
-          )}
-
-          <Tooltip content="Search (Enter)">
+      {value.length > 0 && (
+        <TextField.Slot side="right">
+          <Tooltip content="Clear (Esc)">
             <IconButton
               variant="ghost"
               radius="full"
-              aria-label="Run search"
-              onClick={() => {
-                if (value.trim()) onSubmit(value);
-              }}
-              disabled={!value.trim()}
+              aria-label="Clear input"
+              onClick={clear}
             >
-              <MagnifyingGlassIcon />
+              <Cross2Icon />
             </IconButton>
           </Tooltip>
-        </Flex>
-      </TextField.Slot>
+        </TextField.Slot>
+      )}
     </TextField.Root>
   );
 }

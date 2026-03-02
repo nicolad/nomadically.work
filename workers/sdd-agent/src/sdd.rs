@@ -22,6 +22,7 @@ use worker::*;
 use crate::types::*;
 use crate::deepseek::DeepSeekClient;
 use crate::hooks::HookRegistry;
+use crate::integrations::WorkflowDocs;
 // ── SDD Pipeline ──────────────────────────────────────────────────────────
 
 /// The SDD pipeline orchestrator — drives changes through all phases.
@@ -31,11 +32,12 @@ pub struct SddPipeline {
     client: DeepSeekClient,
     hooks: Option<HookRegistry>,
     workflow_type: String,
+    workflow_docs: Option<WorkflowDocs>,
 }
 
 impl SddPipeline {
     pub fn new(client: DeepSeekClient) -> Self {
-        Self { client, hooks: None, workflow_type: String::new() }
+        Self { client, hooks: None, workflow_type: String::new(), workflow_docs: None }
     }
 
     pub fn with_hooks(mut self, hooks: HookRegistry) -> Self {
@@ -45,6 +47,11 @@ impl SddPipeline {
 
     pub fn with_workflow_type(mut self, wt: &str) -> Self {
         self.workflow_type = wt.into();
+        self
+    }
+
+    pub fn with_workflow_docs(mut self, docs: WorkflowDocs) -> Self {
+        self.workflow_docs = Some(docs);
         self
     }
 
@@ -156,7 +163,10 @@ impl SddPipeline {
             SddPhase::Archive => "You are the SDD Archiver. Merge delta specs into main specs (ADDED→append, MODIFIED→replace, REMOVED→delete). Archive the change folder.",
         };
 
-        base.into()
+        match &self.workflow_docs {
+            Some(docs) => docs.enrich(base, phase.as_str()),
+            None => base.into(),
+        }
     }
 
     // ── Pipeline Execution Modes ──────────────────────────────────────────

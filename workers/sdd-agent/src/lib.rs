@@ -33,7 +33,29 @@ mod hooks;
 mod sessions;
 mod subagents;
 mod sdd;
+mod integrations;
 use types::*;
+
+/// Load workflow docs from D1 and enrich a base prompt. Returns base unchanged if
+/// workflow_type is empty or docs not found.
+async fn enrich_prompt(db: &D1Database, base: &str, phase: &str, workflow_type: &str) -> String {
+    if workflow_type.is_empty() {
+        return base.to_string();
+    }
+    match integrations::WorkflowDocsStore::load(db, workflow_type).await {
+        Ok(Some(docs)) => docs.enrich(base, phase),
+        _ => base.to_string(),
+    }
+}
+
+/// Load workflow docs from D1 for pipeline injection.
+async fn load_workflow_docs(db: &D1Database, workflow_type: &str) -> Option<integrations::WorkflowDocs> {
+    if workflow_type.is_empty() {
+        return None;
+    }
+    let _ = integrations::WorkflowDocsStore::ensure_table(db).await;
+    integrations::WorkflowDocsStore::load(db, workflow_type).await.ok().flatten()
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTE HANDLERS
@@ -386,7 +408,11 @@ async fn handle_sdd_new(mut req: Request, ctx: RouteContext<()>) -> Result<Respo
     // Run proposal phase
     let client = deepseek::DeepSeekClient::from_env(&env)?;
     let workflow_type = body["workflow_type"].as_str().unwrap_or("");
-    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    let mut pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    if let Some(docs) = load_workflow_docs(&db, workflow_type).await {
+        pipeline = pipeline.with_workflow_docs(docs);
+    }
+    let pipeline = pipeline;
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.execute_phase(SddPhase::Propose, &change, context).await?;
@@ -422,7 +448,11 @@ async fn handle_sdd_continue(mut req: Request, ctx: RouteContext<()>) -> Result<
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
     let workflow_type = body["workflow_type"].as_str().unwrap_or("");
-    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    let mut pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    if let Some(docs) = load_workflow_docs(&db, workflow_type).await {
+        pipeline = pipeline.with_workflow_docs(docs);
+    }
+    let pipeline = pipeline;
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.continue_change(&mut change, context).await?;
@@ -460,7 +490,11 @@ async fn handle_sdd_ff(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
     let workflow_type = body["workflow_type"].as_str().unwrap_or("");
-    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    let mut pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    if let Some(docs) = load_workflow_docs(&db, workflow_type).await {
+        pipeline = pipeline.with_workflow_docs(docs);
+    }
+    let pipeline = pipeline;
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.fast_forward(&mut change, context).await?;
@@ -498,7 +532,11 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
     let workflow_type = body["workflow_type"].as_str().unwrap_or("");
-    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    let mut pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    if let Some(docs) = load_workflow_docs(&db, workflow_type).await {
+        pipeline = pipeline.with_workflow_docs(docs);
+    }
+    let pipeline = pipeline;
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.full_pipeline(&mut change, context).await?;
@@ -533,7 +571,11 @@ async fn handle_sdd_phase(mut req: Request, ctx: RouteContext<()>) -> Result<Res
 
     let client = deepseek::DeepSeekClient::from_env(&env)?;
     let workflow_type = body["workflow_type"].as_str().unwrap_or("");
-    let pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    let mut pipeline = sdd::SddPipeline::new(client).with_workflow_type(workflow_type);
+    if let Some(docs) = load_workflow_docs(&db, workflow_type).await {
+        pipeline = pipeline.with_workflow_docs(docs);
+    }
+    let pipeline = pipeline;
     let context = body["context"].as_str().unwrap_or("");
 
     let result = pipeline.execute_phase(phase, &change, context).await?;
@@ -553,6 +595,7 @@ async fn handle_sdd_phase(mut req: Request, ctx: RouteContext<()>) -> Result<Res
 async fn handle_sdd_explore(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let body: Value = req.json().await?;
     let env = ctx.env;
+    let db = env.d1("DB")?;
 
     let topic = body["topic"].as_str().unwrap_or("");
     if topic.is_empty() {
@@ -566,7 +609,13 @@ async fn handle_sdd_explore(mut req: Request, ctx: RouteContext<()>) -> Result<R
     );
     let executor = tools::ToolExecutor::new(env.clone());
 
-    let system_prompt = crate::subagents::SDD_EXPLORE_PROMPT.to_string();
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let system_prompt = enrich_prompt(
+        &db,
+        crate::subagents::SDD_EXPLORE_PROMPT,
+        "explore",
+        workflow_type,
+    ).await;
 
     let agent_result = client.agent_loop(
         &system_prompt,
@@ -623,7 +672,13 @@ async fn handle_sdd_apply(mut req: Request, ctx: RouteContext<()>) -> Result<Res
         context,
     );
 
-    let apply_system_prompt = crate::subagents::SDD_APPLY_PROMPT.to_string();
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let apply_system_prompt = enrich_prompt(
+        &db,
+        crate::subagents::SDD_APPLY_PROMPT,
+        "apply",
+        workflow_type,
+    ).await;
 
     let agent_result = client.agent_loop(
         &apply_system_prompt,
@@ -685,7 +740,13 @@ async fn handle_sdd_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         context,
     );
 
-    let verify_system_prompt = crate::subagents::SDD_VERIFY_PROMPT.to_string();
+    let workflow_type = body["workflow_type"].as_str().unwrap_or("");
+    let verify_system_prompt = enrich_prompt(
+        &db,
+        crate::subagents::SDD_VERIFY_PROMPT,
+        "verify",
+        workflow_type,
+    ).await;
 
     let agent_result = client.agent_loop(
         &verify_system_prompt,
@@ -822,6 +883,74 @@ async fn handle_hooks(_req: Request, _ctx: RouteContext<()>) -> Result<Response>
     })))
 }
 
+// ── Workflow Docs (D1-backed integration context) ────────────────────────
+
+/// GET /sdd/docs — List workflow doc types
+async fn handle_sdd_docs_list(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db = ctx.env.d1("DB")?;
+    integrations::WorkflowDocsStore::ensure_table(&db).await?;
+    let docs = integrations::WorkflowDocsStore::list(&db).await?;
+    Response::from_json(&ApiResponse::success(json!({ "workflow_docs": docs })))
+}
+
+/// GET /sdd/docs/:type — Get workflow docs by type
+async fn handle_sdd_docs_get(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db = ctx.env.d1("DB")?;
+    integrations::WorkflowDocsStore::ensure_table(&db).await?;
+    let wt = ctx.param("type").unwrap_or(&String::new()).clone();
+    match integrations::WorkflowDocsStore::load(&db, &wt).await? {
+        Some(docs) => Response::from_json(&ApiResponse::success(json!({
+            "workflow_type": wt,
+            "reference_docs": docs.reference_docs,
+            "phase_contexts": docs.phase_contexts,
+        }))),
+        None => error_response(&format!("Workflow docs '{}' not found", wt)),
+    }
+}
+
+/// POST /sdd/docs — Upsert workflow docs
+/// Body: { "workflow_type": "...", "reference_docs": "...", "phase_contexts": { "explore": "...", ... } }
+async fn handle_sdd_docs_upsert(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let body: Value = req.json().await?;
+    let db = ctx.env.d1("DB")?;
+    integrations::WorkflowDocsStore::ensure_table(&db).await?;
+
+    let wt = body["workflow_type"].as_str().unwrap_or("");
+    if wt.is_empty() {
+        return error_response("'workflow_type' is required");
+    }
+    let reference_docs = body["reference_docs"].as_str().unwrap_or("");
+    let phase_contexts = &body["phase_contexts"];
+
+    integrations::WorkflowDocsStore::save(&db, wt, reference_docs, phase_contexts).await?;
+    Response::from_json(&ApiResponse::success(json!({
+        "workflow_type": wt,
+        "saved": true,
+    })))
+}
+
+/// DELETE /sdd/docs/:type — Delete workflow docs
+async fn handle_sdd_docs_delete(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db = ctx.env.d1("DB")?;
+    let wt = ctx.param("type").unwrap_or(&String::new()).clone();
+    integrations::WorkflowDocsStore::delete(&db, &wt).await?;
+    Response::from_json(&ApiResponse::success(json!({
+        "workflow_type": wt,
+        "deleted": true,
+    })))
+}
+
+/// POST /sdd/docs/seed — Seed default adapter integration docs
+async fn handle_sdd_docs_seed(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let db = ctx.env.d1("DB")?;
+    integrations::WorkflowDocsStore::ensure_table(&db).await?;
+    let seeded = integrations::WorkflowDocsStore::seed_defaults(&db).await?;
+    Response::from_json(&ApiResponse::success(json!({
+        "seeded": seeded,
+        "workflow_type": "adapter_integration",
+    })))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // WORKER ENTRY POINT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -858,6 +987,13 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .post_async("/sdd/verify", handle_sdd_verify)
         .post_async("/sdd/archive", handle_sdd_archive)
         .get_async("/sdd/changes", handle_sdd_list)
+
+        // ── Workflow Docs ───────────────────────────────────────
+        .get_async("/sdd/docs", handle_sdd_docs_list)
+        .get_async("/sdd/docs/:type", handle_sdd_docs_get)
+        .post_async("/sdd/docs", handle_sdd_docs_upsert)
+        .delete_async("/sdd/docs/:type", handle_sdd_docs_delete)
+        .post_async("/sdd/docs/seed", handle_sdd_docs_seed)
 
         // ── Hooks ────────────────────────────────────────────────
         .get_async("/hooks", handle_hooks)

@@ -68,53 +68,68 @@ function ApplicationDetailInner() {
   }, [flashRequirement]);
 
   const handleOpenTopic = useCallback(
-    async (req: AiInterviewPrepRequirement) => {
+    (req: AiInterviewPrepRequirement) => {
       setSelectedReq(req);
       setDeepDiveError(null);
-      if (!req.deepDive) {
-        setDeepDiveLoading(true);
-        try {
-          const result = await generateTopicDeepDive({
-            variables: { applicationId: app!.id, requirement: req.requirement },
-            refetchQueries: ["GetApplication"],
-          });
-          const updatedReqs = result.data?.generateTopicDeepDive?.aiInterviewPrep?.requirements;
-          const updatedReq = updatedReqs?.find((r) => r.requirement === req.requirement);
-          if (updatedReq) setSelectedReq(updatedReq as AiInterviewPrepRequirement);
-        } catch (e) {
-          setDeepDiveError(e instanceof Error ? e.message : "Generation failed");
-        } finally {
-          setDeepDiveLoading(false);
-        }
+    },
+    [],
+  );
+
+  const handleGenerateDeepDive = useCallback(
+    async () => {
+      if (!selectedReq || !app) return;
+      setDeepDiveLoading(true);
+      setDeepDiveError(null);
+      try {
+        const result = await generateTopicDeepDive({
+          variables: { applicationId: app.id, requirement: selectedReq.requirement },
+          refetchQueries: ["GetApplication"],
+        });
+        const updatedReqs = result.data?.generateTopicDeepDive?.aiInterviewPrep?.requirements;
+        const updatedReq = updatedReqs?.find((r) => r.requirement === selectedReq.requirement);
+        if (updatedReq) setSelectedReq(updatedReq as AiInterviewPrepRequirement);
+      } catch (e) {
+        setDeepDiveError(e instanceof Error ? e.message : "Generation failed");
+      } finally {
+        setDeepDiveLoading(false);
       }
     },
-    [app, generateTopicDeepDive],
+    [selectedReq, app, generateTopicDeepDive],
   );
 
   const handleOpenStudyTopic = useCallback(
-    async (e: React.MouseEvent, req: AiInterviewPrepRequirement, topic: string) => {
+    (e: React.MouseEvent, req: AiInterviewPrepRequirement, topic: string) => {
       e.stopPropagation();
-      const existing = req.studyTopicDeepDives?.find((d) => d.topic === topic);
       setSelectedStudyTopic({ req, topic });
       setStudyTopicError(null);
-      if (!existing?.deepDive) {
-        setStudyTopicLoading(true);
-        try {
-          const result = await generateStudyTopicDeepDive({
-            variables: { applicationId: app!.id, requirement: req.requirement, studyTopic: topic },
-            refetchQueries: ["GetApplication"],
-          });
-          const updatedReqs = result.data?.generateStudyTopicDeepDive?.aiInterviewPrep?.requirements;
-          const updatedReq = updatedReqs?.find((r) => r.requirement === req.requirement);
-          if (updatedReq) setSelectedStudyTopic({ req: updatedReq as AiInterviewPrepRequirement, topic });
-        } catch (e) {
-          setStudyTopicError(e instanceof Error ? e.message : "Generation failed");
-        } finally {
-          setStudyTopicLoading(false);
-        }
+    },
+    [],
+  );
+
+  const handleGenerateStudyTopicDeepDive = useCallback(
+    async () => {
+      if (!selectedStudyTopic || !app) return;
+      setStudyTopicLoading(true);
+      setStudyTopicError(null);
+      try {
+        const result = await generateStudyTopicDeepDive({
+          variables: {
+            applicationId: app.id,
+            requirement: selectedStudyTopic.req.requirement,
+            studyTopic: selectedStudyTopic.topic,
+          },
+          refetchQueries: ["GetApplication"],
+        });
+        const updatedReqs = result.data?.generateStudyTopicDeepDive?.aiInterviewPrep?.requirements;
+        const updatedReq = updatedReqs?.find((r) => r.requirement === selectedStudyTopic.req.requirement);
+        if (updatedReq) setSelectedStudyTopic({ req: updatedReq as AiInterviewPrepRequirement, topic: selectedStudyTopic.topic });
+      } catch (e) {
+        setStudyTopicError(e instanceof Error ? e.message : "Generation failed");
+      } finally {
+        setStudyTopicLoading(false);
       }
     },
-    [app, generateStudyTopicDeepDive],
+    [selectedStudyTopic, app, generateStudyTopicDeepDive],
   );
 
   const handleLinkSource = useCallback(
@@ -226,6 +241,7 @@ function ApplicationDetailInner() {
         onClose={() => { setSelectedReq(null); setDeepDiveError(null); }}
         deepDiveLoading={deepDiveLoading}
         deepDiveError={deepDiveError}
+        onGenerateDeepDive={handleGenerateDeepDive}
         onOpenStudyTopic={handleOpenStudyTopic}
         onLinkSource={handleLinkSource}
         companyKey={app.companyKey}
@@ -236,6 +252,7 @@ function ApplicationDetailInner() {
         onClose={() => { setSelectedStudyTopic(null); setStudyTopicError(null); }}
         studyTopicLoading={studyTopicLoading}
         studyTopicError={studyTopicError}
+        onGenerate={handleGenerateStudyTopicDeepDive}
       />
     </Container>
   );

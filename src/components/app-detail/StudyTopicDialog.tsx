@@ -9,6 +9,7 @@ import {
   Text,
   Dialog,
 } from "@radix-ui/themes";
+import { PlusIcon, ReloadIcon } from "@radix-ui/react-icons";
 import type { AiInterviewPrepRequirement } from "@/__generated__/hooks";
 
 interface StudyTopicDialogProps {
@@ -16,6 +17,7 @@ interface StudyTopicDialogProps {
   onClose: () => void;
   studyTopicLoading: boolean;
   studyTopicError: string | null;
+  onGenerate: () => void;
 }
 
 export function StudyTopicDialog({
@@ -23,6 +25,7 @@ export function StudyTopicDialog({
   onClose,
   studyTopicLoading,
   studyTopicError,
+  onGenerate,
 }: StudyTopicDialogProps) {
   return (
     <Dialog.Root
@@ -41,9 +44,7 @@ export function StudyTopicDialog({
             <Box pt="2">
               {studyTopicLoading ? (
                 <Flex direction="column" gap="3" py="4" align="center">
-                  <Text size="2" color="gray">
-                    Generating focused deep-dive with DeepSeek Reasoner…
-                  </Text>
+                  <Text size="2" color="gray">Generating focused deep-dive…</Text>
                   <Flex gap="2">
                     {[0, 1, 2].map((i) => (
                       <Box
@@ -60,18 +61,35 @@ export function StudyTopicDialog({
                   </Flex>
                 </Flex>
               ) : studyTopicError ? (
-                <Text size="2" color="red">
-                  {studyTopicError}
-                </Text>
+                <Flex direction="column" gap="2">
+                  <Text size="2" color="red">{studyTopicError}</Text>
+                  <Button size="1" variant="soft" onClick={onGenerate}>
+                    <ReloadIcon /> Retry
+                  </Button>
+                </Flex>
               ) : (() => {
                 const d = selectedStudyTopic.req.studyTopicDeepDives?.find(
                   (d) => d.topic === selectedStudyTopic.topic,
                 );
                 return d?.deepDive ? (
-                  <Box className="deep-dive-content">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{d.deepDive}</ReactMarkdown>
-                  </Box>
-                ) : null;
+                  <>
+                    <Flex justify="end" mb="2">
+                      <Button variant="ghost" size="1" color="gray" onClick={onGenerate}>
+                        <ReloadIcon /> Regenerate
+                      </Button>
+                    </Flex>
+                    <Box className="deep-dive-content">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{d.deepDive}</ReactMarkdown>
+                    </Box>
+                  </>
+                ) : (
+                  <Flex direction="column" align="start" gap="2" py="2">
+                    <Text size="2" color="gray">No deep dive generated yet.</Text>
+                    <Button size="2" variant="soft" onClick={onGenerate}>
+                      <PlusIcon /> Generate deep dive
+                    </Button>
+                  </Flex>
+                );
               })()}
             </Box>
             <Flex justify="end" mt="4">

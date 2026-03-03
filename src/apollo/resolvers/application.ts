@@ -319,7 +319,7 @@ export const applicationResolvers = {
 
       const client = createDeepSeekClient();
       const response = await client.chat({
-        model: DEEPSEEK_MODELS.REASONER,
+        model: DEEPSEEK_MODELS.CHAT,
         messages: [
           {
             role: "user",
@@ -663,7 +663,7 @@ Extract 4-6 key requirements from the job description. For each: 2-3 tailored in
 
       const client = createDeepSeekClient();
       const response = await client.chat({
-        model: DEEPSEEK_MODELS.REASONER,
+        model: DEEPSEEK_MODELS.CHAT,
         messages: [
           {
             role: "user",

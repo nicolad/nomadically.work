@@ -9,7 +9,7 @@ import {
   Text,
   Dialog,
 } from "@radix-ui/themes";
-import { Link2Icon } from "@radix-ui/react-icons";
+import { Link2Icon, PlusIcon, ReloadIcon } from "@radix-ui/react-icons";
 import type { AiInterviewPrepRequirement } from "@/__generated__/hooks";
 import Link from "next/link";
 
@@ -18,6 +18,7 @@ interface RequirementDialogProps {
   onClose: () => void;
   deepDiveLoading: boolean;
   deepDiveError: string | null;
+  onGenerateDeepDive: () => void;
   onOpenStudyTopic: (e: React.MouseEvent, req: AiInterviewPrepRequirement, topic: string) => void;
   onLinkSource: (requirement: string) => void;
   companyKey: string | null;
@@ -28,6 +29,7 @@ export function RequirementDialog({
   onClose,
   deepDiveLoading,
   deepDiveError,
+  onGenerateDeepDive,
   onOpenStudyTopic,
   onLinkSource,
   companyKey,
@@ -105,14 +107,19 @@ export function RequirementDialog({
 
             {/* Deep dive section */}
             <Box pt="4" style={{ borderTop: "1px solid var(--gray-4)" }}>
-              <Text size="1" color="gray" weight="medium" mb="3" as="div">
-                DEEP DIVE
-              </Text>
+              <Flex justify="between" align="center" mb="3">
+                <Text size="1" color="gray" weight="medium" as="div">
+                  DEEP DIVE
+                </Text>
+                {selectedReq.deepDive && !deepDiveLoading && (
+                  <Button variant="ghost" size="1" color="gray" onClick={onGenerateDeepDive}>
+                    <ReloadIcon /> Regenerate
+                  </Button>
+                )}
+              </Flex>
               {deepDiveLoading ? (
                 <Flex direction="column" gap="3" py="4" align="center">
-                  <Text size="2" color="gray">
-                    Generating deep-dive with DeepSeek Reasoner…
-                  </Text>
+                  <Text size="2" color="gray">Generating deep-dive…</Text>
                   <Flex gap="2">
                     {[0, 1, 2].map((i) => (
                       <Box
@@ -129,14 +136,24 @@ export function RequirementDialog({
                   </Flex>
                 </Flex>
               ) : deepDiveError ? (
-                <Text size="2" color="red">
-                  {deepDiveError}
-                </Text>
+                <Flex direction="column" gap="2">
+                  <Text size="2" color="red">{deepDiveError}</Text>
+                  <Button size="1" variant="soft" onClick={onGenerateDeepDive}>
+                    <ReloadIcon /> Retry
+                  </Button>
+                </Flex>
               ) : selectedReq.deepDive ? (
                 <Box className="deep-dive-content">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedReq.deepDive}</ReactMarkdown>
                 </Box>
-              ) : null}
+              ) : (
+                <Flex direction="column" align="start" gap="2">
+                  <Text size="2" color="gray">No deep dive generated yet.</Text>
+                  <Button size="2" variant="soft" onClick={onGenerateDeepDive}>
+                    <PlusIcon /> Generate deep dive
+                  </Button>
+                </Flex>
+              )}
             </Box>
 
             <Flex justify="between" mt="4" align="center">

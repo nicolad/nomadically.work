@@ -13,6 +13,7 @@ export function UnifiedJobsProvider() {
   const searchParams = useSearchParams();
   const searchFilter = searchParams.get("q") ?? "";
   const sourcesFilter = (searchParams.get("source") ?? "").split(",").filter(Boolean);
+  const showAll = searchParams.get("showAll") === "1";
 
   const handleSearch = useCallback(
     (query: string) => {
@@ -63,7 +64,7 @@ export function UnifiedJobsProvider() {
         </Flex>
       </Box>
       <Box>
-        <JobsList searchFilter={searchFilter} sourceTypes={sourcesFilter} />
+        <JobsList searchFilter={searchFilter} sourceTypes={sourcesFilter} showAll={showAll} />
       </Box>
     </>
   );

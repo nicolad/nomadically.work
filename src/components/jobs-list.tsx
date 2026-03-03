@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useMemo, useState } from "react";
+import { useRef, useCallback, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   jobListCard,
@@ -45,6 +45,7 @@ type Job = GetJobsQuery["jobs"]["jobs"][number];
 interface JobsListProps {
   searchFilter?: string;
   sourceTypes?: string[];
+  showAll?: boolean;
 }
 
 const getStatusLabel = (status: Job["status"]): string => {
@@ -63,7 +64,7 @@ const getStatusLabel = (status: Job["status"]): string => {
 };
 
 
-export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
+export function JobsList({ searchFilter = "", sourceTypes, showAll }: JobsListProps) {
   const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useAuth();
@@ -71,6 +72,24 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
   const [reportJobMutation] = useReportJobMutation();
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  const scrollRestoredRef = useRef(false);
+
+  // Save scroll position for admin
+  useEffect(() => {
+    if (!isAdmin) return;
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        localStorage.setItem("nomadically:admin:scroll", String(window.scrollY));
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isAdmin]);
 
   const { data: userSettingsData } = useGetUserSettingsQuery({
     variables: { userId: user?.id || "" },
@@ -147,8 +166,9 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
       sourceTypes: sourceTypes && sourceTypes.length > 0 ? sourceTypes : undefined,
       excludedCompanies:
         excludedCompanies.length > 0 ? excludedCompanies : undefined,
+      showAll: showAll || undefined,
     }),
-    [searchFilter, excludedCompanies, sourceTypes, preferredSkills],
+    [searchFilter, excludedCompanies, sourceTypes, preferredSkills, showAll],
   );
 
   const { loading, error, data, refetch, fetchMore } = useGetJobsQuery({
@@ -160,6 +180,16 @@ export function JobsList({ searchFilter = "", sourceTypes }: JobsListProps) {
   const jobs = data?.jobs.jobs || [];
   const totalCount = data?.jobs.totalCount || 0;
   const hasMore = jobs.length < totalCount;
+
+  // Restore scroll position after first data load (admin only)
+  useEffect(() => {
+    if (!isAdmin || scrollRestoredRef.current || !data) return;
+    scrollRestoredRef.current = true;
+    const saved = localStorage.getItem("nomadically:admin:scroll");
+    if (saved) {
+      window.scrollTo({ top: parseInt(saved, 10), behavior: "instant" });
+    }
+  }, [isAdmin, data]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loading) return;

@@ -621,7 +621,7 @@ export function CompanyDetail({ companyKey, companyId }: Props) {
   const effectiveKey = companyKey ?? company?.key;
 
   const { data: jobsData, loading: jobsLoading } = useGetJobsQuery({
-    variables: { search: effectiveKey, limit: 100, status: "active" },
+    variables: { search: effectiveKey, limit: 100, showAll: true },
     skip: !effectiveKey,
   });
   const companyJobs = (jobsData?.jobs?.jobs ?? []).filter(

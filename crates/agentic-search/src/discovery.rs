@@ -18,6 +18,12 @@ pub struct SourceLocation {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct Alternative {
+    pub name: String,
+    pub reason_not_chosen: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct DiscoveredEntry {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,6 +35,20 @@ pub struct DiscoveredEntry {
     pub facts: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source_locations: Vec<SourceLocation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub why_chosen: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pros: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cons: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternatives_considered: Vec<Alternative>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trade_offs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patterns_used: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interview_points: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,7 +98,10 @@ const TARGETS: &[Target] = &[
         hints: "Read src/db/schema.ts and count table definitions. \
                 Glob migrations/*.sql and count files. \
                 Read workers/d1-gateway.ts for gateway details. \
-                Read wrangler.d1-gateway.toml for binding config.",
+                Read wrangler.d1-gateway.toml for binding config. \
+                Check src/db/d1-http.ts to understand the gateway pattern. \
+                Look for Turso/libSQL references for migration history. \
+                Grep for 'hasMore' to find pagination patterns.",
     },
     Target {
         label: "AI / ML",
@@ -87,7 +110,9 @@ const TARGETS: &[Target] = &[
         hints: "Read package.json for AI SDK versions. Glob src/agents/**/* and count agents. \
                 Glob src/anthropic/**/* for Claude integrations. \
                 Read workers/process-jobs/wrangler.jsonc for classification worker config. \
-                Grep for 'deepseek' and 'claude' in src/ to find actual usage sites.",
+                Grep for 'deepseek' and 'claude' in src/ to find actual usage sites. \
+                Check src/observability/prompts.ts for eval-first patterns. \
+                Look for multi-model routing patterns across agents.",
     },
     Target {
         label: "Observability",
@@ -104,7 +129,9 @@ const TARGETS: &[Target] = &[
         technologies: "janitor, insert-jobs, process-jobs, ashby-crawler (Rust/WASM), resume-rag (Python)",
         hints: "Glob workers/**/wrangler*.toml and read each one for: runtime, cron triggers, \
                 queue bindings, D1 bindings. Read workers/ashby-crawler/Cargo.toml for Rust deps. \
-                Count source files in each worker directory.",
+                Count source files in each worker directory. \
+                Check workers/ashby-crawler/src/lib.rs for rig_compat patterns and BM25 search. \
+                Look for language choice rationale (Rust for CPU-bound, Python for LLM, TS for I/O).",
     },
     Target {
         label: "Background Jobs",
@@ -155,7 +182,13 @@ impl DiscoveryWorker {
              5. For each entry, find the EXACT files and line numbers where that technology is used.\n\
                 Use grep to locate import statements, config keys, or usage sites. Record file paths\n\
                 relative to project root (e.g. src/db/schema.ts) and the first relevant line number.\n\
-             6. When done, respond with ONLY a valid JSON object — no markdown, no explanation.\n\n\
+             6. Reason about WHY this technology was chosen based on code evidence — what alternatives\n\
+                exist in the ecosystem and why this project chose differently.\n\
+             7. Identify design patterns visible in the implementation (e.g. gateway pattern, DataLoader,\n\
+                lazy initialization, schema-first development).\n\
+             8. Write 3-5 interview talking points — concise, opinionated, experience-based. Each should\n\
+                be a sentence you could say in a technical interview to demonstrate deep understanding.\n\
+             9. When done, respond with ONLY a valid JSON object — no markdown, no explanation.\n\n\
              OUTPUT SCHEMA (respond with ONLY this JSON, nothing else):\n\
              {{\n\
                \"label\": \"{label}\",\n\
@@ -171,7 +204,16 @@ impl DiscoveryWorker {
                    \"source_locations\": [\n\
                      {{ \"path\": \"src/db/schema.ts\", \"line\": 1, \"note\": \"Drizzle schema entrypoint\" }},\n\
                      {{ \"path\": \"package.json\", \"line\": 73, \"note\": \"drizzle-orm dependency\" }}\n\
-                   ]\n\
+                   ],\n\
+                   \"why_chosen\": \"1-2 sentences on WHY this tech was chosen over alternatives, based on code evidence\",\n\
+                   \"pros\": [\"Advantage 1\", \"Advantage 2\", \"Advantage 3\"],\n\
+                   \"cons\": [\"Drawback 1\", \"Drawback 2\"],\n\
+                   \"alternatives_considered\": [\n\
+                     {{ \"name\": \"AlternativeTech\", \"reason_not_chosen\": \"Why it was not chosen\" }}\n\
+                   ],\n\
+                   \"trade_offs\": [\"Trade-off decision 1\", \"Trade-off decision 2\"],\n\
+                   \"patterns_used\": [\"Pattern visible in implementation\"],\n\
+                   \"interview_points\": [\"Concise talking point for a technical interview\"]\n\
                  }}\n\
                ]\n\
              }}",
@@ -505,5 +547,68 @@ mod tests {
         let raw = r#"{"label":"Frontend","color":"violet","entries":[{"name":"X","role":"r","details":"d","facts":[]}]}"#;
         let group = parse_group_json(raw, dummy_target()).unwrap();
         assert!(group.entries[0].source_locations.is_empty());
+    }
+
+    #[test]
+    fn old_json_without_new_fields_deserializes() {
+        // Backward compat: old discovery.json without interview fields
+        let raw = r#"{"label":"Frontend","color":"violet","entries":[{"name":"Next.js","version":"16.0.0","role":"App Router","url":"https://nextjs.org","details":"Details here.","facts":["fact1"],"source_locations":[{"path":"package.json","line":1,"note":"dep"}]}]}"#;
+        let group = parse_group_json(raw, dummy_target()).unwrap();
+        let entry = &group.entries[0];
+        assert_eq!(entry.name, "Next.js");
+        assert!(entry.why_chosen.is_none());
+        assert!(entry.pros.is_empty());
+        assert!(entry.cons.is_empty());
+        assert!(entry.alternatives_considered.is_empty());
+        assert!(entry.trade_offs.is_empty());
+        assert!(entry.patterns_used.is_empty());
+        assert!(entry.interview_points.is_empty());
+    }
+
+    #[test]
+    fn new_json_with_all_fields_deserializes() {
+        let raw = r#"{
+            "label": "Database",
+            "color": "cyan",
+            "entries": [{
+                "name": "D1",
+                "role": "Edge DB",
+                "details": "SQLite on CF.",
+                "facts": ["fact"],
+                "source_locations": [],
+                "why_chosen": "Native Worker bindings.",
+                "pros": ["Fast", "Free tier"],
+                "cons": ["Beta"],
+                "alternatives_considered": [
+                    {"name": "Turso", "reason_not_chosen": "No native binding"},
+                    {"name": "Neon", "reason_not_chosen": "TCP overhead"}
+                ],
+                "trade_offs": ["Accepted gateway hop"],
+                "patterns_used": ["Gateway pattern"],
+                "interview_points": ["We migrated from Turso to D1 for native bindings"]
+            }]
+        }"#;
+        let group = parse_group_json(raw, dummy_target()).unwrap();
+        let entry = &group.entries[0];
+        assert_eq!(entry.why_chosen.as_deref(), Some("Native Worker bindings."));
+        assert_eq!(entry.pros.len(), 2);
+        assert_eq!(entry.cons.len(), 1);
+        assert_eq!(entry.alternatives_considered.len(), 2);
+        assert_eq!(entry.alternatives_considered[0].name, "Turso");
+        assert_eq!(entry.trade_offs.len(), 1);
+        assert_eq!(entry.patterns_used.len(), 1);
+        assert_eq!(entry.interview_points.len(), 1);
+    }
+
+    #[test]
+    fn alternative_struct_serialization_round_trip() {
+        let alt = Alternative {
+            name: "Prisma".to_string(),
+            reason_not_chosen: "Binary engine can't run on Workers".to_string(),
+        };
+        let json = serde_json::to_string(&alt).unwrap();
+        let parsed: Alternative = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "Prisma");
+        assert_eq!(parsed.reason_not_chosen, "Binary engine can't run on Workers");
     }
 }

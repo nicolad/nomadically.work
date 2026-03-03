@@ -10,6 +10,10 @@
  *   pnpm eval:langfuse
  */
 
+// Load .env.local with override=true so project keys take precedence over shell env
+import { config as dotenvConfig } from "dotenv";
+dotenvConfig({ path: new URL("../.env.local", import.meta.url).pathname, override: true });
+
 import { Langfuse } from "langfuse";
 import { getPrompt, PROMPTS } from "../src/observability";
 import { remoteEUTestCases } from "../src/evals/remote-eu/test-data";

@@ -6,6 +6,7 @@ query GetJobs(
   $offset: Int
   $excludedCompanies: [String!]
   $skills: [String!]
+  $showAll: Boolean
 ) {
   jobs(
     sourceType: $sourceType
@@ -15,6 +16,7 @@ query GetJobs(
     offset: $offset
     excludedCompanies: $excludedCompanies
     skills: $skills
+    showAll: $showAll
   ) {
     jobs {
       id

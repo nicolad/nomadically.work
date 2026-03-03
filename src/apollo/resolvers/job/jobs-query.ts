@@ -50,7 +50,8 @@ export async function jobsQuery(
     }
 
     // Always filter to remote EU jobs (REMOTE_EU_ONLY = true in src/lib/constants.ts)
-    if (REMOTE_EU_ONLY) {
+    // showAll bypasses this filter (admin-only UI toggle)
+    if (REMOTE_EU_ONLY && !args.showAll) {
       conditions.push(eq(jobs.is_remote_eu, true));
     }
 

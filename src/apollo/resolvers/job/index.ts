@@ -7,7 +7,6 @@ import { jobsQuery } from "./jobs-query";
 import { enhanceJobFromATS } from "./enhance-job";
 import { processAllJobs } from "./process-all-jobs";
 import { JOB_STATUS } from "@/constants/job-status";
-import { REMOTE_EU_ONLY } from "@/lib/constants";
 import type {
   JobResolvers,
   QueryResolvers,
@@ -286,9 +285,9 @@ const Query: QueryResolvers = {
           '5',''),'6',''),'7',''),'8',''),'9',''))
         AS REAL) > LENGTH(${jobs.company_key}) * 0.6
       )`;
-      const baseConditions = REMOTE_EU_ONLY
-        ? [ne(jobs.status, "reported"), eq(jobs.is_remote_eu, true), spamKeyFilter]
-        : [ne(jobs.status, "reported"), spamKeyFilter];
+      // Do NOT filter by is_remote_eu for single-job lookups — a direct link
+      // to a job should resolve even if it hasn't been classified yet.
+      const baseConditions = [ne(jobs.status, "reported"), spamKeyFilter];
 
       // 1. Exact match on external_id (Ashby UUIDs, bare IDs)
       const exactResults = await context.db

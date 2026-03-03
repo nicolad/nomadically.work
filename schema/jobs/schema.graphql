@@ -8,6 +8,7 @@ extend type Query {
     excludedCompanies: [String!]
     remoteEuConfidence: String
     skills: [String!]
+    showAll: Boolean
   ): JobsResponse!
   job(id: String!): Job
   userSettings(userId: String!): UserSettings

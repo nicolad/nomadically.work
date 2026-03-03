@@ -3,118 +3,16 @@
 // Local-only page. Run `pnpm stack:discover` to populate discovery.json.
 // Not linked from the sidebar in production (see sidebar.tsx IS_DEV guard).
 
+import { useState } from "react";
 import { Badge, Card, Container, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
-import { LayersIcon, ExternalLinkIcon, UpdateIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
+import { LayersIcon, ExternalLinkIcon, UpdateIcon, GitHubLogoIcon, ChevronDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import discoveryRaw from "./discovery.json";
+import type { StackEntry, StackGroup, DiscoveryData } from "./types";
+import { FALLBACK } from "./fallback-data";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
 
 const GITHUB_BASE = "https://github.com/nicolad/nomadically.work/blob/main";
-
-type SourceLocation = {
-  path: string;
-  line?: number | null;
-  note: string;
-};
-
-type StackEntry = {
-  name: string;
-  version?: string | null;
-  role: string;
-  url?: string | null;
-  details: string;
-  facts?: string[];
-  source_locations?: SourceLocation[];
-};
-
-type StackGroup = {
-  label: string;
-  color: "violet" | "blue" | "cyan" | "orange" | "green" | "amber" | "crimson" | "indigo";
-  entries: StackEntry[];
-};
-
-type DiscoveryData = {
-  generated_at: string | null;
-  root: string | null;
-  groups: StackGroup[];
-};
-
-// ── Hardcoded fallback (shown when discovery.json has no groups) ──────────────
-
-const FALLBACK: StackGroup[] = [
-  {
-    label: "Frontend",
-    color: "violet",
-    entries: [
-      { name: "Next.js 16", role: "App Router, SSR/RSC, API routes", url: "https://nextjs.org", details: "All pages use the App Router with React Server Components where possible. API routes under /api/ handle GraphQL (/api/graphql), job enhancement (/api/enhance-greenhouse-jobs), company import (/api/companies/bulk-import), and text-to-SQL (/api/text-to-sql). Route max duration is set to 60s in vercel.json to accommodate slow ATS API calls." },
-      { name: "React 19", role: "UI rendering, Server Components", url: "https://react.dev", details: "Client components are marked with 'use client' and handle interactive state (search, filters, modals). Server Components fetch data directly or via Apollo. Providers (auth, sidebar, theme) are wrapped in *-provider.tsx files under src/components/." },
-      { name: "Radix UI", role: "Themes + Icons — accessible primitives", url: "https://radix-ui.com", details: "Radix Themes provides the design system: Container, Card, Flex, Grid, Heading, Text, Badge, Button, Dialog, Select, TextField. Radix Icons is the icon set throughout the sidebar and pages." },
-      { name: "Clerk", role: "Authentication and user management", url: "https://clerk.com", details: "Clerk handles sign-in, sign-up, and session management. The current user's email is checked against ADMIN_EMAIL (src/lib/admin.ts) to gate admin mutations." },
-    ],
-  },
-  {
-    label: "API",
-    color: "blue",
-    entries: [
-      { name: "Apollo Server 5", role: "GraphQL endpoint at /api/graphql", url: "https://www.apollographql.com/docs/apollo-server", details: "The main API layer. Schema is split by domain under schema/ (jobs, companies, applications, prompts). Resolvers live in src/apollo/resolvers/. The GraphQL context injects the D1 HTTP client, Drizzle ORM instance, DataLoaders, and Clerk auth info." },
-      { name: "Vercel", role: "Hosting, edge network, 60s max route duration", url: "https://vercel.com", details: "Hosts the Next.js app. Deployment is triggered via pnpm deploy (scripts/deploy.ts). The 60-second function timeout is critical for long-running GraphQL mutations that call external ATS APIs." },
-    ],
-  },
-  {
-    label: "Database",
-    color: "cyan",
-    entries: [
-      { name: "Cloudflare D1", role: "SQLite-compatible edge database", url: "https://developers.cloudflare.com/d1", details: "Primary datastore for jobs, companies, applications, skills, contacts, and ATS sources. Schema defined in src/db/schema.ts using Drizzle SQLite core. Migrations live in migrations/ and are applied with pnpm db:push." },
-      { name: "Drizzle ORM", role: "Type-safe query builder + migrations", url: "https://orm.drizzle.team", details: "All application queries use Drizzle's typed builder — never raw SQL strings. Types are derived from schema inference (typeof jobs.$inferSelect). Pagination uses the hasMore trick (limit + 1) to avoid extra COUNT queries." },
-      { name: "D1 Gateway Worker", role: "HTTP proxy with D1 binding, supports batch queries", url: "https://developers.cloudflare.com/workers", details: "workers/d1-gateway.ts runs as a Cloudflare Worker with a direct D1 binding. The Next.js app calls it over HTTP (authenticated via API_KEY secret). Supports batched queries to reduce round trips." },
-    ],
-  },
-  {
-    label: "AI / ML",
-    color: "orange",
-    entries: [
-      { name: "DeepSeek", role: "Remote EU job classification (process-jobs worker)", url: "https://www.deepseek.com", details: "The process-jobs Python worker runs on a 6-hour cron + queue trigger. Feeds unprocessed job descriptions to DeepSeek to determine whether a job is genuinely remote and EU-eligible, setting is_remote_eu = 1 in D1." },
-      { name: "Anthropic Claude", role: "Agent SDK, sub-agents, architect, MCP tools", url: "https://www.anthropic.com", details: "Powers the SQL agent (src/agents/), strategy enforcer (src/agents/strategy-enforcer.ts), and architect sub-agents (src/anthropic/). MCP tool definitions are in src/anthropic/mcp/." },
-      { name: "Vercel AI SDK", role: "Streaming, tool use, multi-model routing", url: "https://sdk.vercel.ai", details: "Provides a unified interface for calling Claude, DeepSeek, and other models. Used in src/agents/ for streaming responses, tool invocation, and structured output generation." },
-      { name: "OpenRouter", role: "Model gateway for multi-provider routing", url: "https://openrouter.ai", details: "Acts as a fallback and comparison gateway when testing multiple models against the same prompt." },
-      { name: "Google ADK", role: "Agent Development Kit integration", url: "https://google.com", details: "Google Agent Development Kit is integrated for exploring multi-agent orchestration patterns alongside the Anthropic Agent SDK." },
-    ],
-  },
-  {
-    label: "Observability",
-    color: "green",
-    entries: [
-      { name: "Langfuse", role: "LLM tracing, prompt versioning, scoring", url: "https://langfuse.com", details: "Central observability layer for all LLM calls. Prompt versions managed and fetched at runtime. Session scoring from stop_hook.py writes accuracy scores back for trend tracking." },
-      { name: "LangSmith", role: "Trace logging for LangChain-based pipelines", url: "https://smith.langchain.com", details: "Used alongside Langfuse for pipelines that use LangChain/LangGraph primitives (resume-rag, process-jobs). Provides dataset management for running evals against captured production traces." },
-    ],
-  },
-  {
-    label: "Workers",
-    color: "amber",
-    entries: [
-      { name: "janitor", role: "Daily cron — triggers ATS ingestion", details: "Runs at midnight UTC daily. Scans all active ATS sources in D1 and enqueues ingestion jobs for Greenhouse, Lever, and Ashby boards." },
-      { name: "insert-jobs", role: "Queue-based job insertion from ATS APIs", details: "Processes messages from the ingestion queue. Fetches job listings from ATS APIs, deduplicates by external_id, and upserts into D1." },
-      { name: "process-jobs", role: "Python/LangGraph — DeepSeek classification every 6h", details: "Python Worker using LangGraph for the classification state machine. Runs every 6 hours and on queue trigger. Sets is_remote_eu on each classified job." },
-      { name: "ashby-crawler", role: "Rust/WASM — Common Crawl → Ashby boards → D1", details: "Written in Rust compiled to WASM via worker-build. Crawls Common Crawl CDX index to discover Ashby job boards and runs TF-IDF vector search." },
-      { name: "resume-rag", role: "Python — Vectorize + Workers AI resume matching", details: "Uses Cloudflare Vectorize for resume embeddings and Workers AI for generating them. Performs vector similarity search to rank job matches." },
-    ],
-  },
-  {
-    label: "Background Jobs",
-    color: "indigo",
-    entries: [
-      { name: "Trigger.dev", role: "Managed task queues for job enhancement", url: "https://trigger.dev", details: "Tasks live in src/trigger/ and are registered in trigger.config.ts. Used primarily for job enhancement — fetching full job details from ATS APIs after initial ingestion." },
-    ],
-  },
-  {
-    label: "Evaluation",
-    color: "crimson",
-    entries: [
-      { name: "Langfuse Evals", role: "LLM evaluation with tracing and scoring", url: "https://langfuse.com", details: "Langfuse-native evaluation script (scripts/eval-remote-eu-langfuse.ts) runs classification evals with full tracing, prompt versioning, and accuracy scoring. The optimization strategy requires >= 80% accuracy before any prompt or model change ships." },
-      { name: "Vitest", role: "Unit and eval tests (src/evals/)", url: "https://vitest.dev", details: "src/evals/ contains eval test files for the classification pipeline, skill extraction quality, and worker correctness." },
-    ],
-  },
-];
 
 // ── Resolve data source ───────────────────────────────────────────────────────
 
@@ -122,11 +20,60 @@ const discovery = discoveryRaw as unknown as DiscoveryData;
 const isDiscovered = Array.isArray(discovery.groups) && discovery.groups.length > 0;
 const STACK: StackGroup[] = isDiscovered ? (discovery.groups as StackGroup[]) : FALLBACK;
 
+// ── CollapsibleSection ───────────────────────────────────────────────────────
+
+function CollapsibleSection({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <Flex direction="column" gap="1" mt="4">
+      <Flex
+        align="center"
+        gap="1"
+        style={{ cursor: "pointer", userSelect: "none" }}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? (
+          <ChevronDownIcon width={12} height={12} style={{ color: "var(--gray-9)" }} />
+        ) : (
+          <ChevronRightIcon width={12} height={12} style={{ color: "var(--gray-9)" }} />
+        )}
+        <Text size="1" weight="medium" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          {title}
+        </Text>
+      </Flex>
+      {open && <div style={{ marginTop: 4 }}>{children}</div>}
+    </Flex>
+  );
+}
+
 // ── Components ────────────────────────────────────────────────────────────────
 
 function EntryModal({ entry, color }: { entry: StackEntry; color: StackGroup["color"] }) {
   const hasFacts = Array.isArray(entry.facts) && entry.facts.length > 0;
   const hasLocations = Array.isArray(entry.source_locations) && entry.source_locations.length > 0;
+  const hasWhyChosen = !!entry.why_chosen;
+  const hasInterviewPoints = Array.isArray(entry.interview_points) && entry.interview_points.length > 0;
+  const hasPros = Array.isArray(entry.pros) && entry.pros.length > 0;
+  const hasCons = Array.isArray(entry.cons) && entry.cons.length > 0;
+  const hasAlternatives = Array.isArray(entry.alternatives_considered) && entry.alternatives_considered.length > 0;
+  const hasTradeOffs = Array.isArray(entry.trade_offs) && entry.trade_offs.length > 0;
+  const hasPatterns = Array.isArray(entry.patterns_used) && entry.patterns_used.length > 0;
+
+  // Badge text
+  const badgeText = hasInterviewPoints
+    ? `${entry.interview_points!.length} interview pts`
+    : hasFacts
+      ? `${entry.facts!.length} facts`
+      : "details";
 
   return (
     <Dialog.Root>
@@ -143,13 +90,13 @@ function EntryModal({ entry, color }: { entry: StackEntry; color: StackGroup["co
               <Text size="1" color="gray">{entry.role}</Text>
             </Flex>
             <Badge color={color} variant="soft" size="1" style={{ flexShrink: 0 }}>
-              {hasFacts ? `${entry.facts!.length} facts` : "details"}
+              {badgeText}
             </Badge>
           </Flex>
         </Card>
       </Dialog.Trigger>
 
-      <Dialog.Content maxWidth="560px">
+      <Dialog.Content maxWidth="640px">
         <Dialog.Title>
           <Flex align="center" gap="2" wrap="wrap">
             {entry.name}
@@ -172,12 +119,108 @@ function EntryModal({ entry, color }: { entry: StackEntry; color: StackGroup["co
           {entry.details}
         </Text>
 
-        {hasFacts && (
-          <Flex direction="column" gap="1" mt="4">
+        {/* Why Chosen — always visible, accent background */}
+        {hasWhyChosen && (
+          <Card mt="4" style={{ background: `var(--${color}-2)`, border: `1px solid var(--${color}-6)` }}>
             <Text size="1" weight="medium" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Discovered facts
+              Why chosen
             </Text>
-            <Flex direction="column" gap="1" mt="1">
+            <Text as="p" size="2" mt="1" style={{ lineHeight: 1.6 }}>
+              {entry.why_chosen}
+            </Text>
+          </Card>
+        )}
+
+        {/* Interview Talking Points — collapsible, default open */}
+        {hasInterviewPoints && (
+          <CollapsibleSection title="Interview Talking Points" defaultOpen>
+            <Flex direction="column" gap="2">
+              {entry.interview_points!.map((point, i) => (
+                <Flex key={i} align="start" gap="2">
+                  <Text size="1" weight="medium" color={color} style={{ flexShrink: 0, marginTop: 2, fontFamily: "monospace" }}>
+                    {i + 1}.
+                  </Text>
+                  <Text size="2" style={{ lineHeight: 1.55 }}>{point}</Text>
+                </Flex>
+              ))}
+            </Flex>
+          </CollapsibleSection>
+        )}
+
+        {/* Pros & Cons — collapsible, two-column layout */}
+        {(hasPros || hasCons) && (
+          <CollapsibleSection title="Pros & Cons">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {hasPros && (
+                <Flex direction="column" gap="1">
+                  {entry.pros!.map((pro, i) => (
+                    <Flex key={i} align="start" gap="2">
+                      <Text size="1" style={{ flexShrink: 0, marginTop: 2, color: "var(--green-9)" }}>+</Text>
+                      <Text size="2">{pro}</Text>
+                    </Flex>
+                  ))}
+                </Flex>
+              )}
+              {hasCons && (
+                <Flex direction="column" gap="1">
+                  {entry.cons!.map((con, i) => (
+                    <Flex key={i} align="start" gap="2">
+                      <Text size="1" style={{ flexShrink: 0, marginTop: 2, color: "var(--red-9)" }}>-</Text>
+                      <Text size="2">{con}</Text>
+                    </Flex>
+                  ))}
+                </Flex>
+              )}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Alternatives Considered — collapsible */}
+        {hasAlternatives && (
+          <CollapsibleSection title="Alternatives Considered">
+            <Flex direction="column" gap="2">
+              {entry.alternatives_considered!.map((alt, i) => (
+                <Flex key={i} direction="column" gap="0">
+                  <Text size="2" weight="medium">{alt.name}</Text>
+                  <Text size="1" color="gray" style={{ lineHeight: 1.5 }}>{alt.reason_not_chosen}</Text>
+                </Flex>
+              ))}
+            </Flex>
+          </CollapsibleSection>
+        )}
+
+        {/* Trade-offs — collapsible */}
+        {hasTradeOffs && (
+          <CollapsibleSection title="Trade-offs">
+            <Flex direction="column" gap="1">
+              {entry.trade_offs!.map((t, i) => (
+                <Flex key={i} align="start" gap="2">
+                  <Text size="1" color="gray" style={{ flexShrink: 0, marginTop: 2 }}>·</Text>
+                  <Text size="2">{t}</Text>
+                </Flex>
+              ))}
+            </Flex>
+          </CollapsibleSection>
+        )}
+
+        {/* Design Patterns — collapsible */}
+        {hasPatterns && (
+          <CollapsibleSection title="Design Patterns">
+            <Flex direction="column" gap="1">
+              {entry.patterns_used!.map((p, i) => (
+                <Flex key={i} align="start" gap="2">
+                  <Text size="1" color={color} style={{ flexShrink: 0, marginTop: 2 }}>·</Text>
+                  <Text size="2">{p}</Text>
+                </Flex>
+              ))}
+            </Flex>
+          </CollapsibleSection>
+        )}
+
+        {/* Discovered Facts — existing */}
+        {hasFacts && (
+          <CollapsibleSection title="Discovered Facts">
+            <Flex direction="column" gap="1">
               {entry.facts!.map((fact, i) => (
                 <Flex key={i} align="start" gap="2">
                   <Text size="1" color={color} style={{ flexShrink: 0, marginTop: 2 }}>·</Text>
@@ -185,15 +228,13 @@ function EntryModal({ entry, color }: { entry: StackEntry; color: StackGroup["co
                 </Flex>
               ))}
             </Flex>
-          </Flex>
+          </CollapsibleSection>
         )}
 
+        {/* Source Locations — existing */}
         {hasLocations && (
-          <Flex direction="column" gap="1" mt="4">
-            <Text size="1" weight="medium" color="gray" style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Source locations
-            </Text>
-            <Flex direction="column" gap="1" mt="1">
+          <CollapsibleSection title="Source Locations">
+            <Flex direction="column" gap="1">
               {entry.source_locations!.map((loc, i) => {
                 const href = `${GITHUB_BASE}/${loc.path}${loc.line ? `#L${loc.line}` : ""}`;
                 return (
@@ -214,7 +255,7 @@ function EntryModal({ entry, color }: { entry: StackEntry; color: StackGroup["co
                 );
               })}
             </Flex>
-          </Flex>
+          </CollapsibleSection>
         )}
 
         <Flex justify="end" mt="4">

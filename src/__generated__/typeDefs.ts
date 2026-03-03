@@ -1072,7 +1072,7 @@ type Query {
   deepPlannerTasks: [DeepPlannerTask!]!
   executeSql(sql: String!): TextToSqlResult!
   job(id: String!): Job
-  jobs(excludedCompanies: [String!], limit: Int, offset: Int, remoteEuConfidence: String, search: String, skills: [String!], sourceType: String, sourceTypes: [String!]): JobsResponse!
+  jobs(excludedCompanies: [String!], limit: Int, offset: Int, remoteEuConfidence: String, search: String, showAll: Boolean, skills: [String!], sourceType: String, sourceTypes: [String!]): JobsResponse!
   langsmithPrompt(promptIdentifier: String!): LangSmithPrompt
   langsmithPromptCommit(includeModel: Boolean, promptIdentifier: String!): LangSmithPromptCommit
   langsmithPrompts(isArchived: Boolean, isPublic: Boolean, query: String): [LangSmithPrompt!]!

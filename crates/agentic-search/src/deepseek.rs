@@ -109,7 +109,7 @@ impl DeepSeekClient {
             messages,
             tools,
             tool_choice: tools.map(|_| "auto"),
-            max_tokens: 4096,
+            max_tokens: 8192,
         };
 
         let resp = self

@@ -139,6 +139,19 @@ export async function enhanceCompany(
         extractedData.evidence.capture_timestamp || new Date().toISOString();
     }
 
+    // Map AI classification to ai_tier: 2=ai_native, 1=ai_first, 0=not AI
+    if (typeof extractedData.company.is_ai_native === "boolean" || typeof extractedData.company.is_ai_first === "boolean") {
+      updateData.ai_tier = extractedData.company.is_ai_native ? 2
+        : extractedData.company.is_ai_first ? 1
+        : 0;
+    }
+    if (typeof extractedData.company.ai_classification_confidence === "number") {
+      updateData.ai_classification_confidence = extractedData.company.ai_classification_confidence;
+    }
+    if (extractedData.company.ai_classification_reasons && Array.isArray(extractedData.company.ai_classification_reasons)) {
+      updateData.ai_classification_reason = extractedData.company.ai_classification_reasons.join("; ");
+    }
+
     await context.db.update(companies).set(updateData).where(eq(companies.id, company.id));
 
     // Update or insert ATS boards

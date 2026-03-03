@@ -1,12 +1,13 @@
 #!/usr/bin/env tsx
 
 /**
- * Remote EU Job Classification Evaluation with Langfuse
+ * Remote EU Job Classification Evaluation with Langfuse Datasets
  *
- * Uses Vercel AI SDK for classification and Langfuse for tracing.
+ * Seeds test cases as dataset items, runs LLM classification,
+ * links traces to a named dataset run for experiment tracking.
  *
  * Usage:
- *   pnpm tsx scripts/eval-remote-eu-langfuse.ts
+ *   pnpm eval:langfuse
  */
 
 import { Langfuse } from "langfuse";
@@ -22,6 +23,13 @@ import {
   LANGFUSE_PUBLIC_KEY,
   LANGFUSE_BASE_URL,
 } from "../src/config/env";
+import {
+  ensureDataset,
+  upsertDatasetItem,
+  createDatasetRunItem,
+} from "../src/langfuse/datasets";
+
+const DATASET_NAME = "remote-eu-classification";
 
 // Initialize Langfuse client
 const langfuse = new Langfuse({
@@ -50,10 +58,37 @@ interface EvaluationResult {
   traceUrl?: string;
 }
 
+/**
+ * Sync all test cases from test-data.ts into the Langfuse dataset.
+ */
+async function seedDataset() {
+  console.log(`Seeding dataset "${DATASET_NAME}" with ${remoteEUTestCases.length} items...`);
+
+  await ensureDataset(DATASET_NAME, "Remote EU job classification test cases");
+
+  await Promise.all(
+    remoteEUTestCases.map((tc) =>
+      upsertDatasetItem({
+        datasetName: DATASET_NAME,
+        id: tc.id,
+        input: {
+          jobPosting: tc.jobPosting,
+          description: tc.description,
+        },
+        expectedOutput: tc.expectedClassification,
+        metadata: { description: tc.description },
+      }),
+    ),
+  );
+
+  console.log("Dataset seeded.\n");
+}
+
 async function evaluateTestCase(
   testCase: (typeof remoteEUTestCases)[0],
   promptText: string,
   sessionId: string,
+  runName: string,
 ): Promise<EvaluationResult> {
   console.log(`\nEvaluating: ${testCase.description}`);
   console.log(`   Location: ${testCase.jobPosting.location}`);
@@ -125,6 +160,13 @@ Classify this job posting.`,
 
     generation.end();
 
+    // Link this trace to the dataset run
+    await createDatasetRunItem({
+      datasetItemId: testCase.id,
+      runName,
+      traceId: trace.id,
+    });
+
     console.log(
       `   Result: ${actualClassification.isRemoteEU ? "EU Remote" : "Non-EU"} (${actualClassification.confidence})`,
     );
@@ -164,6 +206,13 @@ async function runEvaluation() {
   console.log("Remote EU Job Classification Evaluation");
   console.log("==========================================\n");
 
+  // Seed dataset items
+  await seedDataset();
+
+  // Generate a named run for this experiment
+  const runName = `run-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}`;
+  console.log(`Dataset run: ${runName}`);
+
   console.log("Fetching prompt from Langfuse...");
   const { text: promptText } = await getPrompt(PROMPTS.JOB_CLASSIFIER);
   console.log(`Using latest prompt version\n${promptText.substring(0, 100)}...\n`);
@@ -176,7 +225,7 @@ async function runEvaluation() {
 
   for (const testCase of testCases) {
     try {
-      const result = await evaluateTestCase(testCase, promptText, sessionId);
+      const result = await evaluateTestCase(testCase, promptText, sessionId, runName);
       results.push(result);
     } catch (error) {
       console.error(`Failed to evaluate ${testCase.id}, skipping...`);
@@ -205,6 +254,8 @@ async function runEvaluation() {
   console.log(
     `Confidence Match: ${confidenceMatches}/${results.length} (${confidenceAccuracy.toFixed(1)}%)`,
   );
+  console.log(`\nDataset: ${DATASET_NAME}`);
+  console.log(`Run: ${runName}`);
 
   const failures = results.filter((r) => !r.isCorrect);
   if (failures.length > 0) {

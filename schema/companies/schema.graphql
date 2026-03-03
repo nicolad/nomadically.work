@@ -195,6 +195,11 @@ type Company {
   last_seen_capture_timestamp: String
   last_seen_source_url: String
 
+  # AI company tier: 0 = not AI, 1 = ai_first, 2 = ai_native
+  ai_tier: Int!
+  ai_classification_reason: String
+  ai_classification_confidence: Float!
+
   # Ashby crawler enrichment (matched by company key = ashby board slug)
   ashby_enrichment: AshbyEnrichment
 
@@ -228,6 +233,9 @@ input CreateCompanyInput {
   services: [String!]
   service_taxonomy: [String!]
   industries: [String!]
+  ai_tier: Int
+  ai_classification_reason: String
+  ai_classification_confidence: Float
 }
 
 input UpdateCompanyInput {
@@ -248,6 +256,9 @@ input UpdateCompanyInput {
   industries: [String!]
   score: Float
   score_reasons: [String!]
+  ai_tier: Int
+  ai_classification_reason: String
+  ai_classification_confidence: Float
 }
 
 input WarcPointerInput {
@@ -296,6 +307,7 @@ input CompanyFilterInput {
   min_score: Float
   has_ats_boards: Boolean
   service_taxonomy_any: [String!]
+  min_ai_tier: Int
 }
 
 type DeleteCompanyResponse {

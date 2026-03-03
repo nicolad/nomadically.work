@@ -12,7 +12,6 @@ import {
   Skeleton,
   Select,
   IconButton,
-  Tabs,
 } from "@radix-ui/themes";
 import {
   ExternalLinkIcon,
@@ -37,22 +36,9 @@ export interface InterviewPrepTabProps extends TabBaseProps {
   onOpenStudyTopic: (e: React.MouseEvent, req: AiInterviewPrepRequirement, topic: string) => void;
 }
 
-const RECRUITER_CATEGORY_COLOR: Record<string, string> = {
-  Culture: "green",
-  Growth: "blue",
-  "Team Structure": "violet",
-  "Remote Work": "cyan",
-  Process: "gray",
-  "Role Clarity": "orange",
-  Compensation: "amber",
-  "Red Flags": "crimson",
-  Leadership: "indigo",
-  Challenges: "plum",
-};
-
 const TECHNICAL_CATEGORY_COLOR: Record<string, string> = {
   "System Design": "violet",
-  Coding: "blue",
+  "Agentic Coding": "blue",
   Architecture: "indigo",
   Performance: "orange",
   Testing: "green",
@@ -61,10 +47,6 @@ const TECHNICAL_CATEGORY_COLOR: Record<string, string> = {
   "Technical Leadership": "crimson",
 };
 
-function recruiterColor(category: string): string {
-  return RECRUITER_CATEGORY_COLOR[category] ?? "green";
-}
-
 function technicalColor(category: string): string {
   return TECHNICAL_CATEGORY_COLOR[category] ?? "blue";
 }
@@ -72,11 +54,8 @@ function technicalColor(category: string): string {
 export function InterviewPrepTab({ app, isAdmin, onOpenTopic, onOpenStudyTopic }: InterviewPrepTabProps) {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [generatingRecruiter, setGeneratingRecruiter] = useState(false);
-  const [recruiterError, setRecruiterError] = useState<string | null>(null);
   const [generatingTechnical, setGeneratingTechnical] = useState(false);
   const [technicalError, setTechnicalError] = useState<string | null>(null);
-  const [questionsTab, setQuestionsTab] = useState<"recruiter" | "technical">("recruiter");
   const [prepView, setPrepView] = useState<"list" | "graph">("list");
 
   const [generateInterviewPrep] = useGenerateInterviewPrepMutation();
@@ -100,96 +79,8 @@ export function InterviewPrepTab({ app, isAdmin, onOpenTopic, onOpenStudyTopic }
           </Box>
         )}
 
-        <Tabs.Root value={questionsTab} onValueChange={(v) => setQuestionsTab(v as "recruiter" | "technical")}>
-          <Tabs.List>
-            <Tabs.Trigger value="recruiter">
-              Ask Recruiter
-              {(app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0 && (
-                <Badge size="1" variant="soft" color="green" ml="2">{app.aiInterviewQuestions!.recruiterQuestions.length}</Badge>
-              )}
-            </Tabs.Trigger>
-            <Tabs.Trigger value="technical">
-              Technical Prep
-              {(app.aiInterviewQuestions?.technicalQuestions?.length ?? 0) > 0 && (
-                <Badge size="1" variant="soft" color="blue" ml="2">{app.aiInterviewQuestions!.technicalQuestions.length}</Badge>
-              )}
-            </Tabs.Trigger>
-          </Tabs.List>
-
-          <Tabs.Content value="recruiter">
-            <Box pt="3">
-              {isAdmin && (
-                <Flex gap="2" align="center" mb="3">
-                  <Button
-                    variant="soft"
-                    size="2"
-                    color="green"
-                    disabled={generatingRecruiter || !app.jobDescription}
-                    title={!app.jobDescription ? "No job description available" : undefined}
-                    onClick={async () => {
-                      setGeneratingRecruiter(true);
-                      setRecruiterError(null);
-                      try {
-                        await generateInterviewQuestions({
-                          variables: { applicationId: app.id, type: "recruiter" },
-                          refetchQueries: ["GetApplication"],
-                        });
-                      } catch (e) {
-                        setRecruiterError(e instanceof Error ? e.message : "Generation failed");
-                      } finally {
-                        setGeneratingRecruiter(false);
-                      }
-                    }}
-                  >
-                    <PlusIcon />
-                    {generatingRecruiter
-                      ? "Generating..."
-                      : (app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0
-                        ? "Regenerate"
-                        : "Generate Questions to Ask"}
-                  </Button>
-                  {recruiterError && <Text size="1" color="red">{recruiterError}</Text>}
-                </Flex>
-              )}
-
-              {generatingRecruiter && (
-                <Flex direction="column" gap="3" py="6" align="center">
-                  <Text size="2" color="gray">Generating smart questions to ask the recruiter...</Text>
-                  <Flex gap="2">
-                    {[0, 1, 2].map((i) => (
-                      <Box key={i} style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "var(--green-9)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-                    ))}
-                  </Flex>
-                </Flex>
-              )}
-
-              {(app.aiInterviewQuestions?.recruiterQuestions?.length ?? 0) > 0 ? (
-                <Box>
-                  <Flex direction="column" gap="3">
-                    {app.aiInterviewQuestions!.recruiterQuestions.map((q, i) => (
-                      <Box key={i} p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", borderLeft: `3px solid var(--${recruiterColor(q.category)}-9)` }}>
-                        <Flex justify="between" align="start" gap="2" mb="2">
-                          <Text size="2" weight="bold" as="div">{i + 1}. {q.question}</Text>
-                          <Badge size="1" variant="soft" color={recruiterColor(q.category) as any} style={{ flexShrink: 0 }}>{q.category}</Badge>
-                        </Flex>
-                        <Text size="2" color="gray" as="div">{q.reason}</Text>
-                      </Box>
-                    ))}
-                  </Flex>
-                  {app.aiInterviewQuestions!.recruiterGeneratedAt && (
-                    <Text size="1" color="gray" mt="3" as="div">
-                      Generated {new Date(app.aiInterviewQuestions!.recruiterGeneratedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </Text>
-                  )}
-                </Box>
-              ) : !generatingRecruiter ? (
-                <Text size="2" color="gray">No questions yet. Generate smart questions to ask the recruiter about this company and role.</Text>
-              ) : null}
-            </Box>
-          </Tabs.Content>
-
-          <Tabs.Content value="technical">
-            <Box pt="3">
+        <Box>
+          <Box pt="3">
               {isAdmin && (
                 <Flex gap="2" align="center" mb="3">
                   <Button
@@ -258,15 +149,14 @@ export function InterviewPrepTab({ app, isAdmin, onOpenTopic, onOpenStudyTopic }
                 <Text size="2" color="gray">No technical questions yet. Generate deep technical interview questions.</Text>
               ) : null}
             </Box>
-          </Tabs.Content>
-        </Tabs.Root>
+          </Box>
       </Card>
 
       {/* Interview Prep */}
       <Card mb="5">
         <Flex justify="between" align="center" mb="3">
           <Flex align="center" gap="2">
-            <Heading size="4">Interview Prep</Heading>
+            <Heading size="4">Prep</Heading>
             {app.aiInterviewPrep && (app.companyKey || app.companyName) && (
               <Button variant="soft" size="1" asChild>
                 <Link href={`/prep/${app.companyKey || app.companyName?.toLowerCase().replace(/\s+/g, "")}`} target="_blank">

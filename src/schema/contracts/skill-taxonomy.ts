@@ -127,7 +127,6 @@ export const SKILL_TAXONOMY: Record<string, string> = {
   "function-calling": "Function Calling",
   mastra: "Mastra",
   langfuse: "Langfuse",
-  promptfoo: "Promptfoo",
 
   // Cloudflare ecosystem
   "cloudflare-workers": "Cloudflare Workers",

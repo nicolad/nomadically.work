@@ -306,6 +306,9 @@ type CompaniesResponse {
 }
 
 type Company {
+  ai_classification_confidence: Float!
+  ai_classification_reason: String
+  ai_tier: Int!
   ashby_enrichment: AshbyEnrichment
   ats_boards: [ATSBoard!]!
   category: CompanyCategory!
@@ -373,6 +376,7 @@ input CompanyFactInput {
 input CompanyFilterInput {
   category_in: [CompanyCategory!]
   has_ats_boards: Boolean
+  min_ai_tier: Int
   min_score: Float
   service_taxonomy_any: [String!]
   text: String
@@ -464,6 +468,9 @@ type ContactsResult {
 }
 
 input CreateCompanyInput {
+  ai_classification_confidence: Float
+  ai_classification_reason: String
+  ai_tier: Int
   category: CompanyCategory
   description: String
   industries: [String!]
@@ -1245,6 +1252,9 @@ input UpdateApplicationInput {
 }
 
 input UpdateCompanyInput {
+  ai_classification_confidence: Float
+  ai_classification_reason: String
+  ai_tier: Int
   category: CompanyCategory
   description: String
   industries: [String!]

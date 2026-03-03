@@ -112,7 +112,7 @@ interface AshbyBoardResponse {
   jobs: AshbyJobPosting[];
 }
 
-async function fetchAshbyJobs(boardName: string): Promise<Job[]> {
+export async function fetchAshbyJobs(boardName: string): Promise<Job[]> {
   const url = `https://api.ashbyhq.com/posting-api/job-board/${boardName}?includeCompensation=true`;
   const jobs: Job[] = [];
 
@@ -191,7 +191,7 @@ interface GreenhouseResponse {
   jobs: GreenhouseJob[];
 }
 
-async function fetchGreenhouseJobs(companyKey: string): Promise<Job[]> {
+export async function fetchGreenhouseJobs(companyKey: string): Promise<Job[]> {
   const url = `https://boards-api.greenhouse.io/v1/boards/${companyKey}/jobs`;
   const jobs: Job[] = [];
 
@@ -262,7 +262,7 @@ interface LeverResponse {
   postings: LeverJob[];
 }
 
-async function fetchLeverJobs(companyKey: string): Promise<Job[]> {
+export async function fetchLeverJobs(companyKey: string): Promise<Job[]> {
   const url = `https://api.lever.co/v0/postings/${companyKey}`;
   const jobs: Job[] = [];
 
@@ -314,20 +314,21 @@ async function fetchLeverJobs(companyKey: string): Promise<Job[]> {
 // Database Operations
 // ---------------------------------------------------------------------------
 
-async function getRecentCompanies(
+export async function getRecentCompanies(
   db: D1Database,
   hoursAgo: number = 24
 ): Promise<Company[]> {
   const since = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
 
+  // Filter exclusively for AI-native or AI-first companies (ai_tier >= 1)
   const result = await db
     .prepare(
       `SELECT id, key, name, website, category, created_at
        FROM companies
        WHERE created_at > ?
-       AND category != 'UNKNOWN'
        AND category != 'DIRECTORY'
-       ORDER BY created_at DESC
+       AND ai_tier >= 1
+       ORDER BY ai_tier DESC, ai_classification_confidence DESC, created_at DESC
        LIMIT 100`
     )
     .bind(since)
@@ -355,7 +356,7 @@ async function getAtsBoards(
   return (result.results as unknown as AshbyBoard[]) || [];
 }
 
-async function upsertJob(db: D1Database, job: Job): Promise<void> {
+export async function upsertJob(db: D1Database, job: Job): Promise<void> {
   await db
     .prepare(
       `INSERT INTO jobs (external_id, source_kind, company_key, title, location, url, description, posted_at, created_at, updated_at)
@@ -385,7 +386,7 @@ async function upsertJob(db: D1Database, job: Job): Promise<void> {
 // Main Processing Logic
 // ---------------------------------------------------------------------------
 
-async function processCompanies(
+export async function processCompanies(
   env: Env,
   options: { hoursAgo?: number; maxCompanies?: number } = {}
 ): Promise<{

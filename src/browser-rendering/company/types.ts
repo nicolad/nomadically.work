@@ -73,6 +73,10 @@ export type Company = {
   last_seen_capture_timestamp?: string | null; // ISO
   last_seen_source_url?: string | null;
 
+  ai_tier?: number | null; // 0=not AI, 1=ai_first, 2=ai_native
+  ai_classification_confidence?: number | null;
+  ai_classification_reasons?: string[] | null;
+
   // Mirrors nested subset in your CompanyFields fragment
   ats_boards?: Omit<ATSBoard, "evidence">[] | null;
 };

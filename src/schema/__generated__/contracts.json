@@ -111,7 +111,7 @@
     },
     "SkillTaxonomy": {
       "type": "object",
-      "description": "119 canonical skill tags",
+      "description": "118 canonical skill tags",
       "properties": {
         "javascript": {
           "type": "string",
@@ -496,10 +496,6 @@
         "langfuse": {
           "type": "string",
           "const": "Langfuse"
-        },
-        "promptfoo": {
-          "type": "string",
-          "const": "Promptfoo"
         },
         "cloudflare-workers": {
           "type": "string",

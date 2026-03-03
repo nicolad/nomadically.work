@@ -80,7 +80,7 @@ pub const EXTRACTMETHOD_VALUES: &[&str] = &[
 /// Keep AtsProvider::from_str in sync with this list.
 pub const ATS_CRAWLER_PROVIDERS: &[&str] = &["ASHBY", "GREENHOUSE", "WORKABLE"];
 
-/// Canonical skill taxonomy — 119 tags.
+/// Canonical skill taxonomy — 118 tags.
 pub const SKILL_TAGS: &[&str] = &[
     "javascript",
     "typescript",
@@ -178,7 +178,6 @@ pub const SKILL_TAGS: &[&str] = &[
     "function-calling",
     "mastra",
     "langfuse",
-    "promptfoo",
     "cloudflare-workers",
     "cloudflare-workers-ai",
     "cloudflare-d1",

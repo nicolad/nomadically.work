@@ -26,7 +26,7 @@ pnpm db:studio                    # Drizzle Studio
 # Testing
 pnpm test:eval                    # Run Vitest evals once (src/evals/remote-eu-eval.test.ts)
 pnpm test:eval:watch              # Watch mode
-pnpm eval:promptfoo               # Run Promptfoo evaluation suite (sets up Langfuse prompts first)
+pnpm eval:langfuse                # Run Langfuse-native classification eval with tracing
 
 # Strategy enforcement
 pnpm strategy:check               # Validate staged changes against optimization strategy
@@ -49,7 +49,6 @@ cd workers/ashby-crawler && wrangler dev             # Ashby crawler local dev
 
 # Deployment
 pnpm deploy                       # Vercel deploy (runs scripts/deploy.ts)
-pnpm deploy:promptfoo             # Deploy Promptfoo worker
 wrangler deploy --config workers/ashby-crawler/wrangler.toml  # Ashby crawler
 ```
 
@@ -75,7 +74,7 @@ The D1 Gateway Worker (`workers/d1-gateway.ts`) supports batched queries — pre
 6. Skill Extract:  Job descriptions --[LLM pipeline]--> Skills → D1
 7. Resume Match:   Resumes --[resume-rag (Python) / Vectorize]--> Vector search
 8. Serving:        Browser --[Apollo Client]--> /api/graphql --[D1 HTTP]--> Gateway --> D1
-9. Evaluation:     Promptfoo / Vitest --[LLM calls]--> Accuracy scores
+9. Evaluation:     Langfuse / Vitest --[LLM calls]--> Accuracy scores
 ```
 
 ### GraphQL codegen
@@ -98,7 +97,6 @@ Custom scalars: `DateTime`/`URL`/`EmailAddress` → `string`, `Upload` → `File
 | `process-jobs` | `workers/process-jobs/wrangler.jsonc` | Python/LangGraph | Every 6h + queue, DeepSeek classification |
 | `ashby-crawler` | `workers/ashby-crawler/wrangler.toml` | **Rust/WASM** | Common Crawl → D1, rig_compat module |
 | `resume-rag` | `workers/resume-rag/wrangler.jsonc` | **Python** | Vectorize + Workers AI |
-| `promptfoo-eval` | `wrangler.promptfoo.toml` | TypeScript | On-demand |
 
 ### API routes
 
@@ -127,7 +125,7 @@ GraphQL Playground: `http://localhost:3000/api/graphql`. Vercel routes have 60s 
 | AI/ML | Vercel AI SDK, Anthropic Claude (+ Agent SDK), DeepSeek, Google ADK, OpenRouter |
 | Background jobs | Trigger.dev, Cloudflare Workers (cron + queues) |
 | Observability | Langfuse, LangSmith, OpenTelemetry (partially active) |
-| Evaluation | Promptfoo, Vitest |
+| Evaluation | Langfuse, Vitest |
 | Deployment | Vercel (app), Cloudflare Workers (workers) |
 | Package manager | pnpm 10.10 |
 | UI | Radix UI (Themes + Icons) |

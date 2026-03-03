@@ -39,6 +39,15 @@ export const companyResolvers = {
         enriched_at: parent.ashby_enriched_at,
       };
     },
+    ai_tier(parent: any) {
+      return parent.ai_tier ?? 0;
+    },
+    ai_classification_confidence(parent: any) {
+      return parent.ai_classification_confidence ?? 0.5;
+    },
+    ai_classification_reason(parent: any) {
+      return parent.ai_classification_reason ?? null;
+    },
     // Validate and sanitize category enum
     category(parent: any) {
       const validCategories = ["CONSULTANCY", "AGENCY", "STAFFING", "DIRECTORY", "PRODUCT", "OTHER", "UNKNOWN"];
@@ -219,6 +228,8 @@ export const companyResolvers = {
           min_score?: number;
           has_ats_boards?: boolean;
           service_taxonomy_any?: string[];
+          ai_native_only?: boolean;
+          ai_first_only?: boolean;
         };
         order_by?: string;
         limit?: number;
@@ -251,7 +262,9 @@ export const companyResolvers = {
             conditions.push(gte(companies.score, args.filter.min_score));
           }
 
-
+          if (args.filter.min_ai_tier !== undefined && args.filter.min_ai_tier !== null) {
+            conditions.push(gte(companies.ai_tier, args.filter.min_ai_tier));
+          }
         }
         let query = context.db.select().from(companies);
 

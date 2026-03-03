@@ -47,4 +47,7 @@ export interface CompanyUpdateData {
   industries?: string;
   last_seen_source_url?: string;
   last_seen_capture_timestamp?: string;
+  ai_tier?: number;
+  ai_classification_reason?: string;
+  ai_classification_confidence?: number;
 }

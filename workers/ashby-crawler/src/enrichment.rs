@@ -58,8 +58,9 @@ pub async fn auto_enrich_boards(db: &D1Database, boards: &[DiscoveredBoard]) -> 
     if boards.is_empty() { return Ok(0); }
 
     const SQL: &str = "UPDATE companies
-         SET ashby_industry_tags=?1, ashby_tech_signals=?2, ashby_size_signal=?3, ashby_enriched_at=datetime('now')
-         WHERE key=?4";
+         SET ashby_industry_tags=?1, ashby_tech_signals=?2, ashby_size_signal=?3, ashby_enriched_at=datetime('now'),
+             ai_tier=?4, ai_classification_confidence=?5, ai_classification_reason=?6
+         WHERE key=?7";
     const BATCH_SIZE: usize = 100;
 
     let pipeline = build_enrichment_pipeline();
@@ -91,18 +92,39 @@ pub async fn auto_enrich_boards(db: &D1Database, boards: &[DiscoveredBoard]) -> 
             .map(|v| v.to_string())
             .unwrap_or_else(|| "[]".to_string());
         let size_signal = extracted.get("size_signal").and_then(|v| v.as_str()).unwrap_or("startup");
+        
+        // Derive ai_tier: 2=ai_native, 1=ai_first, 0=not AI
+        let is_ai_native = extracted.get("is_ai_native").and_then(|v| v.as_bool()).unwrap_or(false);
+        let is_ai_first  = extracted.get("is_ai_first") .and_then(|v| v.as_bool()).unwrap_or(false);
+        let ai_tier: i32 = if is_ai_native { 2 } else if is_ai_first { 1 } else { 0 };
+        let ai_confidence = extracted.get("ai_classification_confidence").and_then(|v| v.as_f64()).unwrap_or(0.5);
+        let ai_reasons = extracted.get("ai_classification_reasons")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|item| item.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            })
+            .unwrap_or_default();
 
         stmts.push(db.prepare(SQL).bind(&[
             industry_tags.into(),
             tech_signals.into(),
             size_signal.into(),
+            ai_tier.into(),
+            ai_confidence.into(),
+            ai_reasons.into(),
             board.token.clone().into(),
         ])?);
     }
 
-    let saved = stmts.len();
+    let mut saved = 0usize;
     for chunk in stmts.chunks(BATCH_SIZE) {
-        let _ = db.batch(chunk.to_vec()).await;
+        match db.batch(chunk.to_vec()).await {
+            Ok(results) => saved += results.iter().filter(|r| r.success()).count(),
+            Err(e) => console_log!("[enrich] batch update failed: {}", e),
+        }
     }
 
     Ok(saved)

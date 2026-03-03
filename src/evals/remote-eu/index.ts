@@ -1,13 +1,14 @@
 /**
  * Remote EU Job Classification Evaluation
- * 
+ *
  * Centralized module for evaluating Remote EU job classification accuracy.
- * Uses Mastra scorers with Langfuse for observability.
- * 
+ * Evaluation runs via Langfuse Datasets: pnpm eval:langfuse
+ *
  * @module remote-eu-eval
- * @see https://langfuse.com/docs/scores - Langfuse Scores
+ * @see https://langfuse.com/docs/datasets
  */
 
 export * from "./schema";
 export * from "./test-data";
 export * from "./scorers";
+export * from "./classifier";

@@ -200,12 +200,18 @@ async function insertJob(
     if (companyLookup.rows.length > 0) {
       companyId = Number(companyLookup.rows[0].id);
     } else {
-      const companyResult = await d1Run(
+      // INSERT OR IGNORE handles concurrent workers inserting the same company key
+      await d1Run(
         db,
-        `INSERT INTO companies (key, name, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO companies (key, name, created_at, updated_at) VALUES (?, ?, ?, ?)`,
         [job.companyKey!, job.companyKey!, now, now],
       );
-      companyId = companyResult.last_row_id;
+      const inserted = await d1Query(
+        db,
+        `SELECT id FROM companies WHERE key = ? LIMIT 1`,
+        [job.companyKey!],
+      );
+      companyId = Number(inserted.rows[0].id);
     }
 
     const incomingStatus = (job.status ?? "new").trim();
@@ -654,7 +660,7 @@ interface IngestionStats {
   deadBoardsDetected: number;
 }
 
-async function autoIngestFromSources(
+export async function autoIngestFromSources(
   db: D1Database,
   options: { maxSources?: number; stalePeriodHours?: number; traceId?: string } = {},
 ): Promise<IngestionStats> {
@@ -682,12 +688,18 @@ async function autoIngestFromSources(
   );
   const totalSources = Number(totalSourcesResult.rows[0]?.count ?? 0);
 
+  // Prioritize AI-native/AI-first companies: join with companies table and order by AI classification
   const sources = await d1Query(
     db,
-    `SELECT id, kind, company_key, canonical_url
-     FROM job_sources
-     WHERE last_fetched_at IS NULL OR last_fetched_at < ?
-     ORDER BY last_fetched_at ASC NULLS FIRST
+    `SELECT js.id, js.kind, js.company_key, js.canonical_url
+     FROM job_sources js
+     LEFT JOIN companies c ON js.company_key = c.key
+     WHERE (js.last_fetched_at IS NULL OR js.last_fetched_at < ?)
+       AND (c.ai_tier >= 1 OR c.industries LIKE '%"ai-ml"%')
+     ORDER BY
+       COALESCE(c.ai_tier, 0) DESC,
+       COALESCE(c.ai_classification_confidence, 0.5) DESC,
+       js.last_fetched_at ASC NULLS FIRST
      LIMIT ?`,
     [staleThreshold, maxSources],
   );

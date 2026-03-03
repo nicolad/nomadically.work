@@ -59,8 +59,6 @@ const STRUCTURED_OUTPUT_PATTERNS = [
 ];
 
 const GROUNDING_EXEMPT_PATHS = [
-  "src/promptfoo/",
-  "workers/promptfoo-eval.ts",
   "src/anthropic/examples.ts",
   "scripts/bm25-skills.ts",
   "src/agents/cloudflare-workers-ai.ts",
@@ -115,7 +113,7 @@ function checkEvalFirst(
       )!,
       message:
         "Prompt or model-related file changed. Run `pnpm test:eval` and verify >= 80% accuracy before merging.",
-      fix: "Run: pnpm test:eval && pnpm eval:promptfoo",
+      fix: "Run: pnpm test:eval && pnpm eval:langfuse",
     });
   }
 

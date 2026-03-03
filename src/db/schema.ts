@@ -44,6 +44,11 @@ export const companies = sqliteTable("companies", {
   ashby_size_signal: text("ashby_size_signal"),     // "startup" | "mid" | "large"
   ashby_enriched_at: text("ashby_enriched_at"),
 
+  // AI company tier: 0 = not AI, 1 = ai_first, 2 = ai_native
+  ai_tier: integer("ai_tier").notNull().default(0),
+  ai_classification_reason: text("ai_classification_reason"),
+  ai_classification_confidence: real("ai_classification_confidence").default(0.5),
+
   // Common Crawl / last-seen metadata
   last_seen_crawl_id: text("last_seen_crawl_id"),
   last_seen_capture_timestamp: text("last_seen_capture_timestamp"),

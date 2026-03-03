@@ -124,11 +124,12 @@ export default {
       if (req.method === "GET" && url.pathname.startsWith("/jobs/")) {
         const id = url.pathname.split("/")[2];
 
+        // Use exact-match only — LIKE with user input risks wildcard expansion
         const row = await env.DB
           .prepare(
-            `SELECT * FROM jobs WHERE id = ? OR external_id LIKE ? LIMIT 1`
+            `SELECT * FROM jobs WHERE id = ? OR external_id = ? LIMIT 1`
           )
-          .bind(id, `%/${id}`)
+          .bind(id, id)
           .first();
 
         if (!row) {

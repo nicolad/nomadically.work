@@ -127,10 +127,10 @@ SKILL_TAGS: FrozenSet[str] = frozenset({
     "agents", "agentic-ai", "langchain", "langgraph", "openai", "anthropic",
     "vercel-ai-sdk", "vector-db", "pinecone", "weaviate", "chromadb", "mlops",
     "huggingface", "model-evaluation", "structured-output", "function-calling", "mastra", "langfuse",
-    "promptfoo", "cloudflare-workers", "cloudflare-workers-ai", "cloudflare-d1", "cloudflare-vectorize", "next-auth",
-    "radix-ui", "shadcn-ui", "storybook", "playwright", "cypress", "vitest",
-    "react-query", "zustand", "apollo-client", "remix", "astro", "drizzle-orm",
-    "prisma", "trpc", "hono", "bun", "deno",
+    "cloudflare-workers", "cloudflare-workers-ai", "cloudflare-d1", "cloudflare-vectorize", "next-auth", "radix-ui",
+    "shadcn-ui", "storybook", "playwright", "cypress", "vitest", "react-query",
+    "zustand", "apollo-client", "remix", "astro", "drizzle-orm", "prisma",
+    "trpc", "hono", "bun", "deno",
 })
 
 SKILL_LABELS: Dict[str, str] = {
@@ -230,7 +230,6 @@ SKILL_LABELS: Dict[str, str] = {
     "function-calling": "Function Calling",
     "mastra": "Mastra",
     "langfuse": "Langfuse",
-    "promptfoo": "Promptfoo",
     "cloudflare-workers": "Cloudflare Workers",
     "cloudflare-workers-ai": "Cloudflare Workers AI",
     "cloudflare-d1": "Cloudflare D1",

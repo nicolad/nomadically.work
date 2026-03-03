@@ -342,6 +342,9 @@ export type CompaniesResponse = {
 
 export type Company = {
   __typename: 'Company';
+  ai_classification_confidence: Scalars['Float']['output'];
+  ai_classification_reason: Maybe<Scalars['String']['output']>;
+  ai_tier: Scalars['Int']['output'];
   ashby_enrichment: Maybe<AshbyEnrichment>;
   ats_boards: Array<AtsBoard>;
   category: CompanyCategory;
@@ -422,6 +425,7 @@ export type CompanyFactInput = {
 export type CompanyFilterInput = {
   category_in?: InputMaybe<Array<CompanyCategory>>;
   has_ats_boards?: InputMaybe<Scalars['Boolean']['input']>;
+  min_ai_tier?: InputMaybe<Scalars['Int']['input']>;
   min_score?: InputMaybe<Scalars['Float']['input']>;
   service_taxonomy_any?: InputMaybe<Array<Scalars['String']['input']>>;
   text?: InputMaybe<Scalars['String']['input']>;
@@ -516,6 +520,9 @@ export type ContactsResult = {
 };
 
 export type CreateCompanyInput = {
+  ai_classification_confidence?: InputMaybe<Scalars['Float']['input']>;
+  ai_classification_reason?: InputMaybe<Scalars['String']['input']>;
+  ai_tier?: InputMaybe<Scalars['Int']['input']>;
   category?: InputMaybe<CompanyCategory>;
   description?: InputMaybe<Scalars['String']['input']>;
   industries?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -1829,6 +1836,9 @@ export type UpdateApplicationInput = {
 };
 
 export type UpdateCompanyInput = {
+  ai_classification_confidence?: InputMaybe<Scalars['Float']['input']>;
+  ai_classification_reason?: InputMaybe<Scalars['String']['input']>;
+  ai_tier?: InputMaybe<Scalars['Int']['input']>;
   category?: InputMaybe<CompanyCategory>;
   description?: InputMaybe<Scalars['String']['input']>;
   industries?: InputMaybe<Array<Scalars['String']['input']>>;

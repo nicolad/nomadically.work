@@ -19,11 +19,6 @@ import { deepseek } from "@ai-sdk/deepseek";
 import { generateObject } from "ai";
 import { z } from "zod";
 import {
-  LANGFUSE_SECRET_KEY,
-  LANGFUSE_PUBLIC_KEY,
-  LANGFUSE_BASE_URL,
-} from "../src/config/env";
-import {
   ensureDataset,
   upsertDatasetItem,
   createDatasetRunItem,
@@ -31,11 +26,11 @@ import {
 
 const DATASET_NAME = "remote-eu-classification";
 
-// Initialize Langfuse client
+// Initialize Langfuse client — read directly from process.env (loaded via --env-file)
 const langfuse = new Langfuse({
-  secretKey: LANGFUSE_SECRET_KEY,
-  publicKey: LANGFUSE_PUBLIC_KEY,
-  baseUrl: LANGFUSE_BASE_URL,
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  baseUrl: process.env.LANGFUSE_BASE_URL,
 });
 
 // Remote EU classification schema
@@ -125,6 +120,16 @@ Description: ${testCase.jobPosting.description}
 
 Classify this job posting.`,
       schema: remoteEUSchema,
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: `remote-eu-classify-${testCase.id}`,
+        metadata: {
+          langfuseTraceId: trace.id,
+          langfuseUpdateParent: false,
+          sessionId,
+          userId: "eval-script",
+        },
+      },
     });
 
     const actualClassification: RemoteEUClassification = result.object;

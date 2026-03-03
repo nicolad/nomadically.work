@@ -980,6 +980,7 @@ export type Mutation = {
    */
   processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
+  rateResumeAnswer: Maybe<Scalars['Boolean']['output']>;
   /**
    * Report a job as irrelevant, spam, or incorrectly classified.
    * Sets the job status to "reported" so it can be reviewed or excluded.
@@ -1237,6 +1238,12 @@ export type MutationProcessAllJobsArgs = {
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationRateResumeAnswerArgs = {
+  helpful: Scalars['Boolean']['input'];
+  traceId: Scalars['ID']['input'];
 };
 
 
@@ -1723,6 +1730,7 @@ export type ResumeAnswer = {
   __typename?: 'ResumeAnswer';
   answer: Scalars['String']['output'];
   context_count: Scalars['Int']['output'];
+  trace_id: Maybe<Scalars['String']['output']>;
 };
 
 export type ResumeIngestResult = {
@@ -2912,6 +2920,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   linkTrackToApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationLinkTrackToApplicationArgs, 'applicationId' | 'trackSlug'>>;
   processAllJobs?: Resolver<ResolversTypes['ProcessAllJobsResponse'], ParentType, ContextType, Partial<MutationProcessAllJobsArgs>>;
   pushLangSmithPrompt?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationPushLangSmithPromptArgs, 'promptIdentifier'>>;
+  rateResumeAnswer?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType, RequireFields<MutationRateResumeAnswerArgs, 'helpful' | 'traceId'>>;
   reportJob?: Resolver<Maybe<ResolversTypes['Job']>, ParentType, ContextType, RequireFields<MutationReportJobArgs, 'id'>>;
   triggerDeepPlannerTask?: Resolver<ResolversTypes['DeepPlannerTask'], ParentType, ContextType, RequireFields<MutationTriggerDeepPlannerTaskArgs, 'id'>>;
   unlinkTrackFromApplication?: Resolver<ResolversTypes['Application'], ParentType, ContextType, RequireFields<MutationUnlinkTrackFromApplicationArgs, 'applicationId' | 'trackSlug'>>;
@@ -3106,6 +3115,7 @@ export type ResendEmailDetailResolvers<ContextType = GraphQLContext, ParentType 
 export type ResumeAnswerResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeAnswer'] = ResolversParentTypes['ResumeAnswer']> = {
   answer?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   context_count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  trace_id?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type ResumeIngestResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ResumeIngestResult'] = ResolversParentTypes['ResumeIngestResult']> = {

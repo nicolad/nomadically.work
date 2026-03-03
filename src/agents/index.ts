@@ -11,6 +11,8 @@ export async function classifyJobForRemoteEU(input: {
   title: string;
   location: string;
   description: string;
+  userId?: string;
+  sessionId?: string;
 }) {
   const { text: promptText } = await getPrompt(PROMPTS.JOB_CLASSIFIER);
 
@@ -27,7 +29,10 @@ Classify this job posting.`,
       confidence: z.enum(["high", "medium", "low"]),
       reason: z.string(),
     }),
-    experimental_telemetry: aiTelemetry("classify-remote-eu"),
+    experimental_telemetry: aiTelemetry("classify-remote-eu", {
+      ...(input.userId && { userId: input.userId }),
+      ...(input.sessionId && { sessionId: input.sessionId }),
+    }),
   });
 
   return result.object;

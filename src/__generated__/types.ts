@@ -977,6 +977,7 @@ export type Mutation = {
    */
   processAllJobs: ProcessAllJobsResponse;
   pushLangSmithPrompt: Scalars['String']['output'];
+  rateResumeAnswer: Maybe<Scalars['Boolean']['output']>;
   /**
    * Report a job as irrelevant, spam, or incorrectly classified.
    * Sets the job status to "reported" so it can be reviewed or excluded.
@@ -1234,6 +1235,12 @@ export type MutationProcessAllJobsArgs = {
 export type MutationPushLangSmithPromptArgs = {
   input?: InputMaybe<PushLangSmithPromptInput>;
   promptIdentifier: Scalars['String']['input'];
+};
+
+
+export type MutationRateResumeAnswerArgs = {
+  helpful: Scalars['Boolean']['input'];
+  traceId: Scalars['ID']['input'];
 };
 
 
@@ -1720,6 +1727,7 @@ export type ResumeAnswer = {
   __typename: 'ResumeAnswer';
   answer: Scalars['String']['output'];
   context_count: Scalars['Int']['output'];
+  trace_id: Maybe<Scalars['String']['output']>;
 };
 
 export type ResumeIngestResult = {

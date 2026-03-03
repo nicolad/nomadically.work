@@ -910,6 +910,7 @@ type Mutation {
   """
   processAllJobs(limit: Int): ProcessAllJobsResponse!
   pushLangSmithPrompt(input: PushLangSmithPromptInput, promptIdentifier: String!): String!
+  rateResumeAnswer(helpful: Boolean!, traceId: ID!): Boolean
   """
   Report a job as irrelevant, spam, or incorrectly classified.
   Sets the job status to "reported" so it can be reviewed or excluded.
@@ -1143,6 +1144,7 @@ type ResendEmailDetail {
 type ResumeAnswer {
   answer: String!
   context_count: Int!
+  trace_id: String
 }
 
 type ResumeIngestResult {

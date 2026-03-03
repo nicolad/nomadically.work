@@ -19,6 +19,7 @@ type ResumeIngestResult {
 type ResumeAnswer {
   answer: String!
   context_count: Int!
+  trace_id: String
 }
 
 type ResumeStatus {
@@ -51,4 +52,7 @@ extend type Mutation {
     job_id: String!
     filename: String!
   ): ResumeIngestResult
+
+  # Submit helpfulness feedback for a resume answer (scores the Langfuse trace)
+  rateResumeAnswer(traceId: ID!, helpful: Boolean!): Boolean
 }

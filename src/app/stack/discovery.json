@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T14:06:59Z",
+  "generated_at": "2026-03-16T15:22:32Z",
   "root": "/Users/vadimnicolai/Public/nomadically.work",
   "groups": [
     {
@@ -11,85 +11,85 @@
           "version": "16.1.6",
           "role": "React framework for full-stack web applications",
           "url": "https://nextjs.org",
-          "details": "Next.js 16.1.6 is the core framework powering the application with App Router architecture. The project uses vanilla-extract plugin for CSS-in-JS styling and has custom rewrites for resume PDF generation. There are 129 files in the src/app directory including 40+ route handlers and pages.",
+          "details": "The project uses Next.js 16.1.6 as the primary framework with App Router architecture. There are 129 files in src/app/**/* including 45+ route files and API endpoints. The configuration in next.config.ts shows custom rewrites for resume PDF generation, remote image patterns for Unsplash, and integration with Vanilla Extract CSS via plugin.",
           "facts": [
-            "129 files in src/app directory structure",
-            "40+ API routes and pages",
-            "Uses App Router architecture with layout.tsx and page.tsx conventions"
+            "129 files in src/app/**/* directory structure",
+            "45+ route files and API endpoints",
+            "Custom rewrite from /resume/:slug.pdf to /api/resume-pdf/:slug"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 77,
+              "line": 78,
               "note": "Next.js dependency version"
             },
             {
               "path": "next.config.ts",
               "line": 1,
-              "note": "Next.js configuration with vanilla-extract plugin"
+              "note": "Next.js configuration file"
             },
             {
-              "path": "src/app/layout.tsx",
-              "line": 1,
-              "note": "Root layout component"
+              "path": "vercel.json",
+              "line": 6,
+              "note": "Framework set to nextjs"
             }
           ]
         },
         {
           "name": "React",
           "version": "19.1.1",
-          "role": "UI component library",
+          "role": "UI library for building component-based interfaces",
           "url": "https://react.dev",
-          "details": "React 19.1.1 is used throughout the application with 71 components in src/components directory. The project uses modern React patterns including providers, hooks, and server components. Components are organized into UI primitives, admin components, and domain-specific components.",
+          "details": "React 19.1.1 is used throughout the application with 71 component files in src/components/**/*. The project uses modern React features including hooks and server components. Components are organized into UI components, admin components, and specialized components for job applications and interview prep.",
           "facts": [
-            "71 component files in src/components directory",
+            "71 component files in src/components/**/*",
             "Uses React 19.1.1 with React DOM 19.1.1",
-            "Includes custom providers and hooks architecture"
+            "Component architecture with UI, admin, and domain-specific components"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 79,
+              "line": 80,
               "note": "React dependency version"
             },
             {
               "path": "package.json",
-              "line": 80,
+              "line": 81,
               "note": "React DOM dependency version"
             },
             {
-              "path": "src/components/providers.tsx",
+              "path": "src/components/ui/Button.tsx",
               "line": 1,
-              "note": "React context providers"
+              "note": "Example UI component"
             }
           ]
         },
         {
           "name": "Radix UI Themes",
           "version": "3.3.0",
-          "role": "Design system and component primitives",
+          "role": "Design system and component theming",
           "url": "https://www.radix-ui.com/themes",
-          "details": "Radix UI Themes 3.3.0 provides the design system foundation with Radix Icons 1.3.2. Used for building accessible UI components like Badge, Button, Card, and SearchInput in the components/ui directory. The theming system supports dark/light modes and consistent spacing.",
+          "details": "Radix UI Themes 3.3.0 provides the design system foundation with Radix UI Icons 1.3.2 for iconography. The theming system is used for consistent styling across the application's UI components. Components like Badge, Button, Card, and SearchInput in src/components/ui/ leverage Radix primitives.",
           "facts": [
-            "Radix UI Themes 3.3.0 with Radix Icons 1.3.2",
-            "Custom UI components in src/components/ui directory",
-            "Used for accessible form controls and layout primitives"
+            "Radix UI Themes 3.3.0 with Radix UI Icons 1.3.2",
+            "UI components in src/components/ui/ directory",
+            "Design system for consistent theming"
           ],
           "source_locations": [
-            {
-              "path": "package.json",
-              "line": 57,
-              "note": "@radix-ui/react-icons dependency"
-            },
             {
               "path": "package.json",
               "line": 58,
               "note": "@radix-ui/themes dependency"
             },
             {
-              "path": "src/components/ui/Button.tsx",
+              "path": "package.json",
+              "line": 59,
+              "note": "@radix-ui/react-icons dependency"
+            },
+            {
+              "path": "src/components/ui/index.ts",
               "line": 1,
-              "note": "Radix-based Button component"
+              "note": "UI components export"
             }
           ]
         },
@@ -98,85 +98,56 @@
           "version": "6.37.4",
           "role": "Authentication and user management",
           "url": "https://clerk.com",
-          "details": "Clerk 6.37.4 handles authentication with dedicated sign-in and sign-up pages. Integrated with Next.js App Router for protected routes and user session management. Provides auth headers and user context throughout the application.",
+          "details": "Clerk 6.37.4 handles authentication with dedicated sign-in and sign-up pages at /sign-in and /sign-up routes. The auth-header.tsx component provides authentication UI elements. Clerk integrates with Next.js App Router for protected routes and user session management throughout the application.",
           "facts": [
-            "Clerk @clerk/nextjs version 6.37.4",
+            "Clerk 6.37.4 for authentication",
             "Dedicated /sign-in and /sign-up routes",
-            "Auth API route at /api/auth/[...all]"
+            "Auth header component for UI integration"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 49,
-              "note": "@clerk/nextjs dependency version"
+              "line": 47,
+              "note": "@clerk/nextjs dependency"
             },
             {
               "path": "src/app/sign-in/page.tsx",
               "line": 1,
-              "note": "Clerk sign-in page"
+              "note": "Sign-in page route"
             },
             {
-              "path": "src/app/api/auth/[...all]/route.ts",
+              "path": "src/components/auth-header.tsx",
               "line": 1,
-              "note": "Clerk auth API route"
+              "note": "Authentication UI component"
             }
           ]
         },
         {
           "name": "Vanilla Extract",
           "version": "1.18.0",
-          "role": "Zero-runtime CSS-in-JS styling",
+          "role": "Zero-runtime CSS-in-TypeScript styling",
           "url": "https://vanilla-extract.style",
-          "details": "Vanilla Extract 1.18.0 provides type-safe CSS-in-JS with zero runtime. Integrated via Next.js plugin in next.config.ts. Used for component styling with CSS modules approach, particularly in jobs-list.css.ts and source-filter.css.ts.",
+          "details": "Vanilla Extract 1.18.0 is configured via Next.js plugin for zero-runtime CSS-in-TypeScript. The project uses CSS modules (page.module.css) alongside Vanilla Extract for styling. Components like jobs-list.css.ts and source-filter.css.ts demonstrate Type-safe CSS with build-time extraction.",
           "facts": [
-            "@vanilla-extract/css version 1.18.0",
-            "Integrated via Next.js plugin in next.config.ts",
-            "Used for type-safe CSS modules"
-          ],
-          "source_locations": [
-            {
-              "path": "package.json",
-              "line": 61,
-              "note": "@vanilla-extract/css dependency"
-            },
-            {
-              "path": "next.config.ts",
-              "line": 2,
-              "note": "Vanilla Extract Next.js plugin import"
-            },
-            {
-              "path": "src/components/jobs-list.css.ts",
-              "line": 1,
-              "note": "Vanilla Extract CSS module"
-            }
-          ]
-        },
-        {
-          "name": "React Flow",
-          "version": "12.10.1",
-          "role": "Interactive node-based diagrams and flowcharts",
-          "url": "https://reactflow.dev",
-          "details": "React Flow (via @xyflow/react) 12.10.1 powers interactive node-based visualizations for study and preparation flows. Used in prep components for visualizing topic relationships and progress tracking with custom node components.",
-          "facts": [
-            "@xyflow/react version 12.10.1",
-            "Used for study and preparation flow visualizations",
-            "Custom node components in src/components/prep/nodes"
+            "Vanilla Extract 1.18.0 with Next.js plugin integration",
+            "CSS modules alongside Type-safe CSS",
+            "Build-time CSS extraction for zero runtime"
           ],
           "source_locations": [
             {
               "path": "package.json",
               "line": 62,
-              "note": "@xyflow/react dependency"
+              "note": "@vanilla-extract/css dependency"
             },
             {
-              "path": "src/components/prep/nodes/TopicNode.tsx",
-              "line": 1,
-              "note": "React Flow node component"
+              "path": "next.config.ts",
+              "line": 4,
+              "note": "Vanilla Extract Next.js plugin"
             },
             {
-              "path": "src/components/prep/GraphTooltip.tsx",
+              "path": "src/components/jobs-list.css.ts",
               "line": 1,
-              "note": "React Flow tooltip component"
+              "note": "Vanilla Extract CSS file"
             }
           ]
         }
@@ -188,85 +159,171 @@
       "entries": [
         {
           "name": "Apollo Server",
-          "role": "GraphQL server implementation",
+          "version": "5.3.0",
+          "role": "GraphQL server for API layer",
           "url": "https://www.apollographql.com/docs/apollo-server/",
-          "details": "Provides GraphQL API with modular schema design across 34 GraphQL files organized by domain (applications, companies, contacts, jobs, etc.). Context includes userId, userEmail, db instance, and loaders. The GraphQL endpoint is at /api/graphql route.",
+          "details": "Apollo Server 5.3.0 is used as the GraphQL server with Node.js runtime for better I/O performance. It's integrated with Next.js via @as-integrations/next and configured with rate limiting (100 requests/minute) and Clerk authentication. The server uses a modular schema system with 34 GraphQL files across schema/ and src/graphql/ directories.",
           "facts": [
-            "34 GraphQL schema files organized across 11 domains",
-            "GraphQL context includes userId, userEmail, db instance, and loaders",
-            "41 API route files in src/app/api/**/* structure"
+            "34 GraphQL schema files found across schema/ and src/graphql/ directories",
+            "Rate limiting configured at 100 requests per minute per user/IP",
+            "Uses Node.js runtime for better I/O performance with D1 database"
           ],
           "source_locations": [
             {
-              "path": "src/apollo/context.ts",
-              "line": 1,
-              "note": "GraphQL context interface definition"
+              "path": "package.json",
+              "line": 45,
+              "note": "@apollo/server dependency version 5.3.0"
             },
             {
               "path": "src/app/api/graphql/route.ts",
               "line": 1,
-              "note": "GraphQL API route entrypoint"
+              "note": "ApolloServer import and initialization"
             },
             {
-              "path": "schema/base/schema.graphql",
-              "line": 7,
-              "note": "Base Query and Mutation type definitions"
+              "path": "src/app/api/graphql/route.ts",
+              "line": 55,
+              "note": "ApolloServer instance creation with GraphQLContext"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 13,
+              "note": "Node.js runtime configuration for better performance"
             }
           ]
         },
         {
           "name": "Next.js API Routes",
-          "role": "RESTful API endpoints",
-          "url": "https://nextjs.org/docs/app/building-your-application/routing/router-handlers",
-          "details": "Provides 41 API route files organized by functionality including admin, auth, companies, emails, webhooks, and resume PDF generation. Each route follows the App Router pattern with route.ts files. Vercel configuration sets 60-second max duration for all API functions.",
+          "version": "16.1.6",
+          "role": "RESTful API endpoints and GraphQL integration",
+          "url": "https://nextjs.org/docs/app/building-your-application/routing/route-handlers",
+          "details": "41 API route files organized under src/app/api/ covering GraphQL, admin endpoints, email generation, resume PDF rendering, and webhooks. Vercel configuration sets 60-second max duration for all API routes. The GraphQL route at /api/graphql serves as the primary API endpoint with authentication and rate limiting.",
           "facts": [
-            "41 API route files across 10 functional areas",
-            "Vercel timeout configured to 60 seconds max duration",
-            "Includes admin, auth, companies, emails, webhooks, and resume PDF endpoints"
+            "41 API route files found in src/app/api/ directory",
+            "Vercel timeout configured at 60 seconds max duration for all API routes",
+            "GraphQL API route includes Clerk authentication and rate limiting"
           ],
           "source_locations": [
             {
+              "path": "package.json",
+              "line": 78,
+              "note": "Next.js version 16.1.6"
+            },
+            {
               "path": "vercel.json",
               "line": 8,
-              "note": "API function timeout configuration (60 seconds)"
+              "note": "Vercel functions configuration with 60-second max duration"
             },
             {
               "path": "src/app/api/graphql/route.ts",
-              "line": 1,
-              "note": "GraphQL API route"
+              "line": 118,
+              "note": "GraphQL GET route handler with rate limiting"
             },
             {
-              "path": "src/app/api/admin/reported-jobs/route.ts",
-              "line": 1,
-              "note": "Admin API route example"
+              "path": "src/app/api/graphql/route.ts",
+              "line": 142,
+              "note": "GraphQL POST route handler with rate limiting"
             }
           ]
         },
         {
-          "name": "GraphQL Schema",
-          "role": "Type definitions and operations",
-          "url": "https://graphql.org/learn/schema/",
-          "details": "Modular schema design with base types extended across 11 domains. Includes custom scalars (JSON, DateTime, URL, EmailAddress, Upload) and enums for source types and extraction methods. Schema organized in /schema directory with separate files for queries, mutations, and type definitions.",
+          "name": "GraphQL Tools",
+          "version": "10.0.31",
+          "role": "GraphQL schema generation and tooling",
+          "url": "https://www.graphql-tools.com/",
+          "details": "@graphql-tools/schema 10.0.31 is used to create executable schemas from type definitions. The project uses GraphQL Code Generator for type safety with TypeScript resolvers. Schema is split across multiple domains including companies, jobs, applications, prompts, and study topics.",
           "facts": [
-            "11 domain-specific schema modules extending base types",
-            "5 custom scalars: JSON, DateTime, URL, EmailAddress, Upload",
-            "2 enums: SourceType and ExtractMethod with 5 values each"
+            "GraphQL schema organized across 12 domain directories in schema/",
+            "Uses @graphql-tools/load-files and @graphql-tools/schema for schema assembly",
+            "GraphQL Code Generator configured for TypeScript type generation"
           ],
           "source_locations": [
             {
-              "path": "schema/base/schema.graphql",
-              "line": 1,
-              "note": "Base schema with scalars and enums"
+              "path": "package.json",
+              "line": 52,
+              "note": "@graphql-tools/schema dependency version 10.0.31"
             },
             {
-              "path": "schema/companies/schema.graphql",
+              "path": "src/apollo/schema.ts",
               "line": 1,
-              "note": "Company domain schema extending Query"
+              "note": "makeExecutableSchema import from @graphql-tools/schema"
             },
             {
-              "path": "schema/jobs/schema.graphql",
-              "line": 1,
-              "note": "Jobs domain schema extending Query"
+              "path": "src/apollo/schema.ts",
+              "line": 5,
+              "note": "Executable schema creation with typeDefs and resolvers"
+            },
+            {
+              "path": "package.json",
+              "line": 93,
+              "note": "@graphql-codegen/cli for GraphQL type generation"
+            }
+          ]
+        },
+        {
+          "name": "Clerk Authentication",
+          "version": "6.37.4",
+          "role": "User authentication and session management",
+          "url": "https://clerk.com/docs",
+          "details": "Clerk 6.37.4 provides authentication for GraphQL API routes. User ID and email are fetched from Clerk sessions and passed to GraphQL context. Development mode includes an ADMIN_EMAIL bypass for local testing without authentication.",
+          "facts": [
+            "User authentication integrated into GraphQL context setup",
+            "Development mode includes ADMIN_EMAIL bypass for testing",
+            "User email fetched from Clerk for admin checks and prompt access"
+          ],
+          "source_locations": [
+            {
+              "path": "package.json",
+              "line": 47,
+              "note": "@clerk/nextjs dependency version 6.37.4"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 6,
+              "note": "Clerk auth imports"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 67,
+              "note": "Clerk auth() call to get userId"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 80,
+              "note": "Fetching user email from Clerk client"
+            }
+          ]
+        },
+        {
+          "name": "Drizzle ORM",
+          "version": "0.45.1",
+          "role": "Database access layer for API",
+          "url": "https://orm.drizzle.team/",
+          "details": "Drizzle ORM 0.45.1 provides database access through Cloudflare D1. Database instance is passed to GraphQL context and used by resolvers. DataLoaders are created for efficient batch loading of related data.",
+          "facts": [
+            "Database instance passed to GraphQL context for all resolvers",
+            "DataLoaders created for efficient batch loading",
+            "Uses Cloudflare D1 HTTP client for database access"
+          ],
+          "source_locations": [
+            {
+              "path": "package.json",
+              "line": 70,
+              "note": "drizzle-orm dependency version 0.45.1"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 7,
+              "note": "getDb import for database access"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 63,
+              "note": "Database client creation with D1 HTTP client"
+            },
+            {
+              "path": "src/app/api/graphql/route.ts",
+              "line": 64,
+              "note": "DataLoaders creation for batch loading"
             }
           ]
         }
@@ -277,14 +334,48 @@
       "color": "cyan",
       "entries": [
         {
+          "name": "Drizzle ORM",
+          "version": "0.45.1",
+          "role": "Type-safe SQLite ORM for schema definition and query building",
+          "url": "https://orm.drizzle.team",
+          "details": "Used as the primary ORM for defining database schemas and types. The schema is defined in src/db/schema.ts with 15+ table definitions including companies, jobs, user_settings, job_skill_tags, and company_facts. Drizzle Kit (v0.31.8) is used for migrations and database studio. The project uses SQLite core with Cloudflare D1 bindings.",
+          "facts": [
+            "15+ table definitions in schema.ts",
+            "31 migration SQL files in migrations/ directory",
+            "Uses drizzle-kit for migrations and studio"
+          ],
+          "source_locations": [
+            {
+              "path": "package.json",
+              "line": 70,
+              "note": "drizzle-orm dependency"
+            },
+            {
+              "path": "package.json",
+              "line": 111,
+              "note": "drizzle-kit dev dependency"
+            },
+            {
+              "path": "src/db/schema.ts",
+              "line": 1,
+              "note": "Drizzle schema entrypoint with imports"
+            },
+            {
+              "path": "package.json",
+              "line": 34,
+              "note": "db:generate script using drizzle-kit"
+            }
+          ]
+        },
+        {
           "name": "Cloudflare D1",
-          "role": "Serverless SQLite database for job listings and user data",
-          "url": "https://developers.cloudflare.com/d1/",
-          "details": "Used as the primary database with D1 binding 'DB' connecting to 'nomadically-db' (ID: 632b9c57-8262-40bd-86c2-bc08beab713b). Accessed via a dedicated gateway worker at workers/d1-gateway.ts that provides RESTful API endpoints for jobs, user settings, and companies. The database has 31 migration files and contains tables for jobs, companies, user_settings, job_skill_tags, skill_aliases, company_facts, and ashby_boards.",
+          "role": "Serverless SQLite database for Cloudflare Workers",
+          "url": "https://developers.cloudflare.com/d1",
+          "details": "Used as the primary database backend with D1 bindings. The project has a dedicated D1 Gateway Worker (workers/d1-gateway.ts) that provides a secure HTTP API for database access from Vercel. Database ID is 632b9c57-8262-40bd-86c2-bc08beab713b with binding name 'DB'. Uses wrangler for migrations and deployment.",
           "facts": [
             "Database ID: 632b9c57-8262-40bd-86c2-bc08beab713b",
-            "31 SQL migration files in migrations/ directory",
-            "7 main tables defined in src/db/schema.ts"
+            "D1 Gateway Worker provides 8+ REST endpoints",
+            "Uses D1 batch queries for performance"
           ],
           "source_locations": [
             {
@@ -298,64 +389,48 @@
               "note": "DB binding in Env interface"
             },
             {
-              "path": "src/db/schema.ts",
+              "path": "package.json",
+              "line": 36,
+              "note": "db:push script for D1 migrations"
+            },
+            {
+              "path": "workers/d1-gateway.ts",
               "line": 1,
-              "note": "Drizzle schema with table definitions"
+              "note": "D1 Gateway Worker entrypoint"
             }
           ]
         },
         {
-          "name": "Drizzle ORM",
-          "role": "Type-safe SQL ORM for schema definition and query building",
-          "url": "https://orm.drizzle.team/",
-          "details": "Used to define the database schema in src/db/schema.ts with 7 main tables: companies, jobs, ashby_boards, user_settings, job_skill_tags, skill_aliases, and company_facts. Provides type inference with $inferSelect and $inferInsert. The schema includes indexes, foreign keys, and JSON fields. Drizzle is imported from 'drizzle-orm/sqlite-core' and used with SQLite dialect for D1 compatibility.",
+          "name": "Cloudflare Workers",
+          "version": "4.61.1",
+          "role": "Edge runtime for D1 Gateway and database access",
+          "url": "https://workers.cloudflare.com",
+          "details": "Hosts the D1 Gateway Worker that provides secure HTTP API access to the D1 database. The worker implements authentication, CORS, and optimized query patterns. Uses wrangler v4.61.1 for deployment with compatibility date 2026-02-01. Worker includes observability with logs enabled.",
           "facts": [
-            "7 tables defined in schema.ts",
-            "Uses sqliteTable from drizzle-orm/sqlite-core",
-            "Includes 6 indexes on jobs table alone"
+            "Wrangler version 4.61.1",
+            "Compatibility date 2026-02-01",
+            "Observability logs enabled"
           ],
           "source_locations": [
             {
-              "path": "src/db/schema.ts",
-              "line": 1,
-              "note": "Drizzle imports and table definitions"
-            },
-            {
-              "path": "src/db/schema.ts",
-              "line": 4,
-              "note": "First table definition: companies"
-            },
-            {
-              "path": "src/db/schema.ts",
-              "line": 68,
-              "note": "Jobs table with indexes"
-            }
-          ]
-        },
-        {
-          "name": "D1 Gateway Worker",
-          "role": "REST API gateway for secure D1 database access from Vercel",
-          "details": "Custom Cloudflare Worker at workers/d1-gateway.ts that exposes specific query patterns as HTTP endpoints. Uses Bearer token authentication with API_KEY env var. Provides endpoints for /jobs, /jobs/:id, /jobs/batch, /user-settings, and /companies. Implements CORS, caching headers, and batched queries for performance. Worker is configured in wrangler.d1-gateway.toml with observability enabled.",
-          "facts": [
-            "5 main API endpoints exposed",
-            "Uses Bearer token authentication",
-            "Configured with compatibility_date: 2026-02-01"
-          ],
-          "source_locations": [
-            {
-              "path": "workers/d1-gateway.ts",
-              "line": 1,
-              "note": "Gateway worker implementation"
-            },
-            {
-              "path": "workers/d1-gateway.ts",
-              "line": 90,
-              "note": "GET /jobs endpoint"
+              "path": "package.json",
+              "line": 116,
+              "note": "wrangler dev dependency"
             },
             {
               "path": "wrangler.d1-gateway.toml",
-              "line": 1,
-              "note": "Worker configuration"
+              "line": 3,
+              "note": "compatibility_date configuration"
+            },
+            {
+              "path": "wrangler.d1-gateway.toml",
+              "line": 17,
+              "note": "observability configuration"
+            },
+            {
+              "path": "workers/d1-gateway.ts",
+              "line": 62,
+              "note": "Worker fetch handler"
             }
           ]
         }
@@ -367,47 +442,47 @@
       "entries": [
         {
           "name": "DeepSeek via @ai-sdk/deepseek",
-          "version": "2.0.17",
-          "role": "Primary LLM for job classification, SQL generation, and email generation",
+          "version": "^2.0.17",
+          "role": "Primary LLM provider for job classification, SQL generation, email generation, and AI agents",
           "url": "https://www.deepseek.com",
           "details": "Used throughout the project via @ai-sdk/deepseek package. Configured for remote EU job classification in the process-jobs worker (runs hourly via cron), SQL generation agents, and email generation. The system uses multiple DeepSeek models including deepseek-chat, deepseek-reasoner, and deepseek-r1-distill-qwen-32b via Cloudflare Workers AI. Base URL configured as https://api.deepseek.com with beta features available at https://api.deepseek.com/beta.",
           "facts": [
-            "6 agents use DeepSeek for SQL generation and admin tasks",
-            "Process-jobs worker runs hourly via cron (0 * * * *) for job classification",
-            "Uses DEEPSEEK_API_KEY environment variable for authentication"
+            "6 agents in src/agents/ directory using DeepSeek",
+            "Hourly cron schedule (0 * * * *) in workers/process-jobs/wrangler.jsonc",
+            "Supports models: deepseek-chat, deepseek-reasoner, deepseek-r1-distill-qwen-32b"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 43,
+              "line": 41,
               "note": "@ai-sdk/deepseek dependency"
             },
             {
-              "path": "src/llm/deepseek.ts",
-              "line": 42,
-              "note": "DeepSeek client configuration with baseURL"
-            },
-            {
-              "path": "src/evals/remote-eu/classifier.ts",
-              "line": 8,
-              "note": "DeepSeek import for job classification"
-            },
-            {
-              "path": "src/agents/sql.ts",
+              "path": "src/agents/index.ts",
               "line": 1,
-              "note": "DeepSeek import for SQL generation agent"
+              "note": "DeepSeek import for classification"
+            },
+            {
+              "path": "src/llm/deepseek.ts",
+              "line": 1,
+              "note": "DeepSeek client implementation"
             },
             {
               "path": "workers/process-jobs/wrangler.jsonc",
               "line": 8,
-              "note": "Hourly cron schedule for job classification"
+              "note": "Hourly cron schedule for classification"
+            },
+            {
+              "path": "src/evals/remote-eu/classifier.ts",
+              "line": 8,
+              "note": "DeepSeek import for EU classification"
             }
           ]
         },
         {
           "name": "Anthropic Claude via @anthropic-ai/claude-agent-sdk",
-          "version": "0.2.44",
-          "role": "AI agent SDK for autonomous job seeking, architect sub-agents, and study topics",
+          "version": "^0.2.44",
+          "role": "Agentic AI for job seeking, architect sub-agents, and study topic generation",
           "url": "https://docs.anthropic.com/en/docs/agent-sdk",
           "details": "Integrated through @anthropic-ai/claude-agent-sdk package with project settings in .claude/ directory and CLAUDE.md. Used for job seeking agents, architect sub-agents, and study topic generation with models like claude-haiku-4-5-20251001. Includes MCP (Model Context Protocol) servers for PostgreSQL, filesystem, and GitHub integration.",
           "facts": [
@@ -418,125 +493,125 @@
           "source_locations": [
             {
               "path": "package.json",
-              "line": 45,
+              "line": 43,
               "note": "@anthropic-ai/claude-agent-sdk dependency"
             },
             {
               "path": "src/anthropic/client.ts",
-              "line": 28,
-              "note": "Claude Agent SDK imports"
-            },
-            {
-              "path": "src/anthropic/README.md",
-              "line": 3,
-              "note": "Claude Agent SDK integration documentation"
-            },
-            {
-              "path": "src/apollo/resolvers/study-topics.ts",
-              "line": 6,
-              "note": "Anthropic import for study topic generation"
+              "line": 2,
+              "note": "Claude Agent SDK client"
             },
             {
               "path": "src/anthropic/constants.ts",
               "line": 13,
               "note": "Claude model definitions"
+            },
+            {
+              "path": "src/anthropic/agents/job-seeker.ts",
+              "line": 91,
+              "note": "Claude-only agent for job seeking"
+            },
+            {
+              "path": "src/anthropic/mcp.ts",
+              "line": 142,
+              "note": "MCP server for PostgreSQL integration"
             }
           ]
         },
         {
           "name": "Vercel AI SDK",
-          "version": "6.0.77",
+          "version": "^6.0.77",
           "role": "Unified interface for AI models across the application",
           "url": "https://sdk.vercel.ai",
           "details": "Provides a unified interface for AI models across the application via the 'ai' package. Used alongside @ai-sdk/deepseek and @ai-sdk/anthropic packages. Enables consistent model calling patterns for SQL generation, study topics, and resume analysis across different LLM providers.",
           "facts": [
             "Combined with @ai-sdk/deepseek and @ai-sdk/anthropic packages",
-            "Used in 6 agent files for consistent AI model calling",
-            "Provides unified streaming and completion interfaces"
+            "Used in 6 agent files for structured output generation",
+            "Integrates with Langfuse for AI observability"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 63,
-              "note": "ai package dependency (Vercel AI SDK)"
+              "line": 64,
+              "note": "ai package dependency"
             },
             {
-              "path": "package.json",
-              "line": 42,
-              "note": "@ai-sdk/anthropic dependency"
-            },
-            {
-              "path": "src/apollo/resolvers/study-topics.ts",
-              "line": 198,
-              "note": "AI SDK usage with Claude model"
+              "path": "src/evals/remote-eu/classifier.ts",
+              "line": 5,
+              "note": "Uses Vercel AI SDK with DeepSeek"
             },
             {
               "path": "src/agents/index.ts",
-              "line": 17,
-              "note": "AI SDK usage with DeepSeek model"
+              "line": 8,
+              "note": "Classify job using Vercel AI SDK"
+            },
+            {
+              "path": "src/tools/database/sql-generation-tool.ts",
+              "line": 3,
+              "note": "SQL generation with AI SDK"
             }
           ]
         },
         {
-          "name": "OpenRouter via @ai-sdk/openai",
-          "version": "3.0.26",
-          "role": "Gateway for testing multiple models and fallback provider",
+          "name": "OpenRouter",
+          "version": "null",
+          "role": "Fallback and comparison gateway for testing multiple DeepSeek models",
           "url": "https://openrouter.ai",
           "details": "Acts as a fallback and comparison gateway when testing multiple models against the same prompt. Configured with baseURL: https://openrouter.ai/api/v1. Provides access to multiple DeepSeek models including deepseek-chat, deepseek-r1, deepseek-r1-distill-qwen-32b, and deepseek-coder through a unified interface.",
           "facts": [
-            "Uses OpenAI-compatible API interface via @ai-sdk/openai",
-            "Provides access to 5 different DeepSeek models through OpenRouter",
-            "Configured in src/openrouter/provider.ts with OpenRouter base URL"
+            "5 DeepSeek models configured in src/openrouter/config.ts",
+            "Used for model comparison and fallback scenarios",
+            "Base URL: https://openrouter.ai/api/v1"
           ],
           "source_locations": [
             {
-              "path": "package.json",
-              "line": 44,
-              "note": "@ai-sdk/openai dependency"
-            },
-            {
-              "path": "src/openrouter/provider.ts",
-              "line": 8,
-              "note": "OpenAI client creation for OpenRouter"
+              "path": "src/openrouter/index.ts",
+              "line": 4,
+              "note": "OpenRouter integration using DeepSeek models"
             },
             {
               "path": "src/openrouter/config.ts",
               "line": 18,
-              "note": "DeepSeek model configurations for OpenRouter"
+              "note": "DeepSeek model mappings for OpenRouter"
+            },
+            {
+              "path": "src/openrouter/provider.ts",
+              "line": 80,
+              "note": "Pre-configured DeepSeek model instances"
             },
             {
               "path": "package.json",
-              "line": 23,
+              "line": 22,
               "note": "test:openrouter script for integration testing"
             }
           ]
         },
         {
           "name": "Google ADK",
-          "version": "0.3.0",
-          "role": "Google AI development kit for Gemini model integration",
-          "url": "https://developers.google.com/ai/develop",
-          "details": "Google AI development kit for Gemini model integration. Includes both @google/adk and @google/adk-devtools packages. Provides structured access to Google's AI models alongside other LLM providers in the application.",
+          "version": "^0.3.0",
+          "role": "Google AI integration for Gemini models and AI development",
+          "url": "https://ai.google.dev/adk",
+          "details": "Google AI Development Kit for integrating Gemini models and AI capabilities. Used alongside @google/genai package for additional Google AI services. Part of the AI stack for multi-provider AI capabilities.",
           "facts": [
-            "Includes both @google/adk and @google/adk-devtools packages",
-            "Part of multi-provider LLM strategy alongside DeepSeek and Claude",
-            "Version 0.3.0 indicates early adoption/beta usage"
+            "@google/adk version 0.3.0",
+            "@google/genai version 1.41.0",
+            "@google/adk-devtools version 0.3.0 for development"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 51,
+              "line": 49,
               "note": "@google/adk dependency"
             },
             {
               "path": "package.json",
-              "line": 90,
-              "note": "@google/adk-devtools dev dependency"
+              "line": 50,
+              "note": "@google/genai dependency"
             },
             {
               "path": "package.json",
-              "line": 52,
-              "note": "@google/genai dependency for Google AI models"
+              "line": 91,
+              "note": "@google/adk-devtools dev dependency"
             }
           ]
         }
@@ -549,18 +624,18 @@
         {
           "name": "Langfuse",
           "version": "3.38.6",
-          "role": "Central LLM observability with tracing, prompt versioning, and scoring",
+          "role": "Central LLM observability layer for tracing, prompt management, and scoring",
           "url": "https://langfuse.com",
-          "details": "Langfuse is configured as the primary observability layer with LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, and LANGFUSE_BASE_URL environment variables pointing to https://cloud.langfuse.com. It's used for runtime prompt management (fetching prompts like 'job-classifier'), tracing all LLM calls, and scoring accuracy via evaluation scripts. Prompts are referenced using '@@@langfusePrompt:name=PromptName|label=production@@@' format and fetched dynamically from Langfuse cloud.",
+          "details": "Langfuse is configured with LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, and LANGFUSE_BASE_URL environment variables pointing to https://cloud.langfuse.com. It's used for runtime prompt management (fetching prompts like 'job-classifier'), tracing all LLM calls, and scoring accuracy via evaluation scripts. Prompts are referenced using '@@@langfusePrompt:name=PromptName|label=production@@@' format and fetched dynamically from Langfuse cloud.",
           "facts": [
-            "Configured in src/config/env.ts with 3 required environment variables",
-            "Used in 3 evaluation scripts: eval-remote-eu-langfuse.ts, classify-remote-eu-jobs.ts, and build-golden-datasets.py",
-            "Prompt references use format '@@@langfusePrompt:name=PromptName|label=production@@@'"
+            "Configured with 3 required environment variables in src/config/env.ts",
+            "Prompt references use format '@@@langfusePrompt:name=PromptName|label=production@@@'",
+            "Dedicated eval script at scripts/eval-remote-eu-langfuse.ts"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 72,
+              "line": 73,
               "note": "langfuse dependency version 3.38.6"
             },
             {
@@ -569,53 +644,78 @@
               "note": "Langfuse configuration interface"
             },
             {
-              "path": "src/config/env.ts",
-              "line": 74,
-              "note": "Langfuse environment validation"
-            },
-            {
               "path": "src/langfuse/index.ts",
               "line": 303,
-              "note": "Langfuse prompt reference format"
+              "note": "Prompt reference format definition"
             },
             {
               "path": "src/llm/deepseek.ts",
               "line": 62,
-              "note": "Fetching Langfuse prompts at runtime"
+              "note": "Fetching Langfuse prompts in LLM calls"
+            }
+          ]
+        },
+        {
+          "name": "@langfuse/otel",
+          "version": "4.6.1",
+          "role": "OpenTelemetry integration for distributed tracing",
+          "url": "https://langfuse.com",
+          "details": "Provides OpenTelemetry integration that Langfuse builds upon for distributed tracing infrastructure. Enables detailed trace collection and analysis of LLM calls and application workflows through the underlying OpenTelemetry SDK.",
+          "facts": [
+            "@langfuse/otel package version 4.6.1 provides OpenTelemetry integration",
+            "Used alongside @opentelemetry/sdk-trace-node version 2.5.1"
+          ],
+          "source_locations": [
+            {
+              "path": "package.json",
+              "line": 54,
+              "note": "@langfuse/otel dependency version 4.6.1"
+            },
+            {
+              "path": "package.json",
+              "line": 57,
+              "note": "@opentelemetry/sdk-trace-node dependency version 2.5.1"
+            }
+          ]
+        },
+        {
+          "name": "@langfuse/tracing",
+          "version": "4.6.1",
+          "role": "Tracing SDK for Langfuse observability",
+          "url": "https://langfuse.com",
+          "details": "Provides the tracing SDK that integrates with Langfuse for capturing LLM calls, spans, and traces. Works with the OpenTelemetry backend to provide comprehensive observability across the application.",
+          "facts": [
+            "@langfuse/tracing package version 4.6.1",
+            "Part of Langfuse's comprehensive observability stack"
+          ],
+          "source_locations": [
+            {
+              "path": "package.json",
+              "line": 55,
+              "note": "@langfuse/tracing dependency version 4.6.1"
             }
           ]
         },
         {
           "name": "LangSmith",
           "version": "0.5.2",
-          "role": "Alternative LLM evaluation and tracing platform",
+          "role": "Alternative evaluation platform and LLM observability",
           "url": "https://smith.langchain.com",
-          "details": "LangSmith is installed as a dependency but appears to be used primarily as a fallback or alternative evaluation platform. The project has a script 'eval:langfuse' that runs evaluations against both Langfuse and LangSmith. It's integrated into remote EU evaluation workflows with dedicated scorer functions for tracking LLM performance on classification tasks.",
+          "details": "LangSmith is installed as a dependency but appears to be used primarily as a fallback or alternative evaluation platform. The project has evaluation workflows that can run against both Langfuse and LangSmith, with dedicated scorer functions for tracking LLM performance on classification tasks.",
           "facts": [
-            "Installed as dependency version 0.5.2 in package.json",
-            "Has dedicated eval script 'eval:langfuse' for evaluations",
-            "Used in workers/eu-classifier and workers/process-jobs Python modules"
+            "langsmith dependency version 0.5.2",
+            "Integrated into remote EU evaluation workflows as alternative platform"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 73,
+              "line": 74,
               "note": "langsmith dependency version 0.5.2"
             },
             {
               "path": "src/app/stack/discovery.json",
-              "line": 998,
-              "note": "LangSmith evaluation integration"
-            },
-            {
-              "path": "workers/eu-classifier/python_modules/langsmith/env.py",
-              "line": 1,
-              "note": "LangSmith environment module"
-            },
-            {
-              "path": "workers/process-jobs/python_modules/langsmith/env.py",
-              "line": 1,
-              "note": "LangSmith environment module"
+              "line": 638,
+              "note": "LangSmith usage description"
             }
           ]
         }
@@ -627,52 +727,57 @@
       "entries": [
         {
           "name": "Cloudflare Workers",
-          "role": "Serverless compute platform for background jobs and cron tasks",
+          "role": "Serverless runtime for background jobs, crawlers, and AI processing",
           "url": "https://developers.cloudflare.com/workers/",
-          "details": "Multiple workers handle different tasks: ashby-crawler (Rust/WASM) runs daily at 02:00 UTC to crawl job boards, eu-classifier (Python) runs every 6 hours for role classification, and cleanup-jobs processes queue messages. Workers use D1 database bindings to shared 'nomadically-work-db' (ID: 632b9c57-8262-40bd-86c2-bc08beab713b) and queue bindings for job processing.",
+          "details": "Multiple workers handle different tasks: ashby-crawler (Rust/WASM) crawls job boards daily at 02:00 UTC, eu-classifier (Python) runs every 6 hours for role classification, and job-reporter-llm processes job reports via queue. All workers share the same D1 database (nomadically-work-db, ID: 632b9c57-8262-40bd-86c2-bc08beab713b) with remote bindings for local development.",
           "facts": [
-            "5 workers have cron triggers (free plan limit reached)",
-            "All workers share same D1 database with remote bindings",
-            "3 Rust/WASM workers, 5 Python workers, 2 TypeScript workers"
+            "7 distinct workers found: ashby-crawler, cleanup-jobs, eu-classifier, job-matcher, job-reporter-llm, process-jobs, resume-rag, sdd-agent",
+            "3 workers use cron triggers: ashby-crawler (0 2 * * *), eu-classifier (0 */6 * * *), others disabled due to 5-cron free plan limit",
+            "All workers bind to same D1 database: nomadically-work-db (632b9c57-8262-40bd-86c2-bc08beab713b)"
           ],
           "source_locations": [
             {
               "path": "workers/ashby-crawler/wrangler.toml",
               "line": 11,
-              "note": "Cron: 0 2 * * *"
+              "note": "Cron trigger 0 2 * * *"
+            },
+            {
+              "path": "workers/ashby-crawler/wrangler.toml",
+              "line": 15,
+              "note": "D1 database binding"
             },
             {
               "path": "workers/eu-classifier/wrangler.jsonc",
               "line": 8,
-              "note": "Cron: 0 */6 * * *"
+              "note": "Cron trigger 0 */6 * * *"
             },
             {
-              "path": "workers/cleanup-jobs/wrangler.jsonc",
-              "line": 9,
-              "note": "Cron disabled due to limit"
+              "path": "workers/job-reporter-llm/wrangler.toml",
+              "line": 33,
+              "note": "Cron disabled due to free plan limit"
             }
           ]
         },
         {
-          "name": "Rust/WASM (worker-build)",
-          "role": "High-performance crawlers and agents compiled to WebAssembly",
-          "url": "https://rustwasm.github.io/",
-          "details": "Used in ashby-crawler, sdd-agent, and other performance-critical workers. Built with worker-build toolchain and deployed as WASM modules. ashby-crawler specifically crawls Common Crawl CDX API for Ashby, Greenhouse, Lever, and Workable job boards with 5 pages per provider per run.",
+          "name": "Rust/WASM (ashby-crawler)",
+          "role": "WebAssembly crawler for job board APIs (Ashby, Greenhouse, Lever, Workable)",
+          "url": "https://www.rust-lang.org/",
+          "details": "Rust-based worker compiled to WebAssembly that crawls Common Crawl indexes for job boards. Contains 14 source files in src/ including modules for different ATS providers (ashby.rs, greenhouse.rs, lever.rs, workable.rs). Uses worker-build for compilation and runs on Cloudflare Workers with Rust runtime.",
           "facts": [
-            "3 Rust/WASM workers: ashby-crawler, sdd-agent, and one more",
-            "Uses worker-build command for compilation",
-            "13 source files in ashby-crawler/src directory"
+            "14 Rust source files in workers/ashby-crawler/src/",
+            "4 database migrations (0001_init, 0002_enrichment, 0003_agent_analysis, 0007_greenhouse_boards, 0009_lever_boards, 0011_workable_boards)",
+            "Build command: cargo install -q worker-build && worker-build --release"
           ],
           "source_locations": [
-            {
-              "path": "workers/ashby-crawler/wrangler.toml",
-              "line": 6,
-              "note": "Build command: cargo install -q worker-build && worker-build --release"
-            },
             {
               "path": "workers/ashby-crawler/Cargo.toml",
               "line": 1,
               "note": "Rust package manifest"
+            },
+            {
+              "path": "workers/ashby-crawler/wrangler.toml",
+              "line": 6,
+              "note": "Rust build command"
             },
             {
               "path": "workers/ashby-crawler/src/lib.rs",
@@ -684,13 +789,13 @@
         {
           "name": "Python Workers",
           "version": "3.11",
-          "role": "AI/ML processing and job classification with LangChain",
+          "role": "Python-based workers for AI classification, job processing, and cleanup tasks",
           "url": "https://developers.cloudflare.com/workers/languages/python/",
-          "details": "Python workers like eu-classifier, cleanup-jobs, job-reporter-llm use python_workers compatibility flag. eu-classifier uses Cloudflare AI bindings and LangChain for role classification with environment variables for Langfuse tracing (LANGCHAIN_TRACING_V2=true).",
+          "details": "Python workers use compatibility_flags: [\"python_workers\"] and handle tasks like EU job classification, job matching, resume RAG, and cleanup. eu-classifier uses LangChain with Cloudflare AI bindings, job-reporter-llm uses DeepSeek API via AI Gateway, and cleanup-jobs handles database maintenance.",
           "facts": [
-            "5 Python workers identified",
+            "5 Python workers: cleanup-jobs, eu-classifier, job-matcher, process-jobs, resume-rag",
             "All use compatibility_flags: [\"python_workers\"]",
-            "eu-classifier has AI binding for Cloudflare AI models"
+            "eu-classifier has 8 Python source files in src/"
           ],
           "source_locations": [
             {
@@ -699,70 +804,70 @@
               "note": "python_workers compatibility flag"
             },
             {
-              "path": "workers/eu-classifier/wrangler.jsonc",
-              "line": 10,
-              "note": "AI binding configuration"
-            },
-            {
               "path": "workers/job-reporter-llm/wrangler.toml",
               "line": 4,
-              "note": "python_workers flag"
+              "note": "python_workers compatibility flag"
+            },
+            {
+              "path": "workers/eu-classifier/src/entry.py",
+              "line": 1,
+              "note": "Python worker entrypoint"
             }
           ]
         },
         {
           "name": "Cloudflare Queues",
-          "role": "Message queue system for async job processing",
+          "role": "Message queue system for async job processing between workers",
           "url": "https://developers.cloudflare.com/queues/",
-          "details": "Used for decoupled processing: job-report-queue (max_batch_size: 10), cleanup-jobs-queue (max_batch_size: 1), with dead letter queues for failed messages. Queue bindings allow producers and consumers to communicate between workers.",
+          "details": "Used for decoupled processing: job-reporter-llm consumes from job-report-queue (max_batch_size: 10), cleanup-jobs has cleanup-jobs-queue (max_batch_size: 1), and both have dead letter queues for failed messages. Queue bindings allow producers to enqueue jobs and consumers to process them asynchronously.",
           "facts": [
-            "3 queues configured: job-report-queue, cleanup-jobs-queue, plus others",
-            "All queues have DLQ (dead letter queue) configurations",
-            "Max retries typically set to 3"
+            "job-reporter-llm queue: max_batch_size=10, max_retries=3, dead_letter_queue=job-report-dlq",
+            "cleanup-jobs queue: max_batch_size=1, max_retries=3, dead_letter_queue=cleanup-jobs-dlq",
+            "eu-classifier queues disabled due to plan limitations"
           ],
           "source_locations": [
             {
               "path": "workers/job-reporter-llm/wrangler.toml",
-              "line": 18,
-              "note": "Queue consumer with DLQ"
+              "line": 14,
+              "note": "Queue producer/consumer configuration"
             },
             {
               "path": "workers/cleanup-jobs/wrangler.jsonc",
               "line": 18,
-              "note": "Queue producer/consumer config"
+              "note": "Queue configuration"
             },
             {
-              "path": "workers/job-reporter-llm/wrangler.toml",
-              "line": 14,
-              "note": "Queue producer binding"
+              "path": "workers/eu-classifier/wrangler.jsonc",
+              "line": 22,
+              "note": "Queues disabled due to plan limits"
             }
           ]
         },
         {
           "name": "Cloudflare D1",
-          "role": "SQLite-based database for all worker data",
+          "role": "SQLite-based database for all worker data persistence",
           "url": "https://developers.cloudflare.com/d1/",
-          "details": "Shared database 'nomadically-work-db' (ID: 632b9c57-8262-40bd-86c2-bc08beab713b) used by all workers with remote bindings for local development. Contains job listings, classifications, and processing state.",
+          "details": "Shared D1 database (nomadically-work-db) used by all workers with remote=true binding for local development. Database ID: 632b9c57-8262-40bd-86c2-bc08beab713b. Contains tables for jobs, classifications, crawls, and agent sessions managed through migrations in ashby-crawler.",
           "facts": [
-            "Single database ID used across all workers: 632b9c57-8262-40bd-86c2-bc08beab713b",
-            "All workers use 'DB' binding name",
-            "Remote binding enabled for local dev"
+            "Single database ID: 632b9c57-8262-40bd-86c2-bc08beab713b",
+            "All workers use remote=true binding for local dev",
+            "6 database migrations in ashby-crawler/migrations/"
           ],
           "source_locations": [
             {
               "path": "workers/ashby-crawler/wrangler.toml",
-              "line": 14,
+              "line": 17,
+              "note": "D1 database ID and remote binding"
+            },
+            {
+              "path": "workers/job-reporter-llm/wrangler.toml",
+              "line": 12,
               "note": "D1 database binding"
             },
             {
-              "path": "workers/eu-classifier/wrangler.jsonc",
-              "line": 14,
-              "note": "D1 configuration"
-            },
-            {
-              "path": "workers/cleanup-jobs/wrangler.jsonc",
-              "line": 10,
-              "note": "D1 binding with remote"
+              "path": "workers/ashby-crawler/migrations/0001_init/up.sql",
+              "line": 1,
+              "note": "Initial database schema"
             }
           ]
         }
@@ -775,20 +880,25 @@
         {
           "name": "Trigger.dev",
           "version": "4.3.3",
-          "role": "Background job orchestration for job data enhancement and processing",
+          "role": "Background job processing and scheduling system for job data enhancement",
           "url": "https://trigger.dev",
-          "details": "Used for scheduled and on-demand background jobs to enhance job postings from ATS sources like Greenhouse and Ashby. Configured in trigger.config.ts with project ID 'proj_gmqcwyqsqcnkjnlqcmxf', runtime 'node', and tasks located in ./src/trigger directory. Tasks include job enhancement with retry logic, scheduled cron jobs, and resume processing.",
+          "details": "Trigger.dev is used for scheduled and on-demand background jobs to enhance job postings from ATS sources like Greenhouse and Ashby. The system has 4 task definitions in src/trigger/ directory: enhanceJobTask, enhanceJobsScheduled (cron), enhanceJobsOnDemand, and processResumeTask. Configuration in trigger.config.ts sets project ID 'proj_gmqcwyqsqcnkjnlqcmxf' with 6-hour job scanning schedule and 5 concurrent task limit.",
           "facts": [
-            "Found 5 task files in src/trigger/ directory",
-            "Configured with cron schedule '0 */6 * * *' for scheduled job enhancement",
-            "Tasks have concurrency limit of 5 and max duration of 120-300 seconds",
-            "Uses batchTriggerAndWait for fan-out pattern to process up to 200 jobs"
+            "Found 4 task definitions across 5 files in src/trigger/ directory",
+            "Scheduled task runs every 6 hours with cron '0 */6 * * *' to enhance unprocessed jobs",
+            "Maximum task duration configured as 3600 seconds (1 hour) with 3 retry attempts default",
+            "Project ID: proj_gmqcwyqsqcnkjnlqcmxf with Node.js runtime"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 60,
+              "line": 61,
               "note": "@trigger.dev/sdk dependency version 4.3.3"
+            },
+            {
+              "path": "package.json",
+              "line": 100,
+              "note": "@trigger.dev/build dev dependency version 4.3.3"
             },
             {
               "path": "trigger.config.ts",
@@ -796,24 +906,24 @@
               "note": "Trigger.dev configuration entrypoint"
             },
             {
-              "path": "src/trigger/enhance-job.ts",
-              "line": 33,
-              "note": "Main enhance-job task with ID 'enhance-job'"
-            },
-            {
               "path": "src/trigger/enhance-greenhouse.ts",
               "line": 20,
-              "note": "Scheduled task with cron '0 */6 * * *'"
+              "note": "Scheduled task with cron schedule '0 */6 * * *'"
+            },
+            {
+              "path": "src/trigger/enhance-job.ts",
+              "line": 33,
+              "note": "Main enhanceJobTask definition with concurrency limit 5"
             },
             {
               "path": "src/trigger/process-resume.ts",
               "line": 11,
-              "note": "Resume processing task"
+              "note": "processResumeTask definition"
             },
             {
               "path": "src/trigger/enhance-all.ts",
               "line": 18,
-              "note": "On-demand job enhancement task"
+              "note": "enhanceJobsOnDemand task definition"
             }
           ]
         }
@@ -824,31 +934,58 @@
       "color": "crimson",
       "entries": [
         {
-          "name": "Langfuse",
-          "version": "3.38.6",
-          "role": "Observability and scoring platform for live evaluations",
-          "url": "https://langfuse.com",
-          "details": "Used for live evaluation tracking with scorers attached to agents. Automatically tracks evaluations in Langfuse for observability. Integrated with Mastra for scorer functionality. Documentation referenced in src/evals/index.eval.ts for Langfuse Scores.",
+          "name": "Vitest",
+          "version": "4.0.18",
+          "role": "Testing framework for unit and integration tests",
+          "url": "https://vitest.dev",
+          "details": "Vitest is listed as a dev dependency in package.json at line 115. It's used for testing across the codebase, though no specific test files were found in the evals directory. The project has 6 TypeScript evaluation files in src/evals/ focused on remote EU job classification and AI evaluation tasks.",
           "facts": [
-            "Langfuse used for live evaluation scoring",
-            "Scorers attached to agents in src/agents/",
-            "Langfuse Scores documentation referenced in eval files"
+            "Vitest version 4.0.18 is installed as dev dependency",
+            "6 TypeScript evaluation files exist in src/evals/ directory"
           ],
           "source_locations": [
             {
               "path": "package.json",
-              "line": 72,
-              "note": "langfuse dependency version"
+              "line": 115,
+              "note": "vitest dev dependency"
             },
             {
-              "path": "src/evals/index.eval.ts",
-              "line": 18,
-              "note": "Langfuse documentation reference"
+              "path": "src/evals/ai-classifier.ts",
+              "line": 1,
+              "note": "AI classification evaluation file"
             },
             {
-              "path": "src/evals/index.eval.ts",
-              "line": 6,
-              "note": "Mention of Langfuse for automatic tracking"
+              "path": "src/evals/remote-eu/index.ts",
+              "line": 1,
+              "note": "Remote EU evaluation entry point"
+            }
+          ]
+        },
+        {
+          "name": "Promptfoo",
+          "role": "LLM evaluation and testing framework",
+          "url": "https://promptfoo.dev",
+          "details": "Promptfoo is not listed as a dependency in package.json and no promptfoo config files were found in the root directory. However, the project has an 'eval' script at line 22 that runs 'tsx --env-file=.env.local scripts/eval-remote-eu-langfuse.ts', suggesting custom evaluation scripts are used instead of promptfoo.",
+          "facts": [
+            "No promptfoo dependency found in package.json",
+            "Custom eval script uses tsx with langfuse integration",
+            "No promptfoo config files found in root directory"
+          ],
+          "source_locations": [
+            {
+              "path": "package.json",
+              "line": 22,
+              "note": "eval script using custom evaluation"
+            },
+            {
+              "path": "src/evals/remote-eu/scorers.ts",
+              "line": 1,
+              "note": "Custom scoring logic for evaluations"
+            },
+            {
+              "path": "src/evals/remote-eu/test-data.ts",
+              "line": 1,
+              "note": "Test data for evaluations"
             }
           ]
         }

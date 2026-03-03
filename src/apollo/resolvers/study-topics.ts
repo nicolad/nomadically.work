@@ -3,9 +3,10 @@ import { eq, and, sql } from "drizzle-orm";
 import { studyTopics, studyConceptExplanations } from "@/db/schema";
 import { isAdminEmail } from "@/lib/admin";
 import { generateText } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import { deepseek } from "@ai-sdk/deepseek";
 import { createDeepSeekClient, DEEPSEEK_MODELS } from "@/deepseek";
 import type { ChatMessage } from "@/deepseek/types";
+import { aiTelemetry } from "@/lib/telemetry";
 
 function toSlug(s: string): string {
   return s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -195,7 +196,7 @@ Return a JSON array of objects with these fields:
 
       // 6. Generate explanation
       const { text: explanation } = await generateText({
-        model: anthropic("claude-haiku-4-5-20251001"),
+        model: deepseek("deepseek-chat"),
         system: `You are a technical instructor explaining a concept to a software engineer studying for interviews.
 
 Topic context:
@@ -205,6 +206,7 @@ Topic context:
 
 Explain the selected excerpt clearly and concisely in the context of this topic. Use markdown formatting. Keep the explanation focused — 3-8 paragraphs max. Include a short code example if relevant. Do not repeat the selected text back verbatim.`,
         prompt: `Explain the following excerpt:\n\n"${text}"${args.context ? `\n\nSurrounding context:\n${args.context}` : ""}`,
+        experimental_telemetry: aiTelemetry("study-concept-explanation", { userId: context.userId }),
       });
 
       // 7. Cache result (INSERT OR IGNORE for race safety)
@@ -250,13 +252,9 @@ Explain the selected excerpt clearly and concisely in the context of this topic.
 
       if (topic.deep_dive_md && !args.force) return topic;
 
-      const client = createDeepSeekClient();
-      const response = await client.chat({
-        model: DEEPSEEK_MODELS.REASONER,
-        messages: [
-          {
-            role: "user",
-            content: `You are a senior staff engineer and technical interview coach. Generate a focused, technically rigorous deep dive on a study topic for a software engineer preparing for interviews.
+      const { text: deepDive } = await generateText({
+        model: deepseek("deepseek-reasoner"),
+        prompt: `You are a senior staff engineer and technical interview coach. Generate a focused, technically rigorous deep dive on a study topic for a software engineer preparing for interviews.
 
 Topic: "${topic.title}" (${topic.category}, ${topic.difficulty})
 
@@ -276,12 +274,12 @@ What mid-level engineers say that reveals shallow understanding. Be blunt.
 
 ## One Concrete Example
 A real production scenario where this concept was the crux. What happened, why, and what to learn from it.`,
-          },
-        ],
-        max_tokens: 2500,
+        maxTokens: 2500,
+        experimental_telemetry: aiTelemetry("study-deep-dive", {
+          userId: context.userId,
+          topicId: String(topicId),
+        }),
       });
-
-      const deepDive = response.choices[0]?.message?.content;
 
       if (!deepDive) throw new Error("Empty response from AI");
 

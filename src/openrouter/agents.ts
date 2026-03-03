@@ -9,6 +9,7 @@ import { generateText } from "ai";
 import { deepseekModels } from "./provider";
 import type { OpenRouterOptions } from "./config";
 import { GOAL_CONTEXT_LINE } from "@/constants/goal";
+import { aiTelemetry } from "@/lib/telemetry";
 
 /**
  * Agent configuration options
@@ -36,6 +37,7 @@ export function createChatAgent(config: AgentConfig) {
         model,
         system: config.instructions,
         prompt,
+        experimental_telemetry: aiTelemetry(`openrouter-chat-${config.name}`),
       });
       return { text: result.text };
     },
@@ -54,6 +56,7 @@ export function createReasoningAgent(config: Omit<AgentConfig, "model">) {
         model: deepseekModels.r1(),
         system: config.instructions,
         prompt,
+        experimental_telemetry: aiTelemetry(`openrouter-reasoning-${config.name}`),
       });
       return { text: result.text };
     },
@@ -72,6 +75,7 @@ export function createCodingAgent(config: Omit<AgentConfig, "model">) {
         model: deepseekModels.coder(),
         system: config.instructions,
         prompt,
+        experimental_telemetry: aiTelemetry(`openrouter-coder-${config.name}`),
       });
       return { text: result.text };
     },

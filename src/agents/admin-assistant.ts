@@ -8,6 +8,7 @@
 import { deepseek } from "@ai-sdk/deepseek";
 import { generateText } from "ai";
 import { GOAL_PROMPT_FRAGMENT } from "@/constants/goal";
+import { aiTelemetry } from "@/lib/telemetry";
 
 const ADMIN_INSTRUCTIONS = `${GOAL_PROMPT_FRAGMENT}
 
@@ -19,6 +20,7 @@ export const adminAssistantAgent = {
       model: deepseek("deepseek-chat"),
       system: ADMIN_INSTRUCTIONS,
       prompt,
+      experimental_telemetry: aiTelemetry("admin-assistant"),
     });
     return { text: result.text };
   },

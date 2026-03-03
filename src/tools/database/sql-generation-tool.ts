@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { generateObject } from 'ai';
 import { deepseek } from '@ai-sdk/deepseek';
 import { GOAL_CONTEXT_LINE } from '@/constants/goal';
+import { aiTelemetry } from '@/lib/telemetry';
 
 // Define the schema for SQL generation output
 const sqlGenerationSchema = z.object({
@@ -111,6 +112,7 @@ Only generate SELECT queries. Use proper formatting.`,
 Provide the SQL query, explanation, confidence level (0-1), assumptions, and tables used.`,
     schema: sqlGenerationSchema,
     temperature: 0.1,
+    experimental_telemetry: aiTelemetry("sql-generation-tool"),
   });
 
   return result.object;

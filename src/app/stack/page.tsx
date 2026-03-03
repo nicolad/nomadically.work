@@ -86,7 +86,6 @@ const FALLBACK: StackGroup[] = [
     entries: [
       { name: "Langfuse", role: "LLM tracing, prompt versioning, scoring", url: "https://langfuse.com", details: "Central observability layer for all LLM calls. Prompt versions managed and fetched at runtime. Session scoring from stop_hook.py writes accuracy scores back for trend tracking." },
       { name: "LangSmith", role: "Trace logging for LangChain-based pipelines", url: "https://smith.langchain.com", details: "Used alongside Langfuse for pipelines that use LangChain/LangGraph primitives (resume-rag, process-jobs). Provides dataset management for running evals against captured production traces." },
-      { name: "OpenTelemetry", role: "Distributed tracing (partially active)", url: "https://opentelemetry.io", details: "OTel instrumentation is partially wired — the intent is to trace the full request path from Apollo Server through the D1 Gateway Worker." },
     ],
   },
   {

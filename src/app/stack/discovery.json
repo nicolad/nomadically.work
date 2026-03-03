@@ -618,40 +618,6 @@
               "note": "LangSmith environment module"
             }
           ]
-        },
-        {
-          "name": "OpenTelemetry",
-          "version": "1.9.0",
-          "role": "Planned distributed tracing infrastructure (disabled)",
-          "url": "https://opentelemetry.io",
-          "details": "OpenTelemetry setup was attempted but @langfuse/otel was removed due to zlib dependency incompatibility with Edge Runtime. The initialization file src/otel/initOtel.ts exists but Langfuse span processor is disabled. Shows planned observability architecture where traces would flow through OpenTelemetry to Langfuse, but currently only basic OpenTelemetry API is present as transitive dependency.",
-          "facts": [
-            "@langfuse/otel removed due to Edge Runtime incompatibility",
-            "OpenTelemetry API version 1.9.0 installed as transitive dependency",
-            "Init file exists but span processor disabled"
-          ],
-          "source_locations": [
-            {
-              "path": "src/otel/initOtel.ts",
-              "line": 2,
-              "note": "Note about @langfuse/otel removal"
-            },
-            {
-              "path": "src/otel/initOtel.ts",
-              "line": 14,
-              "note": "Langfuse span processor disabled"
-            },
-            {
-              "path": "pnpm-lock.yaml",
-              "line": 2663,
-              "note": "@opentelemetry/api version 1.9.0"
-            },
-            {
-              "path": "src/app/stack/discovery.json",
-              "line": 709,
-              "note": "OpenTelemetry setup attempted but disabled"
-            }
-          ]
         }
       ]
     },

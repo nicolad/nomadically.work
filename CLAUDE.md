@@ -23,10 +23,8 @@ pnpm db:migrate                   # Apply locally with Drizzle Kit
 pnpm db:push                      # Apply migrations to remote D1
 pnpm db:studio                    # Drizzle Studio
 
-# Testing
-pnpm test:eval                    # Run Vitest evals once (src/evals/remote-eu-eval.test.ts)
-pnpm test:eval:watch              # Watch mode
-pnpm eval:langfuse                # Run Langfuse-native classification eval with tracing
+# Evaluation
+pnpm eval:langfuse                # Run LLM classification eval with Langfuse Datasets
 
 # Strategy enforcement
 pnpm strategy:check               # Validate staged changes against optimization strategy

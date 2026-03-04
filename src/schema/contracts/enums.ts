@@ -134,18 +134,6 @@ export const ApplicationStatus = z.enum([
 export type ApplicationStatus = z.infer<typeof ApplicationStatus>;
 
 // ---------------------------------------------------------------------------
-// Deep planner status
-// ---------------------------------------------------------------------------
-
-export const DeepPlannerStatus = z.enum([
-  "PENDING",
-  "RUNNING",
-  "COMPLETE",
-  "FAILED",
-]);
-export type DeepPlannerStatus = z.infer<typeof DeepPlannerStatus>;
-
-// ---------------------------------------------------------------------------
 // Skill level (job_skill_tags.level)
 // ---------------------------------------------------------------------------
 

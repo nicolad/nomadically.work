@@ -120,7 +120,7 @@ GraphQL Playground: `http://localhost:3000/api/graphql`. Vercel routes have 60s 
 | ORM | Drizzle ORM |
 | API | Apollo Server 5 (GraphQL) |
 | Auth | Clerk |
-| AI/ML | Vercel AI SDK, Anthropic Claude (+ Agent SDK), DeepSeek, Google ADK, OpenRouter |
+| AI/ML | Vercel AI SDK, Anthropic Claude (+ Agent SDK), DeepSeek, OpenRouter |
 | Background jobs | Trigger.dev, Cloudflare Workers (cron + queues) |
 | Observability | Langfuse, LangSmith, OpenTelemetry (partially active) |
 | Evaluation | Langfuse, Vitest |

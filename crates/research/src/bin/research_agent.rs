@@ -7,6 +7,7 @@ use research_agent::{
     backend,
     d1::D1Client,
     enhance,
+    remote_job_search,
     research_context::ResearchContext,
     study,
     tools::{GetPaperDetail, SearchPapers},
@@ -138,6 +139,17 @@ enum Command {
         /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
         #[arg(long)]
         api_key: Option<String>,
+    },
+
+    /// Spawn 15 parallel agents to research remote AI/ML engineering job search strategies
+    RemoteJobSearch {
+        /// DeepSeek API key (or set DEEPSEEK_API_KEY env var)
+        #[arg(long)]
+        api_key: Option<String>,
+
+        /// Skip the synthesis phase (just run the 15 topic agents)
+        #[arg(long)]
+        skip_synthesis: bool,
     },
 
     /// Spawn 20 parallel agents for backend interview prep
@@ -358,6 +370,28 @@ Research standards:
             info!(category = %category, count, "Generating study topics with DeepSeek Reasoner");
             study::run_gen(&category, count, &api_key, &d1).await?;
             info!(category = %category, "Topics saved to D1 — visit /study/{category}");
+        }
+
+        Command::RemoteJobSearch { api_key, skip_synthesis } => {
+            let api_key = api_key
+                .or_else(|| std::env::var("DEEPSEEK_API_KEY").ok())
+                .context("DEEPSEEK_API_KEY not set")?;
+
+            let scholar = SemanticScholarClient::new(
+                std::env::var("SEMANTIC_SCHOLAR_API_KEY").ok().as_deref(),
+            );
+
+            let d1 = D1Client::from_env()?;
+
+            info!("Starting remote-job-search research (15 parallel agents, 30 tasks)");
+            remote_job_search::run(&api_key, &scholar, &d1).await?;
+
+            if !skip_synthesis {
+                info!("Running synthesis — producing master playbook");
+                remote_job_search::run_synthesis(&api_key, &d1).await?;
+            }
+
+            info!("Remote job search research complete — visit /study/remote-job-search");
         }
 
         Command::Backend { source, api_key } => {

@@ -356,6 +356,7 @@ export type Company = {
   id: Scalars['Int']['output'];
   industries: Array<Scalars['String']['output']>;
   industry: Maybe<Scalars['String']['output']>;
+  is_hidden: Scalars['Boolean']['output'];
   job_board_url: Maybe<Scalars['String']['output']>;
   key: Scalars['String']['output'];
   last_seen_capture_timestamp: Maybe<Scalars['String']['output']>;
@@ -425,6 +426,7 @@ export type CompanyFactInput = {
 export type CompanyFilterInput = {
   category_in?: InputMaybe<Array<CompanyCategory>>;
   has_ats_boards?: InputMaybe<Scalars['Boolean']['input']>;
+  is_hidden?: InputMaybe<Scalars['Boolean']['input']>;
   min_ai_tier?: InputMaybe<Scalars['Int']['input']>;
   min_score?: InputMaybe<Scalars['Float']['input']>;
   service_taxonomy_any?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -590,32 +592,6 @@ export type CreateTrackInput = {
   level?: InputMaybe<Scalars['String']['input']>;
   slug: Scalars['String']['input'];
   title: Scalars['String']['input'];
-};
-
-export type DeepPlannerStatus =
-  | 'CANCELLED'
-  | 'COMPLETE'
-  | 'FAILED'
-  | 'PENDING'
-  | 'RUNNING';
-
-export type DeepPlannerTask = {
-  __typename: 'DeepPlannerTask';
-  checkpointCount: Scalars['Int']['output'];
-  completedAt: Maybe<Scalars['DateTime']['output']>;
-  context: Maybe<Scalars['String']['output']>;
-  createdAt: Scalars['DateTime']['output'];
-  currentStep: Maybe<Scalars['String']['output']>;
-  errorMessage: Maybe<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  outputArtifact: Maybe<Scalars['String']['output']>;
-  problemDescription: Scalars['String']['output'];
-  progressPercent: Scalars['Float']['output'];
-  startedAt: Maybe<Scalars['DateTime']['output']>;
-  status: DeepPlannerStatus;
-  totalSteps: Scalars['Int']['output'];
-  updatedAt: Scalars['DateTime']['output'];
-  workflowType: Scalars['String']['output'];
 };
 
 export type DeleteApplicationResponse = {
@@ -912,11 +888,9 @@ export type Mutation = {
   __typename: 'Mutation';
   add_company_facts: Array<CompanyFact>;
   applyEmailPattern: ApplyEmailPatternResult;
-  cancelDeepPlannerTask: DeepPlannerTask;
   createApplication: Application;
   createCompany: Company;
   createContact: Contact;
-  createDeepPlannerTask: DeepPlannerTask;
   createLangSmithPrompt: LangSmithPrompt;
   createOpportunity: Opportunity;
   createPrompt: Prompt;
@@ -929,6 +903,7 @@ export type Mutation = {
   deleteJob: DeleteJobResponse;
   deleteLangSmithPrompt: Scalars['Boolean']['output'];
   deleteOpportunity: DeleteOpportunityResult;
+  deleteStackEntry: StackMutationResponse;
   enhanceAllContacts: EnhanceAllContactsResult;
   enhanceCompany: EnhanceCompanyResponse;
   /**
@@ -984,7 +959,6 @@ export type Mutation = {
    * Requires authentication.
    */
   reportJob: Maybe<Job>;
-  triggerDeepPlannerTask: DeepPlannerTask;
   unlinkTrackFromApplication: Application;
   updateApplication: Application;
   updateCompany: Company;
@@ -1009,11 +983,6 @@ export type MutationApplyEmailPatternArgs = {
 };
 
 
-export type MutationCancelDeepPlannerTaskArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
 export type MutationCreateApplicationArgs = {
   input: ApplicationInput;
 };
@@ -1026,13 +995,6 @@ export type MutationCreateCompanyArgs = {
 
 export type MutationCreateContactArgs = {
   input: CreateContactInput;
-};
-
-
-export type MutationCreateDeepPlannerTaskArgs = {
-  context?: InputMaybe<Scalars['String']['input']>;
-  problemDescription: Scalars['String']['input'];
-  workflowType: Scalars['String']['input'];
 };
 
 
@@ -1094,6 +1056,11 @@ export type MutationDeleteLangSmithPromptArgs = {
 
 export type MutationDeleteOpportunityArgs = {
   id: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteStackEntryArgs = {
+  name: Scalars['String']['input'];
 };
 
 
@@ -1246,11 +1213,6 @@ export type MutationRateResumeAnswerArgs = {
 
 export type MutationReportJobArgs = {
   id: Scalars['Int']['input'];
-};
-
-
-export type MutationTriggerDeepPlannerTaskArgs = {
-  id: Scalars['ID']['input'];
 };
 
 
@@ -1462,8 +1424,6 @@ export type Query = {
   contactByEmail: Maybe<Contact>;
   contactEmails: Array<ContactEmail>;
   contacts: ContactsResult;
-  deepPlannerTask: Maybe<DeepPlannerTask>;
-  deepPlannerTasks: Array<DeepPlannerTask>;
   executeSql: TextToSqlResult;
   job: Maybe<Job>;
   jobs: JobsResponse;
@@ -1554,11 +1514,6 @@ export type QueryContactsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
-};
-
-
-export type QueryDeepPlannerTaskArgs = {
-  id: Scalars['ID']['input'];
 };
 
 
@@ -1782,6 +1737,12 @@ export type SourceType =
   | 'MANUAL'
   | 'PARTNER';
 
+export type StackMutationResponse = {
+  __typename: 'StackMutationResponse';
+  message: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type StudyConceptExplanation = {
   __typename: 'StudyConceptExplanation';
   createdAt: Scalars['DateTime']['output'];
@@ -1852,6 +1813,7 @@ export type UpdateCompanyInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   industries?: InputMaybe<Array<Scalars['String']['input']>>;
   industry?: InputMaybe<Scalars['String']['input']>;
+  is_hidden?: InputMaybe<Scalars['Boolean']['input']>;
   job_board_url?: InputMaybe<Scalars['String']['input']>;
   key?: InputMaybe<Scalars['String']['input']>;
   linkedin_url?: InputMaybe<Scalars['String']['input']>;

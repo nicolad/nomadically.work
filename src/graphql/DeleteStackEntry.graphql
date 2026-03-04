@@ -1,0 +1,6 @@
+mutation DeleteStackEntry($name: String!) {
+  deleteStackEntry(name: $name) {
+    success
+    message
+  }
+}

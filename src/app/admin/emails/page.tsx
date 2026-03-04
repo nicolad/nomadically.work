@@ -22,6 +22,7 @@ import {
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-hooks";
+import { ADMIN_EMAIL } from "@/lib/constants";
 import { getSentEmails, getReceivedEmails, getEmailSubscribers } from "./actions";
 import type { EmailSubscriber } from "./actions";
 import { BatchEmailModal } from "@/components/admin/BatchEmailModal";
@@ -335,7 +336,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user.email?.toLowerCase() !== "contact@vadim.blog") {
+  if (user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
     return (
       <Container size="3" p="8">
         <Card>

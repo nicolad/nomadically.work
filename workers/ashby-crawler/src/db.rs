@@ -266,6 +266,7 @@ pub async fn get_company_slugs_by_provider(db: &D1Database, provider: AtsProvide
                      LEFT JOIN ashby_boards ab ON ab.slug = c.key
                      WHERE (c.ats_provider = 'ashby' OR c.ats_provider IS NULL)
                        AND ab.last_synced_at IS NULL
+                       AND c.is_hidden != 1
                      ORDER BY c.key
                      LIMIT ?1"
                 )
@@ -284,6 +285,7 @@ pub async fn get_company_slugs_by_provider(db: &D1Database, provider: AtsProvide
                      LEFT JOIN greenhouse_boards gb ON gb.token = c.key
                      WHERE c.ats_provider = 'greenhouse'
                        AND gb.last_synced_at IS NULL
+                       AND c.is_hidden != 1
                      ORDER BY c.key
                      LIMIT ?1"
                 )
@@ -302,6 +304,7 @@ pub async fn get_company_slugs_by_provider(db: &D1Database, provider: AtsProvide
                      LEFT JOIN workable_boards wb ON wb.shortcode = c.key
                      WHERE c.ats_provider = 'workable'
                        AND wb.last_synced_at IS NULL
+                       AND c.is_hidden != 1
                      ORDER BY c.key
                      LIMIT ?1"
                 )

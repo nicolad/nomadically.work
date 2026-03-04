@@ -421,12 +421,12 @@ export const FALLBACK: StackGroup[] = [
       },
       {
         name: "Anthropic Claude",
-        role: "Agent SDK, sub-agents, architect, MCP tools",
+        role: "AI model via Vercel AI SDK (@ai-sdk/anthropic)",
         url: "https://www.anthropic.com",
         details:
-          "Powers the SQL agent (src/agents/), strategy enforcer (src/agents/strategy-enforcer.ts), and architect sub-agents (src/anthropic/). MCP tool definitions are in src/anthropic/mcp/.",
+          "Powers the SQL agent (src/agents/) and strategy enforcer (src/agents/strategy-enforcer.ts). Accessed via the Vercel AI SDK (@ai-sdk/anthropic).",
         why_chosen:
-          "Claude is used for agent-style tasks that require complex reasoning, tool use, and multi-step planning — its MCP (Model Context Protocol) support and Agent SDK enable building structured agent workflows with database introspection.",
+          "Claude is used for agent-style tasks that require complex reasoning, tool use, and multi-step planning.",
         pros: [
           "MCP support — agents can use typed tools (DB introspection, SQL execution) with schema validation",
           "Agent SDK enables multi-step workflows with planning, execution, and self-correction",

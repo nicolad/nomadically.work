@@ -1,4 +1,4 @@
-import { jobs, jobSkillTags } from "@/db/schema";
+import { jobs, jobSkillTags, companies } from "@/db/schema";
 import {
   eq,
   and,
@@ -86,6 +86,15 @@ export async function jobsQuery(
             .groupBy(jobSkillTags.job_id),
         ),
       );
+    }
+
+    // Exclude jobs from system-hidden companies (only when hidden companies exist)
+    const hiddenKeys = await context.db
+      .select({ key: companies.key })
+      .from(companies)
+      .where(eq(companies.is_hidden, true));
+    if (hiddenKeys.length > 0) {
+      conditions.push(notInArray(jobs.company_key, hiddenKeys.map((r) => r.key)));
     }
 
     // Exclude companies at SQL level

@@ -8,12 +8,10 @@ import { checkIsAdmin } from "@/lib/admin";
 import { createD1HttpClient } from "@/db/d1-http";
 import { userSettings } from "@/db/schema";
 
-const EMAILS_USER = "contact@vadim.blog";
-
 export async function getSentEmails(limit = 100) {
-  const { isAdmin, userEmail } = await checkIsAdmin();
+  const { isAdmin } = await checkIsAdmin();
 
-  if (!isAdmin || userEmail?.toLowerCase() !== EMAILS_USER) {
+  if (!isAdmin) {
     return { emails: [], error: "Forbidden" };
   }
 
@@ -35,9 +33,9 @@ export async function getSentEmails(limit = 100) {
 }
 
 export async function getReceivedEmails(limit = 100) {
-  const { isAdmin, userEmail } = await checkIsAdmin();
+  const { isAdmin } = await checkIsAdmin();
 
-  if (!isAdmin || userEmail?.toLowerCase() !== EMAILS_USER) {
+  if (!isAdmin) {
     return { emails: [], error: "Forbidden" };
   }
 

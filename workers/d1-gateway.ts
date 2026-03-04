@@ -308,6 +308,7 @@ export default {
           .prepare(
             `SELECT id, key, name, logo_url, website, category, score
              FROM companies
+             WHERE is_hidden != 1
              ORDER BY score DESC, name ASC
              LIMIT ? OFFSET ?`
           )

@@ -328,6 +328,7 @@ export async function getRecentCompanies(
        WHERE created_at > ?
        AND category != 'DIRECTORY'
        AND ai_tier >= 1
+       AND is_hidden != 1
        ORDER BY ai_tier DESC, ai_classification_confidence DESC, created_at DESC
        LIMIT 100`
     )

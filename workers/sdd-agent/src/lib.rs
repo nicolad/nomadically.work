@@ -57,31 +57,6 @@ async fn load_workflow_docs(db: &D1Database, workflow_type: &str) -> Option<inte
     integrations::WorkflowDocsStore::load(db, workflow_type).await.ok().flatten()
 }
 
-/// Update deep_planner_tasks progress in D1 (called by pipeline handler).
-async fn update_task_progress(db: &D1Database, task_id: &str, step: &str, checkpoint: u32) {
-    let now = worker::Date::now().to_string();
-    if let Ok(stmt) = db.prepare("UPDATE deep_planner_tasks SET current_step = ?1, checkpoint_count = ?2, updated_at = ?3 WHERE id = ?4")
-        .bind(&[step.into(), (checkpoint as f64).into(), now.into(), task_id.into()]) {
-        let _ = stmt.run().await;
-    }
-}
-
-/// Mark a deep_planner_task as complete or failed in D1.
-async fn finish_task(db: &D1Database, task_id: &str, status: &str, output: Option<&str>, error: Option<&str>, checkpoints: u32) {
-    let now = worker::Date::now().to_string();
-    if let Ok(stmt) = db.prepare("UPDATE deep_planner_tasks SET status = ?1, output_artifact = ?2, error_message = ?3, checkpoint_count = ?4, current_step = ?5, completed_at = ?6, updated_at = ?7 WHERE id = ?8")
-        .bind(&[
-            status.into(),
-            output.unwrap_or("").into(),
-            error.unwrap_or("").into(),
-            (checkpoints as f64).into(),
-            (if status == "complete" { "Complete" } else { "Failed" }).into(),
-            now.clone().into(),
-            now.into(),
-            task_id.into(),
-        ]) {
-        let _ = stmt.run().await;
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -543,8 +518,6 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
         return error_response("'name' and 'description' are required");
     }
 
-    let task_id = body["task_id"].as_str().unwrap_or("");
-
     sdd::SddChangeStore::ensure_table(&db).await?;
 
     let now = worker::Date::now().to_string();
@@ -586,10 +559,6 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
             continue;
         }
 
-        if !task_id.is_empty() {
-            update_task_progress(&db, task_id, step_label, *checkpoint).await;
-        }
-
         match pipeline.execute_phase(*phase, &change, context).await {
             Ok(r) => {
                 change.artifacts.insert(phase.as_str().into(), r.clone());
@@ -597,9 +566,6 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
                 results.push(r);
             }
             Err(e) => {
-                if !task_id.is_empty() {
-                    finish_task(&db, task_id, "failed", None, Some(&format!("{e}")), *checkpoint).await;
-                }
                 return Err(e);
             }
         }
@@ -617,9 +583,6 @@ async fn handle_sdd_pipeline(mut req: Request, ctx: RouteContext<()>) -> Result<
         .collect::<Vec<_>>()
         .join("\n\n---\n\n");
 
-    if !task_id.is_empty() {
-        finish_task(&db, task_id, "complete", Some(&output), None, 102).await;
-    }
 
     let result = json!({
         "mode": "full-pipeline",
@@ -652,7 +615,6 @@ async fn handle_sdd_step(mut req: Request, ctx: RouteContext<()>) -> Result<Resp
 
     let name = body["name"].as_str().unwrap_or("");
     let description = body["description"].as_str().unwrap_or("");
-    let task_id = body["task_id"].as_str().unwrap_or("");
     let workflow_type = body["workflow_type"].as_str().unwrap_or("");
     let context = body["context"].as_str().unwrap_or("");
 
@@ -685,9 +647,6 @@ async fn handle_sdd_step(mut req: Request, ctx: RouteContext<()>) -> Result<Resp
                 .filter_map(|(p, _, _)| change.artifacts.get(p.as_str()).map(|a| format!("## Phase: {}\n\n{}", p.as_str(), a.as_str().unwrap_or(""))))
                 .collect::<Vec<_>>()
                 .join("\n\n---\n\n");
-            if !task_id.is_empty() {
-                finish_task(&db, task_id, "complete", Some(&output), None, 102).await;
-            }
             return Response::from_json(&ApiResponse::success(json!({
                 "mode": "step-complete",
                 "change": name,
@@ -695,11 +654,6 @@ async fn handle_sdd_step(mut req: Request, ctx: RouteContext<()>) -> Result<Resp
             })));
         }
     };
-
-    // Update progress
-    if !task_id.is_empty() {
-        update_task_progress(&db, task_id, step_label, *checkpoint).await;
-    }
 
     // Execute the single phase
     let client = deepseek::DeepSeekClient::from_env(&env)?;
@@ -726,9 +680,6 @@ async fn handle_sdd_step(mut req: Request, ctx: RouteContext<()>) -> Result<Resp
             })))
         }
         Err(e) => {
-            if !task_id.is_empty() {
-                finish_task(&db, task_id, "failed", None, Some(&format!("{e}")), *checkpoint).await;
-            }
             Err(e)
         }
     }

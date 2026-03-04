@@ -42,7 +42,7 @@ export const opportunityResolvers = {
       const rows = await context.db
         .select()
         .from(companies)
-        .where(eq(companies.id, parent.companyId))
+        .where(and(eq(companies.id, parent.companyId), eq(companies.is_hidden, false)))
         .limit(1);
       return rows[0] ?? null;
     },

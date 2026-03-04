@@ -1,6 +1,6 @@
-import { jobs } from "@/db/schema";
+import { jobs, companies } from "@/db/schema";
 import type { Job } from "@/db/schema";
-import { eq, and, like, ne, sql } from "drizzle-orm";
+import { eq, and, like, ne, notInArray, sql } from "drizzle-orm";
 import type { GraphQLContext } from "../../context";
 import { isAdminEmail } from "@/lib/admin";
 import { jobsQuery } from "./jobs-query";
@@ -287,7 +287,18 @@ const Query: QueryResolvers = {
       )`;
       // Do NOT filter by is_remote_eu for single-job lookups — a direct link
       // to a job should resolve even if it hasn't been classified yet.
+      // But DO filter out jobs from hidden companies.
+      const hiddenKeys = await context.db
+        .select({ key: companies.key })
+        .from(companies)
+        .where(eq(companies.is_hidden, true));
+
       const baseConditions = [ne(jobs.status, "reported"), spamKeyFilter];
+      if (hiddenKeys.length > 0) {
+        baseConditions.push(
+          notInArray(jobs.company_key, hiddenKeys.map((r) => r.key))
+        );
+      }
 
       // 1. Exact match on external_id (Ashby UUIDs, bare IDs)
       const exactResults = await context.db

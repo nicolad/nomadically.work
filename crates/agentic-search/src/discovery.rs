@@ -49,6 +49,12 @@ pub struct DiscoveredEntry {
     pub patterns_used: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interview_points: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gotchas: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security_considerations: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performance_notes: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -76,13 +82,6 @@ struct Target {
 }
 
 const TARGETS: &[Target] = &[
-    Target {
-        label: "Frontend",
-        color: "violet",
-        technologies: "Next.js, React, Radix UI (Themes + Icons), Clerk",
-        hints: "Read package.json for exact versions. Glob src/app/**/* to count routes. \
-                Glob src/components/**/* to count components. Read next.config.ts and vercel.json.",
-    },
     Target {
         label: "API",
         color: "blue",
@@ -150,6 +149,13 @@ const TARGETS: &[Target] = &[
                 Check package.json for promptfoo and vitest versions. \
                 Look for promptfoo config files in the root.",
     },
+    Target {
+        label: "Frontend",
+        color: "violet",
+        technologies: "Next.js, React, Radix UI (Themes + Icons), Clerk",
+        hints: "Read package.json for exact versions. Glob src/app/**/* to count routes. \
+                Glob src/components/**/* to count components. Read next.config.ts and vercel.json.",
+    },
 ];
 
 // ── Discovery worker ─────────────────────────────────────────────────────────
@@ -188,7 +194,12 @@ impl DiscoveryWorker {
                 lazy initialization, schema-first development).\n\
              8. Write 3-5 interview talking points — concise, opinionated, experience-based. Each should\n\
                 be a sentence you could say in a technical interview to demonstrate deep understanding.\n\
-             9. When done, respond with ONLY a valid JSON object — no markdown, no explanation.\n\n\
+             9. Document gotchas — surprising behaviours, non-obvious pitfalls, or things that only\n\
+                become apparent after real usage (e.g. D1 returns 0/1 for booleans, not true/false).\n\
+            10. Note security considerations specific to this technology in this project's context.\n\
+            11. Note observable performance characteristics — latency figures, cold-start behaviour,\n\
+                batch vs single request trade-offs, etc. Based on config evidence in the codebase.\n\
+            12. When done, respond with ONLY a valid JSON object — no markdown, no explanation.\n\n\
              OUTPUT SCHEMA (respond with ONLY this JSON, nothing else):\n\
              {{\n\
                \"label\": \"{label}\",\n\
@@ -213,7 +224,10 @@ impl DiscoveryWorker {
                    ],\n\
                    \"trade_offs\": [\"Trade-off decision 1\", \"Trade-off decision 2\"],\n\
                    \"patterns_used\": [\"Pattern visible in implementation\"],\n\
-                   \"interview_points\": [\"Concise talking point for a technical interview\"]\n\
+                   \"interview_points\": [\"Concise talking point for a technical interview\"],\n\
+                   \"gotchas\": [\"Non-obvious pitfall or surprising behaviour from real usage\"],\n\
+                   \"security_considerations\": [\"Security aspect specific to this tech in this project\"],\n\
+                   \"performance_notes\": [\"Observable perf characteristic with numbers where possible\"]\n\
                  }}\n\
                ]\n\
              }}",

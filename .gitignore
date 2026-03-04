@@ -55,7 +55,6 @@ next-env.d.ts
 # python workers
 python_modules/
 workers/*/node_modules/
-workers/deep-planner/package-lock.json
 workers/job-matcher/.venv/
 workers/job-matcher/.venv-workers/
 workers/job-matcher/.wheels_temp/

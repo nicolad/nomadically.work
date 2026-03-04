@@ -240,6 +240,13 @@ export const companyResolvers = {
       try {
         const conditions = [];
 
+        // By default, exclude hidden companies unless explicitly requested
+        if (args.filter?.is_hidden === true) {
+          conditions.push(eq(companies.is_hidden, true));
+        } else if (args.filter?.is_hidden === false || !args.filter?.is_hidden) {
+          conditions.push(eq(companies.is_hidden, false));
+        }
+
         if (args.filter) {
           if (args.filter.text) {
             const searchPattern = `%${args.filter.text}%`;
@@ -339,9 +346,9 @@ export const companyResolvers = {
         let query = context.db.select().from(companies);
 
         if (args.id) {
-          query = query.where(eq(companies.id, args.id)) as any;
+          query = query.where(and(eq(companies.id, args.id), eq(companies.is_hidden, false))) as any;
         } else if (args.key) {
-          query = query.where(eq(companies.key, args.key)) as any;
+          query = query.where(and(eq(companies.key, args.key), eq(companies.is_hidden, false))) as any;
         }
 
         const [result] = await query.limit(1);
@@ -501,6 +508,7 @@ export const companyResolvers = {
       args: {
         id: number;
         input: {
+          is_hidden?: boolean;
           key?: string;
           name?: string;
           logo_url?: string;

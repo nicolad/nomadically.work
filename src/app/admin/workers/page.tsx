@@ -29,7 +29,6 @@ const WORKERS = [
   { name: "nomadically-work-eu-classifier", config: "workers/eu-classifier/wrangler.jsonc", runtime: "Python", notes: "EU job classification" },
   { name: "nomadically-work-resume-rag", config: "workers/resume-rag/wrangler.jsonc", runtime: "Python", notes: "Vectorize + Workers AI" },
   { name: "nomadically-work-job-matcher", config: "workers/job-matcher/wrangler.jsonc", runtime: "Python", notes: "Resume-to-job matching" },
-  { name: "nomadically-work-deep-planner", config: "workers/deep-planner/wrangler.jsonc", runtime: "Python", notes: "AI task planner with Durable Objects" },
   { name: "job-reporter-llm", config: "workers/job-reporter-llm/wrangler.toml", runtime: "TypeScript", notes: "LLM-based job report analysis" },
   { name: "nomadically-work-cleanup-jobs", config: "workers/cleanup-jobs/wrangler.jsonc", runtime: "Python", notes: "Job cleanup" },
 ] as const;

@@ -59,7 +59,6 @@ const STRUCTURED_OUTPUT_PATTERNS = [
 ];
 
 const GROUNDING_EXEMPT_PATHS = [
-  "src/anthropic/examples.ts",
   "scripts/bm25-skills.ts",
   "src/agents/cloudflare-workers-ai.ts",
 ];

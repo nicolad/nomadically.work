@@ -320,6 +320,7 @@ type Company {
   id: Int!
   industries: [String!]!
   industry: String
+  is_hidden: Boolean!
   job_board_url: String
   key: String!
   last_seen_capture_timestamp: String
@@ -376,6 +377,7 @@ input CompanyFactInput {
 input CompanyFilterInput {
   category_in: [CompanyCategory!]
   has_ats_boards: Boolean
+  is_hidden: Boolean
   min_ai_tier: Int
   min_score: Float
   service_taxonomy_any: [String!]
@@ -541,32 +543,6 @@ input CreateTrackInput {
 }
 
 scalar DateTime
-
-enum DeepPlannerStatus {
-  CANCELLED
-  COMPLETE
-  FAILED
-  PENDING
-  RUNNING
-}
-
-type DeepPlannerTask {
-  checkpointCount: Int!
-  completedAt: DateTime
-  context: String
-  createdAt: DateTime!
-  currentStep: String
-  errorMessage: String
-  id: ID!
-  outputArtifact: String
-  problemDescription: String!
-  progressPercent: Float!
-  startedAt: DateTime
-  status: DeepPlannerStatus!
-  totalSteps: Int!
-  updatedAt: DateTime!
-  workflowType: String!
-}
 
 type DeleteApplicationResponse {
   message: String
@@ -845,11 +821,9 @@ type LangSmithPromptCommit {
 type Mutation {
   add_company_facts(company_id: Int!, facts: [CompanyFactInput!]!): [CompanyFact!]!
   applyEmailPattern(companyId: Int!): ApplyEmailPatternResult!
-  cancelDeepPlannerTask(id: ID!): DeepPlannerTask!
   createApplication(input: ApplicationInput!): Application!
   createCompany(input: CreateCompanyInput!): Company!
   createContact(input: CreateContactInput!): Contact!
-  createDeepPlannerTask(context: String, problemDescription: String!, workflowType: String!): DeepPlannerTask!
   createLangSmithPrompt(input: CreateLangSmithPromptInput, promptIdentifier: String!): LangSmithPrompt!
   createOpportunity(input: CreateOpportunityInput!): Opportunity!
   createPrompt(input: CreatePromptInput!): Prompt!
@@ -862,6 +836,7 @@ type Mutation {
   deleteJob(id: Int!): DeleteJobResponse!
   deleteLangSmithPrompt(promptIdentifier: String!): Boolean!
   deleteOpportunity(id: String!): DeleteOpportunityResult!
+  deleteStackEntry(name: String!): StackMutationResponse!
   enhanceAllContacts: EnhanceAllContactsResult!
   enhanceCompany(id: Int, key: String): EnhanceCompanyResponse!
   """
@@ -917,7 +892,6 @@ type Mutation {
   Requires authentication.
   """
   reportJob(id: Int!): Job
-  triggerDeepPlannerTask(id: ID!): DeepPlannerTask!
   unlinkTrackFromApplication(applicationId: Int!, trackSlug: String!): Application!
   updateApplication(id: Int!, input: UpdateApplicationInput!): Application!
   updateCompany(id: Int!, input: UpdateCompanyInput!): Company!
@@ -1068,8 +1042,6 @@ type Query {
   contactByEmail(email: String!): Contact
   contactEmails(contactId: Int!): [ContactEmail!]!
   contacts(companyId: Int, limit: Int, offset: Int, search: String): ContactsResult!
-  deepPlannerTask(id: ID!): DeepPlannerTask
-  deepPlannerTasks: [DeepPlannerTask!]!
   executeSql(sql: String!): TextToSqlResult!
   job(id: String!): Job
   jobs(excludedCompanies: [String!], limit: Int, offset: Int, remoteEuConfidence: String, search: String, showAll: Boolean, skills: [String!], sourceType: String, sourceTypes: [String!]): JobsResponse!
@@ -1194,6 +1166,11 @@ enum SourceType {
   PARTNER
 }
 
+type StackMutationResponse {
+  message: String
+  success: Boolean!
+}
+
 type StudyConceptExplanation {
   createdAt: DateTime!
   explanation: String!
@@ -1261,6 +1238,7 @@ input UpdateCompanyInput {
   description: String
   industries: [String!]
   industry: String
+  is_hidden: Boolean
   job_board_url: String
   key: String
   linkedin_url: String

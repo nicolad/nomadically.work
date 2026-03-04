@@ -1,0 +1,8 @@
+extend type Mutation {
+  deleteStackEntry(name: String!): StackMutationResponse!
+}
+
+type StackMutationResponse {
+  success: Boolean!
+  message: String
+}

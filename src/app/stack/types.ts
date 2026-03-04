@@ -24,6 +24,9 @@ export type StackEntry = {
   trade_offs?: string[];
   patterns_used?: string[];
   interview_points?: string[];
+  gotchas?: string[];
+  security_considerations?: string[];
+  performance_notes?: string[];
 };
 
 export type StackGroup = {

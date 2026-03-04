@@ -195,6 +195,9 @@ type Company {
   last_seen_capture_timestamp: String
   last_seen_source_url: String
 
+  # System-level hidden flag
+  is_hidden: Boolean!
+
   # AI company tier: 0 = not AI, 1 = ai_first, 2 = ai_native
   ai_tier: Int!
   ai_classification_reason: String
@@ -239,6 +242,7 @@ input CreateCompanyInput {
 }
 
 input UpdateCompanyInput {
+  is_hidden: Boolean
   key: String
   name: String
   logo_url: String
@@ -308,6 +312,7 @@ input CompanyFilterInput {
   has_ats_boards: Boolean
   service_taxonomy_any: [String!]
   min_ai_tier: Int
+  is_hidden: Boolean
 }
 
 type DeleteCompanyResponse {

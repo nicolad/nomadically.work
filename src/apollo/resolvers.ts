@@ -8,10 +8,10 @@ import { applicationResolvers } from "./resolvers/application";
 import { langsmithResolvers } from "./resolvers/langsmith";
 import { resumeResolvers } from "./resolvers/resume";
 import { trackResolvers } from "./resolvers/track";
-import { deepPlannerResolvers } from "./resolvers/deep-planner";
 import { contactResolvers } from "./resolvers/contacts";
 import { studyTopicResolvers } from "./resolvers/study-topics";
 import { opportunityResolvers } from "./resolvers/opportunities";
+import { stackResolvers } from "./resolvers/stack";
 import { merge } from "lodash";
 
 export const resolvers = merge(
@@ -26,8 +26,8 @@ export const resolvers = merge(
   langsmithResolvers,
   resumeResolvers,
   trackResolvers,
-  deepPlannerResolvers,
   contactResolvers,
   studyTopicResolvers,
   opportunityResolvers,
+  stackResolvers,
 );

@@ -127,7 +127,7 @@ async fn handle_enrich(req: Request, ctx: RouteContext<()>) -> Result<Response> 
     };
 
     let row = db_handle
-        .prepare("SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, NULL as http_status FROM companies WHERE key = ?1")
+        .prepare("SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, NULL as http_status FROM companies WHERE key = ?1 AND is_hidden != 1")
         .bind(&[slug.into()])?
         .first::<serde_json::Value>(None)
         .await?;
@@ -157,7 +157,7 @@ async fn handle_enrich_all(req: Request, ctx: RouteContext<()>) -> Result<Respon
     let limit: u32 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
 
     let rows = db_handle
-        .prepare("SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, NULL as http_status FROM companies ORDER BY last_seen_capture_timestamp DESC LIMIT ?1")
+        .prepare("SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, NULL as http_status FROM companies WHERE is_hidden != 1 ORDER BY last_seen_capture_timestamp DESC LIMIT ?1")
         .bind(&[(limit as f64).into()])?
         .all().await?
         .results::<serde_json::Value>()?;
@@ -245,19 +245,19 @@ async fn handle_list_boards(req: Request, ctx: RouteContext<()>) -> Result<Respo
 
     let (q, binds): (String, Vec<JsValue>) = match (&search, &provider_filter) {
         (Some(term), Some(prov)) => (
-            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE key LIKE ?1 AND ats_provider=?2 ORDER BY key LIMIT ?3 OFFSET ?4".into(),
+            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE key LIKE ?1 AND ats_provider=?2 AND is_hidden != 1 ORDER BY key LIMIT ?3 OFFSET ?4".into(),
             vec![format!("%{term}%").into(), prov.clone().into(), (limit as f64).into(), (offset as f64).into()]
         ),
         (Some(term), None) => (
-            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE key LIKE ?1 ORDER BY key LIMIT ?2 OFFSET ?3".into(),
+            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE key LIKE ?1 AND is_hidden != 1 ORDER BY key LIMIT ?2 OFFSET ?3".into(),
             vec![format!("%{term}%").into(), (limit as f64).into(), (offset as f64).into()]
         ),
         (None, Some(prov)) => (
-            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE ats_provider=?1 ORDER BY key LIMIT ?2 OFFSET ?3".into(),
+            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE ats_provider=?1 AND is_hidden != 1 ORDER BY key LIMIT ?2 OFFSET ?3".into(),
             vec![prov.clone().into(), (limit as f64).into(), (offset as f64).into()]
         ),
         (None, None) => (
-            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies ORDER BY key LIMIT ?1 OFFSET ?2".into(),
+            "SELECT key as slug, website as url, created_at as first_seen, last_seen_capture_timestamp as last_seen, last_seen_crawl_id as crawl_id, ats_provider FROM companies WHERE is_hidden != 1 ORDER BY key LIMIT ?1 OFFSET ?2".into(),
             vec![(limit as f64).into(), (offset as f64).into()]
         ),
     };
@@ -266,16 +266,16 @@ async fn handle_list_boards(req: Request, ctx: RouteContext<()>) -> Result<Respo
 
     let count_q = match (&search, &provider_filter) {
         (Some(term), Some(prov)) =>
-            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE key LIKE ?1 AND ats_provider=?2")
+            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE key LIKE ?1 AND ats_provider=?2 AND is_hidden != 1")
                 .bind(&[format!("%{term}%").into(), prov.clone().into()])?,
         (Some(term), None) =>
-            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE key LIKE ?1")
+            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE key LIKE ?1 AND is_hidden != 1")
                 .bind(&[format!("%{term}%").into()])?,
         (None, Some(prov)) =>
-            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE ats_provider=?1")
+            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE ats_provider=?1 AND is_hidden != 1")
                 .bind(&[prov.clone().into()])?,
         (None, None) =>
-            db_handle.prepare("SELECT COUNT(*) as count FROM companies")
+            db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE is_hidden != 1")
                 .bind(&[])?,
     };
     let total = count_q.first::<serde_json::Value>(None).await?
@@ -316,15 +316,15 @@ async fn handle_stats(_req: Request, ctx: RouteContext<()>) -> Result<Response> 
 
     // Per-provider counts
     let by_provider = db_handle.prepare(
-        "SELECT COALESCE(ats_provider, 'ashby') as provider, COUNT(*) as count FROM companies GROUP BY COALESCE(ats_provider, 'ashby')"
+        "SELECT COALESCE(ats_provider, 'ashby') as provider, COUNT(*) as count FROM companies WHERE is_hidden != 1 GROUP BY COALESCE(ats_provider, 'ashby')"
     ).bind(&[])?.all().await?.results::<serde_json::Value>()?;
 
-    let total = db_handle.prepare("SELECT COUNT(*) as count FROM companies")
+    let total = db_handle.prepare("SELECT COUNT(*) as count FROM companies WHERE is_hidden != 1")
         .bind(&[])?.first::<serde_json::Value>(None).await?
         .and_then(|r| r["count"].as_f64()).unwrap_or(0.0) as u64;
-    let by_crawl = db_handle.prepare("SELECT last_seen_crawl_id as crawl_id, COUNT(*) as count FROM companies GROUP BY last_seen_crawl_id")
+    let by_crawl = db_handle.prepare("SELECT last_seen_crawl_id as crawl_id, COUNT(*) as count FROM companies WHERE is_hidden != 1 GROUP BY last_seen_crawl_id")
         .bind(&[])?.all().await?.results::<serde_json::Value>()?;
-    let newest = db_handle.prepare("SELECT key as slug, website as url, last_seen_capture_timestamp as last_seen, ats_provider FROM companies ORDER BY last_seen_capture_timestamp DESC LIMIT 10")
+    let newest = db_handle.prepare("SELECT key as slug, website as url, last_seen_capture_timestamp as last_seen, ats_provider FROM companies WHERE is_hidden != 1 ORDER BY last_seen_capture_timestamp DESC LIMIT 10")
         .bind(&[])?.all().await?.results::<serde_json::Value>()?;
     Response::from_json(&ApiResponse::success(serde_json::json!({
         "total_boards": total, "by_provider": by_provider, "by_crawl": by_crawl, "newest_boards": newest,

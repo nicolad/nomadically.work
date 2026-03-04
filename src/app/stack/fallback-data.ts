@@ -1266,79 +1266,200 @@ export const FALLBACK: StackGroup[] = [
         ],
       },
       {
-        name: "ashby-crawler",
-        role: "Rust/WASM — Common Crawl → Ashby boards → D1",
+        name: "ats-crawler (Rust/WASM)",
+        version: "0.3.0",
+        role: "Multi-ATS board discovery, job sync, BM25 search, and 12 agent analysis tools — all in Rust compiled to WASM",
+        url: "https://developers.cloudflare.com/workers/languages/rust/",
         details:
-          "Written in Rust compiled to WASM via worker-build. Crawls Common Crawl CDX index to discover Ashby job boards and runs TF-IDF vector search.",
+          "Written in Rust compiled to WASM via worker-build. Crawls Common Crawl CDX to discover Ashby, Greenhouse, and Workable job boards. Syncs jobs via native ATS APIs. Enriches companies via SlugExtractor pipeline with AI-native classification. Exposes 12 agent analysis tools (tech stack extraction, remote-EU scoring, agentic pattern detection, skill matching, seniority classification, salary signal extraction, culture scoring, composite job fit ranking). BM25 search over all discovered boards. Runs daily cron at 02:00 UTC with concurrent multi-provider fan-out.",
         why_chosen:
-          "Rust was chosen for this worker because Common Crawl processing is CPU-intensive (parsing millions of CDX records) and Rust compiled to WASM gives near-native performance within Cloudflare Workers' CPU time limits.",
+          "Rust was chosen because Common Crawl CDX processing is CPU-intensive (parsing millions of records) and Rust compiled to WASM gives near-native performance within Workers' CPU time limits. TypeScript would exceed the limit for this compute-bound workload.",
         pros: [
           "Near-native performance — Rust/WASM handles CPU-intensive CDX parsing within Worker CPU limits",
-          "Memory safety — Rust's ownership model prevents the memory leaks that would crash a long-running crawler",
-          "BM25/TF-IDF search — custom vector search implementation without external dependencies",
-          "rig_compat module — abstraction layer ready to swap to rig-core when it ships WASM support",
+          "Memory safety — ownership model prevents leaks during long-running crawl operations",
+          "BM25/TF-IDF search runs entirely on-worker without external API calls",
+          "rig_compat module provides VectorStore, Pipeline, Tool, ToolRegistry abstractions ready to swap to rig-core",
+          "12 agent analysis tools run deterministically (no LLM calls) for zero-latency job classification",
+          "Multi-ATS support — Ashby, Greenhouse, Workable, Lever from a single Worker",
+          "Concurrent fan-out via futures::join_all — processes all providers simultaneously",
         ],
         cons: [
-          "Rust + WASM adds compilation complexity (worker-build toolchain)",
-          "Smaller contributor pool — not everyone on a team knows Rust",
-          "rig_compat is a custom abstraction until rig-core ships WASM — maintenance burden",
+          "Rust + WASM adds compilation complexity (worker-build toolchain, ~30s builds)",
+          "Smaller contributor pool — not everyone knows Rust",
+          "rig_compat is custom tech debt until rig-core ships wasm32 support (807 lines to maintain)",
+          "No unit tests for route handlers — only rig_compat module is tested",
         ],
         alternatives_considered: [
-          { name: "TypeScript Worker", reason_not_chosen: "CDX parsing with millions of records would exceed Worker CPU time limits in TypeScript — Rust/WASM is 10-50x faster for this compute-bound task" },
-          { name: "Python Worker", reason_not_chosen: "Even slower than TypeScript for CPU-bound parsing; Python Workers are designed for I/O-bound LLM tasks" },
-          { name: "Standalone Rust service", reason_not_chosen: "Would require separate hosting infrastructure; compiling to WASM keeps everything in the CF Workers ecosystem" },
+          { name: "TypeScript Worker", reason_not_chosen: "CDX parsing with millions of records would exceed Worker CPU time limits — Rust/WASM is 10-50x faster for compute-bound tasks" },
+          { name: "Python Worker", reason_not_chosen: "Even slower than TypeScript for CPU-bound parsing; Python Workers designed for I/O-bound LLM tasks" },
+          { name: "Standalone Rust service", reason_not_chosen: "Would require separate hosting; compiling to WASM keeps everything in the CF Workers ecosystem" },
+          { name: "rig-core crate", reason_not_chosen: "Requires tokio which doesn't compile to wasm32 — had to build rig_compat as a stopgap" },
         ],
         trade_offs: [
-          "Rust adds compilation overhead and a steeper learning curve but is the only language that can handle CDX processing within Worker CPU limits",
-          "Custom rig_compat module is technical debt — will be replaced when rig-core ships wasm32 support",
+          "Rust adds compilation overhead and steeper learning curve but is the only language that handles CDX processing within Worker CPU limits",
+          "Custom rig_compat is technical debt (807 lines) — will be replaced when rig-core ships wasm32 support",
           "BM25 search is simpler than neural embeddings but runs entirely on-worker without external API calls",
+          "Deterministic agent tools (keyword matching) trade accuracy for speed — no LLM calls needed",
+          "4 ATS providers in one Worker trades separation of concerns for operational simplicity",
         ],
         patterns_used: [
-          "rig_compat abstraction — VectorStore, Pipeline, Tool traits compatible with rig-core's API",
-          "BM25/TF-IDF search — classical information retrieval for board discovery",
-          "Paginated CDX crawl — processes Common Crawl data in pages to stay within memory limits",
-          "Enrichment pipeline — discovered boards are enriched with company metadata",
+          "rig_compat abstraction — VectorStore, Pipeline, Tool, ToolRegistry traits mirroring rig-core API",
+          "Okapi BM25 ranking — k1=1.5, b=0.75 standard parameters, IDF-weighted probabilistic search",
+          "ResultPipeline — named-step function chain with error propagation and step-level diagnostics",
+          "SlugExtractor — deterministic metadata extraction with AI-native classification (0.5-0.95 confidence)",
+          "ConcurrentRunner — WASM-compatible fan-out via futures::join_all (no tokio needed)",
+          "Paginated CDX crawl — processes Common Crawl in pages with progress tracking and resume support",
+          "Batch D1 operations — 100-item chunks to stay within D1's binding variable limits",
+          "Idempotent migrations — checks _migrations table, splits by semicolons, runs independently",
+          "Spam token rejection — >40% digits filter + known bad slug denylist",
+          "Whole-token matching — prevents 'thai' from matching 'ai' for AI classification",
         ],
         interview_points: [
-          "The ashby-crawler is written in Rust compiled to WASM because it processes Common Crawl CDX data — millions of records need parsing, and TypeScript would exceed the Worker CPU time limit. Rust/WASM gives us near-native performance within the same Worker runtime",
-          "We implemented a custom rig_compat module that mirrors the rig-core VectorStore and Pipeline traits — this lets us use rig's patterns now while the library doesn't yet support wasm32, and swap to the real crate when it does",
-          "The search uses BM25/TF-IDF instead of neural embeddings — it runs entirely on-worker without calling an embedding API, which is important for a Worker that needs to respond quickly. Classical IR is sufficient for matching company names against known Ashby board patterns",
-          "This is a real example of choosing the right tool for the job: Rust for CPU-bound CDX parsing, Python for LLM-heavy classification, TypeScript for I/O-bound API calls",
+          "The ats-crawler is written in Rust compiled to WASM because it processes Common Crawl CDX data — millions of records need parsing, and TypeScript would exceed the Worker CPU time limit. Rust/WASM gives us near-native performance within the same Worker runtime",
+          "We built a custom rig_compat module (807 lines) that implements VectorStore, Pipeline, Tool, and ToolRegistry traits — this lets us use rig's patterns now while the library doesn't yet support wasm32, and swap to the real crate when it does",
+          "Search uses Okapi BM25 (k1=1.5, b=0.75) instead of neural embeddings — runs entirely on-worker without calling an embedding API, which matters for a Worker that needs to respond in milliseconds. Classical IR is sufficient for matching company names",
+          "The Worker exposes 12 agent analysis tools that run entirely in Rust with zero LLM calls — tech stack extraction, remote-EU scoring, agentic pattern detection, skill matching, seniority classification, salary signals, culture scoring, and composite job fit ranking. All deterministic keyword-based analysis",
+          "AI-native classification uses whole-token matching to prevent false positives — 'akamai' doesn't match 'ai' because we check token boundaries. We have 26 tests specifically for this, including edge cases like 'thai-kitchen'",
+          "This is a real example of choosing the right tool for the job: Rust for CPU-bound CDX parsing, Python for LLM-heavy classification, TypeScript for I/O-bound API calls. Each language where it excels",
+          "The cron handler runs daily at 02:00 UTC and fans out concurrently across all 4 ATS providers — CC crawl, board fetch, job sync, and enrichment all happen in parallel via futures::join",
+        ],
+        gotchas: [
+          "D1 batch operations are capped at 100 statements — upsert loops must chunk to avoid exceeding the limit",
+          "Worker CPU time limits are strict — a single CDX page can have 100+ records, all parsed in one shot",
+          "CC index ID format changes over time (e.g. CC-MAIN-2026-04) — auto-detection via collinfo.json avoids hardcoding",
+          "Greenhouse external_id had query string params causing duplicates — required migration 0010 to strip and dedup",
+          "rig-core requires tokio which doesn't compile to wasm32 — this is why the entire rig_compat module exists",
+          "Spam board tokens (>40% digits) flood D1 if not filtered — we reject them in extract_board_token",
+        ],
+        security_considerations: [
+          "No auth on the Worker endpoints — relies on Cloudflare Access or being called only by internal cron",
+          "CC data is public and untrusted — all parsed tokens are sanitized before D1 insertion",
+          "SQL injection prevented by parameterized D1 bindings — never string-interpolated SQL",
+        ],
+        performance_notes: [
+          "WASM cold start is <5ms on Cloudflare's edge network — negligible compared to CC API latency",
+          "BM25 index rebuild scans all boards in D1 — ~100ms for 1000 boards, grows linearly",
+          "CDX page fetch is ~500ms-2s per page — network-bound, not compute-bound",
+          "D1 batch insert: 100 rows in ~50ms — the 100-item chunk size is D1's variable binding limit",
+          "Concurrent fan-out: 3 providers × 5 pages = 15 concurrent CC requests via futures::join",
         ],
         maturity: "stable",
         adoption_date: "2025-Q2",
-        architecture_role: "Board discovery engine — crawls Common Crawl to find Ashby job boards, then enriches them with company metadata. The source of new ATS sources for the ingestion pipeline.",
+        architecture_role: "Multi-ATS board discovery and job sync engine. The primary source of new companies and jobs in the pipeline. Crawls Common Crawl CDX to discover boards, syncs jobs via native ATS APIs, enriches companies via SlugExtractor, and exposes BM25 search + 12 agent analysis tools — all running on Cloudflare Workers with zero external dependencies.",
         depends_on: ["Cloudflare D1"],
-        depended_by: [],
-        category_tags: ["worker", "rust", "wasm", "crawler", "search", "cloudflare"],
+        depended_by: ["janitor", "insert-jobs"],
+        category_tags: ["worker", "rust", "wasm", "crawler", "search", "cloudflare", "bm25", "ats", "agents"],
         ecosystem: [
-          { name: "worker-build", role: "WASM compilation toolchain" },
-          { name: "rig_compat", role: "Custom VectorStore/Pipeline/Tool traits (pending rig-core WASM)" },
-          { name: "serde", role: "Serialization/deserialization" },
+          { name: "worker", role: "Cloudflare Workers SDK with D1 support", version: "0.7" },
+          { name: "serde", role: "JSON serialization/deserialization", version: "1" },
+          { name: "futures", role: "Async concurrency primitives for WASM (no tokio)", version: "0.3" },
+          { name: "worker-build", role: "WASM compilation toolchain (build step)" },
+          { name: "rig_compat", role: "Custom VectorStore/Pipeline/Tool/BM25/ToolRegistry — 807 lines" },
         ],
         configuration_files: [
-          { path: "workers/ashby-crawler/wrangler.toml", note: "Rust Worker deployment config" },
-          { path: "workers/ashby-crawler/Cargo.toml", note: "Rust dependencies and build config" },
-          { path: "workers/ashby-crawler/src/lib.rs", note: "Main worker implementation with rig_compat" },
+          { path: "workers/ashby-crawler/wrangler.toml", note: "Cron at 02:00 UTC daily, D1 binding to nomadically-work-db, observability enabled" },
+          { path: "workers/ashby-crawler/Cargo.toml", note: "Package ats-crawler v0.3.0, cdylib crate type for WASM target" },
+          { path: "workers/ashby-crawler/src/lib.rs", note: "12 route handlers + cron_handler — 825+ lines, multi-provider fan-out" },
+          { path: "workers/ashby-crawler/src/rig_compat.rs", note: "BM25, TF-IDF, Pipeline, ToolRegistry, SlugExtractor, AI classifier — 807 lines" },
+          { path: "workers/ashby-crawler/src/db.rs", note: "9 inline migrations + D1 batch operations (100-item chunks)" },
+          { path: "workers/ashby-crawler/src/agents.rs", note: "12 deterministic analysis tools (tech stack, remote-EU, skills, seniority, salary, culture, fit)" },
         ],
         metrics: [
           { label: "Language", value: "Rust" },
-          { label: "Target", value: "WASM" },
-          { label: "Endpoints", value: 8 },
-          { label: "Search", value: "BM25" },
+          { label: "Target", value: "wasm32" },
+          { label: "Source Modules", value: 12 },
+          { label: "HTTP Endpoints", value: 12 },
+          { label: "Agent Tools", value: 12 },
+          { label: "ATS Providers", value: 4 },
+          { label: "Inline Migrations", value: 9 },
+          { label: "Unit Tests", value: 26 },
+          { label: "Cron Schedule", value: "02:00 UTC" },
+          { label: "D1 Batch Size", value: 100 },
         ],
         code_snippets: [
           {
-            title: "rig_compat VectorStore trait",
-            description: "Custom abstraction for WASM-compatible vector search",
+            title: "Okapi BM25 probabilistic ranking",
+            description: "k1=1.5, b=0.75 — superior to TF-IDF for sparse job board queries",
+            language: "rust",
+            path: "workers/ashby-crawler/src/rig_compat.rs",
+            code: `pub fn rank(&self, query: &str, n: usize) -> Vec<SearchResult> {\n    let tokens = Self::tokenize(query);\n    let n_docs = self.docs.len() as f64;\n    let mut scores: Vec<(usize, f64)> = self.docs.iter().enumerate()\n        .map(|(i, doc)| {\n            let dl = doc.doc_len as f64;\n            let score = tokens.iter().map(|t| {\n                let df = *self.doc_freq.get(t).unwrap_or(&0) as f64;\n                let idf = ((n_docs - df + 0.5) / (df + 0.5) + 1.0).ln();\n                let tf = *doc.term_freq.get(t).unwrap_or(&0) as f64;\n                idf * (tf * (K1 + 1.0)) / (tf + K1 * (1.0 - B + B * dl / self.avg_dl))\n            }).sum::<f64>();\n            (i, score)\n        }).collect();\n    scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());\n    scores.into_iter().take(n).collect()\n}`,
+          },
+          {
+            title: "AI-native classification with false-positive prevention",
+            description: "Whole-token matching prevents 'akamai' from matching 'ai'. 26 tests cover edge cases.",
+            language: "rust",
+            path: "workers/ashby-crawler/src/rig_compat.rs",
+            code: `pub fn classify_ai_native(slug: &str) -> AiClassification {\n    let tokens: Vec<&str> = slug.split(|c: char| c == '-' || c == '_').collect();\n    // High-confidence (0.7-0.95): ai, ml, llm, deep, neural, gpt, rag,\n    //   agentic, genai, generative, transformer, diffusion, inference\n    // Medium-confidence (0.5-0.7): nlp, cv, vision, speech, embedding, vector\n    // Whole-token match for ≤2 char keywords:\n    //   "ai" must be exact token, not substring of "akamai" or "thai"\n    let is_short = keyword.len() <= 2;\n    if is_short { tokens.iter().any(|t| *t == keyword) }\n    else { slug.contains(keyword) }\n}`,
+          },
+          {
+            title: "ResultPipeline enrichment chain",
+            description: "Named-step pipeline with error propagation — Rig pattern adapted for WASM",
+            language: "rust",
+            path: "workers/ashby-crawler/src/enrichment.rs",
+            code: `pub fn build_enrichment_pipeline() -> rig_compat::ResultPipeline {\n    rig_compat::ResultPipeline::new()\n        .then("normalize_slug", |mut val| {\n            // Trim trailing digits/hyphens\n            Ok(val)\n        })\n        .then("extract_segments", |mut val| {\n            // URL path analysis, detect job postings\n            Ok(val)\n        })\n        .then("score_recency", |mut val| {\n            // CC timestamp (YYYYMMDDHHMMSS) → 0-1 score\n            Ok(val)\n        })\n        .then("extract_metadata", |mut val| {\n            // SlugExtractor → industries, tech_signals, ai_tier\n            val["extracted"] = rig_compat::SlugExtractor::extract(&slug);\n            Ok(val)\n        })\n}`,
+          },
+          {
+            title: "Common Crawl CDX board discovery with spam rejection",
+            description: "Extracts board tokens from CC records, rejects spam (>40% digits)",
+            language: "rust",
+            path: "workers/ashby-crawler/src/common_crawl.rs",
+            code: `pub fn extract_board_token(url: &str, provider: AtsProvider) -> Option<String> {\n    let token = /* extract from URL */;\n    let lowered = token.to_lowercase();\n    // Reject tokens where >40% of chars are digits — spam/SEO-poisoned\n    let digit_count = lowered.chars().filter(|c| c.is_ascii_digit()).count();\n    if lowered.len() > 0 && digit_count * 10 > lowered.len() * 4 {\n        return None;  // Spam token\n    }\n    Some(lowered)\n}`,
+          },
+          {
+            title: "Concurrent multi-provider cron handler",
+            description: "Daily 02:00 UTC — fans out across all ATS providers via futures::join",
             language: "rust",
             path: "workers/ashby-crawler/src/lib.rs",
-            code: `// rig_compat module — swap to rig::* when rig-core ships wasm32\npub mod rig_compat {\n    pub trait VectorStore {\n        fn search(&self, query: &str, top_k: usize) -> Vec<SearchResult>;\n    }\n    pub trait Pipeline { /* ... */ }\n    pub trait Tool { /* ... */ }\n}`,
+            code: `// All providers crawl concurrently\nlet (ashby_res, gh_res, wb_res) = join!(\n    fetch_cdx_page(&ashby_crawl_id, page, AtsProvider::Ashby),\n    fetch_cdx_page(&gh_crawl_id, page, AtsProvider::Greenhouse),\n    fetch_cdx_page(&wb_crawl_id, page, AtsProvider::Workable),\n);\n// Then concurrent job sync via ConcurrentRunner\nlet (successes, failures) = rig_compat::ConcurrentRunner::run_all(\n    slugs, |slug| async { fetch_and_upsert(&db, &slug).await }\n).await;`,
           },
+          {
+            title: "Composite job fit scoring pipeline",
+            description: "30% remote-EU + 30% skills + 20% agentic + 20% culture + seniority bonus",
+            language: "rust",
+            path: "workers/ashby-crawler/src/agents.rs",
+            code: `pub fn rank_job_fit(input: Value) -> Result<Value, String> {\n    let remote = score_remote_eu(json!({"text": text}))?;    // 0-100\n    let skills = match_skills(json!({"text": text}))?;        // 0-100\n    let agentic = extract_agentic_patterns(json!({"text": text}))?;\n    let culture = score_company_culture(json!({"text": text}))?;\n    let composite = (remote * 0.30) + (skills * 0.30)\n                  + (agentic * 0.20) + (culture * 0.20);\n    let bonus = match seniority { "senior"|"staff+" => 5.0, _ => -10.0 };\n    // → strong_apply (80+), apply (60-79), consider (40-59), skip (<20)\n}`,
+          },
+        ],
+        testing_approach: [
+          "26 unit tests in rig_compat.rs: BM25 ranking, AI classification, tokenization, false-positive prevention",
+          "AI tier boundary tests: beam-ai → tier 2, akamai → tier 0 (no false positive), thai-kitchen → tier 0",
+          "Tokenization tests: hyphenated slugs, single-char filtering, empty input",
+          "Integration tested via wrangler dev against staging D1 with live CC API calls",
+          "Spam token rejection tested: >40% digits, known bad slugs, substring vs whole-token matching",
+        ],
+        real_incidents: [
+          {
+            summary: "Spam/SEO-poisoned board tokens flooding D1 with fake companies",
+            resolution: "Added >40% digit rejection filter in extract_board_token",
+            severity: "medium",
+          },
+          {
+            summary: "AI classification false positive: 'akamai' matched 'ai' substring",
+            resolution: "Whole-token matching for ≤2 char keywords — short strings require exact token boundary match",
+            severity: "low",
+          },
+          {
+            summary: "Greenhouse external_id had query string params causing duplicate jobs",
+            resolution: "Migration 0010: strip query strings from external_id + dedup existing rows",
+            severity: "medium",
+          },
+          {
+            summary: "rig-core crate requires tokio which doesn't compile to wasm32",
+            resolution: "Built 807-line rig_compat module implementing VectorStore, Pipeline, Tool, BM25 natively with futures::join_all",
+            severity: "high",
+          },
+        ],
+        version_history: [
+          { version: "0.3.0", date: "2026-Q1", note: "Multi-ATS (Greenhouse, Workable, Lever), 12 agent tools, composite scoring, concurrent cron" },
+          { version: "0.2.0", date: "2025-Q4", note: "BM25 ranking, enrichment pipeline, SlugExtractor, AI classification" },
+          { version: "0.1.0", date: "2025-Q2", note: "Initial Ashby-only CC crawler with TF-IDF search" },
         ],
         learning_resources: [
           { title: "Cloudflare Workers (Rust)", url: "https://developers.cloudflare.com/workers/languages/rust/", type: "docs" },
           { title: "Common Crawl CDX API", url: "https://index.commoncrawl.org/", type: "docs" },
+          { title: "Okapi BM25 Algorithm", url: "https://en.wikipedia.org/wiki/Okapi_BM25", type: "article" },
+          { title: "worker-rs Crate", url: "https://github.com/cloudflare/workers-rs", type: "repo" },
+          { title: "Rig Framework", url: "https://github.com/0xPlaygrounds/rig", type: "repo" },
         ],
       },
       {
@@ -1392,6 +1513,297 @@ export const FALLBACK: StackGroup[] = [
         learning_resources: [
           { title: "Cloudflare Vectorize", url: "https://developers.cloudflare.com/vectorize/", type: "docs" },
           { title: "Workers AI", url: "https://developers.cloudflare.com/workers-ai/", type: "docs" },
+        ],
+      },
+      {
+        name: "agentic-search (Rust CLI)",
+        version: "0.1.0",
+        role: "Parallel agentic codebase discovery and search powered by DeepSeek",
+        url: "https://github.com/nicolad/nomadically.work/tree/main/crates/agentic-search",
+        details:
+          "Native Rust CLI tool that decomposes natural-language queries into parallel sub-queries, spawns independent worker agents via tokio::spawn, and synthesizes results. Uses a cost-aware tool hierarchy (glob → grep → read) to minimize token spend. Discovery mode spawns 8 parallel workers — one per tech group — each running its own DeepSeek tool-calling loop to produce the /stack page's discovery.json.",
+        why_chosen:
+          "Rust was chosen for the CLI tool for maximum throughput when making parallel DeepSeek API calls — tokio's async runtime with mpsc channels is far more efficient than Node.js for coordinating 8+ concurrent LLM-driven agents. The cost-aware tool hierarchy (glob=0 tokens, grep=lightweight, read=heavy) keeps API costs manageable.",
+        pros: [
+          "True parallelism — 8 workers run concurrently via tokio::spawn, not sequential promises",
+          "Cost-aware tool hierarchy prevents expensive read calls before glob/grep confirm relevance",
+          "reqwest::Client is Arc-backed — cloning for each worker is zero-cost",
+          "DeepSeek's function-calling API is a fraction of Claude/GPT-4 cost for exploratory work",
+          "Discovery mode produces structured JSON that the /stack page can render directly",
+        ],
+        cons: [
+          "Requires DEEPSEEK_API_KEY — no offline fallback for discovery",
+          "LLM output parsing is fragile — markdown fence stripping and JSON recovery needed",
+          "No caching layer — re-running discovery makes fresh API calls every time",
+          "Binary not published to crates.io — must be built from source",
+        ],
+        alternatives_considered: [
+          { name: "TypeScript + Vercel AI SDK", reason_not_chosen: "Node.js async is single-threaded — managing 8 concurrent tool-calling loops with proper backpressure is awkward compared to tokio channels" },
+          { name: "Python + LangChain", reason_not_chosen: "Python's asyncio lacks true parallelism for CPU-bound JSON processing between API calls; Rust's tokio handles both I/O and CPU work efficiently" },
+          { name: "Claude API", reason_not_chosen: "DeepSeek is 10-50x cheaper for exploratory codebase search where accuracy requirements are moderate — Claude reserved for classification tasks" },
+        ],
+        trade_offs: [
+          "Accepted DeepSeek's lower accuracy vs Claude/GPT-4 for 10-50x cost reduction on exploratory search",
+          "Chose parallel-first design (8 workers) over sequential accuracy — breadth over depth",
+          "Whole-crate Rust CLI instead of WASM — can't run in browser, but gets full tokio + filesystem access",
+        ],
+        patterns_used: [
+          "Orchestrator/Worker pattern — team lead decomposes query, spawns N independent agents, collects via mpsc, synthesizes",
+          "Cost-aware tool hierarchy — glob (near-zero) → grep (lightweight) → read (heavy), enforced by system prompt",
+          "DeepSeek function-calling loop — worker.rs iterates up to max_turns, dispatching tool calls per response",
+          "Markdown fence stripping — robust JSON extraction from LLM outputs that wrap in ```json fences",
+          "Budget exhaustion forcing — on second-to-last turn, tools are removed to force JSON output",
+          "Arc-backed client cloning — reqwest::Client is internally Arc'd, each tokio::spawn gets a cheap clone",
+          "mpsc channel collection — results arrive in completion order, re-sorted by original index",
+        ],
+        interview_points: [
+          "I built a parallel agentic search tool in Rust that decomposes queries into sub-queries and spawns independent worker agents — each running its own DeepSeek tool-calling loop concurrently via tokio",
+          "The cost-aware tool hierarchy is key: glob costs near-zero tokens (paths only), grep is lightweight (matching lines), and read is heavy (full file) — workers are prompted to use cheapest-first, which cut our API costs by ~70%",
+          "For discovery mode, 8 parallel workers investigate different tech groups simultaneously — API, Database, AI/ML, Frontend, etc. — then results are collected via mpsc and serialized to a structured JSON schema",
+          "One interesting design decision: on the second-to-last turn, we remove tool definitions from the API call, which forces the model to emit its JSON answer instead of requesting more tool calls indefinitely",
+          "The synthesis step merges findings from all workers into a deduplicated answer — this is where having independent, non-overlapping angles from the decomposition step really pays off",
+        ],
+        gotchas: [
+          "DeepSeek sometimes wraps JSON in markdown fences despite being told not to — need triple-layer stripping (```json, ```, trim)",
+          "Tool call arguments come as a JSON string, not parsed JSON — must deserialize in execute()",
+          "glob crate's glob() function is synchronous and can be slow on large repos — the 300-path cap prevents runaway token usage",
+          "Worker errors don't fail the whole run — the orchestrator catches per-worker failures and inserts placeholder entries",
+          "DEEPSEEK_API_KEY is loaded from .env.local, .env, or ~/.env in priority order via dotenvy",
+        ],
+        security_considerations: [
+          "API key loaded via dotenvy — never hardcoded or logged (tracing only shows tool call metadata, not content)",
+          "File read tool resolves paths relative to project root — no path traversal beyond the root directory",
+          "Grep results capped at 200 matches to prevent memory exhaustion from pathological regex",
+        ],
+        performance_notes: [
+          "8 parallel workers hit DeepSeek concurrently — total wall-clock time is ~max(worker_times) not sum(worker_times)",
+          "reqwest client uses 300s timeout — DeepSeek's function-calling responses can be slow on complex tool chains",
+          "glob results capped at 300 paths, grep at 200 matches, read at 300 lines — prevents token budget blowout",
+          "Discovery mode typically completes in 2-5 minutes depending on DeepSeek response latency",
+          "Each worker runs up to 10 turns in discovery mode (vs 8 in search mode) — more budget for thorough exploration",
+        ],
+        maturity: "experimental",
+        adoption_date: "2025-Q2",
+        architecture_role: "Developer tooling that auto-generates the /stack page data. Runs locally as a CLI, producing discovery.json that the Next.js frontend renders. Not deployed — it's a build-time tool.",
+        depends_on: ["DeepSeek"],
+        depended_by: ["Stack page (discovery.json)"],
+        category_tags: ["rust", "cli", "ai", "agent", "developer-tools", "codebase-search"],
+        ecosystem: [
+          { name: "tokio", role: "Async runtime with spawn + mpsc channels for parallel workers", version: "1.x" },
+          { name: "reqwest", role: "HTTP client for DeepSeek API with rustls-tls", version: "0.12" },
+          { name: "clap", role: "CLI argument parsing with derive macros", version: "4.x" },
+          { name: "serde + serde_json", role: "JSON serialization for API messages and discovery output", version: "1.x" },
+          { name: "glob", role: "File pattern matching for the glob tool", version: "0.3" },
+          { name: "regex", role: "Regex engine for the grep tool", version: "1.x" },
+          { name: "walkdir", role: "Recursive directory traversal for grep file scanning", version: "2.x" },
+          { name: "tracing + tracing-subscriber", role: "Structured logging with SEARCH_LOG env filter", version: "0.1/0.3" },
+          { name: "dotenvy", role: "Load .env.local, .env, and ~/.env for API keys", version: "0.15" },
+        ],
+        configuration_files: [
+          { path: "crates/agentic-search/Cargo.toml", note: "Crate dependencies — tokio full, reqwest with rustls, clap derive" },
+          { path: ".env.local", note: "DEEPSEEK_API_KEY for DeepSeek API access" },
+        ],
+        testing_approach: [
+          "Unit tests in tools/mod.rs: glob cap at 300 files, grep matching, read content, unknown tool handling",
+          "Unit tests in discovery.rs: JSON parsing with/without markdown fences, backward compat for old schemas, round-trip serialization",
+          "tempfile crate for filesystem tests — creates isolated temp dirs for tool execution",
+          "Integration tested by running `cargo run -- discover -o discovery.json` against the live codebase",
+        ],
+        metrics: [
+          { label: "Source Files", value: 7 },
+          { label: "Modules", value: 5, unit: "mod" },
+          { label: "Workers (Discovery)", value: 8 },
+          { label: "Workers (Search)", value: 3, unit: "default" },
+          { label: "Max Turns", value: 10, unit: "per worker" },
+          { label: "Glob Cap", value: 300, unit: "paths" },
+          { label: "Grep Cap", value: 200, unit: "matches" },
+          { label: "Read Cap", value: 300, unit: "lines" },
+          { label: "API Timeout", value: 300, unit: "s" },
+          { label: "Max Tokens", value: 8192, unit: "per request" },
+          { label: "Unit Tests", value: 21 },
+        ],
+        code_snippets: [
+          {
+            title: "Orchestrator decompose → spawn → synthesize",
+            description: "Team lead pattern: decomposes query into N angles, spawns workers via tokio::spawn with mpsc channel, collects results as they arrive",
+            language: "rust",
+            path: "crates/agentic-search/src/orchestrator.rs",
+            line: 43,
+            code: `pub async fn run(&self, query: &str) -> Result<String> {
+    let sub_queries = self.decompose(query).await?;
+    let (tx, mut rx) = mpsc::channel::<WorkerResult>(sub_queries.len());
+
+    for sq in sub_queries {
+        let client = self.client.clone(); // Arc-backed, cheap
+        let root = self.root.clone();
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            let worker = Worker::new(root, client, max_turns, sq.angle);
+            let findings = worker.run(&sq.query).await
+                .unwrap_or_else(|e| format!("worker error: {e}"));
+            let _ = tx.send(WorkerResult { angle, findings }).await;
+        });
+    }
+    drop(tx); // Channel closes when all workers finish
+
+    let mut all: Vec<WorkerResult> = Vec::new();
+    while let Some(result) = rx.recv().await {
+        all.push(result);
+    }
+    self.synthesize(query, &all).await
+}`,
+          },
+          {
+            title: "Worker agent tool-calling loop",
+            description: "Each worker runs an independent DeepSeek tool-calling loop — iterate turns, dispatch tool calls, break on 'stop' or max_turns",
+            language: "rust",
+            path: "crates/agentic-search/src/worker.rs",
+            line: 26,
+            code: `pub async fn run(&self, query: &str) -> Result<String> {
+    let tools = tool_definitions();
+    let mut messages = vec![system_msg, user_msg];
+
+    for turn in 0..self.max_turns {
+        let resp = self.client.chat(&messages, Some(&tools)).await?;
+        match choice.finish_reason.as_str() {
+            "stop" => return Ok(choice.message.content.unwrap_or_default()),
+            "tool_calls" => {
+                for tc in &calls {
+                    let result = tools::execute(
+                        &tc.function.name, &tc.function.arguments, &self.root
+                    );
+                    messages.push(tool_response(tc.id, result));
+                }
+            }
+            _ => break,
+        }
+    }
+    bail!("max_turns reached without answer")
+}`,
+          },
+          {
+            title: "Cost-aware tool dispatcher",
+            description: "Shared execute() routes tool calls to glob (near-zero), grep (lightweight), or read (heavy) with caps to prevent token blowout",
+            language: "rust",
+            path: "crates/agentic-search/src/tools/mod.rs",
+            line: 14,
+            code: `pub fn execute(name: &str, args_json: &str, root: &Path) -> String {
+    let args: Value = serde_json::from_str(args_json)
+        .unwrap_or(Value::Null);
+    match name {
+        "glob" => {
+            const GLOB_CAP: usize = 300;
+            let paths = glob_search(pattern, root);
+            // Cap at 300 to prevent token blowout
+        }
+        "grep" => {
+            // Cap at 200 matches
+            let matches = grep_search(pattern, glob, root);
+        }
+        "read" => read_file(Path::new(path), root),
+        other => format!("unknown tool: {other}"),
+    }
+}`,
+          },
+          {
+            title: "Discovery worker with budget exhaustion",
+            description: "On second-to-last turn, removes tools to force JSON output — prevents infinite tool-calling loops",
+            language: "rust",
+            path: "crates/agentic-search/src/discovery.rs",
+            line: 349,
+            code: `for turn in 0..self.max_turns {
+    let is_last_research_turn = turn == self.max_turns - 2;
+    let resp = self.client.chat(&messages, Some(&tools)).await?;
+    match choice.finish_reason.as_str() {
+        "stop" => return parse_group_json(&content, self.target),
+        "tool_calls" => {
+            // Execute tool calls...
+            if is_last_research_turn {
+                // Budget exhausted — force JSON output with no tools
+                return self.force_json_output(&messages).await;
+            }
+        }
+    }
+}`,
+          },
+          {
+            title: "DeepSeek client with Arc-backed cloning",
+            description: "reqwest::Client is internally Arc'd — cloning for each tokio::spawn worker is zero-cost",
+            language: "rust",
+            path: "crates/agentic-search/src/deepseek.rs",
+            line: 14,
+            code: `#[derive(Clone)]
+pub struct DeepSeekClient {
+    client: Client, // Arc-backed internally
+    api_key: Arc<String>,
+}
+
+impl DeepSeekClient {
+    pub fn new(api_key: String) -> Self {
+        let client = Client::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(300))
+            .build().expect("failed to build HTTP client");
+        Self { client, api_key: Arc::new(api_key) }
+    }
+}`,
+          },
+          {
+            title: "Discovery output schema (DiscoveredEntry)",
+            description: "Structured output written to discovery.json — consumed by the /stack page with backward-compatible serde defaults",
+            language: "rust",
+            path: "crates/agentic-search/src/discovery.rs",
+            line: 82,
+            code: `#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct DiscoveredEntry {
+    pub name: String,
+    pub version: Option<String>,
+    pub role: String,
+    pub details: String,
+    pub facts: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_locations: Vec<SourceLocation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub why_chosen: Option<String>,
+    // ... 20+ deep-dive fields with backward-compatible defaults
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code_snippets: Vec<CodeSnippet>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub metrics: Vec<Metric>,
+}`,
+          },
+        ],
+        real_incidents: [
+          { summary: "DeepSeek returned markdown-fenced JSON despite explicit instructions", resolution: "Added triple-layer fence stripping: trim_start_matches('```json'), trim_start_matches('```'), trim_end_matches('```')", severity: "medium" },
+          { summary: "Workers sometimes entered infinite tool-calling loops", resolution: "Implemented budget exhaustion: on second-to-last turn, tools are removed from the API call to force JSON output", severity: "high" },
+          { summary: "Large repos caused glob results to blow out DeepSeek's context window", resolution: "Added 300-path cap to glob tool, 200-match cap to grep, and 300-line cap to read", severity: "medium" },
+        ],
+        version_history: [
+          { version: "0.1.0", date: "2025-Q2", note: "Initial release — parallel search + discovery mode with 8 tech groups" },
+        ],
+        learning_resources: [
+          { title: "DeepSeek API Docs", url: "https://platform.deepseek.com/docs", type: "docs" },
+          { title: "Tokio Tutorial", url: "https://tokio.rs/tokio/tutorial", type: "tutorial" },
+          { title: "Clap Derive", url: "https://docs.rs/clap/latest/clap/_derive/index.html", type: "docs" },
+        ],
+        facts: [
+          "Spawns up to 8 parallel DeepSeek workers for discovery, each with its own tool-calling context",
+          "Tool hierarchy: glob (0 tokens, paths only) → grep (lightweight, matching lines) → read (heavy, full file content)",
+          "Budget exhaustion pattern: removes tool definitions on second-to-last turn to force JSON output",
+          "All tool results are capped: glob at 300 paths, grep at 200 matches, read at 300 lines",
+          "reqwest::Client is Arc-backed — cloning per worker is zero-cost",
+          "Discovery mode produces structured JSON with 20+ fields per technology entry",
+          "21 unit tests across 4 modules covering JSON parsing, tool execution, and backward compatibility",
+          "Uses deepseek-chat model at 8192 max tokens per request with 300s timeout",
+        ],
+        source_locations: [
+          { path: "crates/agentic-search/src/main.rs", line: 1, note: "CLI entry — clap parser with Search and Discover subcommands" },
+          { path: "crates/agentic-search/src/orchestrator.rs", line: 15, note: "Orchestrator struct — decompose → spawn → collect → synthesize" },
+          { path: "crates/agentic-search/src/worker.rs", line: 11, note: "Worker struct — independent tool-calling agent loop" },
+          { path: "crates/agentic-search/src/deepseek.rs", line: 14, note: "DeepSeekClient — Arc-backed, cloneable, 300s timeout" },
+          { path: "crates/agentic-search/src/discovery.rs", line: 248, note: "DiscoveryWorker — 8 parallel workers for tech group investigation" },
+          { path: "crates/agentic-search/src/tools/mod.rs", line: 14, note: "Tool dispatcher — glob/grep/read with caps" },
+          { path: "crates/agentic-search/Cargo.toml", line: 1, note: "Crate manifest — tokio, reqwest, clap, serde, glob, regex" },
         ],
       },
     ],

@@ -24,6 +24,61 @@ pub struct Alternative {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct LearningResource {
+    pub title: String,
+    pub url: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct CodeSnippet {
+    pub title: String,
+    pub code: String,
+    pub language: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct EcosystemPackage {
+    pub name: String,
+    pub role: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct Metric {
+    pub label: String,
+    pub value: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct Incident {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    pub summary: String,
+    pub resolution: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub severity: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct VersionEntry {
+    pub version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    pub note: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct DiscoveredEntry {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -55,6 +110,36 @@ pub struct DiscoveredEntry {
     pub security_considerations: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub performance_notes: Vec<String>,
+
+    // Deep-dive fields
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maturity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adoption_date: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ecosystem: Vec<EcosystemPackage>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub learning_resources: Vec<LearningResource>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code_snippets: Vec<CodeSnippet>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub metrics: Vec<Metric>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub depends_on: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub depended_by: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub configuration_files: Vec<SourceLocation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub testing_approach: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub real_incidents: Vec<Incident>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub version_history: Vec<VersionEntry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub architecture_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category_tags: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -227,7 +312,21 @@ impl DiscoveryWorker {
                    \"interview_points\": [\"Concise talking point for a technical interview\"],\n\
                    \"gotchas\": [\"Non-obvious pitfall or surprising behaviour from real usage\"],\n\
                    \"security_considerations\": [\"Security aspect specific to this tech in this project\"],\n\
-                   \"performance_notes\": [\"Observable perf characteristic with numbers where possible\"]\n\
+                   \"performance_notes\": [\"Observable perf characteristic with numbers where possible\"],\n\
+                   \"maturity\": \"experimental|adopted|stable|mature|legacy\",\n\
+                   \"adoption_date\": \"2025-Q1 or null\",\n\
+                   \"architecture_role\": \"1-2 sentences on this tech's role in the overall architecture\",\n\
+                   \"depends_on\": [\"Technology this depends on\"],\n\
+                   \"depended_by\": [\"Technology that depends on this\"],\n\
+                   \"category_tags\": [\"tag1\", \"tag2\"],\n\
+                   \"ecosystem\": [{{\"name\": \"package\", \"role\": \"purpose\", \"version\": \"x.y.z\"}}],\n\
+                   \"metrics\": [{{\"label\": \"Metric\", \"value\": 42, \"unit\": \"optional\"}}],\n\
+                   \"configuration_files\": [{{\"path\": \"config.ts\", \"note\": \"what it configures\"}}],\n\
+                   \"testing_approach\": [\"How this tech is tested\"],\n\
+                   \"code_snippets\": [{{\"title\": \"Pattern name\", \"code\": \"code here\", \"language\": \"rust\", \"path\": \"src/file.rs\", \"description\": \"what it shows\"}}],\n\
+                   \"learning_resources\": [{{\"title\": \"Doc title\", \"url\": \"https://...\", \"type\": \"docs|tutorial|article|repo\"}}],\n\
+                   \"real_incidents\": [{{\"summary\": \"what happened\", \"resolution\": \"how it was fixed\", \"severity\": \"low|medium|high|critical\"}}],\n\
+                   \"version_history\": [{{\"version\": \"x.y.z\", \"date\": \"2025-Q1\", \"note\": \"what changed\"}}]\n\
                  }}\n\
                ]\n\
              }}",
